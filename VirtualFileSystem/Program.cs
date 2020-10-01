@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using VirtualFileSystem.Syncronyzation;
+using Windows.Storage;
 using Windows.Storage.Provider;
 
 namespace VirtualFileSystem
@@ -75,16 +76,21 @@ namespace VirtualFileSystem
                 log.Info($"\n{Settings.UserFileSystemRootPath} sync root already registered.");
             }
 
+            // Log indexed state.
+            StorageFolder userFileSystemRootFolder = await StorageFolder.GetFolderFromPathAsync(Settings.UserFileSystemRootPath);
+            log.Info($"\nIndexed state: {(await userFileSystemRootFolder.GetIndexedStateAsync())}\n");
+
             ConsoleKeyInfo exitKey;
 
             try
             {
-                engine                  = new VfsEngine(Settings.License, Settings.UserFileSystemRootPath, log);
-                RemoteStorageMonitorInstance    = new RemoteStorageMonitor(Settings.RemoteStorageRootPath, log);
-                syncService             = new SyncService(Settings.SyncIntervalMs, Settings.UserFileSystemRootPath, log);
-                userFileSystemMonitor   = new UserFileSystemMonitor(Settings.UserFileSystemRootPath, log);
+                engine = new VfsEngine(Settings.License, Settings.UserFileSystemRootPath, log);
+                RemoteStorageMonitorInstance = new RemoteStorageMonitor(Settings.RemoteStorageRootPath, log);
+                syncService = new SyncService(Settings.SyncIntervalMs, Settings.UserFileSystemRootPath, log);
+                userFileSystemMonitor = new UserFileSystemMonitor(Settings.UserFileSystemRootPath, log);
 
                 // Start processing OS file system calls.
+                //engine.ChangesProcessingEnabled = false;
                 await engine.StartAsync();
 
                 // Start monitoring changes in remote file system.
@@ -92,7 +98,7 @@ namespace VirtualFileSystem
 
                 // Start periodical synchronyzation between client and server, 
                 // in case any changes are lost because the client or the server were unavailable.
-                //await syncService.StartAsync();
+                await syncService.StartAsync();
 
                 // Start monitoring pinned/unpinned attributes and files/folders creation in user file system.
                 await userFileSystemMonitor.StartAsync();
@@ -110,8 +116,8 @@ namespace VirtualFileSystem
                 syncService.Dispose();
                 userFileSystemMonitor.Dispose();
             }
-           
-            if (exitKey.KeyChar == 'q') 
+
+            if (exitKey.KeyChar == 'q')
             {
                 // Unregister during programm uninstall.
                 await Registrar.UnregisterAsync(SyncRootId);
@@ -162,6 +168,14 @@ namespace VirtualFileSystem
             get
             {
                 return $"{System.Diagnostics.Process.GetCurrentProcess().ProcessName}!{System.Security.Principal.WindowsIdentity.GetCurrent().User}!User";
+            }
+        }
+
+        internal static string IconsFolderPath
+        {
+            get
+            {
+                return Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), @"Images");
             }
         }
     }

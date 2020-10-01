@@ -22,6 +22,12 @@ namespace VirtualFileSystem
         private ILog log;
 
         /// <summary>
+        /// Enables or disables processing of changes made in IFile.CoseAsync(), IFileSystemItem.MoveToAsync(), IFileSystemItem.DeteteAsync().
+        /// You will disable processing to debug synchronization service.
+        /// </summary>
+        internal bool ChangesProcessingEnabled = true;
+
+        /// <summary>
         /// Creates a Windows user file system.
         /// </summary>
         /// <param name="license">A license string.</param>
@@ -45,11 +51,11 @@ namespace VirtualFileSystem
         {
             if(File.Exists(path))
             {
-                return new VfsFile(path, this);
+                return new VfsFile(path, this, this);
             }
             if(Directory.Exists(path))
             {
-                return new VfsFolder(path, this);
+                return new VfsFolder(path, this, this);
             }
 
             return null; // When a file handle is being closed during delete, the file does not exist.

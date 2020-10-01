@@ -71,6 +71,11 @@ namespace VirtualFileSystem.Syncronyzation
             LogMessage($"Started");
         }
 
+        private bool Started()
+        {
+            return !string.IsNullOrEmpty(watcher.Path);
+        }
+
         /// <summary>
         /// Disables or enables monitoring. Used to avoid circular calls.
         /// </summary>
@@ -83,7 +88,13 @@ namespace VirtualFileSystem.Syncronyzation
         internal bool Enabled
         {
             get { return watcher.EnableRaisingEvents; }
-            set { watcher.EnableRaisingEvents = value; }
+            set 
+            {
+                if (Started())
+                {
+                    watcher.EnableRaisingEvents = value;
+                }
+            }
         }
 
         /// <summary>
@@ -106,6 +117,7 @@ namespace VirtualFileSystem.Syncronyzation
                 {
                     if (!FsPath.AvoidSync(remoteStoragePath))
                     {
+                        LogMessage("Creating new item:", userFileSystemPath);
                         FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
                         await UserFileSystemItem.CreateAsync(userFileSystemParentPath, remoteStorageItem);
                         LogMessage("Created succesefully:", userFileSystemPath);
@@ -141,7 +153,7 @@ namespace VirtualFileSystem.Syncronyzation
                     if (!FsPath.AvoidSync(remoteStoragePath))
                     {
                         // This check is only required because we can not prevent circular calls because of the simplicity of this example.
-                        if (!await new UserFileSystemItem(userFileSystemPath).EqualsAsync(remoteStorageItem))
+                        if (!await new UserFileSystemItem(userFileSystemPath).ETagEqualsAsync(remoteStorageItem))
                         {
                             LogMessage("Item modified:", remoteStoragePath);
                             await new UserFileSystemItem(userFileSystemPath).UpdateAsync(remoteStorageItem);

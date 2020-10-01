@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.Storage;
@@ -36,21 +37,42 @@ namespace VirtualFileSystem.Syncronyzation
             this.userFileSystemPath = userFileSystemPath;
         }
 
+        /*
         /// <summary>
         /// Compares user file system item and remote storage item. Returns true if items are equal. False - otherwise.
         /// </summary>
         /// <param name="remoteStorageItem">Remote storage item info.</param>
-        /// <returns>Returns true user file system item and remote storage item are equal. False - otherwise.</returns>
+        /// <returns>Returns true if user file system item and remote storage item are equal. False - otherwise.</returns>
         public async Task<bool> EqualsAsync(FileSystemInfo remoteStorageItem)
         {
-            // Here you will typically compare file ETags. 
+            // Here you will typically compare file content.
             // For the sake of simplicity we just compare LastWriteTime.
+            return remoteStorageItem.LastWriteTime.Equals(FsPath.GetFileSystemItem(userFileSystemPath).LastWriteTime);
+        }
+        */
 
-            long remoteStorageETag = remoteStorageItem.LastWriteTime.ToBinary();
+        /// <summary>
+        /// Returns true if the remote storage ETag and user file system ETags are equal. False - otherwise.
+        /// </summary>
+        /// <param name="remoteStorageItem">Remote storage item info.</param>
+        /// <remarks>
+        /// ETag is updated on the server during every fdocument update and is stored with a file in 
+        /// user file system. It is sent back to the remote storage togather with a modified content. 
+        /// This makes sure the changes on the server is not overwritten if the document on the server is modified.
+        /// </remarks>
+        internal async Task<bool> ETagEqualsAsync(FileSystemInfo remoteStorageItem)
+        {
+            string remoteStorageETag = remoteStorageItem.LastWriteTime.ToBinary().ToString();
 
-            // We store remote storage LastWriteTime inside custom data when creating and updating files/folders.
-            byte[] userFileSystemItemCustomData = PlaceholderItem.GetItem(userFileSystemPath).GetCustomData();
-            long userFileSystemETag = BitConverter.ToInt64(userFileSystemItemCustomData);
+            // Intstead of ETag we store remote storage LastWriteTime inside custom data when 
+            // creating and updating files/folders.
+            string userFileSystemETag = PlaceholderItem.GetItem(userFileSystemPath).GetETag();
+            if(string.IsNullOrEmpty(userFileSystemETag))
+            {
+                // No ETag associated with the file. The file either was just created in user file system 
+                // or folder where user file system was created is not empty.
+                return false;
+            }
 
             return remoteStorageETag == userFileSystemETag;
         }
@@ -60,7 +82,7 @@ namespace VirtualFileSystem.Syncronyzation
         /// </summary>
         /// <param name="userFileSystemParentPath">User file system folder path in which the new item will be created.</param>
         /// <param name="remoteStorageItem">Remote storage item info. The new placeholder will be populated with data from this item.</param>
-        public static async Task CreateAsync(string userFileSystemParentPath, FileSystemInfo remoteStorageItem)
+        internal static async Task CreateAsync(string userFileSystemParentPath, FileSystemInfo remoteStorageItem)
         {
             IFileSystemItemBasicInfo userFileSystemNewItemInfo = Mapping.GetUserFileSysteItemInfo(remoteStorageItem);
 
@@ -68,17 +90,13 @@ namespace VirtualFileSystem.Syncronyzation
             {
                 new PlaceholderFolder(userFileSystemParentPath).CreatePlaceholders(new[] { userFileSystemNewItemInfo });
             }
-            catch(Win32Exception ex)
+            catch (ExistsException ex)
             {
-                // "Cannot create a file when that file already exists."
-                if (ex.NativeErrorCode == 183)
-                {
-                    // Process conflict.
+                // "Cannot create a file when that file already exists." 
+                //await new UserFileSystemItem(userFileSystemParentPath).ShowDownloadErrorAsync(ex);
 
-                    // Rethrow the exception preserving stack trace of the original exception.
-                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
-                    throw ex; // This is for the compiler to know that the code never reaches here.
-                }
+                // Rethrow the exception preserving stack trace of the original exception.
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
             }
         }
 
@@ -90,36 +108,19 @@ namespace VirtualFileSystem.Syncronyzation
         /// <param name="remoteStorageItem">Remote storage item info. The placeholder info will be updated with info provided in this item.</param>
         internal async Task UpdateAsync(FileSystemInfo remoteStorageItem)
         {
-            /*
-            // Process conflicts. File <-> Folder. Folder <-> File.
-            if (File.Exists(userFileSystemPath) && (remoteStorageItem is DirectoryInfo))
-            {
-            }
-            else if (Directory.Exists(userFileSystemPath) && (remoteStorageItem is FileInfo))
-            {
-            }
-            */
             FileSystemItemBasicInfo userFileSystemItemInfo = Mapping.GetUserFileSysteItemInfo(remoteStorageItem);
 
             try
             {
-                // Dehydrate/hydrate the file, update file size and info.
+                // Dehydrate/hydrate the file, update file size, custom data, creation date, modification date, attributes.
                 PlaceholderItem.GetItem(userFileSystemPath).SetItemInfo(userFileSystemItemInfo);
 
-                // Clear download pending icon
-                await SetDownloadPendingIconAsync(false);
+                // Clear icon.
+                await ClearStateAsync();
             }
-            catch (System.ComponentModel.Win32Exception ex)
+            catch (Exception ex)
             {
-                if (ex.NativeErrorCode == 802)
-                {
-                    // The file is blocked by the client application or pinned.
-                    // "The operation did not complete successfully because it would cause an oplock to be broken. 
-                    // The caller has requested that existing oplocks not be broken."
-
-                    // Show download pending icon.
-                    await SetDownloadPendingIconAsync(true);
-                }
+                await SetDownloadErrorStateAsync(ex);
 
                 // Rethrow the exception preserving stack trace of the original exception.
                 System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
@@ -127,13 +128,93 @@ namespace VirtualFileSystem.Syncronyzation
         }
 
         /// <summary>
-        /// Hydrates or dehydrates the file depending on pinned/unpinned attributes and offline attribute setting.
+        /// Deletes a file or folder placeholder in user file system.
         /// </summary>
-        /// <returns>
-        /// Returns true if hydration is competed, false if dehydration is completed 
-        /// or null if no hydration/dehydrations was done.
-        /// </returns>
-        internal async Task<bool?> UpdateHydrationAsync()
+        /// <remarks>
+        /// This method throws <see cref="ConflictException"/> if the file or folder or any file or folder 
+        /// in the folder hierarchy being deleted in user file system is modified (not in sync with the remote storage).
+        /// </remarks>
+        public async Task DeleteAsync()
+        {
+            // Cloud Filter API does not provide a function to delete a placeholder file only if it is not modified.
+            // Here we check that the file is not modified in user file system, using GetInSync() call.
+            // To avoid the file modification between GetInSync() call and Delete() call we 
+            // open it without FileShare.Write flag.
+            try
+            {
+                using (WindowsFileSystemItem userFileSystemWinItem = WindowsFileSystemItem.Open(userFileSystemPath, (FileAccess)0, FileMode.Open, FileShare.Read | FileShare.Delete))
+                {
+                    if (PlaceholderItem.GetInSync(userFileSystemWinItem.SafeHandle))
+                    {
+                        if (FsPath.IsFile(userFileSystemPath))
+                        {
+                            File.Delete(userFileSystemPath);
+                        }
+                        else
+                        {
+                            Directory.Delete(userFileSystemPath, true);
+                        }
+                    }
+                    else
+                    {
+                        throw new ConflictException(Modified.Client, "The item is not in-sync with the cloud.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await SetDownloadErrorStateAsync(ex);
+
+                // Rethrow the exception preserving stack trace of the original exception.
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
+            }
+        }
+
+        /// <summary>
+        /// Moves a file or folder placeholder in user file system.
+        /// </summary>
+        /// <param name="userFileSystemNewPath">New path in user file system.</param>
+        /// <remarks>
+        /// This method failes if the file or folder in user file system is modified (not in sync with the remote storage)
+        /// or if the target file exists.
+        /// </remarks>
+        public async Task MoveAsync(string userFileSystemNewPath)
+        {
+            // Cloud Filter API does not provide a function to move a placeholder file only if it is not modified.
+            // The file may be modified between InSync call, Move() call and SetInSync() in this method.
+
+            try
+            {
+                PlaceholderItem oldUserFileSystemItem = PlaceholderItem.GetItem(userFileSystemPath);
+
+                if (oldUserFileSystemItem.GetInSync())
+                {
+                    Directory.Move(userFileSystemPath, userFileSystemNewPath);
+
+                    // The file is marked as not in sync after move/rename. Marking it as in-sync.
+                    PlaceholderItem.GetItem(userFileSystemNewPath).SetInSync(true);
+                    PlaceholderItem.GetItem(userFileSystemNewPath).SetOriginalPath(userFileSystemNewPath);
+                    await new UserFileSystemItem(userFileSystemNewPath).ClearStateAsync();
+                }
+                else
+                {
+                    throw new ConflictException(Modified.Client, "The item is not in-sync with the cloud.");
+                }
+            }
+            catch (Exception ex)
+            {
+                string path = FsPath.Exists(userFileSystemNewPath) ? userFileSystemNewPath : userFileSystemPath;
+                await new UserFileSystemItem(userFileSystemPath).SetDownloadErrorStateAsync(ex);
+
+                // Rethrow the exception preserving stack trace of the original exception.
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
+            }
+        }
+
+        /// <summary>
+        /// Returns true if hydration is required. False - otherwise.
+        /// </summary>
+        internal bool HydrationRequired()
         {
             if (FsPath.IsFile(userFileSystemPath))
             {
@@ -143,19 +224,81 @@ namespace VirtualFileSystem.Syncronyzation
                 if (((attributes & (int)FileAttributesExt.Pinned) != 0)
                     && ((attributes & (int)FileAttributesExt.Offline) != 0))
                 {
-                    new PlaceholderFile(userFileSystemPath).Hydrate(0, -1);
                     return true;
                 }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Returns true if dehydration is required. False - otherwise.
+        /// </summary>
+        internal bool DehydrationRequired()
+        {
+            if (FsPath.IsFile(userFileSystemPath))
+            {
+                int attributes = (int)new FileInfo(userFileSystemPath).Attributes;
 
                 // Remove content (dehydrate) if file is unpinned and file content is present locally (not offline).
-                else if (((attributes & (int)FileAttributesExt.Unpinned) != 0)
-                       && ((attributes & (int)FileAttributesExt.Offline) == 0))
+                if (((attributes & (int)FileAttributesExt.Unpinned) != 0)
+                    && ((attributes & (int)FileAttributesExt.Offline) == 0))
                 {
-                    new PlaceholderFile(userFileSystemPath).Dehydrate(0, -1, false);
-                    return false;
+                    return true;
                 }
             }
-            return null;
+            return false;
+        }
+
+        internal async Task ClearStateAsync()
+        {
+            if (FsPath.Exists(userFileSystemPath))
+            {
+                await SetIconAsync(false);
+            }
+        }
+
+        internal async Task SetUploadErrorStateAsync(Exception ex)
+        {
+            if (FsPath.Exists(userFileSystemPath))
+            {
+                if (ex is ConflictException)
+                {
+                    await SetConflictIconAsync(true);
+                }
+                else
+                {
+                    await SetUploadPendingIconAsync(true);
+                }
+            }
+        }
+
+        private async Task SetDownloadErrorStateAsync(Exception ex)
+        {
+            if (FsPath.Exists(userFileSystemPath))
+            {
+                if (ex is ConflictException)
+                {
+                    await SetConflictIconAsync(true);
+                }
+                if (ex is ExistsException)
+                {
+                    await SetConflictIconAsync(true);
+                }
+                else
+                {
+                    // Could be BlockedException or other exception.
+                    await SetDownloadPendingIconAsync(true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sets or removes "Conflict" icon.
+        /// </summary>
+        /// <param name="set">True to display the icon. False - to remove the icon.</param>
+        private async Task SetConflictIconAsync(bool set)
+        {
+            await SetIconAsync(set, 2, "Error.ico", "Conflict. File is modified both on the server and on the client.");
         }
 
         /// <summary>
@@ -164,82 +307,63 @@ namespace VirtualFileSystem.Syncronyzation
         /// <param name="set">True to display the icon. False - to remove the icon.</param>
         private async Task SetDownloadPendingIconAsync(bool set)
         {
-            IStorageItem storageItem = await FsPath.GetStorageItemAsync(userFileSystemPath);
-
-            if (set)
-            {
-                // Set upload pending icon.
-
-                // Set download pending icon.
-                StorageProviderItemProperty propState = new StorageProviderItemProperty()
-                {
-                    Id = 2,
-                    Value = "Download from server pending", // "@propsys.dll,-42291",
-                    IconResource = "%systemroot%\\system32\\imageres.dll,-1402"
-                };
-                await StorageProviderItemProperties.SetAsync(storageItem, new[] { propState });
-            }
-            else
-            {
-                await StorageProviderItemProperties.SetAsync(storageItem, new StorageProviderItemProperty[] { });
-            }
+            await SetIconAsync(set, 2, "Down.ico", "Download from server pending");
         }
 
         /// <summary>
-        /// Deletes a file or folder placeholder in user file system.
+        /// Sets or removes "Upload pending" icon.
         /// </summary>
-        /// <remarks>This method failes if the file or folder in user file system is modified (not in sync with the remote storage).</remarks>
-        public async Task DeleteAsync()
+        /// <param name="set">True to display the icon. False - to remove the icon.</param>
+        private async Task SetUploadPendingIconAsync(bool set)
         {
-            // Windows does not provide a function to delete a placeholder file only if it is not modified.
-            // Here we check that the file is not modified in user file system, using GetInSync() call.
-            // To avoid the file modification between GetInSync() call and Delete() call in this method we 
-            // open it without FileShare.Write flag.
-            using (WindowsFileSystemItem userFileSystemWinItem = WindowsFileSystemItem.Open(userFileSystemPath, (FileAccess)0, FileMode.Open, FileShare.Read | FileShare.Delete))
+            await SetIconAsync(set, 2, "Up.ico", "Upload to server pending");
+        }
+
+        /// <summary>
+        /// Sets or removes icon.
+        /// </summary>
+        /// <param name="set">True to display the icon. False - to remove the icon.</param>
+        private async Task SetIconAsync(bool set, int? id = null, string iconFile = null, string description = null)
+        {
+            IStorageItem storageItem = await FsPath.GetStorageItemAsync(userFileSystemPath);
+            try
             {
-                if (PlaceholderItem.GetInSync(userFileSystemWinItem.SafeHandle))
+                if (set)
                 {
-                    if (FsPath.IsFile(userFileSystemPath))
+                    StorageProviderItemProperty propState = new StorageProviderItemProperty()
                     {
-                        File.Delete(userFileSystemPath);
-                    }
-                    else
-                    {
-                        Directory.Delete(userFileSystemPath, true);
-                    }
+                        Id = id.Value,
+                        Value = description,
+                        IconResource = Path.Combine(Program.IconsFolderPath, iconFile)
+                    };
+                    await StorageProviderItemProperties.SetAsync(storageItem, new StorageProviderItemProperty[] { propState });
                 }
                 else
                 {
-                    throw new IOException("File not in-sync.");
+                    await StorageProviderItemProperties.SetAsync(storageItem, new StorageProviderItemProperty[] { });
                 }
             }
-        }
 
-        /// <summary>
-        /// Moves a file or folder placeholder in user file system.
-        /// </summary>
-        /// <param name="newUserFileSystemPath">New path in user file system.</param>
-        /// <remarks>
-        /// This method failes if the file or folder in user file system is modified (not in sync with the remote storage)
-        /// or if the target file exists.
-        /// </remarks>
-        public async Task MoveAsync(string newUserFileSystemPath)
-        {
-            // Windows does not provide a function to move a placeholder file only if it is not modified.
-            // The file may be modified between InSync call, Move() call and SetInSync() in this method.
-
-            PlaceholderItem oldUserFileSystemItem = PlaceholderItem.GetItem(userFileSystemPath);
-
-            if (oldUserFileSystemItem.GetInSync())
+            // Setting status icon failes for blocked files.
+            catch(FileNotFoundException)
             {
-                Directory.Move(userFileSystemPath, newUserFileSystemPath);
 
-                // The file is marked as not in sync after move/rename. Marking it as in-sync.
-                PlaceholderItem.GetItem(newUserFileSystemPath).SetInSync(true);
             }
-            else
+            catch (COMException)
             {
-                throw new IOException("File not in-sync.");
+                // "Error HRESULT E_FAIL has been returned from a call to a COM component."
+            }
+            catch (Exception ex)
+            {
+                if (ex.HResult == -2147024499)
+                {
+                    // "The operation failed due to a conflicting cloud file property lock. (0x8007018D)"
+                }
+                else
+                {
+                    // Rethrow the exception preserving stack trace of the original exception.
+                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
+                }
             }
         }
     }

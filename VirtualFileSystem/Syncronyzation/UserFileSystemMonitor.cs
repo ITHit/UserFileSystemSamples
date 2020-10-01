@@ -126,13 +126,20 @@ namespace VirtualFileSystem.Syncronyzation
             try
             {
                 string userFileSystemPath = e.FullPath;
-                if (FsPath.Exists(userFileSystemPath))
+                if (FsPath.Exists(userFileSystemPath) && !FsPath.AvoidSync(userFileSystemPath))
                 {
-                    bool? hydrated = await new UserFileSystemItem(userFileSystemPath).UpdateHydrationAsync();
-                    if (hydrated != null)
+                    // Hydrate / dehydrate the file.
+                    if (new UserFileSystemItem(userFileSystemPath).HydrationRequired())
                     {
-                        string hydrationDescrition = (bool)hydrated ? "Hydrated" : "Dehydrated";
-                        LogMessage($"{hydrationDescrition} succesefully:", userFileSystemPath);
+                        LogMessage("Hydrating:", userFileSystemPath);
+                        new PlaceholderFile(userFileSystemPath).Hydrate(0, -1);
+                        LogMessage("Hydrated succesefully:", userFileSystemPath);
+                    }
+                    else if (new UserFileSystemItem(userFileSystemPath).DehydrationRequired())
+                    {
+                        LogMessage("Dehydrating:", userFileSystemPath);
+                        new PlaceholderFile(userFileSystemPath).Dehydrate(0, -1, false);
+                        LogMessage("Dehydrated succesefully:", userFileSystemPath);
                     }
                 }
             }

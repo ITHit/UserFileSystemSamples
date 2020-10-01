@@ -81,7 +81,10 @@ namespace VirtualFileSystem.Syncronyzation
         {
             try
             {
-                // Recursivery synchronize all folders present in the user file system on the client machine.
+                // Recursivery synchronize all moved files and folders present in the user file system on the client machine.
+                await SyncronizeMovedAsync(userFileSystemRootPath);
+
+                // Recursivery synchronize all updated/deleted/created folders present in the user file system on the client machine.
                 await SyncronizeFolderAsync(userFileSystemRootPath);
 
                 // Wait and than start synchronyzation again.
@@ -91,6 +94,63 @@ namespace VirtualFileSystem.Syncronyzation
             {
                 LogError("Timer failure:", null, ex);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Recursively synchronizes all moved files and folders with the server. 
+        /// Synchronizes only folders already loaded into the user file system.
+        /// </summary>
+        /// <param name="userFileSystemFolderPath">Folder path in user file system.</param>
+        private async Task SyncronizeMovedAsync(string userFileSystemFolderPath)
+        {
+            // In case of on-demand loading the user file system contains only a subset of the server files and folders.
+            // Here we sync folder only if its content already loaded into user file system (folder is not offline).
+            // The folder content is loaded inside IFolder.GetChildrenAsync() method.
+            if (new DirectoryInfo(userFileSystemFolderPath).Attributes.HasFlag(System.IO.FileAttributes.Offline))
+            {
+                //LogMessage("Folder offline, skipping:", userFileSystemFolderPath);
+                return;
+            }
+
+            IEnumerable<string> userFileSystemChildren = Directory.EnumerateFileSystemEntries(userFileSystemFolderPath, "*");
+            //LogMessage("Synchronizing:", userFileSystemFolderPath);
+
+            foreach (string userFileSystemPath in userFileSystemChildren)
+            {
+                try
+                {
+                    string remoteStoragePath = Mapping.MapPath(userFileSystemPath);
+
+                    if (!FsPath.AvoidSync(userFileSystemPath) && !FsPath.AvoidSync(remoteStoragePath)
+                        && PlaceholderItem.IsPlaceholder(userFileSystemPath)
+                        && PlaceholderItem.GetItem(userFileSystemPath).IsMoved())
+                    {
+                        // Process items moved in user file system.
+                        string userFileSystemOldPath = PlaceholderItem.GetItem(userFileSystemPath).GetOriginalPath();
+                        LogMessage("Ttem moved, updating:", userFileSystemOldPath, userFileSystemPath);
+                        string remoteStorageOldPath = Mapping.MapPath(userFileSystemOldPath);
+                        await new RemoteStorageItem(remoteStorageOldPath).MoveToAsync(userFileSystemPath);
+                        LogMessage("Moved succesefully:", remoteStorageOldPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogError("Move failed:", userFileSystemPath, ex);
+                }
+
+                // Synchronize subfolders.
+                try
+                {
+                    if (FsPath.IsFolder(userFileSystemPath))
+                    {
+                        await SyncronizeMovedAsync(userFileSystemPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogError("Folder sync failed:", userFileSystemPath, ex);
+                }
             }
         }
 
@@ -106,16 +166,17 @@ namespace VirtualFileSystem.Syncronyzation
             // The folder content is loaded inside IFolder.GetChildrenAsync() method.
             if (new DirectoryInfo(userFileSystemFolderPath).Attributes.HasFlag(System.IO.FileAttributes.Offline))
             {
-                LogMessage("Folder offline, skipping:", userFileSystemFolderPath);
+//                LogMessage("Folder offline, skipping:", userFileSystemFolderPath);
                 return;
             }
 
             IEnumerable<string> userFileSystemChildren = Directory.EnumerateFileSystemEntries(userFileSystemFolderPath, "*");
-            LogMessage("Synchronizing:", userFileSystemFolderPath);
+//            LogMessage("Synchronizing:", userFileSystemFolderPath);
 
             string remoteStorageFolderPath = Mapping.MapPath(userFileSystemFolderPath);
             IEnumerable<FileSystemInfo> remoteStorageChildrenItems = new DirectoryInfo(remoteStorageFolderPath).EnumerateFileSystemInfos("*");
 
+            /*
             // Delete files/folders in user file system.
             foreach (string userFileSystemPath in userFileSystemChildren)
             {
@@ -135,18 +196,22 @@ namespace VirtualFileSystem.Syncronyzation
                     LogError("Delete failed:", userFileSystemPath, ex);
                 }
             }
-
+            */
+            
             // Create new files/folders in user file system.
             foreach (FileSystemInfo remoteStorageItem in remoteStorageChildrenItems)
             {
                 try
                 {
-                    string userFileSystemPath = Mapping.ReverseMapPath(remoteStorageItem.FullName);
-                    if (!FsPath.Exists(userFileSystemPath))
+                    if (!FsPath.AvoidSync(remoteStorageItem.FullName))
                     {
-                        LogMessage("Creating new item:", userFileSystemPath);
-                        await UserFileSystemItem.CreateAsync(userFileSystemFolderPath, remoteStorageItem);
-                        LogMessage("Created succesefully:", userFileSystemPath);
+                        string userFileSystemPath = Mapping.ReverseMapPath(remoteStorageItem.FullName);
+                        if (!FsPath.Exists(userFileSystemPath))
+                        {
+                            LogMessage("Creating new item:", userFileSystemPath);
+                            await UserFileSystemItem.CreateAsync(userFileSystemFolderPath, remoteStorageItem);
+                            LogMessage("Created succesefully:", userFileSystemPath);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -154,7 +219,7 @@ namespace VirtualFileSystem.Syncronyzation
                     LogError("Creation failed:", remoteStorageItem.FullName, ex);
                 }
             }
-
+            
             // Update files/folders in user file system and sync subfolders.
             userFileSystemChildren = Directory.EnumerateFileSystemEntries(userFileSystemFolderPath, "*");
             foreach (string userFileSystemPath in userFileSystemChildren)
@@ -164,29 +229,63 @@ namespace VirtualFileSystem.Syncronyzation
                     string remoteStoragePath = Mapping.MapPath(userFileSystemPath);
                     FileSystemInfo remoteStorageItem = remoteStorageChildrenItems.FirstOrDefault(x => x.FullName.Equals(remoteStoragePath, StringComparison.InvariantCultureIgnoreCase));
 
-                    // The item was deleted or moved/renamed on the server, but it may still exists in the user file system.
-                    // This is just to avoid extra exceptions in the log.
-                    if (remoteStorageItem == null)
+                    
+                    // Convert regular file/folder to placeholder. The file/folder was created or overwritten on the client.
+                    if (!PlaceholderItem.IsPlaceholder(userFileSystemPath))
                     {
-                        continue;
+                        PlaceholderItem.ConvertToPlaceholder(userFileSystemPath, false);
+                        LogMessage("Converted to placeholder:", userFileSystemPath);
                     }
-
-                    // Update existing files/folders info.
-                    if (!await new UserFileSystemItem(userFileSystemPath).EqualsAsync(remoteStorageItem))
+                    
+                    if (!FsPath.AvoidSync(userFileSystemPath) && !FsPath.AvoidSync(remoteStoragePath))
                     {
-                        LogMessage("Item modified:", remoteStoragePath);
-                        await new UserFileSystemItem(userFileSystemPath).UpdateAsync(remoteStorageItem);
-                        LogMessage("Updated succesefully:", userFileSystemPath);
-                    }
-
-                    // Hydrate / dehydrate the file.
-                    else 
-                    {
-                        bool? hydrated = await new UserFileSystemItem(userFileSystemPath).UpdateHydrationAsync();
-                        if (hydrated != null)
+                        if (remoteStorageItem == null)
+                        {   
+                            if (!PlaceholderItem.GetItem(userFileSystemPath).GetInSync())
+                            {
+                                // Create the file/folder in the remote storage.
+                                LogMessage("Creating item:", remoteStoragePath);
+                                await RemoteStorageItem.CreateAsync(remoteStoragePath, userFileSystemPath);
+                                LogMessage("Created succesefully:", remoteStoragePath);
+                            }
+                            else
+                            {
+                                // Delete the file/folder in user file system.
+                                LogMessage("Deleting item:", userFileSystemPath);
+                                await new UserFileSystemItem(userFileSystemPath).DeleteAsync();
+                                LogMessage("Deleted succesefully:", userFileSystemPath);
+                            }                            
+                        }
+                        else
                         {
-                            string hydrationDescrition = (bool)hydrated ? "Hydrated" : "Dehydrated";
-                            LogMessage($"{hydrationDescrition} succesefully:", userFileSystemPath);
+                            if (!PlaceholderItem.GetItem(userFileSystemPath).GetInSync())
+                            {
+                                // User file system -> remote storage update.
+                                LogMessage("Item modified, updating:", userFileSystemPath);
+                                await new RemoteStorageItem(remoteStoragePath).UpdateAsync(userFileSystemPath);
+                                LogMessage("Updated succesefully:", remoteStoragePath);
+                            }
+                            else if (!await new UserFileSystemItem(userFileSystemPath).ETagEqualsAsync(remoteStorageItem))
+                            {
+                                // User file system <- remote storage update.
+                                LogMessage("Item modified, updating:", remoteStoragePath);
+                                await new UserFileSystemItem(userFileSystemPath).UpdateAsync(remoteStorageItem);
+                                LogMessage("Updated succesefully:", userFileSystemPath);
+                            }
+
+                            // Hydrate / dehydrate the file.
+                            if(new UserFileSystemItem(userFileSystemPath).HydrationRequired())
+                            {
+                                LogMessage("Hydrating:", userFileSystemPath);
+                                new PlaceholderFile(userFileSystemPath).Hydrate(0, -1);
+                                LogMessage("Hydrated succesefully:", userFileSystemPath);
+                            }
+                            else if (new UserFileSystemItem(userFileSystemPath).DehydrationRequired())
+                            {
+                                LogMessage("Dehydrating:", userFileSystemPath);
+                                new PlaceholderFile(userFileSystemPath).Dehydrate(0, -1, false);
+                                LogMessage("Dehydrated succesefully:", userFileSystemPath);
+                            }
                         }
                     }
                 }
@@ -198,7 +297,7 @@ namespace VirtualFileSystem.Syncronyzation
                 // Synchronize subfolders.
                 try
                 {                    
-                    if (FsPath.IsFolder(userFileSystemPath))
+                    if (Directory.Exists(userFileSystemPath))
                     {
                         await SyncronizeFolderAsync(userFileSystemPath);
                     }

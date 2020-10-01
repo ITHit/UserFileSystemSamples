@@ -25,7 +25,7 @@ namespace VirtualFileSystem
             storageInfo.Path = await StorageFolder.GetFolderFromPathAsync(path);
             storageInfo.Id = syncRootId;
             storageInfo.DisplayNameResource = displayName;
-            storageInfo.IconResource = "%SystemRoot%\\system32\\charmap.exe,0";
+            storageInfo.IconResource = Path.Combine(Program.IconsFolderPath, "Drive.ico");
             storageInfo.Version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
             storageInfo.RecycleBinUri = new Uri("https://userfilesystem.com/recyclebin");
             storageInfo.Context = CryptographicBuffer.ConvertStringToBinary(path, BinaryStringEncoding.Utf8);

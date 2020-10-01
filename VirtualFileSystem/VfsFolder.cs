@@ -13,9 +13,9 @@ using Windows.Storage;
 namespace VirtualFileSystem
 {
     /// <inheritdoc/>
-    public class VfsFolder : VfsFileSystemItem, IFolder
+    internal class VfsFolder : VfsFileSystemItem, IFolder
     {
-        public VfsFolder(string path, ILogger logger) : base(path, logger)
+        public VfsFolder(string path, ILogger logger, VfsEngine engine) : base(path, logger, engine)
         {
 
         }

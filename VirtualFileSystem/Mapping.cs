@@ -71,10 +71,14 @@ namespace VirtualFileSystem
 
             // Here you will typically store the file ETag. You will send the ETag to 
             // the server inside If-Match header togater with updated content from client.
-            // This will make sure the file on the server is not modified.
+            // This will make sure the changes on the server is not overwritten.
             //
-            // In this sample, for the sake of simplicity, we use file last write time.
-            userFileSystemItem.CustomData = BitConverter.GetBytes(remoteStorageItem.LastWriteTime.ToBinary());
+            // In this sample, for the sake of simplicity, we use file last write time instead of ETag.
+            userFileSystemItem.CustomData = new CustomData
+            {
+                ETag = remoteStorageItem.LastWriteTime.ToBinary().ToString(),
+                OriginalPath = Mapping.ReverseMapPath(remoteStorageItem.FullName)
+            }.Serialize();
 
             if (remoteStorageItem is FileInfo)
             {

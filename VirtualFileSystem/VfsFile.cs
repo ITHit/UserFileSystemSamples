@@ -11,7 +11,7 @@ using VirtualFileSystem.Syncronyzation;
 namespace VirtualFileSystem
 {
     /// <inheritdoc/>
-    public class VfsFile : VfsFileSystemItem, IFile
+    internal class VfsFile : VfsFileSystemItem, IFile
     {
 
         /// <summary>
@@ -19,7 +19,7 @@ namespace VirtualFileSystem
         /// </summary>
         /// <param name="path">File path in user file system.</param>
         /// <param name="logger">Logger.</param>
-        public VfsFile(string path, ILogger logger) : base(path, logger)
+        public VfsFile(string path, ILogger logger, VfsEngine engine) : base(path, logger, engine)
         {
 
         }
@@ -41,37 +41,38 @@ namespace VirtualFileSystem
 
             string userFileSystemFilePath = this.FullPath;
 
-            // In case the file is moved it does not exist in user file system when Close() is called.
-            if (!FsPath.Exists(userFileSystemFilePath) || FsPath.AvoidSync(userFileSystemFilePath))
+            // In case the file is moved it does not exist in user file system when CloseAsync() is called.
+            if (Engine.ChangesProcessingEnabled
+                && FsPath.Exists(userFileSystemFilePath)
+                && !FsPath.AvoidSync(userFileSystemFilePath))
             {
-                return; 
-            }
 
-            // In case the file is overwritten it is converted to a regular file prior to Close().
-            // we need to convert it back into file/folder placeholder.
-            if (!PlaceholderItem.IsPlaceholder(userFileSystemFilePath))
-            {
-                PlaceholderItem.ConvertToPlaceholder(userFileSystemFilePath, false);
-                LogMessage("Converted to placeholder:", userFileSystemFilePath);
-            }
-
-            if (!PlaceholderItem.GetItem(userFileSystemFilePath).GetInSync())
-            {
-                LogMessage("Changed:", userFileSystemFilePath);
-
-                string remoteStorageFilePath = Mapping.MapPath(userFileSystemFilePath);
-
-                try
+                // In case the file is overwritten it is converted to a regular file prior to CloseAsync().
+                // we need to convert it back into file/folder placeholder.
+                if (!PlaceholderItem.IsPlaceholder(userFileSystemFilePath))
                 {
-                    await new RemoteStorageItem(remoteStorageFilePath).UpdateAsync(userFileSystemFilePath);
-                    LogMessage("Updated succesefully:", remoteStorageFilePath);
+                    PlaceholderItem.ConvertToPlaceholder(userFileSystemFilePath, false);
+                    LogMessage("Converted to placeholder:", userFileSystemFilePath);
                 }
-                catch(IOException ex)
+
+                if (!PlaceholderItem.GetItem(userFileSystemFilePath).GetInSync())
                 {
-                    // Either the file is already being synced in another thread or client or server file is blocked by concurrent process.
-                    // This is a normal behaviour.
-                    // The file must be synched by your synchronyzation service at a later time, when the file becomes available.
-                    LogMessage("Failed to upload file. Possibly in use by an application or blocked for synchronization in another thread:", ex.Message);
+                    LogMessage("Changed:", userFileSystemFilePath);
+
+                    string remoteStorageFilePath = Mapping.MapPath(userFileSystemFilePath);
+
+                    try
+                    {
+                        await new RemoteStorageItem(remoteStorageFilePath).UpdateAsync(userFileSystemFilePath);
+                        LogMessage("Updated succesefully:", remoteStorageFilePath);
+                    }
+                    catch (IOException ex)
+                    {
+                        // Either the file is already being synced in another thread or client or server file is blocked by concurrent process.
+                        // This is a normal behaviour.
+                        // The file must be synched by your synchronyzation service at a later time, when the file becomes available.
+                        LogMessage("Failed to upload file. Possibly in use by an application or blocked for synchronization in another thread:", ex.Message);
+                    }
                 }
             }
         }

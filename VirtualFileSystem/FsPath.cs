@@ -119,17 +119,76 @@ namespace VirtualFileSystem
         /// <param name="path">Path to a file or folder.</param>
         public static bool IsMsOfficeTemp(string path)
         {
-            return Path.GetFileName(path).StartsWith('~') && Path.GetExtension(path).Equals(".tmp", StringComparison.InvariantCultureIgnoreCase);
+            return (Path.GetFileName(path).StartsWith('~')   && Path.GetExtension(path).Equals(".tmp", StringComparison.InvariantCultureIgnoreCase))  // Word temp files
+                || (Path.GetFileName(path).StartsWith("ppt") && Path.GetExtension(path).Equals(".tmp", StringComparison.InvariantCultureIgnoreCase)); // PowerPoint temp files
         }
 
+        /// <summary>
+        /// Returns true if file system contains MS Office lock file (~$file.ext) in file 
+        /// system that corresponds to the provided path to MS Office file. 
+        /// </summary>
+        /// <param name="path">Path to MS Office file.</param>
         public static bool IsMsOfficeLocked(string path)
         {
-            //string lockFileName = $"~${Path.GetFileName(path)}";
-            //string lockPath = Path.Combine(Path.GetDirectoryName(path), lockFileName);
+            string lockPath = GetLockPathFromMsOfficePath(path);
+            return lockPath != null;
+        }
 
-            int separatorIndex = path.LastIndexOf(Path.DirectorySeparatorChar);
-            string lockPath = path.Insert(separatorIndex + 1, "~$");
-            return File.Exists(lockPath);
+
+        /// <summary>
+        /// Returns true if the provided path points to MS Office lock file (~$file.ext). 
+        /// </summary>
+        /// <param name="path">Path to lock file.</param>
+        public static bool IsMsOfficeLockFile(string path)
+        {
+            return Path.GetFileName(path).StartsWith("~$");
+        }
+
+        /*
+        public static string GetMsOfficePathFromLock(string msOfficeLockFilePath)
+        {
+            int separatorIndex = msOfficeLockFilePath.LastIndexOf(Path.DirectorySeparatorChar);
+            return msOfficeLockFilePath.Remove(separatorIndex + 1, "~$".Length);
+        }
+        */
+
+        /// <summary>
+        /// Returns MS Office lock file path if such file exists.
+        /// </summary>
+        /// <param name="msOfficeFilePath">MS Office file path.</param>
+        /// <returns>Lock file path.</returns>
+        /// <remarks>
+        /// mydoc.docx       -> ~$mydoc.docx
+        /// mydocfi.docx     -> ~$ydocfi.docx
+        /// mydocfile.docx   -> ~$docfile.docx
+        /// mydocfile.pptx   -> ~$mydocfile.pptx
+        /// mydocfile.ppt    -> ~$mydocfile.ppt
+        /// mydocfile.xlsx   -> ~$mydocfile.xlsx
+        /// mydocfile.xls    -> null
+        /// </remarks>
+        public static string GetLockPathFromMsOfficePath(string msOfficeFilePath)
+        {
+            string msOfficeLockFilePath = null;
+            int separatorIndex = msOfficeFilePath.LastIndexOf(Path.DirectorySeparatorChar);
+            if ((separatorIndex != -1) && !string.IsNullOrEmpty(Path.GetExtension(msOfficeFilePath)))
+            {
+                msOfficeLockFilePath = msOfficeFilePath.Insert(separatorIndex + 1, "~$");
+                if(FsPath.Exists(msOfficeLockFilePath))
+                {
+                    return msOfficeLockFilePath;
+                }
+                int fileNameLength = Path.GetFileNameWithoutExtension(msOfficeFilePath).Length;
+                if (fileNameLength > 6)
+                {
+                    int removeChars = fileNameLength == 7 ? 1 : 2;
+                    msOfficeLockFilePath = msOfficeLockFilePath.Remove(separatorIndex + 1 + "~$".Length, removeChars);
+                    if (FsPath.Exists(msOfficeLockFilePath))
+                    {
+                        return msOfficeLockFilePath;
+                    }
+                }
+            }
+            return null;
         }
 
         /// <summary>
@@ -159,7 +218,7 @@ namespace VirtualFileSystem
         /// <param name="path">Path to a file or folder.</param>
         public static bool AvoidSync(string path)
         {
-            return IsMsOfficeLocked(path) || IsMsOfficeTemp(path) || IsHiddenOrTemp(path);
+            return IsMsOfficeLockFile(path) || IsMsOfficeLocked(path) || IsMsOfficeTemp(path) || IsHiddenOrTemp(path);
         }
 
         /// <summary>

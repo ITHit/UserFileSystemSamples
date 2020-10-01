@@ -6,27 +6,36 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using VirtualFileSystem.Syncronyzation;
 using Windows.Storage;
 using Windows.Storage.Provider;
 
 namespace VirtualFileSystem
 {
     ///<inheritdoc>
-    public abstract class VfsFileSystemItem : IFileSystemItem
+    internal abstract class VfsFileSystemItem : IFileSystemItem
     {
         /// <summary>
         /// File or folder path in user file system.
         /// </summary>
         protected readonly string FullPath;
 
+        /// <summary>
+        /// Logger.
+        /// </summary>
         protected readonly ILogger Logger;
+
+        /// <summary>
+        /// User file system Engine.
+        /// </summary>
+        protected readonly VfsEngine Engine;
 
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="path">File or folder path in user file system.</param>
         /// <param name="logger">Logger.</param>
-        public VfsFileSystemItem(string path, ILogger logger)
+        public VfsFileSystemItem(string path, ILogger logger, VfsEngine engine)
         {
             if (string.IsNullOrEmpty(path))
             {
@@ -40,68 +49,51 @@ namespace VirtualFileSystem
 
             FullPath = path;
             Logger = logger;
+            Engine = engine;
         }
 
 
         ///<inheritdoc>
         public async Task MoveToAsync(string userFileSystemNewPath, IOperationContext operationContext, IConfirmationResultContext resultContext)
         {
-            // Here we will simply move the file in remote storage and confirm the operation.
-            // In your implementation you may implement a more complex scenario with offline operations support.
-
-            LogMessage("IFileSystemItem.MoveToAsync()", this.FullPath, userFileSystemNewPath);
-
             string userFileSystemOldPath = this.FullPath;
+            LogMessage("IFileSystemItem.MoveToAsync()", userFileSystemOldPath, userFileSystemNewPath);
 
+            // Save ETag in MS Office lock file, because original MS Office file will be deleted.
             try
             {
-                bool? inSync = null;
-                try
+                if (FsPath.IsMsOfficeLocked(userFileSystemOldPath))
                 {
-                    Program.RemoteStorageMonitorInstance.Enabled = false; // Disable RemoteStorageMonitor to avoid circular calls.
-
-                    // When a file is deleted, it is moved to a Recycle Bin, that is why we check for recycle bin here.
-                    if (FsPath.Exists(userFileSystemOldPath) && !FsPath.IsRecycleBin(userFileSystemNewPath) 
-                        && !FsPath.AvoidSync(userFileSystemOldPath) && !FsPath.AvoidSync(userFileSystemNewPath))
-                    {
-                        inSync = PlaceholderItem.GetItem(userFileSystemOldPath).GetInSync();
-
-                        string remoteStorageOldPath = Mapping.MapPath(userFileSystemOldPath);
-                        string remoteStorageNewPath = Mapping.MapPath(userFileSystemNewPath);
-
-                        FileSystemInfo remoteStorageOldItem = FsPath.GetFileSystemItem(remoteStorageOldPath);
-
-                        if (remoteStorageOldItem is FileInfo)
-                        {
-                            (remoteStorageOldItem as FileInfo).MoveTo(remoteStorageNewPath);
-                        }
-                        else
-                        {
-                            (remoteStorageOldItem as DirectoryInfo).MoveTo(remoteStorageNewPath);
-                        }
-                        LogMessage("Moved succesefully:", remoteStorageOldPath, remoteStorageNewPath);
-                    }
-                }
-                finally
-                {
-                    resultContext.ReturnConfirmationResult();
-
-                    // If a file with content is deleted it is moved to a recycle bin and converted
-                    // to a regular file, so placeholder features are not available on it.
-                    if ( (inSync != null) && PlaceholderItem.IsPlaceholder(userFileSystemNewPath) )
-                    {
-                        PlaceholderItem.GetItem(userFileSystemNewPath).SetInSync(inSync.Value);
-                    }
+                    byte[] customData = new PlaceholderFile(userFileSystemOldPath).GetCustomData();
+                    string userFileSystemLockFilePath = FsPath.GetLockPathFromMsOfficePath(userFileSystemOldPath);
+                    new PlaceholderFile(userFileSystemLockFilePath).SetSavedData(customData);
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                // remove try-catch when error processing inside CloudProvider is fixed.
-                LogError("Move failed:", $"From: {this.FullPath} to:{userFileSystemNewPath}", ex);
+                LogError("Failed so save custom data in MS Office lock file.", userFileSystemOldPath, ex);
             }
-            finally
+
+            // Process move.
+            if (Engine.ChangesProcessingEnabled)
             {
-                Program.RemoteStorageMonitorInstance.Enabled = true;
+                if (FsPath.Exists(userFileSystemOldPath))
+                {
+                    string remoteStorageOldPath = Mapping.MapPath(userFileSystemOldPath);
+                    await new RemoteStorageItem(remoteStorageOldPath).MoveToAsync(userFileSystemNewPath, resultContext);
+                }
+            }
+            else
+            {
+                resultContext.ReturnConfirmationResult();
+            }
+
+            // Read ETag from MS Office lock file, and store it back in original MS Office file.
+            if (FsPath.IsMsOfficeLocked(userFileSystemNewPath))
+            {
+                string userFileSystemMsOfficeFileLockPath = FsPath.GetLockPathFromMsOfficePath(userFileSystemNewPath);
+                byte[] customData = new PlaceholderFile(userFileSystemMsOfficeFileLockPath).GetSavedData();
+                new PlaceholderFile(userFileSystemNewPath).SetCustomData(customData);
             }
         }
 
@@ -112,6 +104,7 @@ namespace VirtualFileSystem
             // In your implementation you may implement a more complex scenario with offline operations support.
 
             LogMessage("IFileSystemItem.DeleteAsync()", this.FullPath);
+
             string userFileSystemPath = this.FullPath;
             string remoteStoragePath = null;
             try
@@ -121,11 +114,21 @@ namespace VirtualFileSystem
                     Program.RemoteStorageMonitorInstance.Enabled = false; // Disable RemoteStorageMonitor to avoid circular calls.
 
                     remoteStoragePath = Mapping.MapPath(userFileSystemPath);
-                    if (FsPath.Exists(remoteStoragePath) && !FsPath.AvoidSync(userFileSystemPath))
+                    if (Engine.ChangesProcessingEnabled
+                        && FsPath.Exists(remoteStoragePath) 
+                        && !FsPath.AvoidSync(userFileSystemPath))
                     {
 
                         FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
-                        remoteStorageItem.Delete();
+
+                        if (remoteStorageItem is FileInfo)
+                        {
+                            remoteStorageItem.Delete();
+                        }
+                        else
+                        {
+                            (remoteStorageItem as DirectoryInfo).Delete(true);
+                        }
                         LogMessage("Deleted succesefully:", remoteStoragePath);
                     }
                 }
