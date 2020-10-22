@@ -1,14 +1,15 @@
 ﻿using ITHit.FileSystem;
+using ITHit.FileSystem.Windows;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace VirtualFileSystem
 {
     /// <summary>
     /// Maps user file system path to remote storage path and back. 
-    /// Creates user file system file or folder item based on remote storate item info.
     /// </summary>
     internal static class Mapping
     {
@@ -23,9 +24,8 @@ namespace VirtualFileSystem
             string relativePath = Path.TrimEndingDirectorySeparator(userFileSystemPath).Substring(
                 Path.TrimEndingDirectorySeparator(Program.Settings.UserFileSystemRootPath).Length);
 
-            // Get this folder path under the source folder.
-            string sourcePath = $"{Path.TrimEndingDirectorySeparator(Program.Settings.RemoteStorageRootPath)}{relativePath}";
-            return sourcePath;
+            string path = $"{Path.TrimEndingDirectorySeparator(Program.Settings.RemoteStorageRootPath)}{relativePath}";
+            return path;
         }
 
         /// <summary>
@@ -39,9 +39,8 @@ namespace VirtualFileSystem
             string relativePath = Path.TrimEndingDirectorySeparator(remoteStoragePath).Substring(
                 Path.TrimEndingDirectorySeparator(Program.Settings.RemoteStorageRootPath).Length);
 
-            // Get this folder path under the source folder.
-            string sourcePath = $"{Path.TrimEndingDirectorySeparator(Program.Settings.UserFileSystemRootPath)}{relativePath}";
-            return sourcePath;
+            string path = $"{Path.TrimEndingDirectorySeparator(Program.Settings.UserFileSystemRootPath)}{relativePath}";
+            return path;
         }
 
         /// <summary>
@@ -49,7 +48,7 @@ namespace VirtualFileSystem
         /// </summary>
         /// <param name="remoteStorageItem">Remote storage item info.</param>
         /// <returns>User file system item info.</returns>
-        public static FileSystemItemBasicInfo GetUserFileSysteItemInfo(FileSystemInfo remoteStorageItem)
+        public static FileSystemItemBasicInfo GetUserFileSysteItemBasicInfo(FileSystemInfo remoteStorageItem)
         {
             FileSystemItemBasicInfo userFileSystemItem;
 
@@ -69,14 +68,17 @@ namespace VirtualFileSystem
             userFileSystemItem.LastAccessTime = remoteStorageItem.LastAccessTime;
             userFileSystemItem.ChangeTime = remoteStorageItem.LastWriteTime;
 
-            // Here you will typically store the file ETag. You will send the ETag to 
+            // You will send the ETag to 
             // the server inside If-Match header togater with updated content from client.
             // This will make sure the changes on the server is not overwritten.
             //
             // In this sample, for the sake of simplicity, we use file last write time instead of ETag.
+            userFileSystemItem.ETag = remoteStorageItem.LastWriteTime.ToBinary().ToString();
+
+            // If the file is moved/renamed and the app is not running this will help us 
+            // to sync the file/folder to remote storage after app starts.
             userFileSystemItem.CustomData = new CustomData
             {
-                ETag = remoteStorageItem.LastWriteTime.ToBinary().ToString(),
                 OriginalPath = Mapping.ReverseMapPath(remoteStorageItem.FullName)
             }.Serialize();
 

@@ -24,7 +24,7 @@ namespace VirtualFileSystem.Syncronyzation
     /// In your application, instead of using FileSystemWatcher, you will connect to your remote storage using web sockets 
     /// or use any other technology to get notifications about changes in your remote storage.
     /// </remarks>
-    internal class RemoteStorageMonitor : IDisposable
+    internal class RemoteStorageMonitor : Logger, IDisposable
     {
         /// <summary>
         /// Watches for changes remote storage file system.
@@ -37,19 +37,13 @@ namespace VirtualFileSystem.Syncronyzation
         private string remoteStorageRootPath;
 
         /// <summary>
-        /// Logger.
-        /// </summary>
-        private ILog log;
-
-        /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="remoteStorageRootPath">Remote storage path. Folder that contains source files to monitor changes.</param>
         /// <param name="log">Logger.</param>
-        internal RemoteStorageMonitor(string remoteStorageRootPath, ILog log)
+        internal RemoteStorageMonitor(string remoteStorageRootPath, ILog log) : base("Remote Storage Monitor", log)
         {
             this.remoteStorageRootPath = remoteStorageRootPath;
-            this.log = log;
         }
 
         /// <summary>
@@ -107,26 +101,27 @@ namespace VirtualFileSystem.Syncronyzation
             string remoteStoragePath = e.FullPath;
             try
             {
-                string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
-                string userFileSystemParentPath = Path.GetDirectoryName(userFileSystemPath);
-
-                // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                // Here we also check that the folder content was loaded into user file system (the folder is not offline).
-                if (Directory.Exists(userFileSystemParentPath)
-                    && !new DirectoryInfo(userFileSystemParentPath).Attributes.HasFlag(System.IO.FileAttributes.Offline))
+                // We do not want to sync MS Office temp files from remote storage.
+                if (!FsPath.AvoidSync(remoteStoragePath))
                 {
-                    if (!FsPath.AvoidSync(remoteStoragePath))
+                    string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
+                    string userFileSystemParentPath = Path.GetDirectoryName(userFileSystemPath);
+
+                    // Because of the on-demand population the file or folder placeholder may not exist in the user file system
+                    // or the folder may be offline.
+                    if (Directory.Exists(userFileSystemParentPath)
+                        && !new DirectoryInfo(userFileSystemParentPath).Attributes.HasFlag(System.IO.FileAttributes.Offline))
                     {
-                        LogMessage("Creating new item:", userFileSystemPath);
                         FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
-                        await UserFileSystemItem.CreateAsync(userFileSystemParentPath, remoteStorageItem);
-                        LogMessage("Created succesefully:", userFileSystemPath);
+                        FileSystemItemBasicInfo newItemInfo = Mapping.GetUserFileSysteItemBasicInfo(remoteStorageItem);
+                        await UserFileSystemItem.CreateAsync(userFileSystemParentPath, new[] { newItemInfo });
+                        LogMessage($"Created succesefully", userFileSystemPath);
                     }
                 }
             }
             catch (Exception ex)
             {
-                LogError($"{e.ChangeType} failed:", remoteStoragePath, ex);
+                LogError($"{e.ChangeType} failed", remoteStoragePath, null, ex);
             }
         }
 
@@ -143,28 +138,30 @@ namespace VirtualFileSystem.Syncronyzation
             string remoteStoragePath = e.FullPath;
             try
             {
-                string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
-                
-                // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                if (FsPath.Exists(userFileSystemPath))
+                // We do not want to sync MS Office temp files, etc. from remote storage.
+                if (!FsPath.AvoidSync(remoteStoragePath))
                 {
-                    FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
+                    string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
 
-                    if (!FsPath.AvoidSync(remoteStoragePath))
+                    // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
+                    if (FsPath.Exists(userFileSystemPath))
                     {
+                        FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
+
                         // This check is only required because we can not prevent circular calls because of the simplicity of this example.
-                        if (!await new UserFileSystemItem(userFileSystemPath).ETagEqualsAsync(remoteStorageItem))
+                        // In your real-life application you will not sent updates from server back to client that issued the update.
+                        FileSystemItemBasicInfo itemInfo = Mapping.GetUserFileSysteItemBasicInfo(remoteStorageItem);
+                        if (!await ETag.ETagEqualsAsync(userFileSystemPath, itemInfo))
                         {
-                            LogMessage("Item modified:", remoteStoragePath);
-                            await new UserFileSystemItem(userFileSystemPath).UpdateAsync(remoteStorageItem);
-                            LogMessage("Updated succesefully:", userFileSystemPath);
+                            await new UserFileSystemItem(userFileSystemPath).UpdateAsync(itemInfo);
+                            LogMessage("Updated succesefully", userFileSystemPath);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                LogError($"{e.ChangeType} failed:", remoteStoragePath, ex);
+                LogError($"{e.ChangeType} failed", remoteStoragePath, null, ex);
             }
         }
 
@@ -178,21 +175,21 @@ namespace VirtualFileSystem.Syncronyzation
             string remoteStoragePath = e.FullPath;
             try
             {
-                string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
-
-                // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                if (FsPath.Exists(userFileSystemPath))
+                if (!FsPath.AvoidSync(remoteStoragePath))
                 {
-                    if (!FsPath.AvoidSync(remoteStoragePath))
+                    string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
+
+                    // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
+                    if (FsPath.Exists(userFileSystemPath))
                     {
                         await new UserFileSystemItem(userFileSystemPath).DeleteAsync();
-                        LogMessage("Deleted succesefully:", userFileSystemPath);
+                        LogMessage("Deleted succesefully", userFileSystemPath);
                     }
                 }
             }
             catch (Exception ex)
             {
-                LogError($"{e.ChangeType} failed:", remoteStoragePath, ex);
+                LogError($"{e.ChangeType} failed", remoteStoragePath, null, ex);
             }
         }
 
@@ -207,43 +204,30 @@ namespace VirtualFileSystem.Syncronyzation
             string remoteStorageNewPath = e.FullPath;
             try 
             {
-                string userFileSystemOldPath = Mapping.ReverseMapPath(remoteStorageOldPath);
-
-                // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                if (FsPath.Exists(userFileSystemOldPath))
+                if (!FsPath.AvoidSync(remoteStorageOldPath) && !FsPath.AvoidSync(remoteStorageNewPath))
                 {
-                    if (!FsPath.AvoidSync(remoteStorageOldPath) && !FsPath.AvoidSync(remoteStorageNewPath))
+                    string userFileSystemOldPath = Mapping.ReverseMapPath(remoteStorageOldPath);
+
+                    // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
+                    if (FsPath.Exists(userFileSystemOldPath))
                     {
                         string userFileSystemNewPath = Mapping.ReverseMapPath(remoteStorageNewPath);
-                        await new UserFileSystemItem(userFileSystemOldPath).MoveAsync(userFileSystemNewPath);
+                        await new UserFileSystemItem(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath);
                         LogMessage("Renamed succesefully:", userFileSystemOldPath, userFileSystemNewPath);
                     }
                 }
             }
             catch (Exception ex)
             {
-                LogError($"{e.ChangeType} failed:", $"From:{remoteStorageOldPath} To:{remoteStorageNewPath}", ex);
+                LogError($"{e.ChangeType} failed", remoteStorageOldPath, remoteStorageNewPath, ex);
             }
         }
 
         private void Error(object sender, ErrorEventArgs e)
         {
-            LogError(null, null, e.GetException());
+            LogError(null, null, null, e.GetException());
         }
 
-        protected void LogError(string message, string sourcePath, Exception ex)
-        {
-            string att = FsPath.Exists(sourcePath) ? FsPath.GetAttString(sourcePath) : null;
-            log.Error($"\n{DateTime.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {"Remote Storage Monitor: ",-26}{message,-45} {sourcePath,-80} {att} ", ex);
-        }
-
-        protected void LogMessage(string message, string sourcePath = null, string targetPath = null)
-        {
-            string att = FsPath.Exists(sourcePath) ? FsPath.GetAttString(sourcePath) : null;
-            string size = FsPath.Size(sourcePath);
-
-            log.Debug($"\n{DateTime.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {"Remote Storage Monitor: ",-26}{message,-45} {sourcePath,-80} {size,7} {att} {targetPath}");
-        }
 
         private bool disposedValue = false; // To detect redundant calls
 

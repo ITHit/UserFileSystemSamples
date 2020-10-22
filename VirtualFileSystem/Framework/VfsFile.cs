@@ -10,7 +10,7 @@ using VirtualFileSystem.Syncronyzation;
 
 namespace VirtualFileSystem
 {
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IFile"/>
     internal class VfsFile : VfsFileSystemItem, IFile
     {
 
@@ -27,19 +27,20 @@ namespace VirtualFileSystem
         /// <inheritdoc/>
         public async Task OpenAsync(IOperationContext operationContext, IResultContext context)
         {
-            LogMessage("IFile.OpenAsync()", this.FullPath);
+            Logger.LogMessage("IFile.OpenAsync()", UserFileSystemPath);
         }
 
+        //$<IFolder.CloseAsync
         /// <inheritdoc/>
         public async Task CloseAsync(IOperationContext operationContext, IResultContext context)
         {
-            // Here, if the file in user file system is modified (not in-sync), we send file content, 
-            // creation time, modification time and attributes to remote storage.
-            // We also create new ETag, associate it with a file in user file system and send it to the server.
+            // Here, if the file in the user file system is modified (not in-sync), you will send the file content, 
+            // creation time, modification time and attributes to the remote storage.
+            // We also send ETag, to make sure the changes on the server, if any, are not overwritten.
 
-            LogMessage("IFile.CloseAsync()", this.FullPath);
+            Logger.LogMessage("IFile.CloseAsync()", UserFileSystemPath);
 
-            string userFileSystemFilePath = this.FullPath;
+            string userFileSystemFilePath = UserFileSystemPath;
 
             // In case the file is moved it does not exist in user file system when CloseAsync() is called.
             if (Engine.ChangesProcessingEnabled
@@ -52,53 +53,49 @@ namespace VirtualFileSystem
                 if (!PlaceholderItem.IsPlaceholder(userFileSystemFilePath))
                 {
                     PlaceholderItem.ConvertToPlaceholder(userFileSystemFilePath, false);
-                    LogMessage("Converted to placeholder:", userFileSystemFilePath);
+                    Logger.LogMessage("Converted to placeholder", userFileSystemFilePath);
                 }
 
                 if (!PlaceholderItem.GetItem(userFileSystemFilePath).GetInSync())
                 {
-                    LogMessage("Changed:", userFileSystemFilePath);
-
-                    string remoteStorageFilePath = Mapping.MapPath(userFileSystemFilePath);
+                    Logger.LogMessage("Item modified", userFileSystemFilePath);
 
                     try
                     {
-                        await new RemoteStorageItem(remoteStorageFilePath).UpdateAsync(userFileSystemFilePath);
-                        LogMessage("Updated succesefully:", remoteStorageFilePath);
+                        await new RemoteStorageItem(userFileSystemFilePath).UpdateAsync();
+                        string remoteStorageFilePath = Mapping.MapPath(userFileSystemFilePath);
+                        Logger.LogMessage("Updated succesefully", remoteStorageFilePath);
                     }
                     catch (IOException ex)
                     {
                         // Either the file is already being synced in another thread or client or server file is blocked by concurrent process.
                         // This is a normal behaviour.
                         // The file must be synched by your synchronyzation service at a later time, when the file becomes available.
-                        LogMessage("Failed to upload file. Possibly in use by an application or blocked for synchronization in another thread:", ex.Message);
+                        Logger.LogMessage("Failed to upload file. Possibly in use by an application or blocked for synchronization in another thread:", ex.Message);
                     }
                 }
             }
         }
+        //$>
 
+        //$<IFolder.TransferDataAsync
         /// <inheritdoc/>
         public async Task TransferDataAsync(long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext)
         {
             // This method has a 60 sec timeout. 
-            // To process longer requests and reset the timout timer call IContextWindows.ReportProgress() method.
+            // To process longer requests and reset the timout timer call resultContext.ReportProgress() method.
 
-            LogMessage($"IFile.TransferDataAsync({offset}, {length})", this.FullPath);
+            Logger.LogMessage($"IFile.TransferDataAsync({offset}, {length})", UserFileSystemPath);
 
             SimulateNetworkDelay(length, resultContext);
-
             
-            string remoteStoragePath = Mapping.MapPath(this.FullPath);
+            long optionalLength = length + operationContext.OptionalLength;
 
-            // Transfering file content.
-            await using (FileStream stream = File.OpenRead(remoteStoragePath))
-            {
-                stream.Seek(offset, SeekOrigin.Begin);
-                byte[] buffer = new byte[length];
-                int bytesRead = await stream.ReadAsync(buffer, 0, (int)length);
-                resultContext.ReturnData(buffer, offset, length);
-            }
+            byte[] buffer = await new UserFile(UserFileSystemPath).ReadAsync(offset, optionalLength);
+
+            resultContext.ReturnData(buffer, offset, optionalLength);
         }
+        //$>
 
         /// <inheritdoc/>
         public async Task ValidateDataAsync(long offset, long length, IValidateDataOperationContext operationContext, IValidateDataResultContext resultContext)
@@ -106,11 +103,13 @@ namespace VirtualFileSystem
             // This method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer call IContextWindows.ReportProgress() method.
 
-            LogMessage($"IFile.ValidateDataAsync({offset}, {length})", this.FullPath);
+            Logger.LogMessage($"IFile.ValidateDataAsync({offset}, {length})", UserFileSystemPath);
 
             SimulateNetworkDelay(length, resultContext);
 
-            resultContext.ReturnValidationResult(offset, length, true);
+            bool isValid = await new UserFile(UserFileSystemPath).ValidateDataAsync(offset, length);
+
+            resultContext.ReturnValidationResult(offset, length, isValid);
         }
     }
 }

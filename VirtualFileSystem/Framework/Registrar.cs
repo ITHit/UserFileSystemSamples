@@ -25,7 +25,7 @@ namespace VirtualFileSystem
             storageInfo.Path = await StorageFolder.GetFolderFromPathAsync(path);
             storageInfo.Id = syncRootId;
             storageInfo.DisplayNameResource = displayName;
-            storageInfo.IconResource = Path.Combine(Program.IconsFolderPath, "Drive.ico");
+            storageInfo.IconResource = Path.Combine(Program.Settings.IconsFolderPath, "Drive.ico");
             storageInfo.Version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
             storageInfo.RecycleBinUri = new Uri("https://userfilesystem.com/recyclebin");
             storageInfo.Context = CryptographicBuffer.ConvertStringToBinary(path, BinaryStringEncoding.Utf8);
@@ -33,19 +33,16 @@ namespace VirtualFileSystem
             storageInfo.HydrationPolicy = StorageProviderHydrationPolicy.Progressive;
             storageInfo.HydrationPolicyModifier = StorageProviderHydrationPolicyModifier.AutoDehydrationAllowed | StorageProviderHydrationPolicyModifier.ValidationRequired;
 
-            // To implement folders on-demand placeholders population set the StorageProviderSyncRootInfo.PopulationPolicy to StorageProviderPopulationPolicy.Full.
+            // To implement folders on-demand placeholders population set the 
+            // StorageProviderSyncRootInfo.PopulationPolicy to StorageProviderPopulationPolicy.Full.
             storageInfo.PopulationPolicy = StorageProviderPopulationPolicy.Full; // Set to Full to list folder content immediately on program start.
+
             storageInfo.InSyncPolicy = 
-                StorageProviderInSyncPolicy.FileLastWriteTime |
-                StorageProviderInSyncPolicy.FileCreationTime |
-                StorageProviderInSyncPolicy.FileHiddenAttribute |
-                StorageProviderInSyncPolicy.FileReadOnlyAttribute |
-                StorageProviderInSyncPolicy.FileSystemAttribute |
-                StorageProviderInSyncPolicy.DirectoryLastWriteTime |
-                StorageProviderInSyncPolicy.DirectoryCreationTime |
-                StorageProviderInSyncPolicy.DirectoryHiddenAttribute |
-                StorageProviderInSyncPolicy.DirectoryReadOnlyAttribute |
-                StorageProviderInSyncPolicy.DirectorySystemAttribute;
+                StorageProviderInSyncPolicy.FileLastWriteTime           | StorageProviderInSyncPolicy.FileCreationTime |
+                StorageProviderInSyncPolicy.FileHiddenAttribute         | StorageProviderInSyncPolicy.FileReadOnlyAttribute |
+                StorageProviderInSyncPolicy.FileSystemAttribute         | StorageProviderInSyncPolicy.DirectoryLastWriteTime |
+                StorageProviderInSyncPolicy.DirectoryCreationTime       | StorageProviderInSyncPolicy.DirectoryHiddenAttribute |
+                StorageProviderInSyncPolicy.DirectoryReadOnlyAttribute  | StorageProviderInSyncPolicy.DirectorySystemAttribute;
 
                 
             //storageInfo.ShowSiblingsAsGroup = false;
@@ -61,6 +58,8 @@ namespace VirtualFileSystem
             ValidateStorageProviderSyncRootInfo(storageInfo);
 
             StorageProviderSyncRootManager.Register(storageInfo);
+
+            Directory.CreateDirectory(Program.Settings.ServerDataFolderPath);
         }
 
         /// <summary>
@@ -143,6 +142,8 @@ namespace VirtualFileSystem
         public static async Task UnregisterAsync(string syncRootId)
         {
             StorageProviderSyncRootManager.Unregister(syncRootId);
+
+            Directory.Delete(Program.Settings.ServerDataFolderPath, true);
         }
     }
 }

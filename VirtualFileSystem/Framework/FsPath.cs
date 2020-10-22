@@ -117,10 +117,11 @@ namespace VirtualFileSystem
         /// Returns true if the file hase a format ~XXXXX.tmp, false - otherwise.
         /// </summary>
         /// <param name="path">Path to a file or folder.</param>
-        public static bool IsMsOfficeTemp(string path)
+        private static bool IsMsOfficeTemp(string path)
         {
             return (Path.GetFileName(path).StartsWith('~')   && Path.GetExtension(path).Equals(".tmp", StringComparison.InvariantCultureIgnoreCase))  // Word temp files
-                || (Path.GetFileName(path).StartsWith("ppt") && Path.GetExtension(path).Equals(".tmp", StringComparison.InvariantCultureIgnoreCase)); // PowerPoint temp files
+                || (Path.GetFileName(path).StartsWith("ppt") && Path.GetExtension(path).Equals(".tmp", StringComparison.InvariantCultureIgnoreCase)) // PowerPoint temp files
+                || (string.IsNullOrEmpty(Path.GetExtension(path)) && (Path.GetFileName(path).Length == 8)); // Excel temp files
         }
 
         /// <summary>
@@ -128,7 +129,7 @@ namespace VirtualFileSystem
         /// system that corresponds to the provided path to MS Office file. 
         /// </summary>
         /// <param name="path">Path to MS Office file.</param>
-        public static bool IsMsOfficeLocked(string path)
+        private static bool IsMsOfficeLocked(string path)
         {
             string lockPath = GetLockPathFromMsOfficePath(path);
             return lockPath != null;
@@ -139,7 +140,7 @@ namespace VirtualFileSystem
         /// Returns true if the provided path points to MS Office lock file (~$file.ext). 
         /// </summary>
         /// <param name="path">Path to lock file.</param>
-        public static bool IsMsOfficeLockFile(string path)
+        private static bool IsMsOfficeLockFile(string path)
         {
             return Path.GetFileName(path).StartsWith("~$");
         }
@@ -166,7 +167,7 @@ namespace VirtualFileSystem
         /// mydocfile.xlsx   -> ~$mydocfile.xlsx
         /// mydocfile.xls    -> null
         /// </remarks>
-        public static string GetLockPathFromMsOfficePath(string msOfficeFilePath)
+        private static string GetLockPathFromMsOfficePath(string msOfficeFilePath)
         {
             string msOfficeLockFilePath = null;
             int separatorIndex = msOfficeFilePath.LastIndexOf(Path.DirectorySeparatorChar);
@@ -199,7 +200,7 @@ namespace VirtualFileSystem
         /// True if the file or folder is marked with Hidden or Temporaty attributes. 
         /// Returns false if no Hidden or Temporaty attributes found or file/folder does not exists.
         /// </returns>
-        public static bool IsHiddenOrTemp(string path)
+        private static bool IsHiddenOrTemp(string path)
         {
             if(!FsPath.Exists(path))
             {

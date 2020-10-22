@@ -22,7 +22,7 @@ namespace VirtualFileSystem.Syncronyzation
     /// Windows does not provide any notifications for pinned/unpinned attributes change as well as for files/folders creation. 
     /// We need to monitor them using regular FileSystemWatcher.
     /// </remarks>
-    internal class UserFileSystemMonitor : IDisposable
+    internal class UserFileSystemMonitor : Logger, IDisposable
     {
         /// <summary>
         /// User file system watcher.
@@ -35,19 +35,13 @@ namespace VirtualFileSystem.Syncronyzation
         private string userFileSystemRootPath;
 
         /// <summary>
-        /// Logger.
-        /// </summary>
-        private ILog log;
-
-        /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="userFileSystemRootPath">User file system root path. Attributes are monitored in this folder.</param>
         /// <param name="log">Logger.</param>
-        internal UserFileSystemMonitor(string userFileSystemRootPath, ILog log)
+        internal UserFileSystemMonitor(string userFileSystemRootPath, ILog log) : base("User File System Monitor", log)
         {
             this.userFileSystemRootPath = userFileSystemRootPath;
-            this.log = log;
         }
 
         /// <summary>
@@ -89,28 +83,28 @@ namespace VirtualFileSystem.Syncronyzation
                     // When a new file or folder is created under sync root it is created as a regular file or folder,
                     // we need to convert it into file/folder placeholder.
                     PlaceholderItem.ConvertToPlaceholder(userFileSystemPath, false);
-                    LogMessage("Converted to placeholder:", userFileSystemPath);
+                    LogMessage("Converted to placeholder", userFileSystemPath);
 
                     // Do not create temp MS Office, temporary and hidden files in remote storage. 
                     if (!FsPath.AvoidSync(userFileSystemPath))
                     {
                         // Create the file/folder in the remote storage.
-                        string remoteStoragePath = Mapping.MapPath(e.FullPath);
+                        string remoteStoragePath = Mapping.MapPath(userFileSystemPath);
                         try
                         {
-                            await RemoteStorageItem.CreateAsync(remoteStoragePath, userFileSystemPath);
-                            LogMessage("Created succesefully:", remoteStoragePath);
+                            await RemoteStorageItem.CreateAsync(userFileSystemPath);
+                            LogMessage("Created succesefully", remoteStoragePath);
                         }
                         catch (IOException ex)
                         {
-                            LogMessage("Creation failed. Possibly in use by an application:", remoteStoragePath, ex.Message);
+                            LogError("Creation failed. Possibly in use by an application", remoteStoragePath, null, ex);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                LogError($"{e.ChangeType} failed", userFileSystemPath, ex);
+                LogError($"{e.ChangeType} failed", userFileSystemPath, null, ex);
             }
         }
 
@@ -128,24 +122,32 @@ namespace VirtualFileSystem.Syncronyzation
                 string userFileSystemPath = e.FullPath;
                 if (FsPath.Exists(userFileSystemPath) && !FsPath.AvoidSync(userFileSystemPath))
                 {
-                    // Hydrate / dehydrate the file.
+                    // Hydrate / dehydrate.
                     if (new UserFileSystemItem(userFileSystemPath).HydrationRequired())
                     {
-                        LogMessage("Hydrating:", userFileSystemPath);
-                        new PlaceholderFile(userFileSystemPath).Hydrate(0, -1);
-                        LogMessage("Hydrated succesefully:", userFileSystemPath);
+                        LogMessage("Hydrating", userFileSystemPath);
+                        if (FsPath.IsFolder(userFileSystemPath))
+                        {
+                            // List folder content to create placeholders that will trigger hydration.
+                            //new DirectoryInfo(userFileSystemPath).EnumerateFileSystemInfos("*");
+                        }
+                        else
+                        {
+                            new PlaceholderFile(userFileSystemPath).Hydrate(0, -1);
+                        }
+                        LogMessage("Hydrated succesefully", userFileSystemPath);
                     }
                     else if (new UserFileSystemItem(userFileSystemPath).DehydrationRequired())
                     {
-                        LogMessage("Dehydrating:", userFileSystemPath);
-                        new PlaceholderFile(userFileSystemPath).Dehydrate(0, -1, false);
-                        LogMessage("Dehydrated succesefully:", userFileSystemPath);
+                        LogMessage("Dehydrating", userFileSystemPath);
+                        new PlaceholderFile(userFileSystemPath).Dehydrate(0, -1);
+                        LogMessage("Dehydrated succesefully", userFileSystemPath);
                     }
                 }
             }
             catch (Exception ex)
             {
-                LogError("Hydration/dehydration failed:", e.FullPath, ex);
+                LogError("Hydration/dehydration failed", e.FullPath, null, ex);
             }
         }
 
@@ -164,26 +166,13 @@ namespace VirtualFileSystem.Syncronyzation
         /// <remarks>We monitor this event for logging purposes only.</remarks>
         private async void RenamedAsync(object sender, RenamedEventArgs e)
         {
-            LogMessage("Renamed:", e.OldFullPath, e.FullPath);
+            LogMessage("Renamed", e.OldFullPath, e.FullPath);
         }
 
 
         private void Error(object sender, ErrorEventArgs e)
         {
-            LogError(null, null, e.GetException());
-        }
-
-        protected void LogError(string message, string sourcePath, Exception ex)
-        {
-            string att = FsPath.Exists(sourcePath) ? FsPath.GetAttString(sourcePath) : null;
-            log.Error($"\n{DateTime.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {"User File System Monitor: ",-26}{message,-45} {sourcePath,-80} {att} ", ex);
-        }
-
-        protected void LogMessage(string message, string sourcePath = null, string targetPath = null)
-        {
-            string att = FsPath.Exists(sourcePath) ? FsPath.GetAttString(sourcePath) : null;
-            string size = FsPath.Size(sourcePath);
-            log.Debug($"\n{DateTime.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {"User File System Monitor: ",-26}{message,-45} {sourcePath,-80} {size,7} {att} {targetPath}");
+            LogError(null, null, null, e.GetException());
         }
 
 

@@ -46,7 +46,7 @@ namespace VirtualFileSystem
         /// <summary>
         /// Performs complete synchronyzation of the folders and files that are already synched to user file system.
         /// </summary>
-        private static SyncService syncService;
+        private static FullSyncService syncService;
 
         static async Task<int> Main(string[] args)
         {
@@ -59,8 +59,9 @@ namespace VirtualFileSystem
             XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
 
             log.Info($"\n{System.Diagnostics.Process.GetCurrentProcess().ProcessName}");
-            log.Info("\nPress 'q' to unregister file system and exit (simulate uninstall).");
             log.Info("\nPress any other key to exit without unregistering (simulate reboot).");
+            log.Info("\nPress 'q' to unregister file system and exit (simulate uninstall).");
+            log.Info("\nPress 'Q' to unregister file system, delete all files/folders and exit (simulate uninstall with full cleanup).");
             log.Info("\n----------------------\n");
 
             // Typically you will register sync root during your application installation.
@@ -86,7 +87,7 @@ namespace VirtualFileSystem
             {
                 engine = new VfsEngine(Settings.License, Settings.UserFileSystemRootPath, log);
                 RemoteStorageMonitorInstance = new RemoteStorageMonitor(Settings.RemoteStorageRootPath, log);
-                syncService = new SyncService(Settings.SyncIntervalMs, Settings.UserFileSystemRootPath, log);
+                syncService = new FullSyncService(Settings.SyncIntervalMs, Settings.UserFileSystemRootPath, log);
                 userFileSystemMonitor = new UserFileSystemMonitor(Settings.UserFileSystemRootPath, log);
 
                 // Start processing OS file system calls.
@@ -104,9 +105,9 @@ namespace VirtualFileSystem
                 await userFileSystemMonitor.StartAsync();
 #if DEBUG
                 // Opens Windows File Manager with user file system folder and remote storage folder.
-                ShowTestEnvironment(Settings.UserFileSystemRootPath, Settings.RemoteStorageRootPath);
+                ShowTestEnvironment();
 #endif
-                // Keep this application running untill user input.
+                // Keep this application running until user input.
                 exitKey = Console.ReadKey();
             }
             finally
@@ -124,6 +125,14 @@ namespace VirtualFileSystem
                 log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
                 log.Info("\nAll empty file and folder placeholders are deleted. Hydrated placeholders are converted to regular files / folders.\n");
             }
+            else if (exitKey.KeyChar == 'Q')
+            {
+                // Unregister during programm uninstall and delete all files/folder.
+                await Registrar.UnregisterAsync(SyncRootId);
+                Directory.Delete(Settings.UserFileSystemRootPath, true);
+                log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
+                log.Info("\nAll files and folders placeholders are deleted.\n");
+            }
             else
             {
                 log.Info("\n\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.\n");
@@ -137,12 +146,10 @@ namespace VirtualFileSystem
         /// Opens Windows File Manager with both remote storage and user file system for testing.
         /// </summary>
         /// <remarks>This method is provided solely for the development and testing convenience.</remarks>
-        /// <param name="userFileSystemRootPath">User file system path.</param>
-        /// <param name="remoteStorageRootPath">Remote storage path.</param>
-        private static void ShowTestEnvironment(string userFileSystemRootPath, string remoteStorageRootPath)
+        private static void ShowTestEnvironment()
         {
             // Open Windows File Manager with user file system.
-            ProcessStartInfo ufsInfo = new ProcessStartInfo(userFileSystemRootPath);
+            ProcessStartInfo ufsInfo = new ProcessStartInfo(Program.Settings.UserFileSystemRootPath);
             ufsInfo.UseShellExecute = true; // Open window only if not opened already.
             using (Process ufsWinFileManager = Process.Start(ufsInfo))
             {
@@ -150,12 +157,21 @@ namespace VirtualFileSystem
             }
 
             // Open Windows File Manager with remote storage.
-            ProcessStartInfo rsInfo = new ProcessStartInfo(remoteStorageRootPath);
+            ProcessStartInfo rsInfo = new ProcessStartInfo(Program.Settings.RemoteStorageRootPath);
             rsInfo.UseShellExecute = true; // Open window only if not opened already.
             using (Process rsWinFileManager = Process.Start(rsInfo))
             {
 
             }
+
+
+            // Open Windows File Manager with ETags storage.
+            //ProcessStartInfo eTagsInfo = new ProcessStartInfo(Program.Settings.ServerDataFolderPath);
+            //eTagsInfo.UseShellExecute = true; // Open window only if not opened already.
+            //using (Process eTagsWinFileManager = Process.Start(eTagsInfo))
+            //{
+
+            //}
         }
 #endif
 
@@ -168,14 +184,6 @@ namespace VirtualFileSystem
             get
             {
                 return $"{System.Diagnostics.Process.GetCurrentProcess().ProcessName}!{System.Security.Principal.WindowsIdentity.GetCurrent().User}!User";
-            }
-        }
-
-        internal static string IconsFolderPath
-        {
-            get
-            {
-                return Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), @"Images");
             }
         }
     }

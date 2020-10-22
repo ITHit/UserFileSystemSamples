@@ -41,6 +41,15 @@ namespace VirtualFileSystem
         /// </summary>
         public int NetworkSimulationDelayMs { get; set; }
 
+        /// <summary>
+        /// Path to the icons folder.
+        /// </summary>
+        public string IconsFolderPath { get; set; }
+
+        /// <summary>
+        /// Path to the folder that stores ETags, locks and other data associated with files and folders.
+        /// </summary>
+        public string ServerDataFolderPath{ get; set; }
     }
 
     /// <summary>
@@ -94,6 +103,11 @@ namespace VirtualFileSystem
             {
                 Directory.CreateDirectory(settings.UserFileSystemRootPath);
             }
+
+            settings.IconsFolderPath = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), @"Images");
+
+            settings.ServerDataFolderPath = Path.Combine(Path.GetTempPath(), settings.UserFileSystemRootPath.Replace(":", ""), "ServerData");
+
 
             return settings;
         }

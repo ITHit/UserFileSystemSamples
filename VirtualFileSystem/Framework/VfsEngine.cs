@@ -19,7 +19,7 @@ namespace VirtualFileSystem
         /// <summary>
         /// Logger.
         /// </summary>
-        private ILog log;
+        private ILogger logger;
 
         /// <summary>
         /// Enables or disables processing of changes made in IFile.CoseAsync(), IFileSystemItem.MoveToAsync(), IFileSystemItem.DeteteAsync().
@@ -33,9 +33,9 @@ namespace VirtualFileSystem
         /// <param name="license">A license string.</param>
         /// <param name="path">A root folder of your user file system. Your file system tree will be located under this folder.</param>
         /// <param name="log">Logger.</param>
-        public VfsEngine(string license, string path, ILog log) : base(license, path)
+        internal VfsEngine(string license, string path, ILog log) : base(license, path)
         {
-            this.log = log;
+            logger = new Logger("File System Engine", log);
 
             // We want our file system to run regardless of any errors.
             // If any request to file system fails in user code or in Engine itself we continue processing.
@@ -46,6 +46,7 @@ namespace VirtualFileSystem
             Message += Engine_Message;
         }
 
+        //$<Engine.GetFileSystemItemAsync
         /// <inheritdoc/>
         public override async Task<IFileSystemItem> GetFileSystemItemAsync(string path)
         {
@@ -58,8 +59,10 @@ namespace VirtualFileSystem
                 return new VfsFolder(path, this, this);
             }
 
-            return null; // When a file handle is being closed during delete, the file does not exist.
+            // When a file handle is being closed during delete, the file does not exist, return null.
+            return null; 
         }
+        //$>
 
         /// <summary>
         /// Keeps the last logged message, to minimize number of messages being logged.
@@ -68,7 +71,7 @@ namespace VirtualFileSystem
 
         private void Engine_Message(Engine sender, Engine.MessageEventArgs e)
         {
-            log.Debug($"\n{DateTime.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {"File System Engine: ",-26}{e.Message}");
+            logger.LogMessage(e.Message, e.SourcePath, e.TargetPath);
 
             /*
             // Because the applications may make alot of identical calls to file system, 
@@ -87,7 +90,7 @@ namespace VirtualFileSystem
 
         private void Engine_Error(Engine sender, Engine.ErrorEventArgs e)
         {
-            log.Error($"\n{DateTime.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {"File System Engine: ",-26}{e.Message}", e.Exception);
+            logger.LogError(e.Message, e.SourcePath, e.TargetPath, e.Exception);
         }
 
         /// <summary>
@@ -97,7 +100,7 @@ namespace VirtualFileSystem
         /// <param name="e">Contains new and old Engine state.</param>
         private void Engine_StateChanged(Engine engine, EngineWindows.StateChangeEventArgs e)
         {
-            engine.LogMessage($"{e.NewState.ToString()}");
+            engine.LogMessage($"{e.NewState}");
         }
     }
 }
