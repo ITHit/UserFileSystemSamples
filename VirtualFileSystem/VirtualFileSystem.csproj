@@ -16,6 +16,10 @@
     <None Remove="RemoteStorageTemplate\**" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="Framework\ClientLockExistsException.cs" />
+    <Compile Remove="Framework\ClientLockNotFoundException.cs" />
+    <Compile Remove="Framework\Locks\Lock0.cs" />
+    <Compile Remove="Framework\Syncronyzation\LockedException.cs" />
     <Compile Remove="SyncService.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -24,7 +28,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.7" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="1.1.3573.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="1.2.3810.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json">
@@ -40,6 +44,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Images\Locked.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\LockedPending.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Images\Unlocked.ico">

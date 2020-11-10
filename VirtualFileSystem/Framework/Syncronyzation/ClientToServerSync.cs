@@ -49,17 +49,18 @@ namespace VirtualFileSystem.Syncronyzation
 
             foreach (string userFileSystemPath in userFileSystemChildren)
             {
-                string remoteStorageOldPath = null;
-                string remoteStorageNewPath = null;
+                string userFileSystemOldPath = null;
                 try
                 {
+                    //$<PlaceholderItem.IsPlaceholder
                     if (!PlaceholderItem.IsPlaceholder(userFileSystemPath))
                     {
                         // Convert regular file/folder to placeholder. 
-                        // The file/folder was created or overwritten with a file outside from sync root.
+                        // The file/folder was created or overwritten.
                         PlaceholderItem.ConvertToPlaceholder(userFileSystemPath, false);
                         LogMessage("Converted to placeholder", userFileSystemPath);
                     }
+                    //$>
 
                     if (!FsPath.AvoidSync(userFileSystemPath))
                     {
@@ -67,29 +68,30 @@ namespace VirtualFileSystem.Syncronyzation
                         if (userFileSystemItem.IsMoved())
                         {
                             // Process items moved in user file system.                            
-                            string userFileSystemOldPath = userFileSystemItem.GetOriginalPath();
-                            LogMessage("Ttem moved, updating", userFileSystemOldPath, userFileSystemPath);
-                            remoteStorageOldPath = Mapping.MapPath(userFileSystemOldPath);
-                            remoteStorageNewPath = Mapping.MapPath(userFileSystemPath);
-                            await new RemoteStorageItem(userFileSystemOldPath).MoveToAsync(userFileSystemPath);
-                            LogMessage("Moved succesefully", remoteStorageOldPath, remoteStorageNewPath);
+                            userFileSystemOldPath = userFileSystemItem.GetOriginalPath();
+                            await new RemoteStorageRawItem(userFileSystemOldPath, this).MoveToAsync(userFileSystemPath);
                         }
                         else
                         {
-                            // Restore Original Path, lost during MS Office transactional save.
-                            // We keep it to process moved files when app was not running.      
-                            string userFileSystemOldPath = userFileSystemItem.GetOriginalPath();
+                            // Restore Original Path and 'locked' icon that are lost during MS Office transactional save.
+                            // We keep Original Path to process moved files when app was not running.      
+                            userFileSystemOldPath = userFileSystemItem.GetOriginalPath();
                             if (!userFileSystemItem.IsNew() && string.IsNullOrEmpty(userFileSystemOldPath))
                             {
+                                // Restore Original Path.
                                 LogMessage("Saving Original Path", userFileSystemItem.Path);
                                 userFileSystemItem.SetOriginalPath(userFileSystemItem.Path);
+
+                                // Restore the 'locked' icon.
+                                bool isLocked = await Lock.IsLockedAsync(userFileSystemPath);
+                                await new UserFileSystemRawItem(userFileSystemPath).SetLockIconAsync(isLocked);
                             }
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogError("Move failed", remoteStorageOldPath, remoteStorageNewPath, ex);
+                    LogError("Move in remote storage failed", userFileSystemOldPath, userFileSystemPath, ex);
                 }
 
                 // Synchronize subfolders.
@@ -136,21 +138,15 @@ namespace VirtualFileSystem.Syncronyzation
                 {
                     if (!FsPath.AvoidSync(userFileSystemPath))
                     {
-                        string remoteStoragePath = Mapping.MapPath(userFileSystemPath);
-
                         if (PlaceholderItem.GetItem(userFileSystemPath).IsNew())
                         {
-                            // Creating the file/folder in the remote storage.
-                            LogMessage("Creating item", remoteStoragePath);
-                            await RemoteStorageItem.CreateAsync(userFileSystemPath);
-                            LogMessage("Created succesefully", remoteStoragePath);
+                            // Create a file/folder in the remote storage.
+                            await RemoteStorageRawItem.CreateAsync(userFileSystemPath, this);
                         }
-                        else if (!PlaceholderItem.GetItem(userFileSystemPath).GetInSync())
+                        else
                         {
-                            // Updating the file/folder in the remote storage.
-                            LogMessage("Updating item", remoteStoragePath);
-                            await new RemoteStorageItem(userFileSystemPath).UpdateAsync();
-                            LogMessage("Updated succesefully", remoteStoragePath);
+                            // Update file/folder in the remote storage. Unlock if auto-locked.
+                            await new RemoteStorageRawItem(userFileSystemPath, this).UpdateAsync();
                         }
                     }
                 }

@@ -5,14 +5,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Windows.ApplicationModel.Activation;
 
 namespace VirtualFileSystem.Syncronyzation
 {
     /// <summary>
     /// Provides methods for synching user file system to remote storage.
     /// Creates, updates and delets files and folders based on the info from user file system.
+    /// Sets status icons in file manager.
     /// </summary>
-    public class RemoteStorageItem
+    public class RemoteStorageRawItem
     {
         /// <summary>
         /// Path to the file or folder in the user file system.
@@ -20,57 +22,120 @@ namespace VirtualFileSystem.Syncronyzation
         private string userFileSystemPath;
 
         /// <summary>
+        /// Logger.
+        /// </summary>
+        private ILogger logger;
+
+        /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="userFileSystemPath">File or folder path in the user file system.</param>
-        internal RemoteStorageItem(string userFileSystemPath)
+        /// <param name="logger">Logger.</param>
+        internal RemoteStorageRawItem(string userFileSystemPath, ILogger logger)
         {
             if (string.IsNullOrEmpty(userFileSystemPath))
             {
                 throw new ArgumentNullException("userFileSystemPath");
             }
+            if (logger == null)
+            {
+                throw new ArgumentNullException("logger");
+            }
 
             this.userFileSystemPath = userFileSystemPath;
+            this.logger = logger;
         }
 
-        public static async Task CreateAsync(string userFileSystemNewItemPath)
+        public static async Task CreateAsync(string userFileSystemNewItemPath, ILogger logger)
         {
             try
             {
-                await new RemoteStorageItem(userFileSystemNewItemPath).CreateOrUpdateAsync(FileMode.CreateNew);
-
-                await new UserFileSystemItem(userFileSystemNewItemPath).ClearStateAsync();
-
+                logger.LogMessage("Creating item in remote storage", userFileSystemNewItemPath);
+                await new RemoteStorageRawItem(userFileSystemNewItemPath, logger).CreateOrUpdateAsync(FileMode.CreateNew);
+                await new UserFileSystemRawItem(userFileSystemNewItemPath).ClearStateAsync();
+                logger.LogMessage("Created item in remote storage succesefully", userFileSystemNewItemPath);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                await new UserFileSystemItem(userFileSystemNewItemPath).SetUploadErrorStateAsync(ex);
+                await new UserFileSystemRawItem(userFileSystemNewItemPath).SetUploadErrorStateAsync(ex);
 
                 // Rethrow the exception preserving stack trace of the original exception.
                 System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
             }
         }
 
+        /// <summary>
+        /// Sends contending to the remote storage if the item is modified. 
+        /// If Auto-locking is enabled, automatically locks the file if not locked. Unlocks the file after the update if auto-locked.
+        /// </summary>
         public async Task UpdateAsync()
         {
+            Lock fileLock = null;
             try
             {
-                await CreateOrUpdateAsync(FileMode.Open);
+                if (!PlaceholderItem.GetItem(userFileSystemPath).GetInSync())
+                {
 
-                await new UserFileSystemItem(userFileSystemPath).ClearStateAsync();
+                    // Lock file if auto-locking is enabled.
+                    if (Program.Settings.AutoLock)
+                    {
+                        // Get existing lock or create a new lock.
+                        fileLock = await LockAsync(FileMode.OpenOrCreate, LockMode.Auto);
+                    }
+
+                    LockInfo lockInfo = fileLock!=null ? await fileLock.GetLockInfoAsync() : null;
+
+                    // Update item in remote storage.
+                    logger.LogMessage("Sending to remote storage", userFileSystemPath);
+                    await CreateOrUpdateAsync(FileMode.Open, lockInfo);
+                    //await new UserFileSystemRawItem(userFileSystemPath).ClearStateAsync();
+                    logger.LogMessage("Sent to remote storage succesefully", userFileSystemPath);
+                }
+
+                // Unlock if auto-locked.
+                if (await Lock.GetLockModeAsync(userFileSystemPath) == LockMode.Auto)
+                {
+                    if (fileLock == null)
+                    {
+                        // Get existing lock.
+                        fileLock = await Lock.LockAsync(userFileSystemPath, FileMode.Open, LockMode.None, logger);
+                    }
+                    await UnlockAsync(fileLock);
+                }
             }
-            catch(Exception ex)
+            catch(ClientLockFailedException ex)
             {
-                await new UserFileSystemItem(userFileSystemPath).SetUploadErrorStateAsync(ex);
+                // Failed to lock file. Possibly blocked from another thread. This is a normal behaviour.
+                logger.LogMessage(ex.Message, userFileSystemPath);
+            }
+            catch (Exception ex)
+            {
+                // Some error when locking, updating or unlocking occured.
+                await new UserFileSystemRawItem(userFileSystemPath).SetUploadErrorStateAsync(ex);
 
                 // Rethrow the exception preserving stack trace of the original exception.
                 System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
             }
+            finally
+            {
+                if (fileLock != null)
+                {
+                    fileLock.Dispose();
+                }
+            }
         }
 
-        private async Task CreateOrUpdateAsync(FileMode mode)
+        /// <summary>
+        /// Creates or updates the item in the remote storage.
+        /// </summary>
+        /// <param name="mode">
+        /// Indicates if the file should created or updated. 
+        /// Supported modes are <see cref="FileMode.CreateNew"/> and <see cref="FileMode.Open"/>
+        /// </param>
+        /// <param name="lockInfo">Information about the lock. Pass null if the item is not locked.</param>
+        private async Task CreateOrUpdateAsync(FileMode mode, LockInfo lockInfo = null)
         {
-            if ( (mode!=FileMode.CreateNew) && (mode !=FileMode.Open) )
+            if ((mode != FileMode.CreateNew) && (mode != FileMode.Open))
             {
                 throw new ArgumentOutOfRangeException("mode", $"Must be {FileMode.CreateNew} or {FileMode.Open}");
             }
@@ -89,7 +154,7 @@ namespace VirtualFileSystem.Syncronyzation
                 }
 
                 // Ensures LastWriteTimeUtc is in sync with file content after Open() was called.
-                userFileSystemItem.Refresh(); 
+                userFileSystemItem.Refresh();
 
                 IFileSystemItemBasicInfo info = GetBasicInfo(userFileSystemItem);
 
@@ -101,7 +166,7 @@ namespace VirtualFileSystem.Syncronyzation
                     if (FsPath.IsFile(userFileSystemPath))
                     {
                         // File is marked as not in-sync when updated OR moved. 
-                        // Opening a file for reading triggers hydration, open only if content is modified.
+                        // Opening a file for reading triggers hydration, make sure to open only if content is modified.
                         if (PlaceholderFile.GetFileDataSizeInfo(userFileSystemWinItem.SafeHandle).ModifiedDataSize > 0)
                         {
                             //userFileSystemStream = new FileStream(userFileSystemWinItem.SafeHandle, FileAccess.Read);
@@ -114,7 +179,7 @@ namespace VirtualFileSystem.Syncronyzation
                         }
                         else
                         {
-                            eTag = await new UserFile(userFileSystemPath).UpdateAsync((IFileBasicInfo)info, userFileSystemStream);
+                            eTag = await new UserFile(userFileSystemPath, lockInfo).UpdateAsync((IFileBasicInfo)info, userFileSystemStream);
                         }
                     }
                     else
@@ -126,7 +191,7 @@ namespace VirtualFileSystem.Syncronyzation
                         }
                         else
                         {
-                            eTag = await new UserFolder(userFileSystemPath).UpdateAsync((IFolderBasicInfo)info);
+                            eTag = await new UserFolder(userFileSystemPath, lockInfo).UpdateAsync((IFolderBasicInfo)info);
                         }
                     }
                     await ETag.SetETagAsync(userFileSystemPath, eTag);
@@ -142,7 +207,7 @@ namespace VirtualFileSystem.Syncronyzation
                         userFileSystemStream.Close();
                     }
                 }
-                                
+
                 PlaceholderItem.SetInSync(userFileSystemWinItem.SafeHandle, true);
             }
         }
@@ -189,6 +254,7 @@ namespace VirtualFileSystem.Syncronyzation
 
             return itemInfo;
         }
+
         internal async Task MoveToAsync(string userFileSystemNewPath, IConfirmationResultContext resultContext = null)
         {
             string userFileSystemOldPath = userFileSystemPath;
@@ -203,6 +269,8 @@ namespace VirtualFileSystem.Syncronyzation
                     if (!FsPath.IsRecycleBin(userFileSystemNewPath) // When a file is deleted, it is moved to a Recycle Bin.
                         && !FsPath.AvoidSync(userFileSystemOldPath) && !FsPath.AvoidSync(userFileSystemNewPath))
                     {
+                        logger.LogMessage("Moving item in remote storage", userFileSystemOldPath, userFileSystemNewPath);
+
                         // Read In-Sync state before move and set after move
                         if (FsPath.Exists(userFileSystemOldPath))
                         {
@@ -212,8 +280,9 @@ namespace VirtualFileSystem.Syncronyzation
                         eTag = await ETag.GetETagAsync(userFileSystemOldPath);
                         ETag.DeleteETag(userFileSystemOldPath);
 
-                        await new VirtualFileSystem.UserFileSystemItem(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath);
+                        await new UserFileSystemItem(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath);
                         updateTargetOnSuccess = true;
+                        logger.LogMessage("Moved succesefully in remote storage", userFileSystemOldPath, userFileSystemNewPath);
                     }
                 }
                 finally
@@ -222,7 +291,7 @@ namespace VirtualFileSystem.Syncronyzation
                     {
                         resultContext.ReturnConfirmationResult();
                     }
-                    
+
                     // This check is just to avoid extra error in the log.
                     if (FsPath.Exists(userFileSystemNewPath))
                     {
@@ -251,7 +320,7 @@ namespace VirtualFileSystem.Syncronyzation
                                 {
                                     placeholderNew.SetInSync(true);
                                 }
-                                await new UserFileSystemItem(userFileSystemNewPath).ClearStateAsync();
+                                await new UserFileSystemRawItem(userFileSystemNewPath).ClearStateAsync();
                             }
                         }
                     }
@@ -260,7 +329,7 @@ namespace VirtualFileSystem.Syncronyzation
             catch (Exception ex)
             {
                 string userFileSystemPath = FsPath.Exists(userFileSystemNewPath) ? userFileSystemNewPath : userFileSystemOldPath;
-                await new UserFileSystemItem(userFileSystemPath).SetUploadErrorStateAsync(ex);
+                await new UserFileSystemRawItem(userFileSystemPath).SetUploadErrorStateAsync(ex);
 
                 // Rethrow the exception preserving stack trace of the original exception.
                 System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
@@ -275,13 +344,109 @@ namespace VirtualFileSystem.Syncronyzation
             if (!FsPath.AvoidSync(userFileSystemPath))
             {
                 await new VirtualFileSystem.UserFileSystemItem(userFileSystemPath).DeleteAsync();
-                
+
                 ETag.DeleteETag(userFileSystemPath);
 
                 return true;
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Locks file in the remote storage. 
+        /// </summary>
+        /// <param name="lockMode">
+        /// Indicates automatic or manual lock.
+        /// </param>
+        /// <exception cref="ClientLockFailedException">
+        /// Thrown when a file can not be locked. For example when a lock-token file is blocked 
+        /// from another thread, during update, lock and unlock operations.
+        /// </exception>
+        internal async Task LockAsync(LockMode lockMode = LockMode.Manual)
+        {
+            using (await LockAsync(FileMode.CreateNew, lockMode))
+            {
+            }
+        }
+
+        /// <summary>
+        /// Locks file in the remote storage or gets existing lock. 
+        /// </summary>
+        /// <param name="lockFileOpenMode">
+        /// Indicates if a new lock should be created or existing lock file to be opened.
+        /// Allowed options are <see cref="FileMode.OpenOrCreate"/>, <see cref="FileMode.Open"/> and <see cref="FileMode.CreateNew"/>.
+        /// </param>
+        /// <param name="lockMode">
+        /// Indicates automatic or manual lock. Saved only for new files, ignored when existing lock is opened.
+        /// </param>
+        /// <exception cref="ClientLockFailedException">
+        /// Thrown when a file can not be locked. For example when a lock-token file is blocked 
+        /// from another thread, during update, lock and unlock operations.
+        /// </exception>
+        /// <returns>File lock.</returns>
+        private async Task<Lock> LockAsync(FileMode lockFileOpenMode, LockMode lockMode = LockMode.Manual)
+        {
+            // Get existing lock or create a new lock.
+            Lock fileLock = await Lock.LockAsync(userFileSystemPath, lockFileOpenMode, lockMode, logger);
+
+            if (fileLock.IsNew())
+            {
+                logger.LogMessage("Locking", userFileSystemPath);
+
+                // Set pending icon.
+                await new UserFileSystemRawItem(userFileSystemPath).SetLockPendingIconAsync(true);
+
+                // Lock file in remote storage.
+                LockInfo lockInfo = await new UserFileSystemItem(userFileSystemPath).LockAsync();
+
+                // Save lock-token in lock-file.
+                await fileLock.SetLockInfoAsync(lockInfo);
+
+                // Set locked icon.
+                await new UserFileSystemRawItem(userFileSystemPath).SetLockIconAsync(true);
+
+                logger.LogMessage($"Locked succesefully. Mode: {lockMode}", userFileSystemPath);
+            }
+
+            return fileLock;
+        }
+
+        /// <summary>
+        /// Unlocks the file in the remote storage.
+        /// </summary>
+        private async Task UnlockAsync()
+        {
+            using (Lock fileLock = await LockAsync(FileMode.Open))
+            {
+                await UnlockAsync(fileLock);
+            }
+        }
+
+        /// <summary>
+        /// Unlocks the file in the remote storage.
+        /// </summary>
+        /// <param name="fileLock">File lock.</param>
+        private async Task UnlockAsync(Lock fileLock)
+        {
+            logger.LogMessage("Unlocking", userFileSystemPath);
+
+            // Set pending icon.
+            await new UserFileSystemRawItem(userFileSystemPath).SetLockPendingIconAsync(true);
+
+            // Read lock-token from lock-file.
+            string lockToken = (await fileLock.GetLockInfoAsync()).LockToken;
+
+            // Ulock file in remote storage.
+            await new UserFileSystemItem(userFileSystemPath).UnlockAsync(lockToken);
+
+            // Remove lock icon.
+            await new UserFileSystemRawItem(userFileSystemPath).SetLockIconAsync(false);
+
+            // Operation completed succesefully, delete lock files.
+            fileLock.Unlock();
+
+            logger.LogMessage("Unlocked succesefully", userFileSystemPath);
         }
     }
 }

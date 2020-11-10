@@ -18,7 +18,8 @@ namespace VirtualFileSystem
         /// Creates instance of this class.
         /// </summary>
         /// <param name="userfileSystemFolderPath">Path of this folder in the user file system.</param>
-        public UserFolder(string userfileSystemFolderPath) : base(userfileSystemFolderPath)
+        /// <param name="lockInfo">Information about file lock. Pass null if the item is not locked.</param>
+        public UserFolder(string userfileSystemFolderPath, LockInfo lockInfo = null) : base(userfileSystemFolderPath, lockInfo)
         {
 
         }

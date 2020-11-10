@@ -64,10 +64,7 @@ namespace VirtualFileSystem
             {
                 if (FsPath.Exists(userFileSystemOldPath))
                 {
-                    await new RemoteStorageItem(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath, resultContext);
-                    string remoteStorageOldPath = Mapping.MapPath(userFileSystemOldPath);
-                    string remoteStorageNewPath = Mapping.MapPath(userFileSystemNewPath);
-                    Logger.LogMessage("Moved succesefully", remoteStorageOldPath, remoteStorageNewPath);
+                    await new RemoteStorageRawItem(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath, resultContext);
                 }
             }
             else
@@ -75,14 +72,19 @@ namespace VirtualFileSystem
                 resultContext.ReturnConfirmationResult();
             }
 
-            // Restore Original Path, if it's lost during MS Office transactional save.
+            // Restore Original Path and locked icon, lost during MS Office transactional save.
             if (FsPath.Exists(userFileSystemNewPath) &&  PlaceholderItem.IsPlaceholder(userFileSystemNewPath))
             {
                 PlaceholderItem userFileSystemNewItem = PlaceholderItem.GetItem(userFileSystemNewPath);
                 if (!userFileSystemNewItem.IsNew() && string.IsNullOrEmpty(userFileSystemNewItem.GetOriginalPath()))
                 {
-                    Logger.LogMessage("Saving Original Path", userFileSystemNewItem.Path);
-                    userFileSystemNewItem.SetOriginalPath(userFileSystemNewItem.Path);
+                    // Restore Original Path.
+                    Logger.LogMessage("Saving Original Path", userFileSystemNewPath);
+                    userFileSystemNewItem.SetOriginalPath(userFileSystemNewPath);
+
+                    // Restore the 'locked' icon.
+                    bool isLocked = await Lock.IsLockedAsync(userFileSystemNewPath);
+                    await new UserFileSystemRawItem(userFileSystemNewPath).SetLockIconAsync(isLocked);
                 }
             }
         }
@@ -98,18 +100,15 @@ namespace VirtualFileSystem
             string remoteStoragePath = null;
             try
             {
-                remoteStoragePath = Mapping.MapPath(userFileSystemPath);
-
                 if (Engine.ChangesProcessingEnabled
                     && !FsPath.AvoidSync(userFileSystemPath))
                 {
-                    await new RemoteStorageItem(userFileSystemPath).DeleteAsync();
-                    Logger.LogMessage("Deleted succesefully", remoteStoragePath);
+                    await new RemoteStorageRawItem(userFileSystemPath, Logger).DeleteAsync();
+                    Logger.LogMessage("Deleted item in remote storage succesefully", userFileSystemPath);
                 }
             }
             catch (Exception ex)
             {
-                // remove try-catch when error processing inside CloudProvider is fixed.
                 Logger.LogError("Delete failed", remoteStoragePath, null, ex);
             }
             finally

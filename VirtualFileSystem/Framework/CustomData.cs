@@ -95,7 +95,8 @@ namespace VirtualFileSystem
         }
 
         /// <summary>
-        /// Returns true if the file was moved in the user file system and changes not yet synched to the remote storage.
+        /// Returns true if the file was moved in the user file system and 
+        /// changes not yet synched to the remote storage.
         /// </summary>
         public static bool IsMoved(this PlaceholderItem placeholder)
         {
@@ -110,13 +111,20 @@ namespace VirtualFileSystem
             return !originalPath.Equals(placeholder.Path, StringComparison.InvariantCultureIgnoreCase);
         }
 
+        /// <summary>
+        /// Returns true if the item was created and must be synched to remote storage.
+        /// </summary>
+        /// <returns>
+        /// True if the item was created in the user file system and does not exists 
+        /// in the remote storage. False otherwise.
+        /// </returns>
         public static bool IsNew(this PlaceholderItem placeholder)
         {
-            // ETag presence signals if the item is new.
+            // ETag absence signals that the item is new.
             // However, ETag file may not exists during move operation, 
             // additionally checking OriginalPath presence.
             // Can not rely on OriginalPath only, 
-            // because MS Office transactional save deletes and recreates the file.
+            // because MS Office files are being deleted and re-created during transactional save.
 
             string originalPath = placeholder.GetOriginalPath();
 

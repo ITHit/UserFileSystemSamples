@@ -17,7 +17,7 @@ namespace VirtualFileSystem.Syncronyzation
     /// Provides methods for synching from remote storage to user file system.
     /// Creates, updates and delets placeholder files and folders based on the info from remote storage.
     /// </summary>
-    internal class UserFileSystemItem
+    internal class UserFileSystemRawItem
     {
         /// <summary>
         /// Path to the file or folder placeholder in user file system.
@@ -29,7 +29,7 @@ namespace VirtualFileSystem.Syncronyzation
         /// </summary>
         /// <param name="userFileSystemPath">File or folder path in user file system.</param>
         /// <param name="logger">Logger.</param>
-        internal UserFileSystemItem(string userFileSystemPath)
+        internal UserFileSystemRawItem(string userFileSystemPath)
         {
             if(string.IsNullOrEmpty(userFileSystemPath))
             {
@@ -231,7 +231,7 @@ namespace VirtualFileSystem.Syncronyzation
                         placeholderItem.SetInSync(true);
                         placeholderItem.SetOriginalPath(userFileSystemNewPath);
 
-                        await new UserFileSystemItem(userFileSystemNewPath).ClearStateAsync();
+                        await new UserFileSystemRawItem(userFileSystemNewPath).ClearStateAsync();
                     }
 
                     if(!inSync)
@@ -243,7 +243,7 @@ namespace VirtualFileSystem.Syncronyzation
             catch (Exception ex)
             {
                 string path = FsPath.Exists(userFileSystemNewPath) ? userFileSystemNewPath : userFileSystemPath;
-                await new UserFileSystemItem(userFileSystemPath).SetDownloadErrorStateAsync(ex);
+                await new UserFileSystemRawItem(userFileSystemPath).SetDownloadErrorStateAsync(ex);
 
                 // Rethrow the exception preserving stack trace of the original exception.
                 System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
@@ -359,12 +359,36 @@ namespace VirtualFileSystem.Syncronyzation
         }
 
         /// <summary>
+        /// Sets or removes "Lock" icon.
+        /// </summary>
+        /// <param name="set">True to display the icon. False - to remove the icon.</param>
+        internal async Task SetLockIconAsync(bool set)
+        {
+            await SetIconAsync(set, 2, "Locked.ico", "The item is locked");
+        }
+
+        /// <summary>
+        /// Sets or removes "Lock pending" icon.
+        /// </summary>
+        /// <param name="set">True to display the icon. False - to remove the icon.</param>
+        internal async Task SetLockPendingIconAsync(bool set)
+        {
+            await SetIconAsync(set, 2, "LockedPending.ico", "Updating lock...");
+        }
+
+        /// <summary>
         /// Sets or removes icon.
         /// </summary>
         /// <param name="set">True to display the icon. False - to remove the icon.</param>
         private async Task SetIconAsync(bool set, int? id = null, string iconFile = null, string description = null)
         {
             IStorageItem storageItem = await FsPath.GetStorageItemAsync(userFileSystemPath);
+
+            if (storageItem == null)
+            {
+                return; // Item does not exists.
+            }
+
             try
             {
                 if (set)

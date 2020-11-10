@@ -52,18 +52,18 @@ namespace VirtualFileSystem.Syncronyzation
             string remoteStorageFolderPath = Mapping.MapPath(userFileSystemFolderPath);
             foreach (FileSystemItemBasicInfo remoteStorageItem in remoteStorageChildrenItems)
             {
-                string userFileSystemPath = null;
+                string userFileSystemPath = Path.Combine(userFileSystemFolderPath, remoteStorageItem.Name);
                 try
                 {
                     // We do not want to sync MS Office temp files, etc. from remote storage.
+                    // We also do not want to create MS Office files during transactional save in user file system.
                     string remoteStorageItemFullPath = Path.Combine(remoteStorageFolderPath, remoteStorageItem.Name);
-                    if (!FsPath.AvoidSync(remoteStorageItemFullPath))
+                    if (!FsPath.AvoidSync(remoteStorageItemFullPath) && !FsPath.AvoidSync(userFileSystemPath))
                     {
-                        userFileSystemPath = Mapping.ReverseMapPath(remoteStorageItemFullPath);
                         if (!FsPath.Exists(userFileSystemPath))
                         {
                             LogMessage($"Creating", userFileSystemPath);
-                            await UserFileSystemItem.CreateAsync(userFileSystemFolderPath, new[] { remoteStorageItem });
+                            await UserFileSystemRawItem.CreateAsync(userFileSystemFolderPath, new[] { remoteStorageItem });
                             LogMessage($"Created succesefully", userFileSystemPath);
                         }
                     }
@@ -93,7 +93,7 @@ namespace VirtualFileSystem.Syncronyzation
                             {
                                 // Delete the file/folder in user file system.
                                 LogMessage("Deleting item", userFileSystemPath);
-                                await new UserFileSystemItem(userFileSystemPath).DeleteAsync();
+                                await new UserFileSystemRawItem(userFileSystemPath).DeleteAsync();
                                 LogMessage("Deleted succesefully", userFileSystemPath);
                             }                            
                         }
@@ -104,18 +104,18 @@ namespace VirtualFileSystem.Syncronyzation
                             {
                                 // User file system <- remote storage update.
                                 LogMessage("Item modified", remoteStoragePath);
-                                await new UserFileSystemItem(userFileSystemPath).UpdateAsync(remoteStorageItem);
+                                await new UserFileSystemRawItem(userFileSystemPath).UpdateAsync(remoteStorageItem);
                                 LogMessage("Updated succesefully", userFileSystemPath);
                             }
 
                             // Hydrate / dehydrate the file.
-                            if(new UserFileSystemItem(userFileSystemPath).HydrationRequired())
+                            if(new UserFileSystemRawItem(userFileSystemPath).HydrationRequired())
                             {
                                 LogMessage("Hydrating", userFileSystemPath);
                                 new PlaceholderFile(userFileSystemPath).Hydrate(0, -1);
                                 LogMessage("Hydrated succesefully", userFileSystemPath);
                             }
-                            else if (new UserFileSystemItem(userFileSystemPath).DehydrationRequired())
+                            else if (new UserFileSystemRawItem(userFileSystemPath).DehydrationRequired())
                             {
                                 LogMessage("Dehydrating", userFileSystemPath);
                                 new PlaceholderFile(userFileSystemPath).Dehydrate(0, -1);

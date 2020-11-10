@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using VirtualFileSystem.Syncronyzation;
+using Windows.UI.Xaml;
 
 namespace VirtualFileSystem
 {
@@ -28,6 +29,28 @@ namespace VirtualFileSystem
         public async Task OpenAsync(IOperationContext operationContext, IResultContext context)
         {
             Logger.LogMessage("IFile.OpenAsync()", UserFileSystemPath);
+
+            // Auto-lock the file.
+            string userFileSystemFilePath = UserFileSystemPath;
+            if (Engine.ChangesProcessingEnabled && FsPath.Exists(userFileSystemFilePath))
+            {
+                if (Program.Settings.AutoLock
+                    && !FsPath.AvoidAutoLock(userFileSystemFilePath) 
+                    && ! await Lock.IsLockedAsync(userFileSystemFilePath)
+                    && FsPath.IsWriteLocked(userFileSystemFilePath)
+                    && !new PlaceholderFile(userFileSystemFilePath).IsNew())
+                {
+                    try
+                    {
+                        await new RemoteStorageRawItem(userFileSystemFilePath, Logger).LockAsync(LockMode.Auto);
+                    }
+                    catch(ClientLockFailedException ex)
+                    {
+                        // Lock file is blocked by the concurrent thread. This is a normal behaviour.
+                        Logger.LogMessage(ex.Message, userFileSystemFilePath);
+                    }
+                }
+            }
         }
 
         //$<IFolder.CloseAsync
@@ -55,30 +78,24 @@ namespace VirtualFileSystem
                     PlaceholderItem.ConvertToPlaceholder(userFileSystemFilePath, false);
                     Logger.LogMessage("Converted to placeholder", userFileSystemFilePath);
                 }
-
-                if (!PlaceholderItem.GetItem(userFileSystemFilePath).GetInSync())
+                
+                try
                 {
-                    Logger.LogMessage("Item modified", userFileSystemFilePath);
-
-                    try
-                    {
-                        await new RemoteStorageItem(userFileSystemFilePath).UpdateAsync();
-                        string remoteStorageFilePath = Mapping.MapPath(userFileSystemFilePath);
-                        Logger.LogMessage("Updated succesefully", remoteStorageFilePath);
-                    }
-                    catch (IOException ex)
-                    {
+                    // Send content to remote storage. Unlock if auto-locked.
+                    await new RemoteStorageRawItem(userFileSystemFilePath, Logger).UpdateAsync();
+                }
+                catch (IOException ex)
+                {
                         // Either the file is already being synced in another thread or client or server file is blocked by concurrent process.
                         // This is a normal behaviour.
                         // The file must be synched by your synchronyzation service at a later time, when the file becomes available.
                         Logger.LogMessage("Failed to upload file. Possibly in use by an application or blocked for synchronization in another thread:", ex.Message);
-                    }
-                }
+                }                
             }
         }
         //$>
 
-        //$<IFolder.TransferDataAsync
+        //$<IFile.TransferDataAsync
         /// <inheritdoc/>
         public async Task TransferDataAsync(long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext)
         {

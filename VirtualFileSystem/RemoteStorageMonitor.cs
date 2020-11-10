@@ -114,7 +114,7 @@ namespace VirtualFileSystem.Syncronyzation
                     {
                         FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
                         FileSystemItemBasicInfo newItemInfo = Mapping.GetUserFileSysteItemBasicInfo(remoteStorageItem);
-                        await UserFileSystemItem.CreateAsync(userFileSystemParentPath, new[] { newItemInfo });
+                        await UserFileSystemRawItem.CreateAsync(userFileSystemParentPath, new[] { newItemInfo });
                         LogMessage($"Created succesefully", userFileSystemPath);
                     }
                 }
@@ -153,7 +153,7 @@ namespace VirtualFileSystem.Syncronyzation
                         FileSystemItemBasicInfo itemInfo = Mapping.GetUserFileSysteItemBasicInfo(remoteStorageItem);
                         if (!await ETag.ETagEqualsAsync(userFileSystemPath, itemInfo))
                         {
-                            await new UserFileSystemItem(userFileSystemPath).UpdateAsync(itemInfo);
+                            await new UserFileSystemRawItem(userFileSystemPath).UpdateAsync(itemInfo);
                             LogMessage("Updated succesefully", userFileSystemPath);
                         }
                     }
@@ -182,7 +182,7 @@ namespace VirtualFileSystem.Syncronyzation
                     // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                     if (FsPath.Exists(userFileSystemPath))
                     {
-                        await new UserFileSystemItem(userFileSystemPath).DeleteAsync();
+                        await new UserFileSystemRawItem(userFileSystemPath).DeleteAsync();
                         LogMessage("Deleted succesefully", userFileSystemPath);
                     }
                 }
@@ -212,7 +212,7 @@ namespace VirtualFileSystem.Syncronyzation
                     if (FsPath.Exists(userFileSystemOldPath))
                     {
                         string userFileSystemNewPath = Mapping.ReverseMapPath(remoteStorageNewPath);
-                        await new UserFileSystemItem(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath);
+                        await new UserFileSystemRawItem(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath);
                         LogMessage("Renamed succesefully:", userFileSystemOldPath, userFileSystemNewPath);
                     }
                 }

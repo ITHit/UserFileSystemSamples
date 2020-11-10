@@ -80,24 +80,22 @@ namespace VirtualFileSystem.Syncronyzation
                 // When a file/folder is moved this method is also called. The file/folder move is already processed in IFileSystem.MoveToAsync().
                 if (FsPath.Exists(userFileSystemPath) && !PlaceholderItem.IsPlaceholder(userFileSystemPath))
                 {
-                    // When a new file or folder is created under sync root it is created as a regular file or folder,
-                    // we need to convert it into file/folder placeholder.
+                    // When a new file or folder is created under sync root it is 
+                    // created as a regular file or folder. Converting to placeholder.
                     PlaceholderItem.ConvertToPlaceholder(userFileSystemPath, false);
                     LogMessage("Converted to placeholder", userFileSystemPath);
 
-                    // Do not create temp MS Office, temporary and hidden files in remote storage. 
+                    // Do not create temp MS Office, temp and hidden files in remote storage. 
                     if (!FsPath.AvoidSync(userFileSystemPath))
                     {
                         // Create the file/folder in the remote storage.
-                        string remoteStoragePath = Mapping.MapPath(userFileSystemPath);
                         try
                         {
-                            await RemoteStorageItem.CreateAsync(userFileSystemPath);
-                            LogMessage("Created succesefully", remoteStoragePath);
+                            await RemoteStorageRawItem.CreateAsync(userFileSystemPath, this);
                         }
                         catch (IOException ex)
                         {
-                            LogError("Creation failed. Possibly in use by an application", remoteStoragePath, null, ex);
+                            LogError("Creation in remote storage failed. Possibly in use by an application", userFileSystemPath, null, ex);
                         }
                     }
                 }
@@ -123,7 +121,7 @@ namespace VirtualFileSystem.Syncronyzation
                 if (FsPath.Exists(userFileSystemPath) && !FsPath.AvoidSync(userFileSystemPath))
                 {
                     // Hydrate / dehydrate.
-                    if (new UserFileSystemItem(userFileSystemPath).HydrationRequired())
+                    if (new UserFileSystemRawItem(userFileSystemPath).HydrationRequired())
                     {
                         LogMessage("Hydrating", userFileSystemPath);
                         if (FsPath.IsFolder(userFileSystemPath))
@@ -137,7 +135,7 @@ namespace VirtualFileSystem.Syncronyzation
                         }
                         LogMessage("Hydrated succesefully", userFileSystemPath);
                     }
-                    else if (new UserFileSystemItem(userFileSystemPath).DehydrationRequired())
+                    else if (new UserFileSystemRawItem(userFileSystemPath).DehydrationRequired())
                     {
                         LogMessage("Dehydrating", userFileSystemPath);
                         new PlaceholderFile(userFileSystemPath).Dehydrate(0, -1);

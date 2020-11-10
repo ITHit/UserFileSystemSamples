@@ -114,14 +114,15 @@ namespace VirtualFileSystem
         }
 
         /// <summary>
-        /// Returns true if the file hase a format ~XXXXX.tmp, false - otherwise.
+        /// Returns true if the file is in ~XXXXX.tmp, pptXXXX.tmp format, false - otherwise.
         /// </summary>
-        /// <param name="path">Path to a file or folder.</param>
+        /// <param name="path">Path to a file.</param>
         private static bool IsMsOfficeTemp(string path)
         {
-            return (Path.GetFileName(path).StartsWith('~')   && Path.GetExtension(path).Equals(".tmp", StringComparison.InvariantCultureIgnoreCase))  // Word temp files
-                || (Path.GetFileName(path).StartsWith("ppt") && Path.GetExtension(path).Equals(".tmp", StringComparison.InvariantCultureIgnoreCase)) // PowerPoint temp files
-                || (string.IsNullOrEmpty(Path.GetExtension(path)) && (Path.GetFileName(path).Length == 8)); // Excel temp files
+            return (Path.GetFileName(path).StartsWith('~')   && Path.GetExtension(path).Equals(".tmp", StringComparison.InvariantCultureIgnoreCase))    // Word temp files
+                || (Path.GetFileName(path).StartsWith("ppt") && Path.GetExtension(path).Equals(".tmp", StringComparison.InvariantCultureIgnoreCase))    // PowerPoint temp files
+                || (string.IsNullOrEmpty(Path.GetExtension(path)) && (Path.GetFileName(path).Length == 8))                                              // Excel temp files
+                || ((Path.GetFileNameWithoutExtension(path).Length == 8) && Path.GetExtension(path).Equals(".tmp", StringComparison.InvariantCultureIgnoreCase));   // Excel temp files
         }
 
         /// <summary>
@@ -129,7 +130,7 @@ namespace VirtualFileSystem
         /// system that corresponds to the provided path to MS Office file. 
         /// </summary>
         /// <param name="path">Path to MS Office file.</param>
-        private static bool IsMsOfficeLocked(string path)
+        internal static bool IsMsOfficeLocked(string path)
         {
             string lockPath = GetLockPathFromMsOfficePath(path);
             return lockPath != null;
@@ -140,18 +141,18 @@ namespace VirtualFileSystem
         /// Returns true if the provided path points to MS Office lock file (~$file.ext). 
         /// </summary>
         /// <param name="path">Path to lock file.</param>
-        private static bool IsMsOfficeLockFile(string path)
+        internal static bool IsMsOfficeLockFile(string path)
         {
             return Path.GetFileName(path).StartsWith("~$");
         }
 
-        /*
-        public static string GetMsOfficePathFromLock(string msOfficeLockFilePath)
-        {
-            int separatorIndex = msOfficeLockFilePath.LastIndexOf(Path.DirectorySeparatorChar);
-            return msOfficeLockFilePath.Remove(separatorIndex + 1, "~$".Length);
-        }
-        */
+        
+        //public static string GetMsOfficePathFromLock(string msOfficeLockFilePath)
+        //{
+        //    int separatorIndex = msOfficeLockFilePath.LastIndexOf(Path.DirectorySeparatorChar);
+        //    return msOfficeLockFilePath.Remove(separatorIndex + 1, "~$".Length);
+        //}
+        
 
         /// <summary>
         /// Returns MS Office lock file path if such file exists.
@@ -223,6 +224,15 @@ namespace VirtualFileSystem
         }
 
         /// <summary>
+        /// Returns true if the file or folder should not be automatically locked. False - otherwise.
+        /// </summary>
+        /// <param name="path">Path to a file or folder.</param>
+        public static bool AvoidAutoLock(string path)
+        {
+            return IsMsOfficeLockFile(path) ||                           IsMsOfficeTemp(path) || IsHiddenOrTemp(path);
+        }
+
+        /// <summary>
         /// Gets formatted file size or null for folders or if the file is not found.
         /// </summary>
         /// <param name="path">Path to a file or folder.</param>
@@ -252,6 +262,28 @@ namespace VirtualFileSystem
             int place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
             double num = Math.Round(bytes / Math.Pow(1024, place), 1);
             return (Math.Sign(length) * num).ToString() + suf[place];
+        }
+
+        /// <summary>
+        /// Returns true if the file is locked for writing, false otherwise.
+        /// </summary>
+        /// <param name="path">Path ot a file.</param>
+        /// <returns>True if the file is locked for writing. False otherwise.</returns>
+        public static bool IsWriteLocked(string path)
+        {
+            try
+            {
+                using (FileStream stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete))
+                {
+                    stream.Close();
+                }
+            }
+            catch (IOException)
+            {
+                return true;
+            }
+
+            return false;
         }
     }
 }

@@ -42,10 +42,10 @@ namespace VirtualFileSystem
         /// <summary>
         /// Deletes ETag associated with a file.
         /// </summary>
-        /// <param name="userFileSystemSourcePath">Path in the user file system.</param>
-        public static void DeleteETag(string userFileSystemSourcePath)
+        /// <param name="userFileSystemPath">Path in the user file system.</param>
+        public static void DeleteETag(string userFileSystemPath)
         {
-            File.Delete(GetETagFilePath(userFileSystemSourcePath));
+            File.Delete(GetETagFilePath(userFileSystemPath));
         }
 
         /// <summary>
