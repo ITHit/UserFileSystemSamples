@@ -10,10 +10,11 @@ using Windows.ApplicationModel.Activation;
 namespace VirtualFileSystem.Syncronyzation
 {
     /// <summary>
-    /// Provides methods for synching user file system to remote storage.
-    /// Creates, updates and delets files and folders based on the info from user file system.
-    /// Sets status icons in file manager.
+    /// Provides methods for synching the user file system to the remote storage.
+    /// Creates, updates, deletes, moves, locks and unloacks files and folders based on the info from user file system.
+    /// This class also іets status icons in file manager.
     /// </summary>
+    /// <remarks>In most cases you can use this class in your project without any changes.</remarks>
     public class RemoteStorageRawItem
     {
         /// <summary>
@@ -46,14 +47,19 @@ namespace VirtualFileSystem.Syncronyzation
             this.logger = logger;
         }
 
+        /// <summary>
+        /// Creates a new file or folder in the remote storage.
+        /// </summary>
+        /// <param name="userFileSystemNewItemPath">Path to the file or folder in the user file system to be created in the remote storage.</param>
+        /// <param name="logger">Logger</param>
         public static async Task CreateAsync(string userFileSystemNewItemPath, ILogger logger)
         {
             try
             {
-                logger.LogMessage("Creating item in remote storage", userFileSystemNewItemPath);
+                logger.LogMessage("Creating item in the remote storage", userFileSystemNewItemPath);
                 await new RemoteStorageRawItem(userFileSystemNewItemPath, logger).CreateOrUpdateAsync(FileMode.CreateNew);
                 await new UserFileSystemRawItem(userFileSystemNewItemPath).ClearStateAsync();
-                logger.LogMessage("Created item in remote storage succesefully", userFileSystemNewItemPath);
+                logger.LogMessage("Created item in the remote storage succesefully", userFileSystemNewItemPath);
             }
             catch (Exception ex)
             {
@@ -354,7 +360,7 @@ namespace VirtualFileSystem.Syncronyzation
         }
 
         /// <summary>
-        /// Locks file in the remote storage. 
+        /// Locks the file in the remote storage. 
         /// </summary>
         /// <param name="lockMode">
         /// Indicates automatic or manual lock.
@@ -371,7 +377,7 @@ namespace VirtualFileSystem.Syncronyzation
         }
 
         /// <summary>
-        /// Locks file in the remote storage or gets existing lock. 
+        /// Locks the file in the remote storage or gets existing lock. 
         /// </summary>
         /// <param name="lockFileOpenMode">
         /// Indicates if a new lock should be created or existing lock file to be opened.
@@ -415,7 +421,7 @@ namespace VirtualFileSystem.Syncronyzation
         /// <summary>
         /// Unlocks the file in the remote storage.
         /// </summary>
-        private async Task UnlockAsync()
+        internal async Task UnlockAsync()
         {
             using (Lock fileLock = await LockAsync(FileMode.Open))
             {
@@ -424,7 +430,7 @@ namespace VirtualFileSystem.Syncronyzation
         }
 
         /// <summary>
-        /// Unlocks the file in the remote storage.
+        /// Unlocks the file in the remote storage using existing <see cref="Lock"/>.
         /// </summary>
         /// <param name="fileLock">File lock.</param>
         private async Task UnlockAsync(Lock fileLock)

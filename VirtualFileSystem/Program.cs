@@ -166,12 +166,12 @@ namespace VirtualFileSystem
 
 
             // Open Windows File Manager with ETags and locks storage.
-            ProcessStartInfo serverDataInfo = new ProcessStartInfo(Program.Settings.ServerDataFolderPath);
-            serverDataInfo.UseShellExecute = true; // Open window only if not opened already.
-            using (Process serverDataWinFileManager = Process.Start(serverDataInfo))
-            {
+            //ProcessStartInfo serverDataInfo = new ProcessStartInfo(Program.Settings.ServerDataFolderPath);
+            //serverDataInfo.UseShellExecute = true; // Open window only if not opened already.
+            //using (Process serverDataWinFileManager = Process.Start(serverDataInfo))
+            //{
 
-            }
+            //}
         }
 #endif
 

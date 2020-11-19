@@ -17,6 +17,7 @@ namespace VirtualFileSystem.Syncronyzation
     /// <summary>
     /// User File System to Remote Storage synchronization.
     /// </summary>
+    /// <remarks>In most cases you can use this class in your project without any changes.</remarks>
     internal class ClientToServerSync : Logger
     {
         /// <summary>

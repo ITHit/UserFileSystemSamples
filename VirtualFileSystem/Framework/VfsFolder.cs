@@ -12,6 +12,7 @@ using Windows.Storage;
 
 namespace VirtualFileSystem
 {
+    // In most cases you can use this class in your project without any changes.
     //$<IFolder
     /// <inheritdoc cref="IFolder"/>
     internal class VfsFolder : VfsFileSystemItem, IFolder

@@ -12,6 +12,7 @@ namespace VirtualFileSystem
     /// Represents a folder in the remote storage. Provides methods for enumerating this folder children, 
     /// creating files and folders and updating this folder information (creatin date, modification date, attributes, etc.).
     /// </summary>
+    /// <remarks>You will change methods of this class to read/write data from/to your remote storage.</remarks>
     internal class UserFolder : UserFileSystemItem
     {
         /// <summary>

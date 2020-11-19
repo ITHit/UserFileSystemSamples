@@ -12,6 +12,7 @@ namespace VirtualFileSystem
     /// <summary>
     /// Represents a file or a folder in the remote storage. Contains methods common for both files and folders.
     /// </summary>
+    /// <remarks>You will change methods of this class to read/write data from/to your remote storage.</remarks>
     internal class UserFileSystemItem
     {
         /// <summary>
@@ -245,7 +246,7 @@ namespace VirtualFileSystem
         /// </summary>
         /// <returns>Lock info that conains lock-token returned by the remote storage.</returns>
         /// <remarks>
-        /// Lock your item in the remote storage here and receive the lock-token.
+        /// Lock your item in the remote storage in this method and receive the lock-token.
         /// Return a new <see cref="LockInfo"/> object with the <see cref="LockInfo.LockToken"/> being set from this function.
         /// The <see cref="LockInfo"/> will become available via the <see cref="Lock"/> property when the 
         /// item in the remote storage should be updated. Supply the lock-token during the update request in 
@@ -260,7 +261,10 @@ namespace VirtualFileSystem
         /// Unlocks the item in the remote storage.
         /// </summary>
         /// <param name="lockToken">Lock token to unlock the item in the remote storage.</param>
-        /// <remarks>Unlock your item in the remote storage using the <paramref name="lockToken"/> parameter.</remarks>
+        /// <remarks>
+        /// Unlock your item in the remote storage in this method using the 
+        /// <paramref name="lockToken"/> parameter.
+        /// </remarks>
         public async Task UnlockAsync(string lockToken)
         {
 

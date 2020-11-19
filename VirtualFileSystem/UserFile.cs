@@ -10,6 +10,7 @@ namespace VirtualFileSystem
     /// <summary>
     /// Represents a file in the remote storage.
     /// </summary>
+    /// <remarks>You will change methods of this class to read/write data from/to your remote storage.</remarks>
     internal class UserFile : UserFileSystemItem
     {
         /// <summary>

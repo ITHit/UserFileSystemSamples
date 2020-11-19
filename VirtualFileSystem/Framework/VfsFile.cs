@@ -11,6 +11,7 @@ using Windows.UI.Xaml;
 
 namespace VirtualFileSystem
 {
+    // In most cases you can use this class in your project without any changes.
     /// <inheritdoc cref="IFile"/>
     internal class VfsFile : VfsFileSystemItem, IFile
     {
@@ -81,8 +82,16 @@ namespace VirtualFileSystem
                 
                 try
                 {
-                    // Send content to remote storage. Unlock if auto-locked.
-                    await new RemoteStorageRawItem(userFileSystemFilePath, Logger).UpdateAsync();
+                    if (PlaceholderItem.GetItem(userFileSystemFilePath).IsNew())
+                    {
+                        // Create new file in the remote storage.
+                        await RemoteStorageRawItem.CreateAsync(userFileSystemFilePath, Logger);
+                    }
+                    else
+                    {
+                        // Send content to remote storage. Unlock if auto-locked.
+                        await new RemoteStorageRawItem(userFileSystemFilePath, Logger).UpdateAsync();
+                    }
                 }
                 catch (IOException ex)
                 {

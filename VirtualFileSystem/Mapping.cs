@@ -9,15 +9,16 @@ using System.Threading.Tasks;
 namespace VirtualFileSystem
 {
     /// <summary>
-    /// Maps user file system path to remote storage path and back. 
+    /// Maps a user file system path to the remote storage path and back. 
     /// </summary>
+    /// <remarks>You will change methods of this class to map the user file system path to your remote storage path.</remarks>
     internal static class Mapping
     {
         /// <summary>
-        /// Returns remote storage path that corresponds to user file system path.
+        /// Returns a remote storage path that corresponds to the user file system path.
         /// </summary>
-        /// <param name="userFileSystemPath">Full path in user file system.</param>
-        /// <returns>Path in remote storage that corresponds to <paramref name="userFileSystemPath"/>.</returns>
+        /// <param name="userFileSystemPath">Full path in the user file system.</param>
+        /// <returns>Path in the remote storage that corresponds to the <paramref name="userFileSystemPath"/>.</returns>
         public static string MapPath(string userFileSystemPath)
         {
             // Get path relative to the virtual root.
@@ -29,10 +30,10 @@ namespace VirtualFileSystem
         }
 
         /// <summary>
-        /// Returns user file system path that corresponds to remote storage path.
+        /// Returns a user file system path that corresponds to the remote storage path.
         /// </summary>
-        /// <param name="remoteStoragePath">Full path in remote storage.</param>
-        /// <returns>Path in user file system that corresponds to <paramref name="remoteStoragePath"/>.</returns>
+        /// <param name="remoteStoragePath">Full path in the remote storage.</param>
+        /// <returns>Path in the user file system that corresponds to the <paramref name="remoteStoragePath"/>.</returns>
         public static string ReverseMapPath(string remoteStoragePath)
         {
             // Get path relative to the virtual root.
@@ -44,7 +45,7 @@ namespace VirtualFileSystem
         }
 
         /// <summary>
-        /// Gets user file system item info from the remote storage data.
+        /// Gets a user file system item info from the remote storage data.
         /// </summary>
         /// <param name="remoteStorageItem">Remote storage item info.</param>
         /// <returns>User file system item info.</returns>

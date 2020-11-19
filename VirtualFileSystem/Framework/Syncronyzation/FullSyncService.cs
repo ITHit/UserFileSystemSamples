@@ -14,29 +14,13 @@ using Windows.Storage.Provider;
 
 namespace VirtualFileSystem.Syncronyzation
 {
-
-    // 4194304    (0x400000)	FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS        (M)
-    // 4096 	    (0x1000) 	FILE_ATTRIBUTE_OFFLINE                      (O)
-    // 1024 	     (0x400)  	FILE_ATTRIBUTE_REPARSE_POINT                (L)
-    // 16   	      (0x10)   	FILE_ATTRIBUTE_DIRECTORY                    (D)
-    //          (0x00080000)    FILE_ATTRIBUTE_PINNED                       (P)
-    //          (0x00100000)    FILE_ATTRIBUTE_UNPINNED                     (U)
-    // 32             (0x20)    FILE_ATTRIBUTE_ARCHIVE                      (A)
-    // 512           (0x200)    FILE_ATTRIBUTE_SPARSE_FILE
-
-    [Flags]
-    public enum FileAttributesExt
-    {
-        Pinned      = 0x00080000,
-        Unpinned    = 0x00100000,
-        Offline     = 0x1000
-    }
-
     /// <summary>
-    /// Doing full synchronization between client and server.
+    /// Doing full synchronization between the user file system and the remote storage, recursively going through all folders.
     /// </summary>
     /// <remarks>
     /// This is a simple full synchronyzation example. 
+    /// 
+    /// You can use this class in your project out of the box or replace with a more advanced algorithm.
     /// </remarks>
     internal class FullSyncService : Logger, IDisposable
     {

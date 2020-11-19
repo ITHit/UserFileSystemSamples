@@ -21,6 +21,8 @@ namespace VirtualFileSystem.Syncronyzation
     /// <remarks>
     /// Windows does not provide any notifications for pinned/unpinned attributes change as well as for files/folders creation. 
     /// We need to monitor them using regular FileSystemWatcher.
+    /// 
+    /// In most cases you can use this class in your project without any changes.
     /// </remarks>
     internal class UserFileSystemMonitor : Logger, IDisposable
     {

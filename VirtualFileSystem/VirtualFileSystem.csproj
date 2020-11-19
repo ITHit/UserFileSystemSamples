@@ -28,7 +28,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.7" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="1.2.3810.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="1.2.3941.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json">

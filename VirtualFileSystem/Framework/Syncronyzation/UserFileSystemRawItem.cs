@@ -14,9 +14,10 @@ using Windows.Storage.Provider;
 namespace VirtualFileSystem.Syncronyzation
 {
     /// <summary>
-    /// Provides methods for synching from remote storage to user file system.
-    /// Creates, updates and delets placeholder files and folders based on the info from remote storage.
+    /// Provides methods for synching the from remote storage to the user file system.
+    /// Creates, updates and deletes placeholder files and folders based on the info from the remote storage.
     /// </summary>
+    /// <remarks>In most cases you can use this class in your project without any changes.</remarks>
     internal class UserFileSystemRawItem
     {
         /// <summary>

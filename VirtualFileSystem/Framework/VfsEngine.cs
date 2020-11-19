@@ -13,6 +13,7 @@ using Windows.Storage.Provider;
 
 namespace VirtualFileSystem
 {
+    // In most cases you can use this class in your project without any changes.
     /// <inheritdoc/>
     internal class VfsEngine : EngineWindows
     {
