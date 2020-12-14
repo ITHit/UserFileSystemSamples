@@ -37,14 +37,14 @@ namespace VirtualFileSystem
             // StorageProviderSyncRootInfo.PopulationPolicy to StorageProviderPopulationPolicy.Full.
             storageInfo.PopulationPolicy = StorageProviderPopulationPolicy.Full; // Set to Full to list folder content immediately on program start.
 
-            storageInfo.InSyncPolicy = 
-                StorageProviderInSyncPolicy.FileLastWriteTime           | StorageProviderInSyncPolicy.FileCreationTime |
-                StorageProviderInSyncPolicy.FileHiddenAttribute         | StorageProviderInSyncPolicy.FileReadOnlyAttribute |
-                StorageProviderInSyncPolicy.FileSystemAttribute         | StorageProviderInSyncPolicy.DirectoryLastWriteTime |
-                StorageProviderInSyncPolicy.DirectoryCreationTime       | StorageProviderInSyncPolicy.DirectoryHiddenAttribute |
-                StorageProviderInSyncPolicy.DirectoryReadOnlyAttribute  | StorageProviderInSyncPolicy.DirectorySystemAttribute;
+            // The read-only attribute is used to indicate that the item is being locked by another user. Do not include it into InSyncPolicy.
+            storageInfo.InSyncPolicy =
+                StorageProviderInSyncPolicy.FileCreationTime    | StorageProviderInSyncPolicy.DirectoryCreationTime |
+                StorageProviderInSyncPolicy.FileLastWriteTime   | StorageProviderInSyncPolicy.DirectoryLastWriteTime |
+                StorageProviderInSyncPolicy.FileHiddenAttribute | StorageProviderInSyncPolicy.DirectoryHiddenAttribute |
+                StorageProviderInSyncPolicy.FileSystemAttribute | StorageProviderInSyncPolicy.DirectorySystemAttribute;
+            //StorageProviderInSyncPolicy.FileReadOnlyAttribute | StorageProviderInSyncPolicy.DirectoryReadOnlyAttribute;
 
-                
             //storageInfo.ShowSiblingsAsGroup = false;
             //storageInfo.HardlinkPolicy = StorageProviderHardlinkPolicy.None;
 

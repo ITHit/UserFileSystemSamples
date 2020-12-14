@@ -27,7 +27,7 @@ namespace VirtualFileSystem.Syncronyzation
     internal class RemoteStorageMonitor : Logger, IDisposable
     {
         /// <summary>
-        /// Watches for changes remote storage file system.
+        /// Watches for changes in the remote storage file system.
         /// </summary>
         private FileSystemWatcher watcher = new FileSystemWatcher();
 
@@ -156,6 +156,9 @@ namespace VirtualFileSystem.Syncronyzation
                             await new UserFileSystemRawItem(userFileSystemPath).UpdateAsync(itemInfo);
                             LogMessage("Updated succesefully", userFileSystemPath);
                         }
+
+                        // Update "locked by another user" icon.
+                        await new UserFileSystemRawItem(userFileSystemPath).SetLockedByAnotherUserAsync(itemInfo.LockedByAnotherUser);
                     }
                 }
             }

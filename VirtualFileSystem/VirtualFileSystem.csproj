@@ -6,6 +6,7 @@
     <Company>IT Hit LTD.</Company>
     <Product>Virtual File System</Product>
     <Copyright>IT Hit LTD.</Copyright>
+    <Platforms>AnyCPU</Platforms>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
@@ -28,7 +29,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.7" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="1.2.3941.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="1.2.3984.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json">
@@ -44,6 +45,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Images\Locked.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\LockedByAnotherUser.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Images\LockedPending.ico">

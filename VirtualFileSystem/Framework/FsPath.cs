@@ -121,7 +121,7 @@ namespace VirtualFileSystem
         {
             return (Path.GetFileName(path).StartsWith('~')   && Path.GetExtension(path).Equals(".tmp", StringComparison.InvariantCultureIgnoreCase))    // Word temp files
                 || (Path.GetFileName(path).StartsWith("ppt") && Path.GetExtension(path).Equals(".tmp", StringComparison.InvariantCultureIgnoreCase))    // PowerPoint temp files
-                || (string.IsNullOrEmpty(Path.GetExtension(path)) && (Path.GetFileName(path).Length == 8))                                              // Excel temp files
+                || (string.IsNullOrEmpty(Path.GetExtension(path)) && (Path.GetFileName(path).Length == 8) && File.Exists(path))                         // Excel temp files
                 || ((Path.GetFileNameWithoutExtension(path).Length == 8) && Path.GetExtension(path).Equals(".tmp", StringComparison.InvariantCultureIgnoreCase));   // Excel temp files
         }
 
@@ -129,30 +129,21 @@ namespace VirtualFileSystem
         /// Returns true if file system contains MS Office lock file (~$file.ext) in file 
         /// system that corresponds to the provided path to MS Office file. 
         /// </summary>
-        /// <param name="path">Path to MS Office file.</param>
+        /// <param name="path">Path to the MS Office file.</param>
         internal static bool IsMsOfficeLocked(string path)
         {
             string lockPath = GetLockPathFromMsOfficePath(path);
             return lockPath != null;
         }
 
-
         /// <summary>
         /// Returns true if the provided path points to MS Office lock file (~$file.ext). 
         /// </summary>
-        /// <param name="path">Path to lock file.</param>
+        /// <param name="path">Path to the MS Office lock file.</param>
         internal static bool IsMsOfficeLockFile(string path)
         {
             return Path.GetFileName(path).StartsWith("~$");
         }
-
-        
-        //public static string GetMsOfficePathFromLock(string msOfficeLockFilePath)
-        //{
-        //    int separatorIndex = msOfficeLockFilePath.LastIndexOf(Path.DirectorySeparatorChar);
-        //    return msOfficeLockFilePath.Remove(separatorIndex + 1, "~$".Length);
-        //}
-        
 
         /// <summary>
         /// Returns MS Office lock file path if such file exists.
@@ -253,7 +244,7 @@ namespace VirtualFileSystem
                 return null;
             }
 
-            string[] suf = { "b ", "KB", "MB", "GB", "TB", "PB", "EB" }; //Longs run out around EB
+            string[] suf = { "b ", "KB", "MB", "GB", "TB", "PB", "EB" };
             if (length == 0)
             {
                 return "0" + suf[0];
@@ -271,6 +262,13 @@ namespace VirtualFileSystem
         /// <returns>True if the file is locked for writing. False otherwise.</returns>
         public static bool IsWriteLocked(string path)
         {
+            // To avoid hydration (typically during the file deletion) we check the Offline attribute.
+            // If file is marked offline, it is not open for writing.            
+            if (((int)File.GetAttributes(path) & (int)Syncronyzation.FileAttributesExt.Offline) != 0)
+            {
+                return false;
+            }
+            
             try
             {
                 using (FileStream stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete))

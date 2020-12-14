@@ -126,15 +126,7 @@ namespace VirtualFileSystem.Syncronyzation
                     if (new UserFileSystemRawItem(userFileSystemPath).HydrationRequired())
                     {
                         LogMessage("Hydrating", userFileSystemPath);
-                        if (FsPath.IsFolder(userFileSystemPath))
-                        {
-                            // List folder content to create placeholders that will trigger hydration.
-                            //new DirectoryInfo(userFileSystemPath).EnumerateFileSystemInfos("*");
-                        }
-                        else
-                        {
-                            new PlaceholderFile(userFileSystemPath).Hydrate(0, -1);
-                        }
+                        new PlaceholderFile(userFileSystemPath).Hydrate(0, -1);
                         LogMessage("Hydrated succesefully", userFileSystemPath);
                     }
                     else if (new UserFileSystemRawItem(userFileSystemPath).DehydrationRequired())

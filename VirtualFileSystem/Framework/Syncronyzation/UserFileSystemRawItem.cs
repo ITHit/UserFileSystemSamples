@@ -78,6 +78,9 @@ namespace VirtualFileSystem.Syncronyzation
                     {
                         string userFileSystemItemPath = Path.Combine(userFileSystemParentPath, child.Name);
                         await ETag.SetETagAsync(userFileSystemItemPath, child.ETag);
+
+                        // Set the lock icon and read-only attribute, to indicate that the item is locked by another user.
+                        await new UserFileSystemRawItem(userFileSystemItemPath).SetLockedByAnotherUserAsync(child.LockedByAnotherUser);
                     }
 
                     return created;
@@ -113,6 +116,12 @@ namespace VirtualFileSystem.Syncronyzation
                 {
                     PlaceholderItem placeholderItem = PlaceholderItem.GetItem(userFileSystemPath);
 
+                    // To be able to update the item we need to remove the read-only attribute.
+                    if((FsPath.GetFileSystemItem(userFileSystemPath).Attributes | System.IO.FileAttributes.ReadOnly) != 0)
+                    {
+                        FsPath.GetFileSystemItem(userFileSystemPath).Attributes &= ~System.IO.FileAttributes.ReadOnly;
+                    }
+
                     // Dehydrate/hydrate the file, update file size, custom data, creation date, modification date, attributes.
                     placeholderItem.SetItemInfo(itemInfo);
 
@@ -120,7 +129,10 @@ namespace VirtualFileSystem.Syncronyzation
                     await ETag.SetETagAsync(userFileSystemPath, itemInfo.ETag);
 
                     // Clear icon.
-                    await ClearStateAsync();
+                    //await ClearStateAsync();
+
+                    // Set the lock icon and read-only attribute, to indicate that the item is locked by another user.
+                    await SetLockedByAnotherUserAsync(itemInfo.LockedByAnotherUser);
 
                     return true;
                 }
@@ -378,6 +390,15 @@ namespace VirtualFileSystem.Syncronyzation
         }
 
         /// <summary>
+        /// Sets or removes "Locked another another user" icon.
+        /// </summary>
+        /// <param name="set">True to display the icon. False - to remove the icon.</param>
+        private async Task SetLockedByAnotherUserIconAsync(bool set)
+        {
+            await SetIconAsync(set, 2, "LockedByAnotherUser.ico", "The item is locked by another user");
+        }
+
+        /// <summary>
         /// Sets or removes icon.
         /// </summary>
         /// <param name="set">True to display the icon. False - to remove the icon.</param>
@@ -430,5 +451,40 @@ namespace VirtualFileSystem.Syncronyzation
                 }
             }
         }
+
+        /// <summary>
+        /// Sets or removes "Locked another another user" icon and read-only attribute on files.
+        /// </summary>
+        /// <param name="set">True to display the icon and read-only attribute. False - to remove the icon and read-only attribute.</param>
+        internal async Task SetLockedByAnotherUserAsync(bool set)
+        {
+            // Can not set icon on read-only files.
+            // Changing read-only attribute on folders triggers folders listing. Changing it on files only.
+
+            if(FsPath.IsFile(userFileSystemPath))
+            {
+                FileInfo file = new FileInfo(userFileSystemPath);
+                if(set != file.IsReadOnly)
+                {
+                    // Remove read-only attribute.
+                    new FileInfo(userFileSystemPath).Attributes &= ~System.IO.FileAttributes.ReadOnly;
+
+                    // Update the lock icon, to indicate that the item is locked by another user.
+                    await SetLockedByAnotherUserIconAsync(set);
+
+                    // Set read-only attribute.
+                    if (set)
+                    {
+                        new FileInfo(userFileSystemPath).Attributes |= System.IO.FileAttributes.ReadOnly;
+                    }
+                }
+            }
+            else
+            {
+                // Update the lock icon, to indicate that the item is locked by another user.
+                await SetLockedByAnotherUserIconAsync(set);
+            }
+        }
+
     }
 }

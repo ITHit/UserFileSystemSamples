@@ -127,11 +127,19 @@ namespace VirtualFileSystem
             }
             else if (exitKey.KeyChar == 'Q')
             {
-                // Unregister during programm uninstall and delete all files/folder.
-                await Registrar.UnregisterAsync(SyncRootId);
-                Directory.Delete(Settings.UserFileSystemRootPath, true);
                 log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
                 log.Info("\nAll files and folders placeholders are deleted.\n");
+
+                // Unregister during programm uninstall and delete all files/folder.
+                await Registrar.UnregisterAsync(SyncRootId);
+                try
+                {
+                    Directory.Delete(Settings.UserFileSystemRootPath, true);
+                }
+                catch (Exception ex)
+                {
+                    log.Error($"\n{ex}");
+                }
             }
             else
             {

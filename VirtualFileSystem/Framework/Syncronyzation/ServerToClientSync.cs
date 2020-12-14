@@ -109,6 +109,13 @@ namespace VirtualFileSystem.Syncronyzation
                                 LogMessage("Updated succesefully", userFileSystemPath);
                             }
 
+                            // Update "locked by another user" icon.
+                            if(PlaceholderItem.GetItem(userFileSystemPath).GetInSync())
+
+                            {
+                                await new UserFileSystemRawItem(userFileSystemPath).SetLockedByAnotherUserAsync(remoteStorageItem.LockedByAnotherUser);
+                            }
+
                             // Hydrate / dehydrate the file.
                             if(new UserFileSystemRawItem(userFileSystemPath).HydrationRequired())
                             {

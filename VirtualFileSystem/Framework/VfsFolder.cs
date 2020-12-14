@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using VirtualFileSystem.Syncronyzation;
 using Windows.Storage;
 
 namespace VirtualFileSystem
@@ -51,14 +52,19 @@ namespace VirtualFileSystem
             resultContext.ReturnChildren(newChildren.ToArray(), newChildren.Count());
 
             
-            // Create ETags.
-            // ETags must correspond with a server file/folder, NOT with a client placeholder. 
-            // It should NOT be moved/deleted/updated when a placeholder in the user file system is moved/deleted/updated.
-            // It should be moved/deleted when a file/folder in the remote storage is moved/deleted.
+            // Save ETags and set "locked by another user" icon.
             foreach (FileSystemItemBasicInfo child in children)
             {
                 string userFileSystemItemPath = Path.Combine(UserFileSystemPath, child.Name);
-                await ETag.SetETagAsync(userFileSystemItemPath, child.ETag);
+
+                // Create ETags.
+                // ETags must correspond with a server file/folder, NOT with a client placeholder. 
+                // It should NOT be moved/deleted/updated when a placeholder in the user file system is moved/deleted/updated.
+                // It should be moved/deleted when a file/folder in the remote storage is moved/deleted.
+                ETag.SetETagAsync(userFileSystemItemPath, child.ETag);
+
+                // Set the lock icon and read-only attribute, to indicate that the item is locked by another user.
+                new UserFileSystemRawItem(userFileSystemItemPath).SetLockedByAnotherUserAsync(child.LockedByAnotherUser);
             }
         }
     }

@@ -43,9 +43,9 @@ namespace VirtualFileSystem
         }
 
         /// <summary>
-        /// Moves file or folder to new location in the remote storage.
+        /// Renames or moves file or folder to a new location in the remote storage.
         /// </summary>
-        /// <param name="userFileSystemNewPath">Target path of this file of folder in user file system.</param>
+        /// <param name="userFileSystemNewPath">Target path of this file of folder in the user file system.</param>
         public async Task MoveToAsync(string userFileSystemNewPath)
         {
             string remoteStorageOldPath = RemoteStoragePath;

@@ -15,10 +15,10 @@ namespace VirtualFileSystem
     internal static class Mapping
     {
         /// <summary>
-        /// Returns a remote storage path that corresponds to the user file system path.
+        /// Returns a remote storage URI that corresponds to the user file system path.
         /// </summary>
         /// <param name="userFileSystemPath">Full path in the user file system.</param>
-        /// <returns>Path in the remote storage that corresponds to the <paramref name="userFileSystemPath"/>.</returns>
+        /// <returns>Remote storage URI that corresponds to the <paramref name="userFileSystemPath"/>.</returns>
         public static string MapPath(string userFileSystemPath)
         {
             // Get path relative to the virtual root.
@@ -30,14 +30,14 @@ namespace VirtualFileSystem
         }
 
         /// <summary>
-        /// Returns a user file system path that corresponds to the remote storage path.
+        /// Returns a user file system path that corresponds to the remote storage URI.
         /// </summary>
-        /// <param name="remoteStoragePath">Full path in the remote storage.</param>
-        /// <returns>Path in the user file system that corresponds to the <paramref name="remoteStoragePath"/>.</returns>
-        public static string ReverseMapPath(string remoteStoragePath)
+        /// <param name="remoteStorageUri">Remote storage URI.</param>
+        /// <returns>Path in the user file system that corresponds to the <paramref name="remoteStorageUri"/>.</returns>
+        public static string ReverseMapPath(string remoteStorageUri)
         {
             // Get path relative to the virtual root.
-            string relativePath = Path.TrimEndingDirectorySeparator(remoteStoragePath).Substring(
+            string relativePath = Path.TrimEndingDirectorySeparator(remoteStorageUri).Substring(
                 Path.TrimEndingDirectorySeparator(Program.Settings.RemoteStorageRootPath).Length);
 
             string path = $"{Path.TrimEndingDirectorySeparator(Program.Settings.UserFileSystemRootPath)}{relativePath}";
@@ -70,11 +70,15 @@ namespace VirtualFileSystem
             userFileSystemItem.ChangeTime = remoteStorageItem.LastWriteTime;
 
             // You will send the ETag to 
-            // the server inside If-Match header togater with updated content from client.
+            // the server inside If-Match header togeter with updated content from client.
             // This will make sure the changes on the server is not overwritten.
             //
             // In this sample, for the sake of simplicity, we use file last write time instead of ETag.
             userFileSystemItem.ETag = remoteStorageItem.LastWriteTime.ToBinary().ToString();
+
+            // If the item is locked by another user, set the LockedByAnotherUser to true.
+            // Here we just use the read-only attribute from remote storage item for demo purposes.
+            userFileSystemItem.LockedByAnotherUser = (remoteStorageItem.Attributes & System.IO.FileAttributes.ReadOnly) != 0;
 
             // If the file is moved/renamed and the app is not running this will help us 
             // to sync the file/folder to remote storage after app starts.

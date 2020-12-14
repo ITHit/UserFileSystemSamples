@@ -37,5 +37,10 @@ namespace VirtualFileSystem
         /// Server ETag.
         /// </summary>
         public string ETag { get; set; }
+
+        /// <summary>
+        /// Indicates if the item is locked by another user in the remote storage.
+        /// </summary>
+        public bool LockedByAnotherUser { get; set; }
     }
 }

@@ -30,7 +30,7 @@ namespace VirtualFileSystem
         public async Task OpenAsync(IOperationContext operationContext, IResultContext context)
         {
             Logger.LogMessage("IFile.OpenAsync()", UserFileSystemPath);
-
+            
             // Auto-lock the file.
             string userFileSystemFilePath = UserFileSystemPath;
             if (Engine.ChangesProcessingEnabled && FsPath.Exists(userFileSystemFilePath))
@@ -131,7 +131,7 @@ namespace VirtualFileSystem
 
             Logger.LogMessage($"IFile.ValidateDataAsync({offset}, {length})", UserFileSystemPath);
 
-            SimulateNetworkDelay(length, resultContext);
+            //SimulateNetworkDelay(length, resultContext);
 
             bool isValid = await new UserFile(UserFileSystemPath).ValidateDataAsync(offset, length);
 

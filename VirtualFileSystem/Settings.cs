@@ -109,9 +109,12 @@ namespace VirtualFileSystem
                 Directory.CreateDirectory(settings.UserFileSystemRootPath);
             }
 
+            // Icons folder.
             settings.IconsFolderPath = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), @"Images");
 
-            settings.ServerDataFolderPath = Path.Combine(Path.GetTempPath(), settings.UserFileSystemRootPath.Replace(":", ""), "ServerData");
+            // Folder where eTags and file locks are sored.
+            string localApplicationDataFolderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            settings.ServerDataFolderPath = Path.Combine(localApplicationDataFolderPath, settings.UserFileSystemRootPath.Replace(":", ""), "ServerData");
 
 
             return settings;
