@@ -4,7 +4,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <Authors>IT Hit LTD.</Authors>
     <Company>IT Hit LTD.</Company>
-    <Product>Virtual File System</Product>
+    <Product>Map WebDAV Drive</Product>
     <Copyright>IT Hit LTD.</Copyright>
     <Platforms>AnyCPU</Platforms>
   </PropertyGroup>
@@ -24,12 +24,13 @@
     <Compile Remove="SyncService.cs" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="ITHitWebDAVClient" Version="4.0.1381" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="1.3.4067.0" />
     <PackageReference Include="log4net" Version="2.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.7" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.7" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="1.3.4067.0" />
+    <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.19041.1" />
+    <PackageReference Include="System.Security.Principal.Windows" Version="4.7.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json">
