@@ -32,7 +32,7 @@ namespace VirtualFileSystem.Syncronyzation
         private FileSystemWatcher watcher = new FileSystemWatcher();
 
         /// <summary>
-        /// Remote storage path. Folder to minitor changes in.
+        /// Remote storage path. Folder to monitor for changes.
         /// </summary>
         private string remoteStorageRootPath;
 

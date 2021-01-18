@@ -37,7 +37,7 @@ namespace VirtualFileSystem
 
 
             // Add trailing slash to folder URLs so Uri class concatenation works correctly.
-            if(Directory.Exists(userFileSystemPath))
+            if(!path.EndsWith('/') && Directory.Exists(userFileSystemPath))
             {
                 path = $"{path}/";
             }

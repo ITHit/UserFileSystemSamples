@@ -1,16 +1,20 @@
 ﻿using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.WebDAV.Client;
+using ITHit.WebDAV.Client.Exceptions;
 using log4net;
 using log4net.Config;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using VirtualFileSystem.Syncronyzation;
 using Windows.Storage;
 using Windows.Storage.Provider;
@@ -54,6 +58,7 @@ namespace VirtualFileSystem
         /// </summary>
         private static FullSyncService syncService;
 
+        //[STAThread]
         static async Task<int> Main(string[] args)
         {
             // Load Settings.
@@ -64,10 +69,10 @@ namespace VirtualFileSystem
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
             XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
 
-            log.Info($"\n{System.Diagnostics.Process.GetCurrentProcess().ProcessName}");
-            log.Info("\nPress any other key to exit without unregistering (simulate reboot).");
-            log.Info("\nPress 'q' to unregister file system and exit (simulate uninstall).");
+            log.Info($"\n{Settings.ProductName}");
             log.Info("\nPress 'Q' to unregister file system, delete all files/folders and exit (simulate uninstall with full cleanup).");
+            log.Info("\nPress 'q' to unregister file system and exit (simulate uninstall).");
+            log.Info("\nPress any other key to exit without unregistering (simulate reboot).");
             log.Info("\n----------------------\n");
 
             // Typically you will register sync root during your application installation.
@@ -76,7 +81,9 @@ namespace VirtualFileSystem
             {
                 Directory.CreateDirectory(Settings.UserFileSystemRootPath);
                 log.Info($"\nRegistering {Settings.UserFileSystemRootPath} sync root.");
-                await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, "WebDAV Drive");
+                
+                
+                await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName);
             }
             else
             {
@@ -87,11 +94,7 @@ namespace VirtualFileSystem
             StorageFolder userFileSystemRootFolder = await StorageFolder.GetFolderFromPathAsync(Settings.UserFileSystemRootPath);
             log.Info($"\nIndexed state: {(await userFileSystemRootFolder.GetIndexedStateAsync())}\n");
 
-
-            // Create and configure WebDAV client to access the remote storage;
-            DavClient = new WebDavSessionAsync(Program.Settings.WebDAVClientLicense);
-            ITHit.WebDAV.Client.Logger.FileLogger.LogFile = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().CodeBase), "WebDAVLog.txt");
-            ITHit.WebDAV.Client.Logger.FileLogger.Level = ITHit.WebDAV.Client.Logger.LogLevel.All;
+            ConfigureWebDAVClient();
 
             ConsoleKeyInfo exitKey;
 
@@ -204,6 +207,118 @@ namespace VirtualFileSystem
             get
             {
                 return $"{System.Diagnostics.Process.GetCurrentProcess().ProcessName}!{System.Security.Principal.WindowsIdentity.GetCurrent().User}!User";
+            }
+        }
+
+        /// <summary>
+        /// Creates and configures WebDAV client to access the remote storage;
+        /// </summary>
+        private static void ConfigureWebDAVClient()
+        {
+            DavClient = new WebDavSessionAsync(Program.Settings.WebDAVClientLicense);
+            
+            // Set authentication credentials if needed. Supports Basic, Digest, NTLM, Kerberos.
+            // DavClient.Credentials = new System.Net.NetworkCredential("User1", "pwd");
+
+            // Disable automatic redirect processing so we can process the 
+            // 302 login redirect inside the error event handler.
+            DavClient.AllowAutoRedirect = false;
+            DavClient.WebDavError += DavClient_WebDavError;
+
+            ITHit.WebDAV.Client.Logger.FileLogger.LogFile = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().CodeBase), "WebDAVLog.txt");
+            ITHit.WebDAV.Client.Logger.FileLogger.Level = ITHit.WebDAV.Client.Logger.LogLevel.All;
+        }
+
+        /// <summary>
+        /// Maximum number of login attempts.
+        /// </summary>
+        private static uint loginRetriesMax = 3;
+
+        /// <summary>
+        /// Current login attempt.
+        /// </summary>
+        private static uint loginRetriesCurrent = 0;
+
+
+        private static void DavClient_WebDavError(IWebRequestAsync sender, WebDavErrorEventArgs e)
+        {
+            WebDavHttpException httpException = e.Exception as WebDavHttpException;
+            log.Info($"\n{httpException?.Status.Code} {httpException?.Status.Description} {e.Exception.Message} ");
+            if (httpException != null)
+            {
+                switch (httpException.Status.Code)
+                {
+                    // 302 redirect to login page.
+                    case 302 :
+                        if (loginRetriesCurrent < loginRetriesMax)
+                        {
+                            // Show login dialog.
+
+                            // Azure AD can not navigate directly to login page - failed corelation.
+                            //string loginUrl = ((Redirect302Exception)e.Exception).Location;
+                            //Uri url = new System.Uri(loginUrl, System.UriKind.Absolute);
+
+                            Uri failedUri = (e.Exception as WebDavHttpException).Uri;
+
+                            WebDAVDrive.Login.WebBrowserLogin loginForm = null;
+                            Thread thread = new Thread(() => {
+                                loginForm = new WebDAVDrive.Login.WebBrowserLogin(failedUri, e.Request, DavClient);
+                                Application.Run(loginForm);
+                            });
+                            thread.SetApartmentState(ApartmentState.STA);
+                            thread.Start();
+                            thread.Join();
+
+                            loginRetriesCurrent++;
+                            
+                            /*
+                            if (loginForm.Cookies != null)
+                            {
+                                // Attach cookies to all future requests.
+                                DavClient.CookieContainer.Add(loginForm.Cookies);
+                                e.Result = WebDavErrorEventResult.Fail;
+
+                                // Set successful response and continue processing.
+                                e.Response = loginForm.Response;
+                                e.Result = WebDavErrorEventResult.ContinueProcessing;
+
+                                // Alternatively you can modify this request, attaching cookies or headers, and replay it.
+                                //e.Request.CookieContainer.Add(loginForm.Cookies);
+                                //e.Result = WebDavErrorEventResult.Repeat;
+                            }
+                            */
+                        }
+                        break;
+
+                        // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
+                    case 401:
+                        if (loginRetriesCurrent < loginRetriesMax)
+                        {
+                            // Show login dialog.
+
+                            Uri failedUri = (e.Exception as WebDavHttpException).Uri;
+
+                            WebDAVDrive.Login.ChallengeLogin loginForm = null;
+                            Thread thread = new Thread(() => {
+                                loginForm = new WebDAVDrive.Login.ChallengeLogin();
+                                loginForm.Server.Text = failedUri.OriginalString;
+                                Application.Run(loginForm);
+                            });
+                            thread.SetApartmentState(ApartmentState.STA);
+                            thread.Start();
+                            thread.Join();
+
+                            loginRetriesCurrent++;
+
+                            if (loginForm.DialogResult == DialogResult.OK)
+                            {
+                                string login = loginForm.Login.Text.Trim();
+                                string password = loginForm.Password.Text.Trim();
+                                DavClient.Credentials = new NetworkCredential(login, password);
+                            }
+                        }
+                        break;
+                }
             }
         }
     }

@@ -69,14 +69,15 @@ namespace VirtualFileSystem.Syncronyzation
 
                 // UFS <- RS. Recursivery synchronize all updated/created/deleted file and folders present in the user file system.
                 await new ServerToClientSync(Log).SyncronizeFolderAsync(userFileSystemRootPath);
-
-                // Wait and than start synchronyzation again.
-                timer.Start();
             }
             catch(Exception ex)
             {
-                LogError("Timer failure:", null, null, ex);
-                throw;
+                LogError(null, null, null, ex);
+            }
+            finally
+            {
+                // Wait and than start synchronyzation again.
+                timer.Start();
             }
         }
 

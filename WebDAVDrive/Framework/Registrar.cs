@@ -48,12 +48,14 @@ namespace VirtualFileSystem
             //storageInfo.ShowSiblingsAsGroup = false;
             //storageInfo.HardlinkPolicy = StorageProviderHardlinkPolicy.None;
 
-            /*
+            
+            // Adds columns to Windows File Manager. 
+            // Show/hide columns in the "More..." context menu on the columns header.
             var proDefinitions = storageInfo.StorageProviderItemPropertyDefinitions;
-            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Test0", Id = 0, });
-            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Test1", Id = 1, });
-            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Test2", Id = 2, });
-            */
+            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Header 0", Id = 0, });
+            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Header 1", Id = 1, });
+            //proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Column 2", Id = 2, });
+            
 
             ValidateStorageProviderSyncRootInfo(storageInfo);
 

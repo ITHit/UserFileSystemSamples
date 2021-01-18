@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using VirtualFileSystem.Syncronyzation;
-using Windows.UI.Xaml;
 
 namespace VirtualFileSystem
 {

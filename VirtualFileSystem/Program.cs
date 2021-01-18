@@ -59,9 +59,9 @@ namespace VirtualFileSystem
             XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
 
             log.Info($"\n{System.Diagnostics.Process.GetCurrentProcess().ProcessName}");
-            log.Info("\nPress any other key to exit without unregistering (simulate reboot).");
-            log.Info("\nPress 'q' to unregister file system and exit (simulate uninstall).");
             log.Info("\nPress 'Q' to unregister file system, delete all files/folders and exit (simulate uninstall with full cleanup).");
+            log.Info("\nPress 'q' to unregister file system and exit (simulate uninstall).");
+            log.Info("\nPress any other key to exit without unregistering (simulate reboot).");
             log.Info("\n----------------------\n");
 
             // Typically you will register sync root during your application installation.
@@ -70,7 +70,7 @@ namespace VirtualFileSystem
             {
                 Directory.CreateDirectory(Settings.UserFileSystemRootPath);
                 log.Info($"\nRegistering {Settings.UserFileSystemRootPath} sync root.");
-                await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, "My Virtual File System");
+                await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName);
             }
             else
             {

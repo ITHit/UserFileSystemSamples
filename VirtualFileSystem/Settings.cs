@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -45,6 +47,12 @@ namespace VirtualFileSystem
         /// Path to the icons folder.
         /// </summary>
         public string IconsFolderPath { get; set; }
+
+        /// <summary>
+        /// Product name. Displayed as a mounted folder name under Desktop as 
+        /// well in every location where product name is required.
+        /// </summary>
+        public string ProductName { get; set; }
 
         /// <summary>
         /// Path to the folder that stores ETags, locks and other data associated with files and folders.
@@ -109,13 +117,17 @@ namespace VirtualFileSystem
                 Directory.CreateDirectory(settings.UserFileSystemRootPath);
             }
 
+            string assemblyLocation = Assembly.GetEntryAssembly().Location;
+
             // Icons folder.
-            settings.IconsFolderPath = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), @"Images");
+            settings.IconsFolderPath = Path.Combine(Path.GetDirectoryName(assemblyLocation), @"Images");
 
-            // Folder where eTags and file locks are sored.
+            // Load product name from entry exe file.
+            settings.ProductName = FileVersionInfo.GetVersionInfo(assemblyLocation).ProductName;
+
+            // Folder where eTags and file locks are stored.
             string localApplicationDataFolderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            settings.ServerDataFolderPath = Path.Combine(localApplicationDataFolderPath, settings.UserFileSystemRootPath.Replace(":", ""), "ServerData");
-
+            settings.ServerDataFolderPath = Path.Combine(localApplicationDataFolderPath, settings.ProductName, settings.UserFileSystemRootPath.Replace(":", ""), "ServerData");
 
             return settings;
         }

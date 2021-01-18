@@ -39,7 +39,16 @@ namespace VirtualFileSystem
             // This method has a 60 sec timeout. 
             // To process longer requests modify the IFolder.GetChildrenAsync() implementation.
 
-            IHierarchyItemAsync[] remoteStorageChildren = await Program.DavClient.GetChildrenAsync(new Uri(RemoteStorageUri), false);
+            IHierarchyItemAsync[] remoteStorageChildren = null;
+            // Retry the request in case the log-in dialog is shown.
+            try
+            {
+                remoteStorageChildren = await Program.DavClient.GetChildrenAsync(new Uri(RemoteStorageUri), false);
+            }
+            catch (ITHit.WebDAV.Client.Exceptions.Redirect302Exception) 
+            {
+                remoteStorageChildren = await Program.DavClient.GetChildrenAsync(new Uri(RemoteStorageUri), false);
+            }
 
             List<FileSystemItemBasicInfo> userFileSystemChildren = new List<FileSystemItemBasicInfo>();
             foreach (IHierarchyItemAsync remoteStorageItem in remoteStorageChildren)
@@ -47,6 +56,7 @@ namespace VirtualFileSystem
                 FileSystemItemBasicInfo itemInfo = Mapping.GetUserFileSysteItemBasicInfo(remoteStorageItem);
                 userFileSystemChildren.Add(itemInfo);
             }
+
 
             return userFileSystemChildren;
         }

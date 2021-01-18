@@ -7,6 +7,9 @@
     <Product>Virtual File System</Product>
     <Copyright>IT Hit LTD.</Copyright>
     <Platforms>AnyCPU</Platforms>
+    <Description>A virtual file system with synchronization support, on-demand loading, selective offline files support, upload and download progress, and error reporting. It synchronizes files and folders both from remote storage to the user file system and from the user file system to remote storage. 
+
+To simulate the remote storage, this sample is using a folder in the local file system on the same machine.</Description>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
@@ -29,7 +32,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.7" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="1.3.4067.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="1.3.4102.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json">
