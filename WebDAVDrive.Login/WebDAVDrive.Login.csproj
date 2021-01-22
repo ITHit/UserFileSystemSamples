@@ -12,11 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ITHitWebDAVClient" Version="4.0.1398-Beta" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.721-prerelease" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="ITHitWebDAVClient" Version="4.0.1393-Beta" />
   </ItemGroup>
 
 </Project>

@@ -252,6 +252,8 @@ namespace VirtualFileSystem
                     case 302 :
                         if (loginRetriesCurrent < loginRetriesMax)
                         {
+                            loginRetriesCurrent++;
+
                             // Show login dialog.
 
                             // Azure AD can not navigate directly to login page - failed corelation.
@@ -268,8 +270,6 @@ namespace VirtualFileSystem
                             thread.SetApartmentState(ApartmentState.STA);
                             thread.Start();
                             thread.Join();
-
-                            loginRetriesCurrent++;
                             
                             /*
                             if (loginForm.Cookies != null)

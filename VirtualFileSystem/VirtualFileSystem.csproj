@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0-windows10.0.19041.0</TargetFramework>
+    <CsWinRTWindowsMetadata>10.0.19041.0</CsWinRTWindowsMetadata>
     <Authors>IT Hit LTD.</Authors>
     <Company>IT Hit LTD.</Company>
     <Product>Virtual File System</Product>
@@ -32,7 +33,7 @@ To simulate the remote storage, this sample is using a folder in the local file 
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.7" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="1.3.4102.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="1.3.4108.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json">
