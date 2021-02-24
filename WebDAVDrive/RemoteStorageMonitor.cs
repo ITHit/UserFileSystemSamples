@@ -16,7 +16,7 @@ namespace VirtualFileSystem.Syncronyzation
 {
     /// <summary>
     /// Monitors changes in the remote storage, notifies the client and updates the user file system.
-    /// If any file or folder is is modified, created, delated, renamed or attributes changed in the remote storage, 
+    /// If any file or folder is modified, created, delated, renamed or attributes changed in the remote storage, 
     /// triggers an event with information about changes being made.
     /// </summary>
     internal class RemoteStorageMonitor : Logger, IDisposable

@@ -1,24 +1,27 @@
 ﻿using ITHit.WebDAV.Client;
+using log4net;
 using Microsoft.Web.WebView2.Core;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.IO;
-using System.Linq;
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Forms;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 
-namespace WebDAVDrive.Login
+namespace WebDAVDrive.LoginWPF
 {
     /// <summary>
-    /// Window that contins a web browser 
-    /// Web browser is a Microsoft Edge Chromium.
+    /// Interaction logic for WebBrowserLogin.xaml
     /// </summary>
-    public partial class WebBrowserLogin : Form
+    public partial class WebBrowserLogin : Window
     {
         /// <summary>
         /// Succesefull server response or null if no succesefull response was 
@@ -49,51 +52,87 @@ namespace WebDAVDrive.Login
         /// <summary>
         ///  Microsoft Edge Chromium instance.
         /// </summary>
-        private Microsoft.Web.WebView2.WinForms.WebView2 webView;
-
+        private Microsoft.Web.WebView2.Wpf.WebView2 webView;
 
         /// <summary>
-        /// Current number of 302 redirects.
+        /// Task for initializign of WebView2
         /// </summary>
-        //private uint numberOfRedirects = 0;
+        private Task BrowserInitializeTask;
+
+        /// <summary>
+        /// Navigation events count
+        /// </summary>
+        private int CountOfNavigationStartingEvents;
+
+        /// <summary>
+        /// Delegete for navigating to WebDAV server URL
+        /// </summary>
+        Delegate DoNavigation;
+
+        private ILog log;
 
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="url">URL to navigate to. This URL must redirect to a log-in page.</param>
-        public WebBrowserLogin(Uri url, IWebRequestAsync request, WebDavSessionAsync davClient)
+        public WebBrowserLogin(Uri url, IWebRequestAsync request, WebDavSessionAsync davClient, ILog log)
         {
             this.url = url;
             this.request = request;
             this.davClient = davClient;
-
+            this.log = log;
             InitializeComponent();
 
-            this.SuspendLayout();
-            string icoPath = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), @"Images", "Drive.ico");
-            this.Icon = new Icon(icoPath);
-
-            this.webView = new Microsoft.Web.WebView2.WinForms.WebView2();
-
-            this.webView.CreationProperties = null;
-            this.webView.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.webView.Location = new System.Drawing.Point(0, 0);
-            this.webView.Source = this.url;
-            this.webView.TabIndex = 0;
-            this.webView.ZoomFactor = 1D;
-            this.Controls.Add(this.webView);
-            this.ResumeLayout(false);
-
-            webView.CoreWebView2InitializationCompleted += CoreWebView2InitializationCompleted;
+            this.webView = new Microsoft.Web.WebView2.Wpf.WebView2();
+            this.Loaded += WebBrowserLogin_Load;
+            this.panel.Children.Add(this.webView);
         }
 
+        /// <summary>
+        /// WebBrowserLogin Load event handler
+        /// </summary>
+        public void WebBrowserLogin_Load(object sender, EventArgs e)
+        {
+            DoNavigation = (Action)delegate
+            {
+                webView.Source = new Uri(this.url.ToString(), UriKind.Absolute);
+            };
+            CountOfNavigationStartingEvents = 0;
+            webView.CoreWebView2InitializationCompleted += Browser_CoreWebView2Ready;
+            BrowserInitializeTask = webView.EnsureCoreWebView2Async();
+        }
 
-        private void CoreWebView2InitializationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2InitializationCompletedEventArgs e)
+        /// <summary>
+        /// CoreWebView2InitializationCompleted event handler
+        /// </summary>
+        private void Browser_CoreWebView2Ready(object sender, EventArgs e)
         {
             webView.CoreWebView2.DocumentTitleChanged += DocumentTitleChanged;
             webView.CoreWebView2.WebResourceResponseReceived += WebResourceResponseReceived;
+            BrowserInitializeTask.ContinueWith((t) =>
+            {
+                webView.NavigationStarting += Browser_NavigationStarting;
+                try
+                {
+                    webView.Dispatcher.Invoke(DoNavigation);
+                }
+                catch (Exception e)
+                {
+                    log.Error($"WebView navigation failed: {e.Message}");
+                }
+            });
+        }
+        /// <summary>
+        /// CoreWebView2Initialization event handler
+        /// </summary>
+        private void Browser_NavigationStarting(object sender, CoreWebView2NavigationStartingEventArgs e)
+        {
+            CountOfNavigationStartingEvents += 1;
         }
 
+        /// <summary>
+        /// WebResourceResponseReceived event hanlder
+        /// </summary>
         private async void WebResourceResponseReceived(object sender, Microsoft.Web.WebView2.Core.CoreWebView2WebResourceResponseReceivedEventArgs e)
         {
             // Here we test if the login is succeseful resending the original request to the server.
@@ -103,7 +142,7 @@ namespace WebDAVDrive.Login
             {
                 int statusCode = e.Response.StatusCode;
 
-                if (IsSuccess(statusCode) 
+                if (IsSuccess(statusCode)
                     && e.Request.Uri.Equals(url.OriginalString, StringComparison.InvariantCultureIgnoreCase)
                     && e.Request.Method == "GET")
                 {
@@ -142,9 +181,14 @@ namespace WebDAVDrive.Login
             return (statusCode >= 200) && (statusCode <= 299);
         }
 
+        /// <summary>
+        /// Event handler which changes window title acording to document title
+        /// </summary>
         private void DocumentTitleChanged(object sender, object e)
         {
-            this.Text = webView.CoreWebView2.DocumentTitle;
+            this.Title = this.Title + " - " + webView.CoreWebView2.DocumentTitle;
         }
     }
+
+
 }

@@ -1,0 +1,220 @@
+﻿<Window x:Class="WebDAVDrive.LoginWPF.ChallengeLogin"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"       
+        xmlns:WebDAVDrive.LoginWPF="clr-namespace:WebDAVDrive.LoginWPF"
+        Title="Login" Height="374" Width="429" FontSize="20" HorizontalAlignment="Center" Background="{DynamicResource FormBackground}" VerticalAlignment="Center" Icon="/WebDAVDrive.LoginWPF;component/Drive.ico" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" Opacity="1" WindowStyle="None">
+
+    <Window.Resources>
+        <!--Form background and text color-->
+        <SolidColorBrush x:Key="FormBackground"/>
+        <SolidColorBrush x:Key="FormForeground"/>
+
+        <Style x:Key="MyWaterMarkStyle" TargetType="{x:Type TextBox}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TextBox}">
+                        <Grid>
+                            <Border x:Name="border" Background="White" BorderBrush="{TemplateBinding BorderBrush}"  BorderThickness="1"/>
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="5,0,0,0" VerticalAlignment="Center" />
+                            <Label Margin="5,0,0,0" x:Name="WaterMarkLabel" Content="{TemplateBinding Tag}" VerticalAlignment="Center" Visibility="Collapsed" Foreground="Gray" FontFamily="Arial"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="Text" Value=""/>
+                                </MultiTrigger.Conditions>
+                                <Setter Property="Visibility" TargetName="WaterMarkLabel" Value="Visible"/>
+                            </MultiTrigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="DimGray"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="false">
+                                <Setter Property="Opacity" TargetName="border" Value="0.56"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter Property="BorderBrush" TargetName="border" Value="#FF7EB4EA"/>
+                            </Trigger>
+                            <Trigger Property="IsFocused" Value="true">
+                                <Setter Property="BorderBrush" TargetName="border" Value="Yellow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+
+            <Style.Triggers>
+                <Trigger Property="Validation.HasError" Value="true">
+                    <Setter Property="ToolTip" Value="{Binding RelativeSource={x:Static RelativeSource.Self},Path=(Validation.Errors)/ErrorContent}"/>
+                </Trigger>
+            </Style.Triggers>
+
+        </Style>
+
+        <!--Password Box placeholder and foucsing Styles-->
+        <Style x:Key="{x:Type PasswordBox}"
+        TargetType="{x:Type PasswordBox}">
+            <Setter Property="WebDAVDrive.LoginWPF:PasswordBoxMonitor.IsMonitoring" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type PasswordBox}">
+                        <Border Name="Bd" Background="{TemplateBinding Background}" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}" SnapsToDevicePixels="true">
+                            <Grid>
+                                <ScrollViewer x:Name="PART_ContentHost" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                <TextBlock Text="Password" Margin="4, 2, 0, 0" Foreground="Gray" Visibility="Collapsed" Name="txtPrompt" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="false">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"/>
+                            </Trigger>
+                            <Trigger Property="WebDAVDrive.LoginWPF:PasswordBoxMonitor.PasswordLength" Value="0">
+                                <Setter Property="Visibility" TargetName="txtPrompt" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter Property="BorderBrush" TargetName="Bd" Value="#FF7EB4EA"/>
+                            </Trigger>
+                            <Trigger Property="IsFocused" Value="true">
+                                <Setter Property="BorderBrush" TargetName="Bd" Value="Yellow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+
+        </Style>
+
+        <!--Text Box Foucsing Styles-->
+        <Style TargetType="TextBox">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TextBox}">
+                        <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="false">
+                                <Setter Property="Opacity" TargetName="border" Value="0.56"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter Property="BorderBrush" TargetName="border" Value="#FF7EB4EA"/>
+                            </Trigger>
+                            <Trigger Property="IsFocused" Value="true">
+                                <Setter Property="BorderBrush" TargetName="border" Value="Yellow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+
+        </Style>
+
+        <!--TitleBarCloseButton Styles-->
+        <Style x:Key="TitleBarCloseButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource FormForeground}" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="border" Background="{DynamicResource FormBackground}" BorderThickness="0" SnapsToDevicePixels="true">
+                            <ContentPresenter x:Name="contentPresenter" Margin="0" HorizontalAlignment="Center" VerticalAlignment="Center" Focusable="False" RecognizesAccessKey="True" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <ControlTemplate x:Key="validationTemplate">
+        </ControlTemplate>
+
+        
+        <WebDAVDrive.LoginWPF:ErrorCollectionToVisibility x:Key="ToVisibility" />
+
+    </Window.Resources>
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="32" ResizeBorderThickness="{x:Static SystemParameters.WindowResizeBorderThickness}" GlassFrameThickness="0" CornerRadius="0"/>
+    </WindowChrome.WindowChrome>
+
+    <Grid Margin="0,0,0,1">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="29*"></RowDefinition>
+            <RowDefinition Height="89*"></RowDefinition>
+            <RowDefinition Height="62*"></RowDefinition>
+            <RowDefinition Height="59*"></RowDefinition>
+            <RowDefinition Height="42*"></RowDefinition>
+            <RowDefinition Height="58*"></RowDefinition>
+            <RowDefinition Height="64*"></RowDefinition>
+        </Grid.RowDefinitions>
+        <TextBlock x:Name="StaticTextBlock" Text="Enter your credentials " Margin="24,14,117,41" Grid.ColumnSpan="2" Grid.Row="1" Foreground="{DynamicResource FormForeground}"/>
+        <TextBox x:Name="loginTextBox" Style="{StaticResource MyWaterMarkStyle}" Validation.ErrorTemplate="{StaticResource validationTemplate}"  Tag="Login" HorizontalAlignment="Left" VerticalAlignment="Center" Width="268" Margin="24,0,0,0" Height="42" Grid.Row="2" MaxLines="1" TextAlignment="Left" Grid.ColumnSpan="2" HorizontalContentAlignment="Left">
+            <TextBox.Text>
+                <Binding Path="Login" UpdateSourceTrigger="PropertyChanged">
+                    <Binding.ValidationRules>
+                        <WebDAVDrive.LoginWPF:LoginValidationRule ValidatesOnTargetUpdated="True" />
+                    </Binding.ValidationRules>
+                </Binding>
+            </TextBox.Text>
+        </TextBox>
+        <PasswordBox Tag="Login" x:Name="PasswdBox" PasswordChanged="PasswordBox_PasswordChanged" HorizontalAlignment="Left" VerticalAlignment="Top" Width="268" Margin="24,10,0,0" Grid.Row="3" Height="41" Grid.ColumnSpan="2" HorizontalContentAlignment="Left" VerticalContentAlignment="Center"/>
+        <CheckBox Grid.Row="5" VerticalAlignment="Top" VerticalContentAlignment="Center" HorizontalAlignment="Left"  IsChecked="{Binding KeepLogedIn}" Height="24" Width="21" Margin="21,3,0,0">
+            <CheckBox.LayoutTransform>
+                <ScaleTransform ScaleX="2" ScaleY="2" />
+            </CheckBox.LayoutTransform>
+        </CheckBox>
+        <TextBlock x:Name="CheckBoxText" Foreground="{DynamicResource FormForeground}" Text="Keep me loged-in" Grid.Row="5" VerticalAlignment="Top" HorizontalAlignment="Left" Height="28" Width="157" Margin="63,10,0,0"/>
+        <Button Content="OK" IsDefault="True" HorizontalAlignment="Left" Margin="24,0,0,0" Grid.Row="6" VerticalAlignment="Center" Width="180" Click="Button_Ok_Click" Height="37" Grid.ColumnSpan="2">
+            <Button.Style>
+                <Style TargetType="{x:Type Button}">
+                    <Setter Property="IsEnabled" Value="false" />
+                    <Style.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding ElementName=loginTextBox, Path=(Validation.HasError)}" Value="false" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="IsEnabled" Value="true" />
+                        </MultiDataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Button.Style>
+        </Button>
+        <Button Content="Cancel" IsCancel="True" HorizontalAlignment="Left" Margin="219,0,0,0" Grid.Row="6" VerticalAlignment="Center" Width="180" Click="Button_Cancel_Click" Height="37"/>
+        <TextBlock x:Name="URLTextBox" Foreground="{DynamicResource FormForeground}" HorizontalAlignment="Left" Margin="24,46,0,0" Text="{Binding Path=Url, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" VerticalAlignment="Top" Width="360" Height="26" Grid.Row="1"/>
+        <TextBlock x:Name="ErrorTextBox" Grid.Row="4" Visibility="{Binding ElementName=loginTextBox, Path=(Validation.Errors), Converter={StaticResource ToVisibility}}" VerticalAlignment="Center" HorizontalAlignment="Left" Height="28" Width="358" Margin="24,0,0,0" FontStyle="Italic" Foreground="#FFF70707">
+            <TextBlock.Text>
+                <Binding ElementName="loginTextBox" Path="(Validation.Errors)[0].ErrorContent"/>
+            </TextBlock.Text>
+        </TextBlock>
+
+        <Grid Grid.Row="0" Background="{DynamicResource FormBackground}" Width="Auto">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="353" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Image Grid.Column="0" Width="22" Height="22" Margin="4" Source="/WebDAVDrive.LoginWPF;component/Drive.ico" />
+            <TextBlock Grid.Column="1" Margin="4 0 0 0" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource FormForeground}" Text="{Binding WindowTitle}"/>
+
+            <Button Grid.Column="4" Click="OnCloseButtonClick" Style="{StaticResource TitleBarCloseButtonStyle}" Margin="0,0,-2,0">
+                <Path Width="46" Height="32" Data="M 18,11 27,20 M 18,20 27,11" Stroke="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}" StrokeThickness="1" />
+            </Button>
+        </Grid>
+    </Grid>
+
+
+</Window>

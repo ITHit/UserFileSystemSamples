@@ -36,7 +36,7 @@ namespace VirtualFileSystem
         public void LogError(string message, string sourcePath = null, string targetPath = null, Exception ex = null)
         {
             string att = FsPath.Exists(sourcePath) ? FsPath.GetAttString(sourcePath) : null;
-            Log.Error($"\n{DateTime.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {componentName,-26}{message,-45} {sourcePath,-80} {att} ", ex);
+            Log.Error($"\n{DateTimeOffset.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {componentName,-26}{message,-45} {sourcePath,-80} {att} ", ex);
         }
 
         /// <inheritdoc/>
@@ -45,7 +45,7 @@ namespace VirtualFileSystem
             string att = FsPath.Exists(sourcePath) ? FsPath.GetAttString(sourcePath) : null;
             string size = FsPath.Size(sourcePath);
 
-            Log.Debug($"\n{DateTime.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {componentName,-26}{message,-45} {sourcePath,-80} {size,7} {att} {targetPath}");
+            Log.Debug($"\n{DateTimeOffset.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {componentName,-26}{message,-45} {sourcePath,-80} {size,7} {att} {targetPath}");
         }
     }
 }

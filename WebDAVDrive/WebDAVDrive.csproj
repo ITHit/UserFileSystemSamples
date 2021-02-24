@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0-windows10.0.19041.0</TargetFramework>
-    <CsWinRTWindowsMetadata>10.0.19041.0</CsWinRTWindowsMetadata>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <Authors>IT Hit LTD.</Authors>
     <Company>IT Hit LTD.</Company>
     <Product>WebDAV Drive</Product>
@@ -26,15 +25,16 @@
     <Compile Remove="SyncService.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHitWebDAVClient" Version="4.0.1398-Beta" />
     <PackageReference Include="log4net" Version="2.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.7" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.7" />
+    <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.19041.1" />
     <PackageReference Include="System.Security.Principal.Windows" Version="4.7.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="1.3.4108.0" />
-    <ProjectReference Include="..\WebDAVDrive.Login\WebDAVDrive.Login.csproj" />
+    <PackageReference Include="ITHitWebDAVClient" Version="4.0.1398-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="1.4.4298.0" />
+    <ProjectReference Include="..\WebDAVDrive.LoginWPF\WebDAVDrive.LoginWPF.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json">

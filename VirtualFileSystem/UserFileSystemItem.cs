@@ -153,7 +153,7 @@ namespace VirtualFileSystem
                     // This is only required to avoid circular updates because of the simplicity of this sample.
                     // In your real-life application you will receive a new ETag from the server in the update response
                     // and return it from this method.
-                    string eTag = newInfo.LastWriteTime.ToBinary().ToString();
+                    string eTag = newInfo.LastWriteTime.DateTime.ToBinary().ToString();
                     await ETag.SetETagAsync(userFileSystemPath, eTag);
 
                     // Update remote storage file content.
@@ -224,14 +224,14 @@ namespace VirtualFileSystem
                 // Update ETag/LastWriteTime in user file system, so the synchronyzation or remote storage monitor would not start the new update.
                 // This is only required to avoid circular updates because of the simplicity of this sample.
                 // In your real-life application you will receive a new ETag from server in the update response.
-                string eTag = newInfo.LastWriteTime.ToBinary().ToString();
+                string eTag = newInfo.LastWriteTime.DateTime.ToBinary().ToString();
                 await ETag.SetETagAsync(userFileSystemPath, eTag);
 
                 remoteStorageItem.Attributes = newInfo.Attributes;
-                remoteStorageItem.CreationTimeUtc = newInfo.CreationTime;
-                remoteStorageItem.LastWriteTimeUtc = newInfo.LastWriteTime;
-                remoteStorageItem.LastAccessTimeUtc = newInfo.LastAccessTime;
-                remoteStorageItem.LastWriteTimeUtc = newInfo.LastWriteTime;
+                remoteStorageItem.CreationTimeUtc = newInfo.CreationTime.DateTime;
+                remoteStorageItem.LastWriteTimeUtc = newInfo.LastWriteTime.DateTime;
+                remoteStorageItem.LastAccessTimeUtc = newInfo.LastAccessTime.DateTime;
+                remoteStorageItem.LastWriteTimeUtc = newInfo.LastWriteTime.DateTime;
 
                 return eTag;
             }

@@ -12,10 +12,12 @@ using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 using VirtualFileSystem.Syncronyzation;
+using WebDAVDrive;
+using WebDAVDrive.LoginWPF.ViewModels;
 using Windows.Storage;
 using Windows.Storage.Provider;
 
@@ -68,6 +70,8 @@ namespace VirtualFileSystem
             // Load Log4Net for net configuration.
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
             XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
+            // Enable UTF8 for Console Window
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
 
             log.Info($"\n{Settings.ProductName}");
             log.Info("\nPress 'Q' to unregister file system, delete all files/folders and exit (simulate uninstall with full cleanup).");
@@ -262,10 +266,11 @@ namespace VirtualFileSystem
 
                             Uri failedUri = (e.Exception as WebDavHttpException).Uri;
 
-                            WebDAVDrive.Login.WebBrowserLogin loginForm = null;
+                            WebDAVDrive.LoginWPF.WebBrowserLogin webBrowserLogin = null;
                             Thread thread = new Thread(() => {
-                                loginForm = new WebDAVDrive.Login.WebBrowserLogin(failedUri, e.Request, DavClient);
-                                Application.Run(loginForm);
+                                webBrowserLogin = new WebDAVDrive.LoginWPF.WebBrowserLogin(failedUri, e.Request, DavClient, log);
+                                webBrowserLogin.Title = Settings.ProductName;
+                                webBrowserLogin.ShowDialog();
                             });
                             thread.SetApartmentState(ApartmentState.STA);
                             thread.Start();
@@ -290,36 +295,57 @@ namespace VirtualFileSystem
                         }
                         break;
 
-                        // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
+                    // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
                     case 401:
                         if (loginRetriesCurrent < loginRetriesMax)
                         {
-                            // Show login dialog.
-
                             Uri failedUri = (e.Exception as WebDavHttpException).Uri;
-
-                            WebDAVDrive.Login.ChallengeLogin loginForm = null;
-                            Thread thread = new Thread(() => {
-                                loginForm = new WebDAVDrive.Login.ChallengeLogin();
-                                loginForm.Server.Text = failedUri.OriginalString;
-                                Application.Run(loginForm);
-                            });
-                            thread.SetApartmentState(ApartmentState.STA);
-                            thread.Start();
-                            thread.Join();
-
-                            loginRetriesCurrent++;
-
-                            if (loginForm.DialogResult == DialogResult.OK)
+                            Windows.Security.Credentials.PasswordCredential passwordCredential = CredentialManager.GetCredentials(Settings.ProductName,log);
+                            if (passwordCredential != null)
                             {
-                                string login = loginForm.Login.Text.Trim();
-                                string password = loginForm.Password.Text.Trim();
-                                DavClient.Credentials = new NetworkCredential(login, password);
+                                passwordCredential.RetrievePassword();
+                                DavClient.Credentials = new NetworkCredential(passwordCredential.UserName, passwordCredential.Password);
+                            }
+                            else 
+                            {
+                                string login = null;
+                                SecureString password = null;
+                                bool dialogResult = false;
+                                bool keepLogedin = false;
+
+                                // Show login dialog
+                                WebDAVDrive.LoginWPF.ChallengeLogin loginForm = null;
+                                Thread thread = new Thread(() =>
+                                {
+                                    loginForm = new WebDAVDrive.LoginWPF.ChallengeLogin();
+                                    ((ChallengeLoginViewModel)loginForm.DataContext).Url = failedUri.OriginalString;
+                                    ((ChallengeLoginViewModel)loginForm.DataContext).WindowTitle = Settings.ProductName;
+                                    loginForm.ShowDialog();
+
+                                    login = ((ChallengeLoginViewModel)loginForm.DataContext).Login;
+                                    password = ((ChallengeLoginViewModel)loginForm.DataContext).Password;
+                                    keepLogedin = ((ChallengeLoginViewModel)loginForm.DataContext).KeepLogedIn;
+                                    dialogResult = (bool)loginForm.DialogResult;
+                                });
+                                thread.SetApartmentState(ApartmentState.STA);
+                                thread.Start();
+                                thread.Join();
+
+                                loginRetriesCurrent++;
+                                if (dialogResult)
+                                {
+                                    if (keepLogedin)
+                                    {
+                                        CredentialManager.SaveCredentials(Settings.ProductName,login, password);
+                                    }
+                                    DavClient.Credentials = new NetworkCredential(login, password);
+                                }
                             }
                         }
                         break;
                 }
             }
         }
+
     }
 }

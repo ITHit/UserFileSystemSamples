@@ -57,6 +57,8 @@ namespace VirtualFileSystem
             // Load Log4Net for net configuration.
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
             XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
+            // Enable UTF8 for Console Window
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
 
             log.Info($"\n{System.Diagnostics.Process.GetCurrentProcess().ProcessName}");
             log.Info("\nPress 'Q' to unregister file system, delete all files/folders and exit (simulate uninstall with full cleanup).");

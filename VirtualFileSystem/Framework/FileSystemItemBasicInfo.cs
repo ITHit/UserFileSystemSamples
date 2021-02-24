@@ -22,16 +22,16 @@ namespace VirtualFileSystem
         public byte[] CustomData { get; set; }
 
         ///<inheritdoc/>
-        public DateTime CreationTime { get; set; }
+        public DateTimeOffset CreationTime { get; set; }
 
         ///<inheritdoc/>
-        public DateTime LastWriteTime { get; set; }
+        public DateTimeOffset LastWriteTime { get; set; }
 
         ///<inheritdoc/>
-        public DateTime LastAccessTime { get; set; }
+        public DateTimeOffset LastAccessTime { get; set; }
 
         ///<inheritdoc/>
-        public DateTime ChangeTime { get; set; }
+        public DateTimeOffset ChangeTime { get; set; }
 
         /// <summary>
         /// Server ETag.
