@@ -1,0 +1,2 @@
+D:\Projects\WebDAV\fusemacnet\VirtualFilesystemMacCommon\obj\Debug\VirtualFilesystemMacCommon.csprojAssemblyReference.cache
+D:\Projects\WebDAV\fusemacnet\VirtualFilesystemMacCommon\obj\Debug\VirtualFilesystemMacCommon.csproj.CoreCompileInputs.cache
