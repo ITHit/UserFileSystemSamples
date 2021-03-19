@@ -5,27 +5,30 @@ using System.Linq;
 using System.Security;
 using System.Text;
 using System.Threading.Tasks;
-using VirtualFileSystem;
+using Windows.Security.Credentials;
 
 namespace WebDAVDrive
 {
-    class CredentialManager
+    /// <summary>
+    /// Saves and reads login and password to/from Windows Credentials Manger.
+    /// </summary>
+    public class CredentialManager
     {
 
         /// <summary>
-        /// Save credential from login form to Windows Credentials Manger
+        /// Saves login and password to the Windows Credentials Manger.
         /// </summary>
-        /// <param name="resource">Name of credential</param>
-        /// <param name="login">User login</param>
-        /// <param name="securePassword">User password</param>
-        public static void SaveCredentials(string resource,string login, SecureString securePassword)
+        /// <param name="resource">Resource name under which credentials will be saved.</param>
+        /// <param name="login">User name to be saved.</param>
+        /// <param name="securePassword">Password to be saved.</param>
+        public static void SaveCredentials(string resource, string login, SecureString securePassword)
         {
-            Windows.Security.Credentials.PasswordVault vault = new Windows.Security.Credentials.PasswordVault();
+            PasswordVault vault = new PasswordVault();
 
             //retrive string password form SecureString (password can not be retrived directly from Security string)
             string password = new System.Net.NetworkCredential(string.Empty, securePassword).Password;
 
-            Windows.Security.Credentials.PasswordCredential credential = new Windows.Security.Credentials.PasswordCredential()
+            PasswordCredential credential = new PasswordCredential()
             {
                 UserName = login,
                 Password = password,
@@ -37,16 +40,16 @@ namespace WebDAVDrive
         }
 
         /// <summary>
-        /// Get credentials from windows credentials manger
+        /// Gets credentials from the Windows Credentials Manger.
         /// </summary>
-        /// <param name="resource">Name of credential</param>
-        /// <param name="log">Name of credential</param>
-        /// <returns>Credentials for current application</returns>
-        public static Windows.Security.Credentials.PasswordCredential GetCredentials(string resource, ILog log)
+        /// <param name="resource">Resource name from which ro retrieve the credentials.</param>
+        /// <param name="log">Logger.</param>
+        /// <returns>Credentials for current application.</returns>
+        public static PasswordCredential GetCredentials(string resource, ILog log)
         {
-            Windows.Security.Credentials.PasswordCredential credential = null;
+            PasswordCredential credential = null;
 
-            var vault = new Windows.Security.Credentials.PasswordVault();
+            PasswordVault vault = new PasswordVault();
 
             try
             {

@@ -11,7 +11,7 @@
     <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
     <TargetFrameworkIdentifier>Xamarin.Mac</TargetFrameworkIdentifier>
     <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
-    <ReleaseVersion>0.5</ReleaseVersion>
+    <ReleaseVersion>2.0.4465.0</ReleaseVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -32,10 +32,11 @@
     <LinkMode>None</LinkMode>
     <AOTMode>None</AOTMode>
     <PackageSigningKey>3rd Party Mac Developer Installer</PackageSigningKey>
-    <CodeSignProvision>ITHit Profile</CodeSignProvision>
+    <CodeSignProvision>Automatic</CodeSignProvision>
     <LangVersion>9.0</LangVersion>
     <UseHardenedRuntime>true</UseHardenedRuntime>
     <XamMacArch>x86_64</XamMacArch>
+    <CodeSignEntitlements>Entitlements.plist</CodeSignEntitlements>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -62,10 +63,10 @@
     <Reference Include="System.Core" />
     <Reference Include="Xamarin.Mac" />
     <Reference Include="ITHit.FileSystem">
-      <HintPath>..\packages\ITHit.FileSystem.1.4.4298\lib\netstandard2.1\ITHit.FileSystem.dll</HintPath>
+      <HintPath>..\packages\ITHit.FileSystem.2.0.4465\lib\netstandard2.1\ITHit.FileSystem.dll</HintPath>
     </Reference>
-	<Reference Include="ITHit.FileSystem.Mac">
-      <HintPath>..\packages\ITHit.FileSystem.Mac.1.4.4298-Alpha\lib\xamarinmac74\ITHit.FileSystem.Mac.dll</HintPath>
+    <Reference Include="ITHit.FileSystem.Mac">
+      <HintPath>..\packages\ITHit.FileSystem.Mac.2.0.4465-Alpha\lib\xamarinmac20\ITHit.FileSystem.Mac.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

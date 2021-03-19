@@ -7,7 +7,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>FileProviderExtension</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.ithit.virtualfilesystem.app.extension</string>
+	<string>com.userfilesystem.vfs.app.extension</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>

@@ -1,7 +1,4 @@
-﻿using ITHit.FileSystem;
-using ITHit.FileSystem.Windows;
-using log4net;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -11,8 +8,13 @@ using Windows.Storage;
 using Windows.Storage.FileProperties;
 using Windows.Storage.Provider;
 using Windows.System.Update;
+using log4net;
 
-namespace VirtualFileSystem.Syncronyzation
+using ITHit.FileSystem;
+using ITHit.FileSystem.Windows;
+using ITHit.FileSystem.Samples.Common;
+
+namespace WebDAVDrive
 {
     /// <summary>
     /// Monitors changes in the remote storage, notifies the client and updates the user file system.

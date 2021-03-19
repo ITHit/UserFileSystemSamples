@@ -12,6 +12,9 @@ using Windows.Storage.FileProperties;
 using Windows.Storage.Provider;
 using Windows.System.Update;
 
+using ITHit.FileSystem.Samples.Common;
+using ITHit.FileSystem.Samples.Common.Syncronyzation;
+
 namespace VirtualFileSystem.Syncronyzation
 {
     /// <summary>

@@ -88,5 +88,10 @@ namespace FileProviderExtension
         {
             throw new NotImplementedException();
         }
+
+        public Task<IFileSystemItemBasicInfo> GetBasicInfoAsync()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

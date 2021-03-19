@@ -1,11 +1,14 @@
-﻿using ITHit.FileSystem;
-using ITHit.FileSystem.Windows;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
+using ITHit.FileSystem;
+using ITHit.FileSystem.Windows;
+using ITHit.FileSystem.Samples.Common;
+
 
 namespace VirtualFileSystem
 {
@@ -13,7 +16,7 @@ namespace VirtualFileSystem
     /// Represents a file or a folder in the remote storage. Contains methods common for both files and folders.
     /// </summary>
     /// <remarks>You will change methods of this class to read/write data from/to your remote storage.</remarks>
-    internal class UserFileSystemItem
+    internal class UserFileSystemItem : IUserFileSystemItem
     {
         /// <summary>
         /// Path of this file of folder in the user file system.
@@ -26,20 +29,14 @@ namespace VirtualFileSystem
         protected string RemoteStoragePath;
 
         /// <summary>
-        /// Information about the lock. Null if the item is not locked.
-        /// </summary>
-        protected LockInfo Lock;
-
-        /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="userFileSystemPath">Path of this file of folder in the user file system.</param>
         /// <param name="lockInfo">Information about the lock. Pass null if the item is not locked.</param>
-        public UserFileSystemItem(string userFileSystemPath, LockInfo lockInfo = null)
+        public UserFileSystemItem(string userFileSystemPath)
         {
             this.UserFileSystemPath = userFileSystemPath;
             this.RemoteStoragePath = Mapping.MapPath(userFileSystemPath);
-            this.Lock = lockInfo;
         }
 
         /// <summary>
@@ -113,8 +110,9 @@ namespace VirtualFileSystem
         /// <param name="newInfo">New information about the file, such as modification date, attributes, custom data, etc.</param>
         /// <param name="mode">Specifies if a new file should be created or existing file should be updated.</param>
         /// <param name="newContentStream">New file content or null if the file content is not modified.</param>
+        /// <param name="lockInfo">Information about the lock. Caller passes null if the item is not locked.</param>
         /// <returns>New ETag returned from the remote storage.</returns>
-        protected async Task<string> CreateOrUpdateFileAsync(string remoteStoragePath, IFileBasicInfo newInfo, FileMode mode, Stream newContentStream = null)
+        protected async Task<string> CreateOrUpdateFileAsync(string remoteStoragePath, IFileBasicInfo newInfo, FileMode mode, Stream newContentStream = null, ServerLockInfo lockInfo = null)
         {
             // Get ETag and lock-token here and send it to the remote storage with the new item content/info if needed.
             if (mode == FileMode.Open)
@@ -123,7 +121,7 @@ namespace VirtualFileSystem
                 string eTag = await ETag.GetETagAsync(UserFileSystemPath);
 
                 // Get lock-token.
-                string lockToken = Lock?.LockToken;
+                string lockToken = lockInfo?.LockToken;
             }
 
             FileInfo remoteStorageItem = new FileInfo(remoteStoragePath);
@@ -188,8 +186,9 @@ namespace VirtualFileSystem
         /// <param name="remoteStoragePath">Path of the folder to be created or updated in the remote storage.</param>
         /// <param name="newInfo">New information about the folder, such as modification date, attributes, custom data, etc.</param>
         /// <param name="mode">Specifies if a new folder should be created or existing folder should be updated.</param>
+        /// <param name="lockInfo">Information about the lock. Caller passes null if the item is not locked.</param>
         /// <returns>New ETag returned from the remote storage.</returns>
-        protected async Task<string> CreateOrUpdateFolderAsync(string remoteStoragePath, IFolderBasicInfo newInfo, FileMode mode)
+        protected async Task<string> CreateOrUpdateFolderAsync(string remoteStoragePath, IFolderBasicInfo newInfo, FileMode mode, ServerLockInfo lockInfo = null)
         {
             // Get ETag and lock-token here and send it to the remote storage with the new item content/info if needed.
             if (mode == FileMode.Open)
@@ -198,7 +197,7 @@ namespace VirtualFileSystem
                 string eTag = await ETag.GetETagAsync(UserFileSystemPath);
                 
                 // Get lock-token.
-                string lockToken = Lock?.LockToken;
+                string lockToken = lockInfo?.LockToken;
             }
 
             DirectoryInfo remoteStorageItem = new DirectoryInfo(remoteStoragePath);
@@ -252,9 +251,9 @@ namespace VirtualFileSystem
         /// item in the remote storage should be updated. Supply the lock-token during the update request in 
         /// <see cref="UserFile.UpdateAsync"/> and <see cref="UserFolder.UpdateAsync"/> method calls.
         /// </remarks>
-        public async Task<LockInfo> LockAsync()
+        public async Task<ServerLockInfo> LockAsync()
         {
-            return new LockInfo { LockToken = "token" };
+            return new ServerLockInfo { LockToken = "token", Exclusive = true, LockExpirationDateUtc = DateTimeOffset.Now.AddMinutes(30), Owner = "You" };
         }
 
         /// <summary>

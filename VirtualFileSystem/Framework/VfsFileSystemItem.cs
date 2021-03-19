@@ -119,6 +119,14 @@ namespace VirtualFileSystem
         }
         //$>
 
+        ///<inheritdoc>
+        public Task<IFileSystemItemBasicInfo> GetBasicInfoAsync()
+        {
+            // Read information about this file or folder from your remote storage 
+            // and return IFileBasicInfo for a file, IFolderBasicInfo for a folder.
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Simulates network delays and reports file transfer progress for demo purposes.
         /// </summary>

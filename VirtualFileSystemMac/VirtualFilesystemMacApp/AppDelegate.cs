@@ -17,7 +17,7 @@ namespace VirtualFilesystemMacApp
 
         public override void DidFinishLaunching(NSNotification notification)
         {
-            LocalExtensionManager = new ExtensionManager("com.ithit.virtualfilesystem.app", "ITHitFS");
+            LocalExtensionManager = new ExtensionManager("com.userfilesystem.vfs.app", "ITHitFS");
 
             NSMenu menu = new NSMenu();
 

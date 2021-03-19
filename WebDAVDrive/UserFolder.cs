@@ -1,27 +1,29 @@
-﻿using ITHit.FileSystem;
-using ITHit.WebDAV.Client;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace VirtualFileSystem
+using ITHit.FileSystem;
+using ITHit.FileSystem.Samples.Common;
+using ITHit.WebDAV.Client;
+
+namespace WebDAVDrive
 {
     /// <summary>
     /// Represents a folder in the remote storage. Provides methods for enumerating this folder children, 
     /// creating files and folders and updating this folder information (creatin date, modification date, attributes, etc.).
     /// </summary>
     /// <remarks>You will change methods of this class to read/write data from/to your remote storage.</remarks>
-    internal class UserFolder : UserFileSystemItem
+    internal class UserFolder : UserFileSystemItem, IUserFolder
     {
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="userfileSystemFolderPath">Path of this folder in the user file system.</param>
         /// <param name="lockInfo">Information about file lock. Pass null if the item is not locked.</param>
-        public UserFolder(string userfileSystemFolderPath, LockInfo lockInfo = null) : base(userfileSystemFolderPath, lockInfo)
+        public UserFolder(string userfileSystemFolderPath) : base(userfileSystemFolderPath)
         {
 
         }
@@ -45,7 +47,7 @@ namespace VirtualFileSystem
             {
                 remoteStorageChildren = await Program.DavClient.GetChildrenAsync(new Uri(RemoteStorageUri), false);
             }
-            catch (ITHit.WebDAV.Client.Exceptions.Redirect302Exception) 
+            catch (ITHit.WebDAV.Client.Exceptions.Redirect302Exception)
             {
                 remoteStorageChildren = await Program.DavClient.GetChildrenAsync(new Uri(RemoteStorageUri), false);
             }
@@ -53,10 +55,9 @@ namespace VirtualFileSystem
             List<FileSystemItemBasicInfo> userFileSystemChildren = new List<FileSystemItemBasicInfo>();
             foreach (IHierarchyItemAsync remoteStorageItem in remoteStorageChildren)
             {
-                FileSystemItemBasicInfo itemInfo = Mapping.GetUserFileSysteItemBasicInfo(remoteStorageItem);
+                FileSystemItemBasicInfo itemInfo = Mapping.GetUserFileSystemItemBasicInfo(remoteStorageItem);
                 userFileSystemChildren.Add(itemInfo);
             }
-
 
             return userFileSystemChildren;
         }
@@ -80,7 +81,7 @@ namespace VirtualFileSystem
         /// <returns>New ETag returned from the remote storage.</returns>
         public async Task<string> CreateFolderAsync(IFolderBasicInfo folderInfo)
         {
-            Uri newFolderUri = new Uri(new Uri(RemoteStorageUri), folderInfo.Name);          
+            Uri newFolderUri = new Uri(new Uri(RemoteStorageUri), folderInfo.Name);
             await Program.DavClient.CreateFolderAsync(newFolderUri);
             return null; // This implementation does not support ETags on folders.
         }
@@ -89,8 +90,9 @@ namespace VirtualFileSystem
         /// Updates folder in the remote storage.
         /// </summary>
         /// <param name="folderInfo">New folder information.</param>
+        /// <param name="lockInfo">Information about the lock. Caller passes null if the item is not locked.</param>
         /// <returns>New ETag returned from the remote storage.</returns>
-        public async Task<string> UpdateAsync(IFolderBasicInfo folderInfo)
+        public async Task<string> UpdateAsync(IFolderBasicInfo folderInfo, ServerLockInfo lockInfo = null)
         {
             return null;
         }

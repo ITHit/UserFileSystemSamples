@@ -11,7 +11,7 @@
     <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
     <TargetFrameworkIdentifier>Xamarin.Mac</TargetFrameworkIdentifier>
     <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
-    <ReleaseVersion>0.5</ReleaseVersion>
+    <ReleaseVersion>2.0.4465.0</ReleaseVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -52,10 +52,7 @@
     <Reference Include="System.Core" />
     <Reference Include="Xamarin.Mac" />
     <Reference Include="ITHit.FileSystem">
-      <HintPath>..\packages\ITHit.FileSystem.1.4.4298\lib\netstandard2.1\ITHit.FileSystem.dll</HintPath>
-    </Reference>
-	<Reference Include="ITHit.FileSystem.Mac">
-      <HintPath>..\packages\ITHit.FileSystem.Mac.1.4.4298-Alpha\lib\xamarinmac74\ITHit.FileSystem.Mac.dll</HintPath>
+      <HintPath>..\packages\ITHit.FileSystem.2.0.4465\lib\netstandard2.1\ITHit.FileSystem.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

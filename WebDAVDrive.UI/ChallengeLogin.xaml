@@ -1,0 +1,94 @@
+﻿<Window x:Class="WebDAVDrive.UI.ChallengeLogin"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"       
+        xmlns:WebDAVDrive.UI="clr-namespace:WebDAVDrive.UI"
+        xmlns:resx="clr-namespace:WebDAVDrive.UI.Localization"
+        Title="ChallangeLogin" Height="374" Width="429" FontSize="20" HorizontalAlignment="Center" Background="{DynamicResource FormBackground}" VerticalAlignment="Center" Icon="/WebDAVDrive.UI;component/Drive.ico" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" Opacity="1" WindowStyle="None">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="32" ResizeBorderThickness="{x:Static SystemParameters.WindowResizeBorderThickness}" GlassFrameThickness="0" CornerRadius="0"/>
+    </WindowChrome.WindowChrome>
+
+    <Grid Margin="0,0,0,1">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="29*"></RowDefinition>
+            <RowDefinition Height="89*"></RowDefinition>
+            <RowDefinition Height="62*"></RowDefinition>
+            <RowDefinition Height="59*"></RowDefinition>
+            <RowDefinition Height="42*"></RowDefinition>
+            <RowDefinition Height="58*"></RowDefinition>
+            <RowDefinition Height="64*"></RowDefinition>
+        </Grid.RowDefinitions>
+        <TextBlock x:Name="StaticTextBlock" Text="{x:Static resx:Resources.LoginMessage}" Margin="24,14,117,41" Grid.ColumnSpan="2" Grid.Row="1" Foreground="{DynamicResource FormForeground}"/>
+        <TextBox x:Name="loginTextBox" Style="{StaticResource WaterMarkStyle}" Validation.ErrorTemplate="{StaticResource validationTemplate}"  Tag="{x:Static resx:Resources.Login}" HorizontalAlignment="Left" VerticalAlignment="Center" Width="268" Margin="24,0,0,0" Height="42" Grid.Row="2" MaxLines="1" TextAlignment="Left" Grid.ColumnSpan="2" HorizontalContentAlignment="Left">
+            <TextBox.Text>
+                <Binding Path="Login" UpdateSourceTrigger="PropertyChanged">
+                    <Binding.ValidationRules>
+                        <WebDAVDrive.UI:LoginValidationRule ValidatesOnTargetUpdated="True" />
+                    </Binding.ValidationRules>
+                </Binding>
+            </TextBox.Text>
+        </TextBox>
+        <PasswordBox Tag="Login" x:Name="PasswdBox" PasswordChanged="PasswordBox_PasswordChanged" HorizontalAlignment="Left" VerticalAlignment="Top" Width="268" Margin="24,10,0,0" Grid.Row="3" Height="41" Grid.ColumnSpan="2" HorizontalContentAlignment="Left" VerticalContentAlignment="Center"/>
+        <CheckBox Grid.Row="5" VerticalAlignment="Top" VerticalContentAlignment="Center" HorizontalAlignment="Left"  IsChecked="{Binding KeepLogedIn}" Height="24" Width="21" Margin="21,3,0,0">
+            <CheckBox.LayoutTransform>
+                <ScaleTransform ScaleX="2" ScaleY="2" />
+            </CheckBox.LayoutTransform>
+        </CheckBox>
+        <TextBlock x:Name="CheckBoxText" Foreground="{DynamicResource FormForeground}" Text="{x:Static resx:Resources.KeepLogined}" Grid.Row="5" VerticalAlignment="Top" HorizontalAlignment="Left" Height="28" Width="331" Margin="63,10,0,0"/>
+        <Button Content="{x:Static resx:Resources.OK}" IsDefault="True" HorizontalAlignment="Left" Margin="24,0,0,0" Grid.Row="6" VerticalAlignment="Center" Width="180" Click="Button_Ok_Click" Height="37" Grid.ColumnSpan="2">
+            <Button.Style>
+                <Style TargetType="{x:Type Button}">
+                    <Setter Property="IsEnabled" Value="false" />
+                    <Style.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding ElementName=loginTextBox, Path=(Validation.HasError)}" Value="false" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="IsEnabled" Value="true" />
+                        </MultiDataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Button.Style>
+        </Button>
+        <Button Content="{x:Static resx:Resources.Cancel}" IsCancel="True" HorizontalAlignment="Left" Margin="219,0,0,0" Grid.Row="6" VerticalAlignment="Center" Width="180" Click="Button_Cancel_Click" Height="37"/>
+        <TextBlock x:Name="URLTextBox" Foreground="{DynamicResource FormForeground}" HorizontalAlignment="Left" Margin="24,46,0,0" Text="{Binding Path=Url, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" VerticalAlignment="Top" Width="360" Height="26" Grid.Row="1"/>
+        <TextBlock x:Name="ErrorTextBox" Grid.Row="4" Visibility="{Binding ElementName=loginTextBox, Path=(Validation.Errors), Converter={StaticResource ToVisibility}}" VerticalAlignment="Center" HorizontalAlignment="Left" Height="28" Width="358" Margin="24,0,0,0" FontStyle="Italic" Foreground="#FFF70707">
+            <TextBlock.Text>
+                <Binding ElementName="loginTextBox" Path="(Validation.Errors)[0].ErrorContent"/>
+            </TextBlock.Text>
+        </TextBlock>
+
+        <Grid Grid.Row="0" Background="{DynamicResource FormBackground}" Width="Auto">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="353" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Image Grid.Column="0" Width="22" Height="22" Margin="4" Source="/WebDAVDrive.UI;component/Drive.ico" />
+            <TextBlock Grid.Column="1" Margin="4 0 0 0" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource FormForeground}" Text="{Binding WindowTitle}"/>
+
+            <Button Grid.Column="4" Click="OnCloseButtonClick" Style="{StaticResource TitleBarCloseButtonStyle}" Margin="0,0,-2,0">
+                <Path Width="46" Height="32" Data="M 18,11 27,20 M 18,20 27,11" Stroke="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}" StrokeThickness="1" />
+            </Button>
+        </Grid>
+    </Grid>
+
+
+</Window>

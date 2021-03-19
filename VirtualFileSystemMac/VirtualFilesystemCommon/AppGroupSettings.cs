@@ -7,7 +7,7 @@ namespace VirtualFilesystemCommon
 {
     public static class AppGroupSettings
     {
-        private const string AppGroupId = "${TeamIdentificator}.group.com.ithit.virtualfilesystem";
+        private const string AppGroupId = "${TeamIdentificator}.group.com.userfilesystem.vfs";
         private const string InternalSettingFile = "data.out";
         public const string LocalPathId = "RemoteStorageRootPath";
         public const string LicenseId = "License";

@@ -1,10 +1,4 @@
-﻿using ITHit.FileSystem;
-using ITHit.FileSystem.Windows;
-using ITHit.WebDAV.Client;
-using ITHit.WebDAV.Client.Exceptions;
-using log4net;
-using log4net.Config;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,20 +9,29 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
-using VirtualFileSystem.Syncronyzation;
-using WebDAVDrive;
-using WebDAVDrive.LoginWPF.ViewModels;
+using WebDAVDrive.UI.ViewModels;
 using Windows.Storage;
 using Windows.Storage.Provider;
+using System.Windows.Forms;
 
-namespace VirtualFileSystem
+using log4net;
+using log4net.Config;
+
+using ITHit.FileSystem;
+using ITHit.FileSystem.Windows;
+using ITHit.FileSystem.Samples.Common;
+using ITHit.WebDAV.Client;
+using ITHit.WebDAV.Client.Exceptions;
+using WebDAVDrive.UI;
+
+namespace WebDAVDrive
 {
     class Program
     {
         /// <summary>
         /// Application settings.
         /// </summary>
-        internal static Settings Settings;
+        internal static AppSettings Settings;
 
         /// <summary>
         /// WebDAV client for accessing the WebDAV server.
@@ -41,24 +44,16 @@ namespace VirtualFileSystem
         private static readonly ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         /// <summary>
-        /// Processes file system calls, implements on-demand loading and initial data transfer from remote storage to client.
+        /// Processes OS file system calls, 
+        /// synchronizes user file system to remote storage and back, 
+        /// monitors files pinning and unpinning.
         /// </summary>
-        private static VfsEngine engine;
+        private static VirtualDrive virtualDrive;
 
         /// <summary>
         /// Monitores changes in the remote file system.
         /// </summary>
         internal static RemoteStorageMonitor RemoteStorageMonitorInstance;
-
-        /// <summary>
-        /// Monitors pinned and unpinned attributes in user file system.
-        /// </summary>
-        private static UserFileSystemMonitor userFileSystemMonitor;
-
-        /// <summary>
-        /// Performs complete synchronyzation of the folders and files that are already synched to user file system.
-        /// </summary>
-        private static FullSyncService syncService;
 
         //[STAThread]
         static async Task<int> Main(string[] args)
@@ -66,11 +61,13 @@ namespace VirtualFileSystem
             // Load Settings.
             IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
             Settings = configuration.ReadSettings();
+            Config.Settings = Settings;
 
             // Load Log4Net for net configuration.
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
             XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
-            // Enable UTF8 for Console Window
+            
+            // Enable UTF8 for Console window.
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
             log.Info($"\n{Settings.ProductName}");
@@ -83,58 +80,58 @@ namespace VirtualFileSystem
             // Here we register it during first program start for the sake of the development convenience.
             if (!await Registrar.IsRegisteredAsync(Settings.UserFileSystemRootPath))
             {
-                Directory.CreateDirectory(Settings.UserFileSystemRootPath);
                 log.Info($"\nRegistering {Settings.UserFileSystemRootPath} sync root.");
-                
-                
-                await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName);
+                Directory.CreateDirectory(Settings.UserFileSystemRootPath);
+                Directory.CreateDirectory(Settings.ServerDataFolderPath);
+
+                await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
+                    Path.Combine(Config.Settings.IconsFolderPath, "Drive.ico"));
             }
             else
             {
                 log.Info($"\n{Settings.UserFileSystemRootPath} sync root already registered.");
             }
 
-            // Log indexed state.
+            // Log indexed state. Indexing must be enabled for the sync root to function.
             StorageFolder userFileSystemRootFolder = await StorageFolder.GetFolderFromPathAsync(Settings.UserFileSystemRootPath);
             log.Info($"\nIndexed state: {(await userFileSystemRootFolder.GetIndexedStateAsync())}\n");
 
             ConfigureWebDAVClient();
 
-            ConsoleKeyInfo exitKey;
+            ConsoleKeyInfo exitKey = new ConsoleKeyInfo();
+
+            // Event to be fired when any key will be pressed in the console or when the tray application exits.
+            ManualResetEvent exitEvent = new ManualResetEvent(false);
 
             try
             {
-                engine = new VfsEngine(Settings.UserFileSystemLicense, Settings.UserFileSystemRootPath, log);
+                virtualDrive = new VirtualDrive(Settings.UserFileSystemLicense, Settings.UserFileSystemRootPath, log, Settings.SyncIntervalMs);
                 RemoteStorageMonitorInstance = new RemoteStorageMonitor(Settings.WebDAVServerUrl, log);
-                syncService = new FullSyncService(Settings.SyncIntervalMs, Settings.UserFileSystemRootPath, log);
-                userFileSystemMonitor = new UserFileSystemMonitor(Settings.UserFileSystemRootPath, log);
+                
+                // Start tray application.
+                Thread tryIconThread = WindowsTrayInterface.CreateTrayInterface(Settings.ProductName, virtualDrive.SyncService, exitEvent);
 
                 // Start processing OS file system calls.
                 //engine.ChangesProcessingEnabled = false;
-                await engine.StartAsync();
+                await virtualDrive.StartAsync();
 
                 // Start monitoring changes in remote file system.
                 //await RemoteStorageMonitorInstance.StartAsync();
-
-                // Start periodical synchronyzation between client and server, 
-                // in case any changes are lost because the client or the server were unavailable.
-                await syncService.StartAsync();
-
-                // Start monitoring pinned/unpinned attributes and files/folders creation in user file system.
-                await userFileSystemMonitor.StartAsync();
+                
 #if DEBUG
                 // Opens Windows File Manager with user file system folder and remote storage folder.
                 ShowTestEnvironment();
 #endif
                 // Keep this application running until user input.
-                exitKey = Console.ReadKey();
+                exitKey = WebDAVDrive.UI.ConsoleManager.WaitConsoleReadKey(exitEvent);
+
+                //wait until the button "Exit" is pressed or any key in console is peressed  to stop application
+                exitEvent.WaitOne();
             }
             finally
             {
-                engine.Dispose();
+                virtualDrive.Dispose();
                 RemoteStorageMonitorInstance.Dispose();
-                syncService.Dispose();
-                userFileSystemMonitor.Dispose();
             }
 
             if (exitKey.KeyChar == 'q')
@@ -154,6 +151,15 @@ namespace VirtualFileSystem
                 try
                 {
                     Directory.Delete(Settings.UserFileSystemRootPath, true);
+                }
+                catch (Exception ex)
+                {
+                    log.Error($"\n{ex}");
+                }
+
+                try
+                { 
+                    Directory.Delete(Config.Settings.ServerDataFolderPath, true);
                 }
                 catch (Exception ex)
                 {
@@ -192,7 +198,7 @@ namespace VirtualFileSystem
             }
 
 
-            // Open Windows File Manager with ETags and locks storage.
+            // Open Windows File Manager with ETags and locks storage. Uncomment this to debug locks and ETags management.
             //ProcessStartInfo serverDataInfo = new ProcessStartInfo(Program.Settings.ServerDataFolderPath);
             //serverDataInfo.UseShellExecute = true; // Open window only if not opened already.
             //using (Process serverDataWinFileManager = Process.Start(serverDataInfo))
@@ -210,7 +216,7 @@ namespace VirtualFileSystem
         {
             get
             {
-                return $"{System.Diagnostics.Process.GetCurrentProcess().ProcessName}!{System.Security.Principal.WindowsIdentity.GetCurrent().User}!User";
+                return $"{Settings.AppID}!{System.Security.Principal.WindowsIdentity.GetCurrent().User}!User";
             }
         }
 
@@ -243,7 +249,12 @@ namespace VirtualFileSystem
         /// </summary>
         private static uint loginRetriesCurrent = 0;
 
-
+        /// <summary>
+        /// Even handler to process WebDAV errors. 
+        /// If server returns 401 or 302 response here we show the login dialog.
+        /// </summary>
+        /// <param name="sender">Request to the WebDAV server.</param>
+        /// <param name="e">WebDAV error details.</param>
         private static void DavClient_WebDavError(IWebRequestAsync sender, WebDavErrorEventArgs e)
         {
             WebDavHttpException httpException = e.Exception as WebDavHttpException;
@@ -266,9 +277,9 @@ namespace VirtualFileSystem
 
                             Uri failedUri = (e.Exception as WebDavHttpException).Uri;
 
-                            WebDAVDrive.LoginWPF.WebBrowserLogin webBrowserLogin = null;
+                            WebDAVDrive.UI.WebBrowserLogin webBrowserLogin = null;
                             Thread thread = new Thread(() => {
-                                webBrowserLogin = new WebDAVDrive.LoginWPF.WebBrowserLogin(failedUri, e.Request, DavClient, log);
+                                webBrowserLogin = new WebDAVDrive.UI.WebBrowserLogin(failedUri, e.Request, DavClient, log);
                                 webBrowserLogin.Title = Settings.ProductName;
                                 webBrowserLogin.ShowDialog();
                             });
@@ -314,10 +325,10 @@ namespace VirtualFileSystem
                                 bool keepLogedin = false;
 
                                 // Show login dialog
-                                WebDAVDrive.LoginWPF.ChallengeLogin loginForm = null;
+                                WebDAVDrive.UI.ChallengeLogin loginForm = null;
                                 Thread thread = new Thread(() =>
                                 {
-                                    loginForm = new WebDAVDrive.LoginWPF.ChallengeLogin();
+                                    loginForm = new WebDAVDrive.UI.ChallengeLogin();
                                     ((ChallengeLoginViewModel)loginForm.DataContext).Url = failedUri.OriginalString;
                                     ((ChallengeLoginViewModel)loginForm.DataContext).WindowTitle = Settings.ProductName;
                                     loginForm.ShowDialog();

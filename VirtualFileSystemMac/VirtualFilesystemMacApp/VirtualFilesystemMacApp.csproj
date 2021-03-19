@@ -10,7 +10,7 @@
     <AssemblyName>Virtual Filesystem</AssemblyName>
     <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
     <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
-    <ReleaseVersion>0.5</ReleaseVersion>
+    <ReleaseVersion>2.0.4465.0</ReleaseVersion>
     <TargetFrameworkIdentifier>Xamarin.Mac</TargetFrameworkIdentifier>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -32,7 +32,7 @@
     <PackageSigningKey>3rd Party Mac Developer Installer</PackageSigningKey>
     <LinkMode>None</LinkMode>
     <AOTMode>None</AOTMode>
-    <CodeSignProvision>ITHit Profile</CodeSignProvision>
+    <CodeSignProvision>Automatic</CodeSignProvision>
     <UseHardenedRuntime>true</UseHardenedRuntime>
     <CustomCommands>
       <CustomCommands>
@@ -48,6 +48,7 @@
     </CustomCommands>
     <LangVersion>9.0</LangVersion>
     <XamMacArch>x86_64</XamMacArch>
+    <CodeSignEntitlements>Entitlements.plist</CodeSignEntitlements>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>

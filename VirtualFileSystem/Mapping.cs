@@ -6,6 +6,8 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
+using ITHit.FileSystem.Samples.Common;
+
 namespace VirtualFileSystem
 {
     /// <summary>
@@ -80,17 +82,27 @@ namespace VirtualFileSystem
             // Here we just use the read-only attribute from remote storage item for demo purposes.
             userFileSystemItem.LockedByAnotherUser = (remoteStorageItem.Attributes & System.IO.FileAttributes.ReadOnly) != 0;
 
-            // If the file is moved/renamed and the app is not running this will help us 
-            // to sync the file/folder to remote storage after app starts.
-            userFileSystemItem.CustomData = new CustomData
-            {
-                OriginalPath = Mapping.ReverseMapPath(remoteStorageItem.FullName)
-            }.Serialize();
-
             if (remoteStorageItem is FileInfo)
             {
                 ((FileBasicInfo)userFileSystemItem).Length = ((FileInfo)remoteStorageItem).Length;
             };
+
+            // Set custom columns to be displayed in file manager.
+            // We create property definitions when registering the sync root with corresponding IDs.
+            List<FileSystemItemPropertyData> customProps = new List<FileSystemItemPropertyData>();
+            if (userFileSystemItem.LockedByAnotherUser)
+            {
+                customProps.AddRange(
+                    new ServerLockInfo()
+                    {
+                        LockToken = "token",
+                        Owner = "User Name",
+                        Exclusive = true,
+                        LockExpirationDateUtc = DateTimeOffset.Now.AddMinutes(30)
+                    }.GetLockProperties(Path.Combine(Config.Settings.IconsFolderPath, "LockedByAnotherUser.ico"))
+                );
+            }
+            userFileSystemItem.CustomProperties = customProps;
 
             return userFileSystemItem;
         }

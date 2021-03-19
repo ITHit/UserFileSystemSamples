@@ -1,0 +1,90 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ITHit.FileSystem.Samples.Common
+{
+    /// <summary>
+    /// Provides method for reading and writing ETags.
+    /// </summary>
+    public static class ETag
+    {
+        /// <summary>
+        /// Creates or updates ETag associated with the file.
+        /// </summary>
+        /// <param name="userFileSystemPath">Path in the user file system.</param>
+        /// <param name="eTag">ETag.</param>
+        /// <returns></returns>
+        public static async Task SetETagAsync(string userFileSystemPath, string eTag)
+        {
+            string eTagFilePath = GetETagFilePath(userFileSystemPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(eTagFilePath));
+            await File.WriteAllTextAsync(eTagFilePath, eTag);
+        }
+
+        /// <summary>
+        /// Gets ETag associated with a file.
+        /// </summary>
+        /// <param name="userFileSystemPath">Path in the user file system.</param>
+        /// <returns>ETag.</returns>
+        public static async Task<string> GetETagAsync(string userFileSystemPath)
+        {
+            string eTagFilePath = GetETagFilePath(userFileSystemPath);
+            if (!File.Exists(eTagFilePath))
+            {
+                return null;
+            }
+            return await File.ReadAllTextAsync(eTagFilePath);
+        }
+
+        /// <summary>
+        /// Deletes ETag associated with a file.
+        /// </summary>
+        /// <param name="userFileSystemPath">Path in the user file system.</param>
+        public static void DeleteETag(string userFileSystemPath)
+        {
+            File.Delete(GetETagFilePath(userFileSystemPath));
+        }
+
+        /// <summary>
+        /// Gets path to the file in which ETag is stored based on the provided user file system path.
+        /// </summary>
+        /// <param name="userFileSystemPath">Path to the file or folder to get the ETag file path.</param>
+        /// <returns>Path to the file that contains ETag.</returns>
+        public static string GetETagFilePath(string userFileSystemPath)
+        {
+            // Get path relative to the virtual root.
+            string relativePath = userFileSystemPath.TrimEnd(Path.DirectorySeparatorChar).Substring(
+                Config.Settings.UserFileSystemRootPath.TrimEnd(Path.DirectorySeparatorChar).Length);
+
+            string path = $"{Config.Settings.ServerDataFolderPath.TrimEnd(Path.DirectorySeparatorChar)}{relativePath}.etag";
+            return path;
+        }
+
+        /// <summary>
+        /// Returns true if the remote storage ETag and user file system ETags are equal. False - otherwise.
+        /// </summary>
+        /// <param name="userFileSystemPath">User file system item.</param>
+        /// <param name="remoteStorageItem">Remote storage item info.</param>
+        /// <remarks>
+        /// ETag is updated on the server during every document update and is sent to client with a file. 
+        /// During client->server update it is sent back to the remote storage together with a modified content. 
+        /// This ensures the changes on the server are not overwritten if the document on the server is modified.
+        /// </remarks>
+        public static async Task<bool> ETagEqualsAsync(string userFileSystemPath, FileSystemItemBasicInfo remoteStorageItem)
+        {
+            string remoteStorageETag = remoteStorageItem.ETag;
+            string userFileSystemETag = await ETag.GetETagAsync(userFileSystemPath);
+
+            if (string.IsNullOrEmpty(remoteStorageETag) && string.IsNullOrEmpty(userFileSystemETag))
+            {
+                // We assume the remote storage is not using ETags or no ETag is ssociated with this file/folder.
+                return true;
+            }
+
+            return remoteStorageETag == userFileSystemETag;
+        }
+    }
+}

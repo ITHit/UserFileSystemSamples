@@ -1,14 +1,16 @@
-﻿using ITHit.FileSystem;
-using ITHit.FileSystem.Windows;
-using ITHit.WebDAV.Client;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
 
-namespace VirtualFileSystem
+using ITHit.FileSystem;
+using ITHit.FileSystem.Windows;
+using ITHit.FileSystem.Samples.Common;
+using ITHit.WebDAV.Client;
+
+namespace WebDAVDrive
 {
     /// <summary>
     /// Maps a user file system path to the remote storage path and back. 
@@ -74,7 +76,7 @@ namespace VirtualFileSystem
         /// </summary>
         /// <param name="remoteStorageItem">Remote storage item info.</param>
         /// <returns>User file system item info.</returns>
-        public static FileSystemItemBasicInfo GetUserFileSysteItemBasicInfo(IHierarchyItemAsync remoteStorageItem)
+        public static FileSystemItemBasicInfo GetUserFileSystemItemBasicInfo(IHierarchyItemAsync remoteStorageItem)
         {
             FileSystemItemBasicInfo userFileSystemItem;
 
@@ -95,14 +97,9 @@ namespace VirtualFileSystem
             userFileSystemItem.ChangeTime = remoteStorageItem.LastModified;
 
             // If the item is locked by another user, set the LockedByAnotherUser to true.
+            // This will set read-only arrtibute on files. 
+            // Note that read-only attribute is a convenience feture, it does not protect files from modification.
             userFileSystemItem.LockedByAnotherUser = remoteStorageItem.ActiveLocks.Length > 0;
-
-            // If the file is moved/renamed and the app is not running this will help us 
-            // to sync the file/folder to remote storage after app starts.
-            userFileSystemItem.CustomData = new CustomData
-            {
-                OriginalPath = Mapping.ReverseMapPath(remoteStorageItem.Href.ToString())
-            }.Serialize();
 
             if (remoteStorageItem is IFileAsync)
             {
@@ -113,6 +110,28 @@ namespace VirtualFileSystem
 
                 ((FileBasicInfo)userFileSystemItem).Length = ((IFileAsync)remoteStorageItem).ContentLength;
             };
+
+            // Set custom columns to be displayed in file manager.
+            // We create property definitions when registering the sync root with corresponding IDs.
+            List<FileSystemItemPropertyData> customProps = new List<FileSystemItemPropertyData>();
+            LockInfo lockInfo = remoteStorageItem.ActiveLocks.FirstOrDefault();
+            if (lockInfo != null)
+            {
+                customProps.AddRange(
+                    new ServerLockInfo()
+                    {
+                        LockToken = lockInfo.LockToken.LockToken,
+                        Owner = lockInfo.Owner,
+                        Exclusive = lockInfo.LockScope == LockScope.Exclusive,
+                        LockExpirationDateUtc = DateTimeOffset.Now.Add(lockInfo.TimeOut)
+                    }.GetLockProperties(Path.Combine(Config.Settings.IconsFolderPath, "LockedByAnotherUser.ico"))
+                );            
+            }
+            if (remoteStorageItem is IFileAsync)
+            {
+                customProps.Add(new FileSystemItemPropertyData(5, ((IFileAsync)remoteStorageItem).Etag));
+            };
+            userFileSystemItem.CustomProperties = customProps;
 
             return userFileSystemItem;
         }

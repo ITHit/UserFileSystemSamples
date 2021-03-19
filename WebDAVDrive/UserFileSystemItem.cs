@@ -1,20 +1,21 @@
-﻿using ITHit.FileSystem;
-using ITHit.FileSystem.Windows;
-using ITHit.WebDAV.Client;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace VirtualFileSystem
+using ITHit.FileSystem;
+using ITHit.FileSystem.Samples.Common;
+using ITHit.WebDAV.Client;
+
+namespace WebDAVDrive
 {
     /// <summary>
     /// Represents a file or a folder in the remote storage. Contains methods common for both files and folders.
     /// </summary>
     /// <remarks>You will change methods of this class to read/write data from/to your remote storage.</remarks>
-    internal class UserFileSystemItem
+    internal class UserFileSystemItem : IUserFileSystemItem
     {
         /// <summary>
         /// Path of this file of folder in the user file system.
@@ -27,20 +28,13 @@ namespace VirtualFileSystem
         protected string RemoteStorageUri;
 
         /// <summary>
-        /// Information about the lock. Null if the item is not locked.
-        /// </summary>
-        protected LockInfo Lock;
-
-        /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="userFileSystemPath">Path of this file of folder in the user file system.</param>
-        /// <param name="lockInfo">Information about the lock. Pass null if the item is not locked.</param>
-        public UserFileSystemItem(string userFileSystemPath, LockInfo lockInfo = null)
+        public UserFileSystemItem(string userFileSystemPath)
         {
             this.UserFileSystemPath = userFileSystemPath;
             this.RemoteStorageUri = Mapping.MapPath(userFileSystemPath);
-            this.Lock = lockInfo;
         }
 
         /// <summary>
@@ -70,8 +64,9 @@ namespace VirtualFileSystem
         /// <param name="newInfo">New information about the file, such as modification date, attributes, custom data, etc.</param>
         /// <param name="mode">Specifies if a new file should be created or existing file should be updated.</param>
         /// <param name="content">New file content or null if the file content is not modified.</param>
+        /// <param name="lockInfo">Information about the lock. Caller passes null if the item is not locked.</param>
         /// <returns>New ETag returned from the remote storage.</returns>
-        protected async Task<string> CreateOrUpdateFileAsync(Uri remoteStorageUri, IFileBasicInfo newInfo, FileMode mode, Stream content = null)
+        protected async Task<string> CreateOrUpdateFileAsync(Uri remoteStorageUri, IFileBasicInfo newInfo, FileMode mode, Stream content = null, ServerLockInfo lockInfo = null)
         {
             string eTag = null;
             string lockToken = null;
@@ -82,12 +77,12 @@ namespace VirtualFileSystem
                 eTag = await ETag.GetETagAsync(UserFileSystemPath);
 
                 // Get lock-token.
-                lockToken = Lock?.LockToken;
+                lockToken = lockInfo?.LockToken;
             }
 
             if (content != null || mode == FileMode.CreateNew)
             {
-                long contentLength = content!=null ? content.Length : 0; 
+                long contentLength = content != null ? content.Length : 0;
 
                 IWebRequestAsync request = await Program.DavClient.GetFileWriteRequestAsync(remoteStorageUri, null, contentLength, 0, -1, lockToken, eTag);
 
@@ -115,15 +110,20 @@ namespace VirtualFileSystem
         /// <returns>Lock info that conains lock-token returned by the remote storage.</returns>
         /// <remarks>
         /// Lock your item in the remote storage in this method and receive the lock-token.
-        /// Return a new <see cref="LockInfo"/> object with the <see cref="LockInfo.LockToken"/> being set from this function.
-        /// The <see cref="LockInfo"/> will become available via the <see cref="Lock"/> property when the 
+        /// Return a new <see cref="ServerLockInfo"/> object with the <see cref="ServerLockInfo.LockToken"/> being set from this function.
+        /// The <see cref="ServerLockInfo"/> will become available via methods parameter when the 
         /// item in the remote storage should be updated. Supply the lock-token during the update request in 
         /// <see cref="UserFile.UpdateAsync"/> and <see cref="UserFolder.UpdateAsync"/> method calls.
         /// </remarks>
-        public async Task<LockInfo> LockAsync()
+        public async Task<ServerLockInfo> LockAsync()
         {
-            ITHit.WebDAV.Client.LockInfo lockInfo = await Program.DavClient.LockAsync(new Uri(RemoteStorageUri), LockScope.Exclusive, false, null, TimeSpan.MaxValue);
-            return new LockInfo { LockToken = lockInfo.LockToken.LockToken };
+            LockInfo lockInfo = await Program.DavClient.LockAsync(new Uri(RemoteStorageUri), LockScope.Exclusive, false, null, TimeSpan.MaxValue);
+            return new ServerLockInfo {
+                LockToken = lockInfo.LockToken.LockToken,
+                Exclusive = lockInfo.LockScope == LockScope.Exclusive,
+                Owner = lockInfo.Owner,
+                LockExpirationDateUtc = DateTimeOffset.Now.Add(lockInfo.TimeOut)
+            };
         }
 
         /// <summary>
@@ -136,7 +136,14 @@ namespace VirtualFileSystem
         /// </remarks>
         public async Task UnlockAsync(string lockToken)
         {
-            await Program.DavClient.UnlockAsync(new Uri(RemoteStorageUri), lockToken);
+            try
+            {
+                await Program.DavClient.UnlockAsync(new Uri(RemoteStorageUri), lockToken);
+            }
+            catch(ITHit.WebDAV.Client.Exceptions.ConflictException)
+            {
+                // The item is already unlocked.
+            }
         }
     }
 }

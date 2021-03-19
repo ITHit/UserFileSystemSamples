@@ -1,6 +1,4 @@
-﻿using ITHit.FileSystem;
-using ITHit.FileSystem.Windows;
-using log4net;
+﻿using log4net;
 using log4net.Config;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -14,6 +12,8 @@ using VirtualFileSystem.Syncronyzation;
 using Windows.Storage;
 using Windows.Storage.Provider;
 
+using ITHit.FileSystem.Samples.Common;
+
 namespace VirtualFileSystem
 {
     class Program
@@ -21,7 +21,7 @@ namespace VirtualFileSystem
         /// <summary>
         /// Application settings.
         /// </summary>
-        internal static Settings Settings;
+        internal static AppSettings Settings;
 
         /// <summary>
         /// Log4Net logger.
@@ -29,38 +29,32 @@ namespace VirtualFileSystem
         private static readonly ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         /// <summary>
-        /// Processes file system calls, implements on-demand loading and initial data transfer from remote storage to client.
+        /// Processes OS file system calls, 
+        /// synchronizes user file system to remote storage and back, 
+        /// monitors files pinning and unpinning.
         /// </summary>
-        private static VfsEngine engine;
+        private static VirtualDrive virtualDrive;
 
         /// <summary>
         /// Monitores changes in the remote file system.
         /// </summary>
         internal static RemoteStorageMonitor RemoteStorageMonitorInstance;
 
-        /// <summary>
-        /// Monitors pinned and unpinned attributes in user file system.
-        /// </summary>
-        private static UserFileSystemMonitor userFileSystemMonitor;
-
-        /// <summary>
-        /// Performs complete synchronyzation of the folders and files that are already synched to user file system.
-        /// </summary>
-        private static FullSyncService syncService;
-
         static async Task<int> Main(string[] args)
         {
             // Load Settings.
             IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
             Settings = configuration.ReadSettings();
+            Config.Settings = Settings;
 
             // Load Log4Net for net configuration.
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
             XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
+
             // Enable UTF8 for Console Window
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-            log.Info($"\n{System.Diagnostics.Process.GetCurrentProcess().ProcessName}");
+            log.Info($"\n{System.Diagnostics.Process.GetCurrentProcess().ProcessName} {Settings.AppID}");
             log.Info("\nPress 'Q' to unregister file system, delete all files/folders and exit (simulate uninstall with full cleanup).");
             log.Info("\nPress 'q' to unregister file system and exit (simulate uninstall).");
             log.Info("\nPress any other key to exit without unregistering (simulate reboot).");
@@ -70,9 +64,12 @@ namespace VirtualFileSystem
             // Here we register it during first program start for the sake of the development convenience.
             if (!await Registrar.IsRegisteredAsync(Settings.UserFileSystemRootPath))
             {
-                Directory.CreateDirectory(Settings.UserFileSystemRootPath);
                 log.Info($"\nRegistering {Settings.UserFileSystemRootPath} sync root.");
-                await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName);
+                Directory.CreateDirectory(Settings.UserFileSystemRootPath);
+                Directory.CreateDirectory(Settings.ServerDataFolderPath);
+
+                await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
+                    Path.Combine(Config.Settings.IconsFolderPath, "Drive.ico"));
             }
             else
             {
@@ -87,24 +84,16 @@ namespace VirtualFileSystem
 
             try
             {
-                engine = new VfsEngine(Settings.License, Settings.UserFileSystemRootPath, log);
+                virtualDrive = new VirtualDrive(Settings.UserFileSystemLicense, Settings.UserFileSystemRootPath, log, Settings.SyncIntervalMs);
                 RemoteStorageMonitorInstance = new RemoteStorageMonitor(Settings.RemoteStorageRootPath, log);
-                syncService = new FullSyncService(Settings.SyncIntervalMs, Settings.UserFileSystemRootPath, log);
-                userFileSystemMonitor = new UserFileSystemMonitor(Settings.UserFileSystemRootPath, log);
 
                 // Start processing OS file system calls.
                 //engine.ChangesProcessingEnabled = false;
-                await engine.StartAsync();
+                await virtualDrive.StartAsync();
 
                 // Start monitoring changes in remote file system.
                 await RemoteStorageMonitorInstance.StartAsync();
 
-                // Start periodical synchronyzation between client and server, 
-                // in case any changes are lost because the client or the server were unavailable.
-                await syncService.StartAsync();
-
-                // Start monitoring pinned/unpinned attributes and files/folders creation in user file system.
-                await userFileSystemMonitor.StartAsync();
 #if DEBUG
                 // Opens Windows File Manager with user file system folder and remote storage folder.
                 ShowTestEnvironment();
@@ -114,10 +103,8 @@ namespace VirtualFileSystem
             }
             finally
             {
-                engine.Dispose();
+                virtualDrive.Dispose();
                 RemoteStorageMonitorInstance.Dispose();
-                syncService.Dispose();
-                userFileSystemMonitor.Dispose();
             }
 
             if (exitKey.KeyChar == 'q')
@@ -137,6 +124,15 @@ namespace VirtualFileSystem
                 try
                 {
                     Directory.Delete(Settings.UserFileSystemRootPath, true);
+                }
+                catch (Exception ex)
+                {
+                    log.Error($"\n{ex}");
+                }
+
+                try
+                {
+                    Directory.Delete(Config.Settings.ServerDataFolderPath, true);
                 }
                 catch (Exception ex)
                 {
@@ -193,7 +189,7 @@ namespace VirtualFileSystem
         {
             get
             {
-                return $"{System.Diagnostics.Process.GetCurrentProcess().ProcessName}!{System.Security.Principal.WindowsIdentity.GetCurrent().User}!User";
+                return $"{Settings.AppID}!{System.Security.Principal.WindowsIdentity.GetCurrent().User}!User";
             }
         }
     }
