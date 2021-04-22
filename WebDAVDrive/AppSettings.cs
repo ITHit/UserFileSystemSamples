@@ -85,7 +85,7 @@ namespace WebDAVDrive
 
             // Folder where eTags and file locks are stored.
             string localApplicationDataFolderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            settings.ServerDataFolderPath = Path.Combine(localApplicationDataFolderPath, settings.ProductName, settings.UserFileSystemRootPath.Replace(":", ""), "ServerData");
+            settings.ServerDataFolderPath = Path.Combine(localApplicationDataFolderPath, settings.AppID, settings.UserFileSystemRootPath.Replace(":", ""), "ServerData");
             return settings;
         }       
     }

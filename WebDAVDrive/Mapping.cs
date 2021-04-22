@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using System.Linq;
 
 using ITHit.FileSystem;
-using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.WebDAV.Client;
 
@@ -76,17 +75,17 @@ namespace WebDAVDrive
         /// </summary>
         /// <param name="remoteStorageItem">Remote storage item info.</param>
         /// <returns>User file system item info.</returns>
-        public static FileSystemItemBasicInfo GetUserFileSystemItemBasicInfo(IHierarchyItemAsync remoteStorageItem)
+        public static FileSystemItemMetadata GetUserFileSystemItemMetadata(IHierarchyItemAsync remoteStorageItem)
         {
-            FileSystemItemBasicInfo userFileSystemItem;
+            FileSystemItemMetadata userFileSystemItem;
 
             if (remoteStorageItem is IFileAsync)
             {
-                userFileSystemItem = new FileBasicInfo();
+                userFileSystemItem = new FileMetadata();
             }
             else
             {
-                userFileSystemItem = new FolderBasicInfo();
+                userFileSystemItem = new FolderMetadata();
             }
 
             userFileSystemItem.Name = remoteStorageItem.DisplayName;
@@ -98,7 +97,7 @@ namespace WebDAVDrive
 
             // If the item is locked by another user, set the LockedByAnotherUser to true.
             // This will set read-only arrtibute on files. 
-            // Note that read-only attribute is a convenience feture, it does not protect files from modification.
+            // Note that read-only attribute is a convenience feature, it does not protect files from modification.
             userFileSystemItem.LockedByAnotherUser = remoteStorageItem.ActiveLocks.Length > 0;
 
             if (remoteStorageItem is IFileAsync)
@@ -106,9 +105,9 @@ namespace WebDAVDrive
                 // We send the ETag to 
                 // the server inside If-Match header togeter with updated content from client.
                 // This will make sure the changes on the server is not overwritten.
-                ((FileBasicInfo)userFileSystemItem).ETag = ((IFileAsync)remoteStorageItem).Etag;
+                ((FileMetadata)userFileSystemItem).ETag = ((IFileAsync)remoteStorageItem).Etag;
 
-                ((FileBasicInfo)userFileSystemItem).Length = ((IFileAsync)remoteStorageItem).ContentLength;
+                ((FileMetadata)userFileSystemItem).Length = ((IFileAsync)remoteStorageItem).ContentLength;
             };
 
             // Set custom columns to be displayed in file manager.
@@ -124,12 +123,12 @@ namespace WebDAVDrive
                         Owner = lockInfo.Owner,
                         Exclusive = lockInfo.LockScope == LockScope.Exclusive,
                         LockExpirationDateUtc = DateTimeOffset.Now.Add(lockInfo.TimeOut)
-                    }.GetLockProperties(Path.Combine(Config.Settings.IconsFolderPath, "LockedByAnotherUser.ico"))
+                    }.GetLockProperties(Path.Combine(Program.Settings.IconsFolderPath, "LockedByAnotherUser.ico"))
                 );            
             }
             if (remoteStorageItem is IFileAsync)
             {
-                customProps.Add(new FileSystemItemPropertyData(5, ((IFileAsync)remoteStorageItem).Etag));
+                customProps.Add(new FileSystemItemPropertyData((int)CustomColumnIds.ETag, ((IFileAsync)remoteStorageItem).Etag));
             };
             userFileSystemItem.CustomProperties = customProps;
 

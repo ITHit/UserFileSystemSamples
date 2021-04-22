@@ -8,11 +8,11 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using VirtualFileSystem.Syncronyzation;
 using Windows.Storage;
 using Windows.Storage.Provider;
 
 using ITHit.FileSystem.Samples.Common;
+using ITHit.FileSystem.Samples.Common.Windows;
 
 namespace VirtualFileSystem
 {
@@ -33,19 +33,13 @@ namespace VirtualFileSystem
         /// synchronizes user file system to remote storage and back, 
         /// monitors files pinning and unpinning.
         /// </summary>
-        private static VirtualDrive virtualDrive;
-
-        /// <summary>
-        /// Monitores changes in the remote file system.
-        /// </summary>
-        internal static RemoteStorageMonitor RemoteStorageMonitorInstance;
+        internal static VirtualDrive VirtualDrive;
 
         static async Task<int> Main(string[] args)
         {
             // Load Settings.
             IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
             Settings = configuration.ReadSettings();
-            Config.Settings = Settings;
 
             // Load Log4Net for net configuration.
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
@@ -69,7 +63,7 @@ namespace VirtualFileSystem
                 Directory.CreateDirectory(Settings.ServerDataFolderPath);
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
-                    Path.Combine(Config.Settings.IconsFolderPath, "Drive.ico"));
+                    Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
             }
             else
             {
@@ -84,15 +78,12 @@ namespace VirtualFileSystem
 
             try
             {
-                virtualDrive = new VirtualDrive(Settings.UserFileSystemLicense, Settings.UserFileSystemRootPath, log, Settings.SyncIntervalMs);
-                RemoteStorageMonitorInstance = new RemoteStorageMonitor(Settings.RemoteStorageRootPath, log);
+                VirtualDrive = new VirtualDrive(Settings.UserFileSystemLicense, Settings.UserFileSystemRootPath, Settings, log);
 
-                // Start processing OS file system calls.
+                // Start processing OS file system calls, monitoring changes in user file system and remote storge.
                 //engine.ChangesProcessingEnabled = false;
-                await virtualDrive.StartAsync();
-
-                // Start monitoring changes in remote file system.
-                await RemoteStorageMonitorInstance.StartAsync();
+                await VirtualDrive.StartAsync();
+                //await VirtualDrive.SyncService.StopAsync();
 
 #if DEBUG
                 // Opens Windows File Manager with user file system folder and remote storage folder.
@@ -103,8 +94,7 @@ namespace VirtualFileSystem
             }
             finally
             {
-                virtualDrive.Dispose();
-                RemoteStorageMonitorInstance.Dispose();
+                VirtualDrive.Dispose();
             }
 
             if (exitKey.KeyChar == 'q')
@@ -132,7 +122,7 @@ namespace VirtualFileSystem
 
                 try
                 {
-                    Directory.Delete(Config.Settings.ServerDataFolderPath, true);
+                    Directory.Delete(Settings.ServerDataFolderPath, true);
                 }
                 catch (Exception ex)
                 {
@@ -169,7 +159,6 @@ namespace VirtualFileSystem
             {
 
             }
-
 
             // Open Windows File Manager with ETags and locks storage.
             //ProcessStartInfo serverDataInfo = new ProcessStartInfo(Program.Settings.ServerDataFolderPath);

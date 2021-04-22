@@ -13,11 +13,11 @@
   <ItemGroup>
     <PackageReference Include="ITHitWebDAVClient" Version="4.0.1398-Beta" />
     <PackageReference Include="log4net" Version="2.0.12" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.705.50" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.774.44" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ITHit.FileSystem.Samples.Common\ITHit.FileSystem.Samples.Common.csproj" />
+    <ProjectReference Include="..\ITHit.FileSystem.Samples.Common.Windows\ITHit.FileSystem.Samples.Common.Windows.csproj" />
   </ItemGroup>
 
   <ItemGroup>

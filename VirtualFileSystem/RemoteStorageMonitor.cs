@@ -13,9 +13,9 @@ using Windows.Storage.Provider;
 using Windows.System.Update;
 
 using ITHit.FileSystem.Samples.Common;
-using ITHit.FileSystem.Samples.Common.Syncronyzation;
+using ITHit.FileSystem.Samples.Common.Windows;
 
-namespace VirtualFileSystem.Syncronyzation
+namespace VirtualFileSystem
 {
     /// <summary>
     /// Monitors changes in the remote storage, notifies the client and updates the user file system.
@@ -30,23 +30,33 @@ namespace VirtualFileSystem.Syncronyzation
     internal class RemoteStorageMonitor : Logger, IDisposable
     {
         /// <summary>
-        /// Watches for changes in the remote storage file system.
-        /// </summary>
-        private FileSystemWatcher watcher = new FileSystemWatcher();
-
-        /// <summary>
         /// Remote storage path. Folder to monitor for changes.
         /// </summary>
-        private string remoteStorageRootPath;
+        private readonly string remoteStorageRootPath;
+
+        /// <summary>
+        /// Virtul drive instance. This class will call <see cref="IVirtualDrive"/> methods 
+        /// to update user file system when any data is changed in the remote storage:
+        /// <see cref="IVirtualDrive.CreateAsync(string, FileSystemItemMetadata[])"/>, 
+        /// <see cref="IVirtualDrive.UpdateAsync(string, FileSystemItemMetadata)"/>, etc.
+        /// </summary>
+        private readonly VirtualDrive virtualDrive;
+
+        /// <summary>
+        /// Watches for changes in the remote storage file system.
+        /// </summary>
+        private readonly FileSystemWatcher watcher = new FileSystemWatcher();
 
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="remoteStorageRootPath">Remote storage path. Folder that contains source files to monitor changes.</param>
+        /// <param name="virtualDrive">Virtual drive to send notifications about changes in the remote storage.</param>
         /// <param name="log">Logger.</param>
-        internal RemoteStorageMonitor(string remoteStorageRootPath, ILog log) : base("Remote Storage Monitor", log)
+        internal RemoteStorageMonitor(string remoteStorageRootPath, VirtualDrive virtualDrive, ILog log) : base("Remote Storage Monitor", log)
         {
             this.remoteStorageRootPath = remoteStorageRootPath;
+            this.virtualDrive = virtualDrive;
         }
 
         /// <summary>
@@ -66,6 +76,14 @@ namespace VirtualFileSystem.Syncronyzation
             watcher.EnableRaisingEvents = true;
             
             LogMessage($"Started");
+        }
+
+        /// <summary>
+        /// Stops monitoring changes in the remote storage.
+        /// </summary>
+        internal async Task StopAsync()
+        {
+            Enabled = false;
         }
 
         private bool Started()
@@ -112,12 +130,10 @@ namespace VirtualFileSystem.Syncronyzation
 
                     // Because of the on-demand population the file or folder placeholder may not exist in the user file system
                     // or the folder may be offline.
-                    if (Directory.Exists(userFileSystemParentPath)
-                        && !new DirectoryInfo(userFileSystemParentPath).Attributes.HasFlag(System.IO.FileAttributes.Offline))
+                    FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
+                    FileSystemItemMetadata newItemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                    if (await virtualDrive.ServerNotifications(userFileSystemParentPath, this).CreateAsync(new[] { newItemInfo }) > 0)
                     {
-                        FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
-                        FileSystemItemBasicInfo newItemInfo = Mapping.GetUserFileSysteItemBasicInfo(remoteStorageItem);
-                        await UserFileSystemRawItem.CreateAsync(userFileSystemParentPath, new[] { newItemInfo });
                         LogMessage($"Created succesefully", userFileSystemPath);
                     }
                 }
@@ -153,15 +169,12 @@ namespace VirtualFileSystem.Syncronyzation
 
                         // This check is only required because we can not prevent circular calls because of the simplicity of this example.
                         // In your real-life application you will not sent updates from server back to client that issued the update.
-                        FileSystemItemBasicInfo itemInfo = Mapping.GetUserFileSysteItemBasicInfo(remoteStorageItem);
-                        if (!await ETag.ETagEqualsAsync(userFileSystemPath, itemInfo))
+                        FileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                        if (!await virtualDrive.GetETagManager(userFileSystemPath, this).ETagEqualsAsync(itemInfo))
                         {
-                            await new UserFileSystemRawItem(userFileSystemPath).UpdateAsync(itemInfo);
+                            await virtualDrive.ServerNotifications(userFileSystemPath, this).UpdateAsync(itemInfo);
                             LogMessage("Updated succesefully", userFileSystemPath);
                         }
-
-                        // Update "locked by another user" icon.
-                        await new UserFileSystemRawItem(userFileSystemPath).SetLockedByAnotherUserAsync(itemInfo.LockedByAnotherUser);
                     }
                 }
             }
@@ -186,9 +199,8 @@ namespace VirtualFileSystem.Syncronyzation
                     string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
 
                     // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                    if (FsPath.Exists(userFileSystemPath))
+                    if (await virtualDrive.ServerNotifications(userFileSystemPath, this).DeleteAsync())
                     {
-                        await new UserFileSystemRawItem(userFileSystemPath).DeleteAsync();
                         LogMessage("Deleted succesefully", userFileSystemPath);
                     }
                 }
@@ -214,11 +226,11 @@ namespace VirtualFileSystem.Syncronyzation
                 {
                     string userFileSystemOldPath = Mapping.ReverseMapPath(remoteStorageOldPath);
 
+                    string userFileSystemNewPath = Mapping.ReverseMapPath(remoteStorageNewPath);
+
                     // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                    if (FsPath.Exists(userFileSystemOldPath))
+                    if (await virtualDrive.ServerNotifications(userFileSystemOldPath, this).MoveToAsync(userFileSystemNewPath))
                     {
-                        string userFileSystemNewPath = Mapping.ReverseMapPath(remoteStorageNewPath);
-                        await new UserFileSystemRawItem(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath);
                         LogMessage("Renamed succesefully:", userFileSystemOldPath, userFileSystemNewPath);
                     }
                 }

@@ -6,8 +6,9 @@ using System.Threading;
 using System.Windows.Forms;
 
 using ITHit.FileSystem.Samples.Common;
-using ITHit.FileSystem.Samples.Common.Syncronyzation;
-using static ITHit.FileSystem.Samples.Common.Syncronyzation.FullSyncService;
+using ITHit.FileSystem.Samples.Common.Windows;
+using ITHit.FileSystem.Samples.Common.Windows.Syncronyzation;
+using static ITHit.FileSystem.Samples.Common.Windows.Syncronyzation.FullSyncService;
 
 namespace WebDAVDrive.UI
 {
@@ -18,17 +19,16 @@ namespace WebDAVDrive.UI
     {
         /// <summary>
         /// Create new tray icon.
-        /// </summary>
+        /// </summary>s
         /// <param name="productName">Product name.</param>
-        /// <param name="syncService">Sync service</param>
-        /// <param name="exitEvent">ManualResetEvent, used to stop application</param>
+        /// <param name="virtualDrive">VirtualDriveBase, need to get syncService and fileSystemMonitor.</param>
+        /// <param name="exitEvent">ManualResetEvent, used to stop application.</param>
         /// <returns></returns>
-        public static Thread CreateTrayInterface(string productName, FullSyncService syncService, ManualResetEvent exitEvent) 
+        public static Thread CreateTrayInterface(string productName, IVirtualDrive virtualDrive, ConsoleManager.ConsoleExitEvent exitEvent) 
         {
             // Start tray application.
             Thread thread = new Thread(() => {
-                WindowsTrayInterface windowsTrayInterface = new WindowsTrayInterface($"{productName}", syncService);
-                syncService.syncEvent += windowsTrayInterface.HandleStatusChange;
+                WindowsTrayInterface windowsTrayInterface = new WindowsTrayInterface($"{productName}", virtualDrive);
                 Application.Run();
                 exitEvent.Set();
             });
@@ -39,27 +39,30 @@ namespace WebDAVDrive.UI
         }
 
         /// <summary>
-        /// Changes button status to Idle
+        /// Changes button status to Idle.
         /// </summary>
         private void StatusToIdle() 
         {
             notifyIcon.Text = Title + $"\n{Localization.Resources.Idle}";
             notifyIcon.ContextMenuStrip.Items[0].Text = Localization.Resources.StopSync;
+            notifyIcon.Icon = new System.Drawing.Icon("Images\\Drive.ico"); ;
         }
 
         /// <summary>
-        /// Changes button status to Synching
+        /// Changes button status to Synching.
         /// </summary>
         private void StatusToSynching() 
         {
             notifyIcon.Text = Title + $"\n{Localization.Resources.StatusSync}";
             notifyIcon.ContextMenuStrip.Items[0].Text = Localization.Resources.StopSync;
+            notifyIcon.Icon = new System.Drawing.Icon("Images\\DriveSync.ico"); ;
         }
 
         private void StatusToSyncStopped() 
         {
-            notifyIcon.Text = Title + $"\n{Localization.Resources.StopSync}";
+            notifyIcon.Text = Title + $"\n{Localization.Resources.StatusSyncStopped}";
             notifyIcon.ContextMenuStrip.Items[0].Text = Localization.Resources.StartSync;
+            notifyIcon.Icon = new System.Drawing.Icon("Images\\DrivePause.ico"); ;
         }
         /// <summary>
         /// Icon in the status bar notification area.
@@ -72,7 +75,7 @@ namespace WebDAVDrive.UI
         public static bool Visible = true;
 
         /// <summary>
-        /// Notify icon title
+        /// Notify icon title.
         /// </summary>
         public string Title { get; set; }
 
@@ -88,7 +91,7 @@ namespace WebDAVDrive.UI
         /// <param name="syncService">
         /// Synchronization service instance. The tray application will enable/disable this application and show its status.
         /// </param>
-        public WindowsTrayInterface(string title, FullSyncService syncService) 
+        public WindowsTrayInterface(string title, IVirtualDrive virtualDrive) 
         {
             Title = title;
             notifyIcon = new NotifyIcon();
@@ -98,11 +101,11 @@ namespace WebDAVDrive.UI
             notifyIcon.Text = title;
 
             ContextMenuStrip contextMenu = new ContextMenuStrip();
-            contextMenu.Items.Add(Localization.Resources.StopSync, null, (s, e) => { StartStopSync(syncService); });
+            contextMenu.Items.Add(Localization.Resources.StopSync, null, (s, e) => { StartStopSync(virtualDrive); });
 #if !DEBUG
             // Hide console on app start.
             Visible = false;
-            SetConsoleWindowVisibility(false);
+            ConsoleManager.SetConsoleWindowVisibility(false);
             contextMenu.Items.Add(Localization.Resources.ShowLog, null, (s, e) => {
 #else
             contextMenu.Items.Add(Localization.Resources.HideLog, null, (s, e) => {
@@ -115,11 +118,6 @@ namespace WebDAVDrive.UI
             contextMenu.Items.Add($"{Localization.Resources.Exit} {title}",null, (s,e) => { Application.Exit(); });
 
             notifyIcon.ContextMenuStrip = contextMenu;
-
-            notifyIcon.MouseClick += (object sender, MouseEventArgs e) => 
-            {
-                //MessageBox.Show("Clicked");
-            };
         }
 
         /// <summary>
@@ -130,17 +128,17 @@ namespace WebDAVDrive.UI
         /// <summary>
         /// This method handles StartStop Sycn button in tray menu.
         /// </summary>
-        private async void StartStopSync(FullSyncService syncService)
+        private async void StartStopSync(IVirtualDrive virtualDrive)
         {
             if (!sycnStopped)
             {
-                await syncService.StopAsync();
+                await virtualDrive.SetEnabledAsync(false);
                 sycnStopped = true;
                 StatusToSyncStopped();
             }
             else
             {
-                await syncService.StartAsync();
+                await virtualDrive.SetEnabledAsync(true);
                 sycnStopped = false;
                 StatusToIdle();
             }
@@ -151,7 +149,7 @@ namespace WebDAVDrive.UI
         /// </summary>
         public void HandleStatusChange(object sender, SynchEventArgs  synchEventArgs)
         {
-            if (synchEventArgs.state == SynchronizationState.Started)
+            if (synchEventArgs.NewState == SynchronizationState.Synchronizing)
             {
                 StatusToSynching();
             }

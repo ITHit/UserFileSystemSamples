@@ -1,0 +1,14 @@
+﻿using ITHit.FileSystem;
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace ITHit.FileSystem.Samples.Common
+{
+    ///<inheritdoc cref="IFileMetadata"/>
+    public class FileMetadata : FileSystemItemMetadata, IFileMetadata
+    {
+        ///<inheritdoc/>
+        public long Length { get; set; }
+    }
+}

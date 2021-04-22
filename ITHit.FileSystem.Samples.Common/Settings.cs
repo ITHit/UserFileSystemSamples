@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -10,17 +9,6 @@ using System.Threading.Tasks;
 namespace ITHit.FileSystem.Samples.Common
 {
     /// <summary>
-    /// Glogal object for accessing configuration.
-    /// </summary>
-    public static class Config
-    {
-        /// <summary>
-        /// Application settings.
-        /// </summary>
-        public static Settings Settings { get; set; }
-    }
-
-    /// <summary>
     /// Strongly binded project settings.
     /// </summary>
     public class Settings
@@ -29,7 +17,7 @@ namespace ITHit.FileSystem.Samples.Common
         /// Unique ID of this application.
         /// </summary>
         /// <remarks>
-        /// If you must to run more than one instance of this application side-by-side on same client machine
+        /// If you must to run more than one instance of this application side-by-side on the same client machine
         /// (aka Corporate Drive and Personal Drive) set unique ID for each instance.
         /// </remarks>
         public string AppID { get; set; }

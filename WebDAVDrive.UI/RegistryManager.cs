@@ -1,9 +1,10 @@
-﻿using ITHit.FileSystem.Samples.Common;
-using Microsoft.Win32;
+﻿using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+
+using ITHit.FileSystem.Samples.Common;
 
 namespace WebDAVDrive.UI
 {

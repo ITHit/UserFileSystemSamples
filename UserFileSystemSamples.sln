@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebDAVDrive.UI", "WebDAVDri
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtualFileSystem", "VirtualFileSystem\VirtualFileSystem.csproj", "{F83D05C4-EF6D-4BD9-99C4-B404443437F0}"
 EndProject
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "WebDAVDrive.Setup", "WebDAVDrive.Setup\WebDAVDrive.Setup.wixproj", "{2EDB1552-04DD-4974-8199-A8A453916204}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

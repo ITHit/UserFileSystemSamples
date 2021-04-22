@@ -51,17 +51,17 @@ namespace VirtualFileSystem
         /// </summary>
         /// <param name="remoteStorageItem">Remote storage item info.</param>
         /// <returns>User file system item info.</returns>
-        public static FileSystemItemBasicInfo GetUserFileSysteItemBasicInfo(FileSystemInfo remoteStorageItem)
+        public static FileSystemItemMetadata GetUserFileSysteItemMetadata(FileSystemInfo remoteStorageItem)
         {
-            FileSystemItemBasicInfo userFileSystemItem;
+            FileSystemItemMetadata userFileSystemItem;
 
             if (remoteStorageItem is FileInfo)
             {
-                userFileSystemItem = new FileBasicInfo();
+                userFileSystemItem = new FileMetadata();
             }
             else
             {
-                userFileSystemItem = new FolderBasicInfo();
+                userFileSystemItem = new FolderMetadata();
             }
 
             userFileSystemItem.Name = remoteStorageItem.Name;
@@ -76,7 +76,7 @@ namespace VirtualFileSystem
             // This will make sure the changes on the server is not overwritten.
             //
             // In this sample, for the sake of simplicity, we use file last write time instead of ETag.
-            userFileSystemItem.ETag = remoteStorageItem.LastWriteTime.ToBinary().ToString();
+            userFileSystemItem.ETag = userFileSystemItem.LastWriteTime.ToUniversalTime().ToString("o");
 
             // If the item is locked by another user, set the LockedByAnotherUser to true.
             // Here we just use the read-only attribute from remote storage item for demo purposes.
@@ -84,7 +84,7 @@ namespace VirtualFileSystem
 
             if (remoteStorageItem is FileInfo)
             {
-                ((FileBasicInfo)userFileSystemItem).Length = ((FileInfo)remoteStorageItem).Length;
+                ((FileMetadata)userFileSystemItem).Length = ((FileInfo)remoteStorageItem).Length;
             };
 
             // Set custom columns to be displayed in file manager.
@@ -99,7 +99,7 @@ namespace VirtualFileSystem
                         Owner = "User Name",
                         Exclusive = true,
                         LockExpirationDateUtc = DateTimeOffset.Now.AddMinutes(30)
-                    }.GetLockProperties(Path.Combine(Config.Settings.IconsFolderPath, "LockedByAnotherUser.ico"))
+                    }.GetLockProperties(Path.Combine(Program.Settings.IconsFolderPath, "LockedByAnotherUser.ico"))
                 );
             }
             userFileSystemItem.CustomProperties = customProps;

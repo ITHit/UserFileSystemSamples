@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Id="*" Name="$(var.WebDAVDrive.TargetName)" Language="1033" Version="!(bind.fileVersion.MAINFILEXE)" Manufacturer="It-Hit" UpgradeCode="2fae6b9d-673b-4efb-881b-77070d1b4ddf">
+        <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+        <Media Id="1" Cabinet="simple.cab" EmbedCab="yes" />
+        <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+        <!-- Precondition: Check whether WebView RunTime already installed or not -->
+        <Property Id="WVRTINSTALLED">
+            <RegistrySearch Id="WVRTInstalled" Root="HKLM" Key="SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" Name="pv" Type="raw" Win64="no" />
+        </Property>
+        <Feature Id="ProductFeature" Title="$(var.WebDAVDrive.TargetName)" Level="1">
+            <ComponentGroupRef Id="ProductComponents" />
+            <ComponentRef Id="App_Desktop_Shortcut"/>
+        
+            <ComponentRef Id="App_Start_Menu_Shortcut"/>
+        </Feature>
+        <UIRef Id="WixUI_Install" />
+        <!-- Config Custom Action to download/install WebView2 Bootstrapper -->
+        <CustomAction Id="DownloadAndInvokeBootstrapper" Directory="INSTALLDIR" Execute="deferred" ExeCommand="powershell.exe -windowstyle hidden Invoke-WebRequest -Uri &quot;https://go.microsoft.com/fwlink/p/?LinkId=2124703&quot; -OutFile &quot;$env:TEMP\MicrosoftEdgeWebview2Setup.exe&quot; ; &amp; $env:TEMP\MicrosoftEdgeWebview2Setup.exe /silent /install" Return="check" />
+        <!-- Config execute sequence of custom action -->
+        <InstallExecuteSequence>
+            <!-- Only run DownloadAndInvokeBootstrapper action during app install, app repair and when WVRT wasn't installed-->
+            <Custom Action="DownloadAndInvokeBootstrapper" Before="InstallFinalize"><![CDATA[NOT(REMOVE OR WVRTINSTALLED)]]></Custom>
+        </InstallExecuteSequence>
+        <WixVariable Id="WixUIBannerBmp" Value="banner.png" />
+        <WixVariable Id="WixUIDialogBmp" Value="background.png" />
+      
+        <Icon Id="icon.ico" SourceFile="$(var.WebDAVDrive.TargetDir)\Images\Drive.ico"/>
+        <Property Id="ARPPRODUCTICON" Value="icon.ico" />
+        <UI />
+    </Product>
+    <Fragment>
+        <Directory Id="TARGETDIR" Name="SourceDir">
+          
+            <Directory Id="ProgramMenuFolder">
+              <Directory Id="ApplicationProgramsFolder" Name="WebDAV Drive" />
+            </Directory>
+            <Directory Id="DesktopFolder" Name="Desktop"> </Directory>
+            
+            <Directory Id="ProgramFilesFolder">
+                <Directory Id="INSTALLDIR" Name="$(var.WebDAVDrive.TargetName)">
+                    <Component Id="MAINFILE" Guid="*">
+                        <File Id="MAINFILEXE" Source="$(var.WebDAVDrive.TargetDir)\WebDAVDrive.exe" KeyPath="yes" />
+                    </Component>
+                    <Component Id="MAINFILELIB" Guid="*">
+                        <File Id="MAINFILEDLL" Source="$(var.WebDAVDrive.TargetDir)\WebDAVDrive.dll" KeyPath="yes" />
+                    </Component>
+                    <Component Id="WEBDAVDRIVEUI" Guid="*">
+                        <File Id="WEBDAVDRIVEUIDLL" Source="$(var.WebDAVDrive.TargetDir)\WebDAVDrive.UI.dll" KeyPath="yes" />
+                    </Component>
+                    <Component Id="ITHITFILESYSTEM" Guid="*">
+                        <File Id="ITHITFILESYSTEMDLL" Source="$(var.WebDAVDrive.TargetDir)\ITHit.FileSystem.dll" KeyPath="yes" />
+                    </Component>
+                    <Component Id="ITHITFILESYSTEMSAMPLESCOMMON" Guid="*">
+                        <File Id="ITHITFILESYSTEMSAMPLESCOMMONDLL" Source="$(var.WebDAVDrive.TargetDir)\ITHit.FileSystem.Samples.Common.dll" KeyPath="yes" />
+                    </Component>
+                    <Component Id="ITHITFILESYSTEMSAMPLESCOMMONWINDOWS" Guid="*">
+                        <File Id="ITHITFILESYSTEMSAMPLESCOMMONWINDOWSDLL" Source="$(var.WebDAVDrive.TargetDir)\ITHit.FileSystem.Samples.Common.Windows.dll" KeyPath="yes" />
+                    </Component>
+                    <Component Id="ITHITFILESYSTEMWINDOWS" Guid="*">
+                        <File Id="ITHITFILESYSTEMWINDOWSDLL" Source="$(var.WebDAVDrive.TargetDir)\ITHit.FileSystem.Windows.dll" KeyPath="yes" />
+                    </Component>
+                    <Component Id="LOG4NET" Guid="*">
+                        <File Id="LOG4NETDLL" Source="$(var.WebDAVDrive.TargetDir)\log4net.dll" KeyPath="yes" />
+                    </Component>
+                    <Component Id="DEPS" Guid="*">
+                        <File Id="DEPSJSON" Source="$(var.WebDAVDrive.TargetDir)\WebDAVDrive.deps.json" KeyPath="yes" />
+                    </Component>
+                    <Component Id="SYSTEMTEXTJSON" Guid="*">
+                        <File Id="SYSTEMTEXTJSONDLL" Source="$(var.WebDAVDrive.TargetDir)\System.Text.Json.dll" KeyPath="yes" />
+                    </Component>
+                    <Component Id="LOG4NETCONFIG" Guid="*">
+                        <File Id="LOG4NETCONFIGXML" Source="$(var.WebDAVDrive.TargetDir)\log4net.config" KeyPath="yes" />
+                    </Component>
+                    <Component Id="APPSETINGS" Guid="*">
+                        <File Id="APPSETINGSJSON" Source="$(var.WebDAVDrive.TargetDir)\appsettings.json" KeyPath="yes" />
+                    </Component>
+                    <Component Id="WEBDAVDRIVERUNTIECONFIG" Guid="*">
+                        <File Id="WEBDAVDRIVERUNTIECONFIGJSON" Source="$(var.WebDAVDrive.TargetDir)\WebDAVDrive.runtimeconfig.json" KeyPath="yes" />
+                    </Component>
+                    <Component Id="ITHITWEBDAVCLIENT" Guid="5EA26EA0-E5EF-4354-8745-7D2B7D16BFC7">
+                        <File Id="ITHITWEBDAVCLIENTDLL" Source="$(var.WebDAVDrive.TargetDir)\ITHit.WebDAV.Client.dll" KeyPath="yes" />
+                    </Component>
+                    <Component Id="EXTENSIONS" Guid="C9D848EA-55A2-427D-8BB2-207C59BFDF10">
+                        <File Id="MICROSOFT.EXTENSIONS.CONFIGURATION.ABSTRACTIONS.DLL" Name="Microsoft.Extensions.Configuration.Abstractions.dll" Source="$(var.WebDAVDrive.TargetDir)\Microsoft.Extensions.Configuration.Abstractions.dll" />
+                        <File Id="MICROSOFT.EXTENSIONS.CONFIGURATION.BINDER.DLL" Name="Microsoft.Extensions.Configuration.Binder.dll" Source="$(var.WebDAVDrive.TargetDir)\Microsoft.Extensions.Configuration.Binder.dll" />
+                        <File Id="MICROSOFT.EXTENSIONS.CONFIGURATION.DLL" Name="Microsoft.Extensions.Configuration.dll" Source="$(var.WebDAVDrive.TargetDir)\Microsoft.Extensions.Configuration.dll" />
+                        <File Id="MICROSOFT.EXTENSIONS.CONFIGURATION.FILEEXTENSIONS.DLL" Name="Microsoft.Extensions.Configuration.FileExtensions.dll" Source="$(var.WebDAVDrive.TargetDir)\Microsoft.Extensions.Configuration.FileExtensions.dll" />
+                        <File Id="MICROSOFT.EXTENSIONS.CONFIGURATION.JSON.DLL" Name="Microsoft.Extensions.Configuration.Json.dll" Source="$(var.WebDAVDrive.TargetDir)\Microsoft.Extensions.Configuration.Json.dll" />
+                        <File Id="MICROSOFT.EXTENSIONS.FILEPROVIDERS.ABSTRACTIONS.DLL" Name="Microsoft.Extensions.FileProviders.Abstractions.dll" Source="$(var.WebDAVDrive.TargetDir)\Microsoft.Extensions.FileProviders.Abstractions.dll" />
+                        <File Id="MICROSOFT.EXTENSIONS.FILEPROVIDERS.PHYSICAL.DLL" Name="Microsoft.Extensions.FileProviders.Physical.dll" Source="$(var.WebDAVDrive.TargetDir)\Microsoft.Extensions.FileProviders.Physical.dll" />
+                        <File Id="MICROSOFT.EXTENSIONS.FILESYSTEMGLOBBING.DLL" Name="Microsoft.Extensions.FileSystemGlobbing.dll" Source="$(var.WebDAVDrive.TargetDir)\Microsoft.Extensions.FileSystemGlobbing.dll" />
+                        <File Id="MICROSOFT.EXTENSIONS.PRIMITIVES.DLL" Name="Microsoft.Extensions.Primitives.dll" Source="$(var.WebDAVDrive.TargetDir)\Microsoft.Extensions.Primitives.dll" />
+                    </Component>
+                    <Component Id="WEBVIEW2" Guid="21A4FED0-F6C7-474A-8040-9831A001A177">
+                        <File Id="MICROSOFT.WEB.WEBVIEW2.CORE.DLL" Name="Microsoft.Web.WebView2.Core.dll" Source="$(var.WebDAVDrive.TargetDir)\Microsoft.Web.WebView2.Core.dll" />
+                        <File Id="MICROSOFT.WEB.WEBVIEW2.WINFORMS.DLL" Name="Microsoft.Web.WebView2.WinForms.dll" Source="$(var.WebDAVDrive.TargetDir)\Microsoft.Web.WebView2.WinForms.dll" />
+                        <File Id="MICROSOFT.WEB.WEBVIEW2.WPF.DLL" Name="Microsoft.Web.WebView2.Wpf.dll" Source="$(var.WebDAVDrive.TargetDir)\Microsoft.Web.WebView2.Wpf.dll" />
+                    </Component>
+                    <Directory Id="RUNTIMES" Name="runtimes">
+                        <Directory Id="WIN_ARM" Name="win-arm">
+                            <Directory Id="NATIVE" Name="native" />
+                        </Directory>
+                        <Directory Id="WIN_ARM64" Name="win-arm64">
+                            <Directory Id="NATIVE_1" Name="native">
+                                <Component Id="WEBVIEW2LOADER.DLL" DiskId="1" Guid="F6D010ED-E393-4918-812B-AD562773B97E">
+                                    <File Id="WEBVIEW2LOADER.DLL" Name="WebView2Loader.dll" Source="$(var.WebDAVDrive.TargetDir)\runtimes\win-arm64\native\WebView2Loader.dll" />
+                                </Component>
+                            </Directory>
+                        </Directory>
+                        <Directory Id="WIN_X64" Name="win-x64">
+                            <Directory Id="NATIVE_2" Name="native">
+                                <Component Id="WEBVIEW2LOADER.DLL_1" DiskId="1" Guid="6029F534-1274-4C6C-8B53-ADC0D25F43C6">
+                                    <File Id="WEBVIEW2LOADER.DLL_1" Name="WebView2Loader.dll" Source="$(var.WebDAVDrive.TargetDir)\runtimes\win-x64\native\WebView2Loader.dll" />
+                                </Component>
+                            </Directory>
+                        </Directory>
+                        <Directory Id="WIN_X86" Name="win-x86">
+                            <Directory Id="NATIVE_3" Name="native">
+                                <Component Id="WEBVIEW2LOADER.DLL_2" DiskId="1" Guid="157D8A16-A95F-4075-9A10-7D7413848B49">
+                                    <File Id="WEBVIEW2LOADER.DLL_2" Name="WebView2Loader.dll" Source="$(var.WebDAVDrive.TargetDir)\runtimes\win-x86\native\WebView2Loader.dll" />
+                                </Component>
+                            </Directory>
+                        </Directory>
+                        <Directory Id="WIN10_ARM64" Name="win10-arm64">
+                            <Directory Id="NATIVE_4" Name="native" />
+                        </Directory>
+                        <Directory Id="WIN10_X64" Name="win10-x64">
+                            <Directory Id="NATIVE_5" Name="native" />
+                        </Directory>
+                        <Directory Id="WIN10_X86" Name="win10-x86">
+                            <Directory Id="NATIVE_6" Name="native" />
+                        </Directory>
+                    </Directory>
+                    <Directory Id="IMAGES" Name="Images">
+                        <Component Id="ALLIMAGES" Guid="D384550F-802D-41C6-ACC8-9F0E40D6A4B9">
+                            <File Id="BLANK.ICO" Name="Blank.ico" Source="$(var.WebDAVDrive.TargetDir)\Images\Blank.ico" />
+                            <File Id="DOWN.ICO" Name="Down.ico" Source="$(var.WebDAVDrive.TargetDir)\Images\Down.ico" />
+                            <File Id="DRIVE.ICO" Name="Drive.ico" Source="$(var.WebDAVDrive.TargetDir)\Images\Drive.ico" />
+                            <File Id="DRIVEPAUSE.ICO" Name="DrivePause.ico" Source="$(var.WebDAVDrive.TargetDir)\Images\DrivePause.ico" />
+                            <File Id="DRIVESYNC.ICO" Name="DriveSync.ico" Source="$(var.WebDAVDrive.TargetDir)\Images\DriveSync.ico" />
+                            <File Id="ERROR.ICO" Name="Error.ico" Source="$(var.WebDAVDrive.TargetDir)\Images\Error.ico" />
+                            <File Id="LOCKED.ICO" Name="Locked.ico" Source="$(var.WebDAVDrive.TargetDir)\Images\Locked.ico" />
+                            <File Id="LOCKEDBYANOTHERUSER.ICO" Name="LockedByAnotherUser.ico" Source="$(var.WebDAVDrive.TargetDir)\Images\LockedByAnotherUser.ico" />
+                            <File Id="LOCKEDPENDING.ICO" Name="LockedPending.ico" Source="$(var.WebDAVDrive.TargetDir)\Images\LockedPending.ico" />
+                            <File Id="UNLOCKED.ICO" Name="Unlocked.ico" Source="$(var.WebDAVDrive.TargetDir)\Images\Unlocked.ico" />
+                            <File Id="UP.ICO" Name="Up.ico" Source="$(var.WebDAVDrive.TargetDir)\Images\Up.ico" />
+                            <File Id="WARNING.ICO" Name="Warning.ico" Source="$(var.WebDAVDrive.TargetDir)\Images\Warning.ico" />
+                        </Component>
+                    </Directory>
+                  
+                    <!--Localization-->
+                    <Directory Id="UK_UA" Name="uk-UA">
+                        <Component Id="WEBDAVDRIVE.UI.RESOURCES.UA.DLL" DiskId="1" Guid="F5683FB0-B23A-4869-B800-B4E2D3E5D67E">
+                            <File Id="WEBDAVDRIVE.UI.RESOURCES.DLL" Name="WebDAVDrive.UI.resources.dll" Source="..\WebDAVDrive\bin\Debug\netcoreapp3.1\uk-UA\WebDAVDrive.UI.resources.dll" />
+                        </Component>
+                    </Directory>
+                    <Directory Id="ES_ES" Name="es-ES">
+                        <Component Id="WEBDAVDRIVE.UI.RESOURCES.ES.DLL" DiskId="1" Guid="B3706F79-D5D3-4DC5-8FBB-148B66A3B40F">
+                            <File Id="WEBDAVDRIVE.UI.RESOURCES.DLL_1" Name="WebDAVDrive.UI.resources.dll" Source="..\WebDAVDrive\bin\Debug\netcoreapp3.1\es-ES\WebDAVDrive.UI.resources.dll" />
+                        </Component>
+                    </Directory>
+                </Directory>
+            </Directory>
+        </Directory>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="DesktopFolder">
+            <Component Id="App_Desktop_Shortcut" Guid="327629B4-3339-432B-A574-6D9CB7DF8C8C">
+              <Shortcut Id="ApplicationDesktopShortcut"
+                 Name="$(var.WebDAVDrive.TargetName)"
+                 Target="[INSTALLDIR]$(var.WebDAVDrive.TargetName).exe"
+                 WorkingDirectory="INSTALLDIR">
+                 <Icon Id="shdesktopicon.ico" SourceFile="$(var.WebDAVDrive.TargetDir)\Images\Drive.ico"/>
+              </Shortcut>
+               <RemoveFolder Id="RemoveDesktopFolder"
+                   Directory="DesktopFolder"
+                   On="uninstall" />
+               <RegistryValue Root="HKCU" Key="Software\$(var.WebDAVDrive.TargetName)"
+                   Name="installed" Type="integer"
+                   Value="1" KeyPath="yes" />
+             </Component>
+         </DirectoryRef>
+        
+      <DirectoryRef Id="ApplicationProgramsFolder">
+        <Component Id="App_Start_Menu_Shortcut" Guid="0CAFCDBE-99AE-4656-BFE7-98FB02307D02">
+          <Shortcut Id="ApplicationStartMenuShortcut"
+            Name="$(var.WebDAVDrive.TargetName)"
+            Target="[INSTALLDIR]$(var.WebDAVDrive.TargetName).exe"
+            WorkingDirectory="INSTALLDIR">
+            <Icon Id="shicon.ico" SourceFile="$(var.WebDAVDrive.TargetDir)\Images\Drive.ico"/>
+          </Shortcut>
+          <RemoveFolder Id="RemoveApplicationProgramsFolder"
+              Directory="ApplicationProgramsFolder"
+              On="uninstall" />
+          <RegistryValue Root="HKCU" Key="Software\$(var.WebDAVDrive.TargetName)"
+              Name="installed" Type="integer"
+              Value="1" KeyPath="yes" />
+   
+         </Component>
+     </DirectoryRef>
+        
+        <ComponentGroup Id="ProductComponents" Directory="INSTALLDIR">
+            <ComponentRef Id="MAINFILE" />
+            <ComponentRef Id="MAINFILELIB" />
+            <ComponentRef Id="WEBDAVDRIVEUI" />
+            <ComponentRef Id="ITHITFILESYSTEM" />
+            <ComponentRef Id="ITHITFILESYSTEMSAMPLESCOMMON" />
+            <ComponentRef Id="ITHITFILESYSTEMSAMPLESCOMMONWINDOWS" />
+            <ComponentRef Id="ITHITFILESYSTEMWINDOWS" />
+            <ComponentRef Id="ITHITFILESYSTEMSAMPLESCOMMONWINDOWS" />
+            <ComponentRef Id="LOG4NET" />
+            <ComponentRef Id="DEPS" />
+            <ComponentRef Id="APPSETINGS" />
+            <ComponentRef Id="SYSTEMTEXTJSON" />
+            <ComponentRef Id="LOG4NETCONFIG" />
+            <ComponentRef Id="WEBDAVDRIVERUNTIECONFIG" />
+            <ComponentRef Id="ITHITWEBDAVCLIENT" />
+            <ComponentRef Id="EXTENSIONS" />
+            <ComponentRef Id="WEBVIEW2" />
+            <ComponentRef Id="WEBVIEW2LOADER.DLL" />
+            <ComponentRef Id="WEBVIEW2LOADER.DLL_1" />
+            <ComponentRef Id="WEBVIEW2LOADER.DLL_2" />
+            <ComponentRef Id="ALLIMAGES" />
+            <ComponentRef Id="WEBDAVDRIVE.UI.RESOURCES.UA.DLL" />
+            <ComponentRef Id="WEBDAVDRIVE.UI.RESOURCES.ES.DLL" /> 
+                
+        </ComponentGroup>
+    </Fragment>
+</Wix>

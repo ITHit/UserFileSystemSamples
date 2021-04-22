@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
@@ -33,7 +33,7 @@
     <PackageReference Include="System.Security.Principal.Windows" Version="4.7.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ITHit.FileSystem.Samples.Common\ITHit.FileSystem.Samples.Common.csproj" />
+    <ProjectReference Include="..\ITHit.FileSystem.Samples.Common.Windows\ITHit.FileSystem.Samples.Common.Windows.csproj" />
     <ProjectReference Include="..\WebDAVDrive.UI\WebDAVDrive.UI.csproj" />
   </ItemGroup>
   <ItemGroup>

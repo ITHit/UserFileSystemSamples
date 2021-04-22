@@ -20,6 +20,7 @@ using log4net.Config;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
+using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.WebDAV.Client;
 using ITHit.WebDAV.Client.Exceptions;
 using WebDAVDrive.UI;
@@ -46,14 +47,10 @@ namespace WebDAVDrive
         /// <summary>
         /// Processes OS file system calls, 
         /// synchronizes user file system to remote storage and back, 
-        /// monitors files pinning and unpinning.
+        /// monitors files pinning and unpinning in the local file system,
+        /// monitores changes in the remote storage.
         /// </summary>
         private static VirtualDrive virtualDrive;
-
-        /// <summary>
-        /// Monitores changes in the remote file system.
-        /// </summary>
-        internal static RemoteStorageMonitor RemoteStorageMonitorInstance;
 
         //[STAThread]
         static async Task<int> Main(string[] args)
@@ -61,7 +58,6 @@ namespace WebDAVDrive
             // Load Settings.
             IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
             Settings = configuration.ReadSettings();
-            Config.Settings = Settings;
 
             // Load Log4Net for net configuration.
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
@@ -85,7 +81,7 @@ namespace WebDAVDrive
                 Directory.CreateDirectory(Settings.ServerDataFolderPath);
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
-                    Path.Combine(Config.Settings.IconsFolderPath, "Drive.ico"));
+                    Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
             }
             else
             {
@@ -101,37 +97,33 @@ namespace WebDAVDrive
             ConsoleKeyInfo exitKey = new ConsoleKeyInfo();
 
             // Event to be fired when any key will be pressed in the console or when the tray application exits.
-            ManualResetEvent exitEvent = new ManualResetEvent(false);
+            ConsoleManager.ConsoleExitEvent exitEvent = new ConsoleManager.ConsoleExitEvent();
 
             try
             {
-                virtualDrive = new VirtualDrive(Settings.UserFileSystemLicense, Settings.UserFileSystemRootPath, log, Settings.SyncIntervalMs);
-                RemoteStorageMonitorInstance = new RemoteStorageMonitor(Settings.WebDAVServerUrl, log);
+                virtualDrive = new VirtualDrive(Settings.UserFileSystemLicense, Settings.UserFileSystemRootPath, Settings, log);
                 
                 // Start tray application.
-                Thread tryIconThread = WindowsTrayInterface.CreateTrayInterface(Settings.ProductName, virtualDrive.SyncService, exitEvent);
+                Thread tryIconThread = WindowsTrayInterface.CreateTrayInterface(Settings.ProductName, virtualDrive, exitEvent);
 
-                // Start processing OS file system calls.
+                // Start processing OS file system calls, monitoring changes in user file system and remote storge.
                 //engine.ChangesProcessingEnabled = false;
                 await virtualDrive.StartAsync();
-
-                // Start monitoring changes in remote file system.
-                //await RemoteStorageMonitorInstance.StartAsync();
                 
 #if DEBUG
                 // Opens Windows File Manager with user file system folder and remote storage folder.
                 ShowTestEnvironment();
 #endif
                 // Keep this application running until user input.
-                exitKey = WebDAVDrive.UI.ConsoleManager.WaitConsoleReadKey(exitEvent);
+                ConsoleManager.WaitConsoleReadKey(exitEvent);
 
                 //wait until the button "Exit" is pressed or any key in console is peressed  to stop application
                 exitEvent.WaitOne();
+                exitKey = exitEvent.KeyInfo;
             }
             finally
             {
                 virtualDrive.Dispose();
-                RemoteStorageMonitorInstance.Dispose();
             }
 
             if (exitKey.KeyChar == 'q')
@@ -159,7 +151,7 @@ namespace WebDAVDrive
 
                 try
                 { 
-                    Directory.Delete(Config.Settings.ServerDataFolderPath, true);
+                    Directory.Delete(Settings.ServerDataFolderPath, true);
                 }
                 catch (Exception ex)
                 {

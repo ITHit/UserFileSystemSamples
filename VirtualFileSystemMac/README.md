@@ -13,9 +13,9 @@
 <li>Visual Studio Community 2019 for Mac v8.8.10+, Stable Channel.</li>
 </ul>
 <h2>Solution Structure</h2>
-<p>The macOS sample solution consists of 3 projects: container application, a system extension project, and a common code.</p>
-<p>The container application provides a Menu Bar icon to install/uninstall the system extension. Inside the container application, you should change the hardcoded directory to replicate in your Virtual Disk manually. Consider that the system extension can only access sandbox folders (including Downloads, Pictures, Music, Movies). It means that it won't be able to show the contents of the folder outside of the sandbox.</p>
-<p>The system extension project runs in the background and implements a virtual file system on macOS (File Provider). It processes requests from macOS applications sent via macOS file system API and lists folders content. The macOS extension can be installed only as part of a container application, you can not install the extension application by itself.</p>
+<p>The macOS sample solution consists of 3 projects: container application, an extension project, and a common code.</p>
+<p>The container application provides a Menu Bar icon to install/uninstall the file system extension. Inside the container application, you should change the hardcoded directory to replicate in your Virtual Disk manually. Consider that the extension can only access sandbox folders (including Downloads, Pictures, Music, Movies). It means that it won't be able to show the contents of the folder outside of the sandbox.</p>
+<p>The extension project runs in the background and implements a virtual file system on macOS (File Provider). It processes requests from macOS applications sent via macOS file system API and lists folders content. The macOS extension can be installed only as part of a container application, you can not install the extension application by itself.</p>
 <h2>Configuring the Sample</h2>
 <p>In the following steps, we will describe how to configure and run this sample in the development environment. You will create an Apple group ID, Apple app identifies, and Apple provisioning profiles. Then you will update the sample container application project and extension project to use the created IDs and profiles.</p>
 <p>Log-in to the Apple developer account here:&nbsp;<a href="https://developer.apple.com/" rel="nofollow">https://developer.apple.com/</a>. To complete the steps below you must have an App Manager role.</p>
@@ -24,7 +24,7 @@
 <p><strong>Create App Group.</strong>&nbsp;Navigate to Certificates, IDs, Profiles -&gt; Identifiers -&gt; App Groups and create a new group.</p>
 </li>
 <li>
-<p><strong>Create Apple macOS App IDs.</strong>&nbsp;Navigate to Certificates, IDs, Profile -&gt; Identifiers -&gt; App IDs. Create 2 identifiers that will be unique for your project. One will be used for container application another – for the system extension.</p>
+<p><strong>Create Apple macOS App IDs.</strong>&nbsp;Navigate to Certificates, IDs, Profile -&gt; Identifiers -&gt; App IDs. Create 2 identifiers that will be unique for your project. One will be used for container application another – for the extension.</p>
 </li>
 <li>
 <p><strong>Add app identifiers to the group.</strong>&nbsp;Add both identifiers created in Step 2 to the group created in Step 1. Select identifier and click on Edit. Then check the App Groups checkbox, select the Edit button and select the group created in Step 1.</p>
@@ -36,10 +36,10 @@
 <p><strong>Download profiles and certificates in XCode.</strong>&nbsp;Run XCode and go to Xcode Menu &gt; Preferences -&gt; Accounts tab. Select team and click on “Download Manual Profiles”. You can find more detailed instructions:&nbsp;<a href="https://docs.microsoft.com/en-us/xamarin/mac/deploy-test/publishing-to-the-app-store/profiles" rel="nofollow">here</a></p>
 </li>
 <li>
-<p><strong>Set bundle identifier name in Container project.</strong>&nbsp;The bundle identifier is located in VirtualFilesystemMacApp/Info.plist file. You can edit it either in Visual Studio or directly in Info.plist file in the CFBundleIdentifier field (by default it is set to <span class="code">com.ithit.virtualfilesystem.app</span>). You must set this identifier to the value specified in Step 1.</p>
+<p><strong>Set bundle identifier name in Container project.</strong>&nbsp;The bundle identifier is located in VirtualFilesystemMacApp/Info.plist file. You can edit it either in Visual Studio or directly in Info.plist file in the CFBundleIdentifier field (by default it is set to <span class="code">com.userfilesystem.vfs.app</span>). You must set this identifier to the value specified in Step 1.</p>
 </li>
 <li>
-<p><strong>Set bundle identifier name in the Extension project.</strong>&nbsp;The bundle identifier is located in FileProviderExtension/Info.plist file. You can edit it either in Visual Studio or directly in Info.plist file in the CFBundleIdentifier field (by default it is set to <span class="code">com.ithit.virtualfilesystem.app.extension</span>). You must set this identifier to the value specified in Step 1.</p>
+<p><strong>Set bundle identifier name in the Extension project.</strong>&nbsp;The bundle identifier is located in FileProviderExtension/Info.plist file. You can edit it either in Visual Studio or directly in Info.plist file in the CFBundleIdentifier field (by default it is set to <span class="code">com.userfilesystem.vfs.app.extension</span>). You must set this identifier to the value specified in Step 1.</p>
 </li>
 <li>
 <p><strong>Configure macOS bundle signing in Container and Extension projects.</strong>&nbsp;For each project in Visual Studio go to the project Options. Select Mac Signing and check 'Sign the application bundle'. Select Identity and Provisioning profile.</p>

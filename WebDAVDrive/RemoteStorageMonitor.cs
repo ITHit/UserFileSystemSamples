@@ -13,6 +13,7 @@ using log4net;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
+using ITHit.FileSystem.Samples.Common.Windows;
 
 namespace WebDAVDrive
 {
@@ -23,31 +24,47 @@ namespace WebDAVDrive
     /// </summary>
     internal class RemoteStorageMonitor : Logger, IDisposable
     {
-
         /// <summary>
         /// Remote storage path. Folder to monitor changes in.
         /// </summary>
         private string remoteStorageRootPath;
 
         /// <summary>
+        /// Virtual drive instance. This class will call <see cref="IVirtualDrive"/> methods 
+        /// to update user file system when any data is changed in the remote storage:
+        /// <see cref="IVirtualDrive.CreateAsync(string, FileSystemItemMetadata[])"/>, 
+        /// <see cref="IVirtualDrive.UpdateAsync(string, FileSystemItemMetadata)"/>, etc.
+        /// </summary>
+        private IVirtualDrive virtualDrive;
+
+        /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="remoteStorageRootPath">Remote storage path. Folder that contains source files to monitor changes.</param>
+        /// <param name="virtualDrive">Virtual drive to send notifications about changes in the remote storage.</param>
         /// <param name="log">Logger.</param>
-        internal RemoteStorageMonitor(string remoteStorageRootPath, ILog log) : base("Remote Storage Monitor", log)
+        internal RemoteStorageMonitor(string remoteStorageRootPath, IVirtualDrive virtualDrive, ILog log) : base("Remote Storage Monitor", log)
         {
             this.remoteStorageRootPath = remoteStorageRootPath;
+            this.virtualDrive = virtualDrive;
         }
 
         /// <summary>
-        /// Starts monitoring changes on the server.
+        /// Starts monitoring changes in the remote storage.
         /// </summary>
         internal async Task StartAsync()
         {
 
         }
- 
-        
+
+        /// <summary>
+        /// Stops monitoring changes in the remote storage.
+        /// </summary>
+        internal async Task StopAsync()
+        {
+
+        }
+
         private void Error(object sender, ErrorEventArgs e)
         {
             LogError(null, null, null, e.GetException());
