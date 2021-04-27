@@ -1,4 +1,4 @@
-﻿using ITHit.FileSystem;
+using ITHit.FileSystem;
 using System.IO;
 using System.Threading.Tasks;
 

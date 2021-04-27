@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
@@ -33,7 +33,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Processes file system calls, implements on-demand folders listing 
         /// and initial on-demand file content transfer from remote storage to client.
         /// </summary>
-        private readonly VfsEngine engine;
+        internal readonly VfsEngine Engine;
 
         /// <summary>
         /// Monitors pinned and unpinned attributes in user file system.
@@ -63,7 +63,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             this.Settings = settings;
             this.log = log;
-            engine = new VfsEngine(license, userFileSystemRootPath, this, log);
+            Engine = new VfsEngine(license, userFileSystemRootPath, this, log);
             SyncService = new FullSyncService(settings.SyncIntervalMs, userFileSystemRootPath, this, log);
             SyncService.SyncEvent += SyncService_SyncEvent;
             userFileSystemMonitor = new UserFileSystemMonitor(userFileSystemRootPath, this, log);
@@ -111,8 +111,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         public virtual async Task StartAsync()
         {
             // Start processing OS file system calls.
-            engine.ChangesProcessingEnabled = true;
-            await engine.StartAsync();
+            Engine.ChangesProcessingEnabled = true;
+            await Engine.StartAsync();
 
             await SetEnabledAsync(true);
         }
@@ -144,7 +144,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             {
                 if (disposing)
                 {
-                    engine.Dispose();
+                    Engine.Dispose();
                     SyncService.Dispose();
                     userFileSystemMonitor.Dispose();
                 }
@@ -193,7 +193,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
         internal LockManager LockManager(string userFileSystemPath, ILogger logger)
         {
-            return new LockManager(userFileSystemPath, Settings.ServerDataFolderPath, engine.Path, logger);
+            return new LockManager(userFileSystemPath, Settings.ServerDataFolderPath, Engine.Path, logger);
         }
 
         /// <summary>
@@ -205,7 +205,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         public ETagManager GetETagManager(string userFileSystemPath, ILogger logger = null)
         {
             logger ??= new Logger("Virtual Drive", log);
-            return new ETagManager(userFileSystemPath, Settings.ServerDataFolderPath, engine.Path, logger);
+            return new ETagManager(userFileSystemPath, Settings.ServerDataFolderPath, Engine.Path, logger);
         }
 
         internal IRemoteStorageRawItem GetRemoteStorageRawItem(string userFileSystemPath, FileSystemItemTypeEnum itemType, ILogger logger)

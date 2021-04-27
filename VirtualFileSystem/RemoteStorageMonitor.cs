@@ -1,4 +1,4 @@
-﻿using ITHit.FileSystem;
+using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using log4net;
 using System;
@@ -131,7 +131,7 @@ namespace VirtualFileSystem
                     // Because of the on-demand population the file or folder placeholder may not exist in the user file system
                     // or the folder may be offline.
                     FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
-                    FileSystemItemMetadata newItemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                    FileSystemItemMetadataExt newItemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
                     if (await virtualDrive.ServerNotifications(userFileSystemParentPath, this).CreateAsync(new[] { newItemInfo }) > 0)
                     {
                         LogMessage($"Created succesefully", userFileSystemPath);
@@ -169,7 +169,7 @@ namespace VirtualFileSystem
 
                         // This check is only required because we can not prevent circular calls because of the simplicity of this example.
                         // In your real-life application you will not sent updates from server back to client that issued the update.
-                        FileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                        FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
                         if (!await virtualDrive.GetETagManager(userFileSystemPath, this).ETagEqualsAsync(itemInfo))
                         {
                             await virtualDrive.ServerNotifications(userFileSystemPath, this).UpdateAsync(itemInfo);

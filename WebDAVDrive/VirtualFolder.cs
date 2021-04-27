@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -37,7 +37,7 @@ namespace WebDAVDrive
         /// List of files and folders located in this folder in the remote 
         /// storage that correstonds with the provided search pattern.
         /// </returns>
-        public async Task<IEnumerable<FileSystemItemMetadata>> EnumerateChildrenAsync(string pattern)
+        public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern)
         {
             // This method has a 60 sec timeout. 
             // To process longer requests modify the IFolder.GetChildrenAsync() implementation.
@@ -53,10 +53,10 @@ namespace WebDAVDrive
                 remoteStorageChildren = await Program.DavClient.GetChildrenAsync(new Uri(RemoteStorageUri), false);
             }
 
-            List<FileSystemItemMetadata> userFileSystemChildren = new List<FileSystemItemMetadata>();
+            List<FileSystemItemMetadataExt> userFileSystemChildren = new List<FileSystemItemMetadataExt>();
             foreach (IHierarchyItemAsync remoteStorageItem in remoteStorageChildren)
             {
-                FileSystemItemMetadata itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
+                FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
                 userFileSystemChildren.Add(itemInfo);
             }
 

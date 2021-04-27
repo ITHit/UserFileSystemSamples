@@ -1,4 +1,4 @@
-﻿using ITHit.FileSystem;
+using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using System;
 using System.Collections.Generic;
@@ -59,7 +59,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             VirtualDrive = virtualDrive;
         }
 
-        //$<IFileSystemItem.MoveToAsync
+        
         ///<inheritdoc>
         public async Task MoveToAsync(string userFileSystemNewPath, IOperationContext operationContext, IConfirmationResultContext resultContext)
         {
@@ -79,7 +79,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 resultContext.ReturnConfirmationResult();
             }
         }
-        //$>
+        
 
         /// <inheritdoc/>
         public async Task MoveToCompletionAsync(IMoveCompletionContext moveCompletionContext, IResultContext resultContext)
@@ -98,7 +98,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
         }
 
-        //$<IFileSystemItem.DeleteAsync
+        
         ///<inheritdoc>
         public async Task DeleteAsync(IOperationContext operationContext, IConfirmationResultContext resultContext)
         {
@@ -157,7 +157,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
             */
         }
-        //$>
+        
 
         ///<inheritdoc>
         public Task<IFileSystemItemMetadata> GetMetadataAsync()

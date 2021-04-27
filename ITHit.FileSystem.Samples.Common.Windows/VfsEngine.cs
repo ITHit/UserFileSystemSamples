@@ -1,4 +1,4 @@
-﻿using ITHit.FileSystem.Windows;
+using ITHit.FileSystem.Windows;
 using log4net;
 using System.IO;
 using System.Threading.Tasks;
@@ -46,7 +46,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             Message += Engine_Message;
         }
 
-        //$<Engine.GetFileSystemItemAsync
+        
         /// <inheritdoc/>
         public override async Task<IFileSystemItem> GetFileSystemItemAsync(string path)
         {
@@ -59,35 +59,16 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 return new VfsFolder(path, this, this, virtualDrive);
             }
 
-            // Note that this method may be called for items that foes not exists in file system,
+            // Note that this method may be called for items that does not exists in file system,
             // for example when a a file handle is being closed during delete operation.
             // The Engine calls IFile.CloseAsync() and IFileSystemItem.DeleteCompletionAsync() methods in this case.
             return null; 
         }
-        //$>
-
-        /// <summary>
-        /// Keeps the last logged message, to minimize number of messages being logged.
-        /// </summary>
-        //private static string lastMessage = null;
+        
 
         private void Engine_Message(IEngine sender, EngineMessageEventArgs e)
         {
             logger.LogMessage(e.Message, e.SourcePath, e.TargetPath);
-
-            /*
-            // Because the applications may make alot of identical calls to file system, 
-            // to make logs more readable we just log "." instead of a duplicate message.
-            if (lastMessage != e.Message)
-            {
-                log.Debug($"\n{DateTime.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {"File System Engine: ",-26}{e.Message}");
-                lastMessage = e.Message;
-            }
-            else
-            {
-                log.Debug(".");
-            }
-            */
         }
 
         private void Engine_Error(IEngine sender, EngineErrorEventArgs e)

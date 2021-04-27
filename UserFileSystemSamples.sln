@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtualFileSystem", "Virtua
 EndProject
 Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "WebDAVDrive.Setup", "WebDAVDrive.Setup\WebDAVDrive.Setup.wixproj", "{2EDB1552-04DD-4974-8199-A8A453916204}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ITHit.FileSystem.Samples.Common.Windows", "ITHit.FileSystem.Samples.Common.Windows\ITHit.FileSystem.Samples.Common.Windows.csproj", "{0EEFC851-55FF-4A22-8512-B589702B8486}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -35,6 +37,10 @@ Global
 		{F83D05C4-EF6D-4BD9-99C4-B404443437F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F83D05C4-EF6D-4BD9-99C4-B404443437F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F83D05C4-EF6D-4BD9-99C4-B404443437F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EEFC851-55FF-4A22-8512-B589702B8486}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EEFC851-55FF-4A22-8512-B589702B8486}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EEFC851-55FF-4A22-8512-B589702B8486}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EEFC851-55FF-4A22-8512-B589702B8486}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

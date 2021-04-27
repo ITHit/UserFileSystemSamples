@@ -1,4 +1,4 @@
-﻿using ITHit.FileSystem;
+using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using System;
 using System.Collections.Generic;

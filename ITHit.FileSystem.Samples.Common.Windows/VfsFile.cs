@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -59,7 +59,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
         }
 
-        //$<IFolder.CloseAsync
+        
         /// <inheritdoc/>
         public async Task CloseAsync(IOperationContext operationContext, IResultContext context)
         {
@@ -107,9 +107,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 }                
             }
         }
-        //$>
         
-        //$<IFile.TransferDataAsync
+        
+        
         /// <inheritdoc/>
         public async Task TransferDataAsync(long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext)
         {
@@ -130,7 +130,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
             await userFile.ReadAsync(offset, length, operationContext.FileSize, resultContext);
         }
-        //$>
+        
 
         /// <inheritdoc/>
         public async Task ValidateDataAsync(long offset, long length, IValidateDataOperationContext operationContext, IValidateDataResultContext resultContext)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -37,17 +37,17 @@ namespace VirtualFileSystem
         /// List of files and folders located in this folder in the remote 
         /// storage that correstonds with the provided search pattern.
         /// </returns>
-        public async Task<IEnumerable<FileSystemItemMetadata>> EnumerateChildrenAsync(string pattern)
+        public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern)
         {
             // This method has a 60 sec timeout. 
             // To process longer requests modify the IFolder.GetChildrenAsync() implementation.
 
             IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(RemoteStoragePath).EnumerateFileSystemInfos(pattern);
 
-            List<FileSystemItemMetadata> userFileSystemChildren = new List<FileSystemItemMetadata>();
+            List<FileSystemItemMetadataExt> userFileSystemChildren = new List<FileSystemItemMetadataExt>();
             foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
             {
-                FileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
                 userFileSystemChildren.Add(itemInfo);
             }
 

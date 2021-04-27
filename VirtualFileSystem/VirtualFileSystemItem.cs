@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -145,7 +145,7 @@ namespace VirtualFileSystem
                     {
                         // Verify that the item in the remote storage is not modified since it was downloaded to the user file system.
                         // In your real-life application you will send the ETag to the server as part of the update request.
-                        FileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                        FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
                         if (!(await VirtualDrive.GetETagManager(userFileSystemPath).ETagEqualsAsync(itemInfo)))
                         {
                             throw new ConflictException(Modified.Server, "Item is modified in the remote storage, ETags not equal.");
@@ -210,7 +210,7 @@ namespace VirtualFileSystem
                 {
                     // Verify that the item in the remote storage is not modified since it was downloaded to the user file system.
                     // In your real-life application you will send the ETag to the server as part of the update request.
-                    FileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                    FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
                     if (!(await VirtualDrive.GetETagManager(userFileSystemPath).ETagEqualsAsync(itemInfo)))
                     {
                         throw new ConflictException(Modified.Server, "Item is modified in the remote storage, ETags not equal.");

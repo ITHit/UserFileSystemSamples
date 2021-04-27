@@ -1,4 +1,4 @@
-﻿using ITHit.FileSystem;
+using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using log4net;
 using System;
@@ -59,7 +59,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
                 string userFileSystemOldPath = null;
                 try
                 {
-                    //$<PlaceholderItem.IsPlaceholder
+                    
                     if (!PlaceholderItem.IsPlaceholder(userFileSystemPath))
                     {
                         // Convert regular file/folder to placeholder. 
@@ -67,7 +67,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
                         PlaceholderItem.ConvertToPlaceholder(userFileSystemPath, false);
                         LogMessage("Converted to placeholder", userFileSystemPath);
                     }
-                    //$>
+                    
 
                     if (!FsPath.AvoidSync(userFileSystemPath))
                     {

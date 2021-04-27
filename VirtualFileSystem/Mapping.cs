@@ -1,4 +1,4 @@
-﻿using ITHit.FileSystem;
+using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using System;
 using System.Collections.Generic;
@@ -51,17 +51,17 @@ namespace VirtualFileSystem
         /// </summary>
         /// <param name="remoteStorageItem">Remote storage item info.</param>
         /// <returns>User file system item info.</returns>
-        public static FileSystemItemMetadata GetUserFileSysteItemMetadata(FileSystemInfo remoteStorageItem)
+        public static FileSystemItemMetadataExt GetUserFileSysteItemMetadata(FileSystemInfo remoteStorageItem)
         {
-            FileSystemItemMetadata userFileSystemItem;
+            FileSystemItemMetadataExt userFileSystemItem;
 
             if (remoteStorageItem is FileInfo)
             {
-                userFileSystemItem = new FileMetadata();
+                userFileSystemItem = new FileMetadataExt();
             }
             else
             {
-                userFileSystemItem = new FolderMetadata();
+                userFileSystemItem = new FolderMetadataExt();
             }
 
             userFileSystemItem.Name = remoteStorageItem.Name;
@@ -84,7 +84,7 @@ namespace VirtualFileSystem
 
             if (remoteStorageItem is FileInfo)
             {
-                ((FileMetadata)userFileSystemItem).Length = ((FileInfo)remoteStorageItem).Length;
+                ((FileMetadataExt)userFileSystemItem).Length = ((FileInfo)remoteStorageItem).Length;
             };
 
             // Set custom columns to be displayed in file manager.

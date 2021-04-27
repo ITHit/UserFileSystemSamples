@@ -1,4 +1,4 @@
-﻿using ITHit.FileSystem;
+using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using System;
 using System.Collections.Generic;
@@ -55,33 +55,14 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
             {
                 throw new ArgumentNullException(nameof(userFileSystemPath));
             }
-            if (virtualDrive == null)
-            {
-                throw new ArgumentNullException(nameof(virtualDrive));
-            }
-            if (logger == null)
-            {
-                throw new ArgumentNullException(nameof(logger));
-            }
+
+            this.virtualDrive = virtualDrive ?? throw new ArgumentNullException(nameof(virtualDrive));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             this.userFileSystemPath = userFileSystemPath;
-            this.virtualDrive = virtualDrive;
-            this.logger = logger;
             this.lockManager = virtualDrive.LockManager(userFileSystemPath, logger);
             this.userFileSystemRawItem = virtualDrive.GetUserFileSystemRawItem(userFileSystemPath, logger);
         }
-
-        /*
-        /// <summary>
-        /// Creates a new file or folder in the remote storage.
-        /// </summary>
-        /// <param name="userFileSystemNewItemPath">Path to the file or folder in the user file system to be created in the remote storage.</param>
-        /// <param name="logger">Logger</param>
-        internal static async Task CreateAsync<IItemTypeCreate>(string userFileSystemNewItemPath, VirtualDriveBase userEngine, ILogger logger) where IItemTypeCreate : IUserFileSystemItem
-        {
-            await new RemoteStorageRawItem<IItemTypeCreate>(userFileSystemNewItemPath, userEngine, logger).CreateAsync();
-        }
-        */
 
         /// <summary>
         /// This method reduces the number of 
@@ -310,15 +291,15 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
         /// <returns>Object implementing <see cref="IFileSystemItemMetadata"/> interface.</returns>
         private static IFileSystemItemMetadata GetMetadata(FileSystemInfo userFileSystemItem)
         {
-            FileSystemItemMetadata itemInfo;
+            FileSystemItemMetadataExt itemInfo;
 
             if (userFileSystemItem is FileInfo)
             {
-                itemInfo = new FileMetadata();
+                itemInfo = new FileMetadataExt();
             }
             else
             {
-                itemInfo = new FolderMetadata();
+                itemInfo = new FolderMetadataExt();
             }
 
             // Remove Pinned, unpinned and offline flags,
@@ -339,7 +320,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
 
             if (userFileSystemItem is FileInfo)
             {
-                ((FileMetadata)itemInfo).Length = ((FileInfo)userFileSystemItem).Length;
+                ((FileMetadataExt)itemInfo).Length = ((FileInfo)userFileSystemItem).Length;
             };
 
             return itemInfo;
@@ -366,61 +347,58 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
         /// <param name="resultContext">Confirms move competeion. Passed by the platform only.</param>
         internal async Task MoveToAsync(string userFileSystemNewPath, IConfirmationResultContext resultContext)
         {
+            // In this method you must either confirm or reject the move by calling call either 
+            // IConfirmationResultContext.ReturnConfirmationResult() or IConfirmationResultContext.ReturnErrorResult().
+
             string userFileSystemOldPath = userFileSystemPath;
 
             try
             {
-                //bool? inSync = null;
-                //bool updateTargetOnSuccess = false;
-                //string eTag = null;
-                try
+                if (!FsPath.IsRecycleBin(userFileSystemNewPath) // When a file is deleted, it is moved to a Recycle Bin.
+                    && !FsPath.AvoidSync(userFileSystemOldPath) && !FsPath.AvoidSync(userFileSystemNewPath))
                 {
-                    if (!FsPath.IsRecycleBin(userFileSystemNewPath) // When a file is deleted, it is moved to a Recycle Bin.
-                        && !FsPath.AvoidSync(userFileSystemOldPath) && !FsPath.AvoidSync(userFileSystemNewPath))
+                    logger.LogMessage("Moving item in remote storage", userFileSystemOldPath, userFileSystemNewPath);
+                    /*
+                    // Read In-Sync state before move and set after move.
+                    if (FsPath.Exists(userFileSystemOldPath))
                     {
-                        logger.LogMessage("Moving item in remote storage", userFileSystemOldPath, userFileSystemNewPath);
-                        /*
-                        // Read In-Sync state before move and set after move.
-                        if (FsPath.Exists(userFileSystemOldPath))
-                        {
-                            inSync = PlaceholderItem.GetItem(userFileSystemOldPath).GetInSync();
-                        }
-                        */
+                        inSync = PlaceholderItem.GetItem(userFileSystemOldPath).GetInSync();
+                    }
+                    */
 
-                        IVirtualFileSystemItem userFileSystemItemOld = await GetItemAsync(userFileSystemOldPath);
-                        await userFileSystemItemOld.MoveToAsync(userFileSystemNewPath);
-                        //updateTargetOnSuccess = true;
-                        logger.LogMessage("Moved succesefully in remote storage", userFileSystemOldPath, userFileSystemNewPath);
+                    IVirtualFileSystemItem userFileSystemItemOld = await GetItemAsync(userFileSystemOldPath);
+                    await userFileSystemItemOld.MoveToAsync(userFileSystemNewPath);
+                    //updateTargetOnSuccess = true;
+                    logger.LogMessage("Moved succesefully in remote storage", userFileSystemOldPath, userFileSystemNewPath);
 
-                        ETagManager eTagManager = virtualDrive.GetETagManager(userFileSystemOldPath);
-                        if (FsPath.Exists(eTagManager.ETagFilePath))
-                        {
-                            await eTagManager.MoveToAsync(userFileSystemNewPath);
-                            logger.LogMessage("Moved ETag succesefully", userFileSystemOldPath, userFileSystemNewPath);
-                        }
+                    ETagManager eTagManager = virtualDrive.GetETagManager(userFileSystemOldPath);
+                    if (FsPath.Exists(eTagManager.ETagFilePath))
+                    {
+                        await eTagManager.MoveToAsync(userFileSystemNewPath);
+                        logger.LogMessage("Moved ETag succesefully", userFileSystemOldPath, userFileSystemNewPath);
                     }
                 }
-                finally
+
+                // Confirm move.
+                if (resultContext != null)
                 {
-                    if (resultContext != null)
-                    {
-                        // Calling ReturnConfirmationResult() moves file in the user file system.
-                        logger.LogMessage("Confirming move in user file system", userFileSystemOldPath, userFileSystemNewPath);
-                        resultContext.ReturnConfirmationResult();
-                        // After this the MoveToCompletionAsync() method is called. 
-                        // After that, in case of a file, the file handle is closed, triggering IFile.CloseAsync() call 
-                        // and Windows File Manager move progress window is closed. 
-                        // In case the target is the offline folder, the IFolder.GetChildrenAsync() method is called.
-                    }
+                    // Calling ReturnConfirmationResult() moves file in the user file system.
+                    logger.LogMessage("Confirming move in user file system", userFileSystemOldPath, userFileSystemNewPath);
+                    resultContext.ReturnConfirmationResult();
+
+                    // After ReturnConfirmationResult() call the MoveToCompletionAsync() method is called. 
+                    // After that, in case of a file, the file handle is closed, triggering IFile.CloseAsync() call 
+                    // and Windows File Manager move progress window is closed. 
+                    // In addition to thos, in case the target is the offline folder, the IFolder.GetChildrenAsync() method is called.
                 }
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
-                string userFileSystemExPath = FsPath.Exists(userFileSystemNewPath) ? userFileSystemNewPath : userFileSystemOldPath;
-                await virtualDrive.GetUserFileSystemRawItem(userFileSystemExPath, logger).SetUploadErrorStateAsync(ex);
+                logger.LogError("Failed to move item", userFileSystemOldPath, userFileSystemNewPath, ex);
+                resultContext.ReturnErrorResult();
 
-                // Rethrow the exception preserving stack trace of the original exception.
-                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
+                //string userFileSystemExPath = FsPath.Exists(userFileSystemNewPath) ? userFileSystemNewPath : userFileSystemOldPath;
+                //await virtualDrive.GetUserFileSystemRawItem(userFileSystemExPath, logger).SetUploadErrorStateAsync(ex);
             }
         }
 

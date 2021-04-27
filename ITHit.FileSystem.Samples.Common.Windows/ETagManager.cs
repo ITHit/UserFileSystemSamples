@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -110,7 +110,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// During user file system to remote storage update it is sent back to the remote storage together with a modified content. 
         /// This ensures the changes in the remote storage are not overwritten if the document on the server is modified.
         /// </remarks>
-        public async Task<bool> ETagEqualsAsync(FileSystemItemMetadata remoteStorageItem)
+        public async Task<bool> ETagEqualsAsync(FileSystemItemMetadataExt remoteStorageItem)
         {
             string remoteStorageETag = remoteStorageItem.ETag;
             string userFileSystemETag = await GetETagAsync();

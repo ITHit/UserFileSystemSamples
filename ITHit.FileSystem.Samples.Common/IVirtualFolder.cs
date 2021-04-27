@@ -1,4 +1,4 @@
-﻿using ITHit.FileSystem;
+using ITHit.FileSystem;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -21,7 +21,7 @@ namespace ITHit.FileSystem.Samples.Common
         /// List of files and folders located in this folder in the remote 
         /// storage that correstonds with the provided search pattern.
         /// </returns>
-        Task<IEnumerable<FileSystemItemMetadata>> EnumerateChildrenAsync(string pattern);
+        Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern);
 
         /// <summary>
         /// Creates a new file in this folder in the remote storage.

@@ -1,4 +1,4 @@
-﻿using ITHit.FileSystem;
+using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using System;
 using System.Collections.Generic;
@@ -14,7 +14,7 @@ using Windows.Storage.Provider;
 namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
 {
     /// <summary>
-    /// Provides methods for synching the from remote storage to the user file system.
+    /// Provides methods for synching items from the remote storage to the user file system.
     /// Creates, updates and deletes placeholder files and folders based on the info from the remote storage.
     /// </summary>
     /// <remarks>In most cases you can use this class in your project without any changes.</remarks>
@@ -51,32 +51,20 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
             {
                 throw new ArgumentNullException(nameof(userFileSystemPath));
             }
-
-            if (virtualDrive == null)
-            {
-                throw new ArgumentNullException(nameof(virtualDrive));
-            }
-
-            if (logger == null)
-            {
-                throw new ArgumentNullException(nameof(logger));
-            }
+            this.virtualDrive = virtualDrive ?? throw new ArgumentNullException(nameof(virtualDrive));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             this.userFileSystemPath = userFileSystemPath;
-            this.virtualDrive = virtualDrive;
-            this.logger = logger;
-
             this.eTagManager = virtualDrive.GetETagManager(userFileSystemPath);
         }
 
-        //$<PlaceholderFolder.CreatePlaceholders
+        
         /// <summary>
         /// Creates new file and folder placeholders in the user file system in this folder.
         /// </summary>
-        /// <param name="userFileSystemParentPath">User file system folder path in which the new items will be created.</param>
         /// <param name="newItemsInfo">Array of new files and folders.</param>
         /// <returns>Number of items created.</returns>
-        public async Task<uint> CreateAsync(FileSystemItemMetadata[] newItemsInfo)
+        public async Task<uint> CreateAsync(IFileSystemItemMetadata[] newItemsInfo)
         {
             string userFileSystemParentPath = userFileSystemPath;
 
@@ -100,18 +88,20 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
                     }
 
                     // Create placeholders.
-                    uint created = new PlaceholderFolder(userFileSystemParentPath).CreatePlaceholders(newItemsInfo);
+                    uint created = await virtualDrive.Engine.ServerNotifications(userFileSystemParentPath).CreateAsync(newItemsInfo);
 
                     // Create ETags.
-                    foreach (FileSystemItemMetadata child in newItemsInfo)
+                    foreach (IFileSystemItemMetadata newItemInfo in newItemsInfo)
                     {
-                        string userFileSystemNewItemPath = Path.Combine(userFileSystemParentPath, child.Name);
-                        await virtualDrive.GetETagManager(userFileSystemNewItemPath).SetETagAsync(child.ETag);
+                        FileSystemItemMetadataExt newItemInfoExt = newItemInfo as FileSystemItemMetadataExt ?? throw new NotImplementedException($"{nameof(FileSystemItemMetadataExt)}");
+
+                        string userFileSystemNewItemPath = Path.Combine(userFileSystemParentPath, newItemInfoExt.Name);
+                        await virtualDrive.GetETagManager(userFileSystemNewItemPath).SetETagAsync(newItemInfoExt.ETag);
 
                         // Set the read-only attribute and all custom columns data.
                         UserFileSystemRawItem newUserFileSystemRawItem = virtualDrive.GetUserFileSystemRawItem(userFileSystemNewItemPath, logger);
-                        await newUserFileSystemRawItem.SetLockedByAnotherUserAsync(child.LockedByAnotherUser);
-                        await newUserFileSystemRawItem.SetCustomColumnsDataAsync(child.CustomProperties);
+                        await newUserFileSystemRawItem.SetLockedByAnotherUserAsync(newItemInfoExt.LockedByAnotherUser);
+                        await newUserFileSystemRawItem.SetCustomColumnsDataAsync(newItemInfoExt.CustomProperties);
                     }
 
                     return created;
@@ -128,9 +118,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
 
             return 0;
         }
-        //$>        
+                
 
-        //$<PlaceholderItem.SetItemInfo
+        
         /// <summary>
         /// Updates information about the file or folder placeholder in the user file system. 
         /// This method automatically hydrates and dehydrate files.
@@ -138,8 +128,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
         /// <remarks>This method failes if the file or folder in user file system is modified (not in-sync with the remote storage).</remarks>
         /// <param name="itemInfo">New file or folder info.</param>
         /// <returns>True if the file was updated. False - otherwise.</returns>
-        public async Task<bool> UpdateAsync(FileSystemItemMetadata itemInfo)
+        public async Task<bool> UpdateAsync(IFileSystemItemMetadata itemInfo)
         {
+            FileSystemItemMetadataExt itemInfoExt = itemInfo as FileSystemItemMetadataExt ?? throw new NotImplementedException($"{nameof(FileSystemItemMetadataExt)}");
             try
             {
                 // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
@@ -154,17 +145,17 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
                     }
 
                     // Dehydrate/hydrate the file, update file size, custom data, creation date, modification date, attributes.
-                    placeholderItem.SetItemInfo(itemInfo);
+                    await virtualDrive.Engine.ServerNotifications(userFileSystemPath).UpdateAsync(itemInfoExt);
 
                     // Set ETag.
-                    await eTagManager.SetETagAsync(itemInfo.ETag);
+                    await eTagManager.SetETagAsync(itemInfoExt.ETag);
 
                     // Clear icon.
                     //await ClearStateAsync();
 
                     // Set the read-only attribute and all custom columns data.
-                    await SetLockedByAnotherUserAsync(itemInfo.LockedByAnotherUser);
-                    await SetCustomColumnsDataAsync(itemInfo.CustomProperties);
+                    await SetLockedByAnotherUserAsync(itemInfoExt.LockedByAnotherUser);
+                    await SetCustomColumnsDataAsync(itemInfoExt.CustomProperties);
 
                     return true;
                 }
@@ -178,7 +169,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
             }
             return false;
         }
-        //$>
+        
 
         /// <summary>
         /// Deletes a file or folder placeholder in user file system.
@@ -203,14 +194,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
                     {
                         if (PlaceholderItem.GetInSync(userFileSystemWinItem.SafeHandle))
                         {
-                            if (FsPath.IsFile(userFileSystemPath))
-                            {
-                                File.Delete(userFileSystemPath);
-                            }
-                            else
-                            {
-                                Directory.Delete(userFileSystemPath, true);
-                            }
+                            await virtualDrive.Engine.ServerNotifications(userFileSystemPath).DeleteAsync();
 
                             // Delete ETag
                             logger.LogMessage("Deleting ETag", userFileSystemPath);
@@ -262,7 +246,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
                         await eTagManager.MoveToAsync(userFileSystemNewPath);
 
                         logger.LogMessage("Moving item", userFileSystemPath, userFileSystemNewPath);
-                        Directory.Move(userFileSystemPath, userFileSystemNewPath);
+                        await virtualDrive.Engine.ServerNotifications(userFileSystemPath).MoveToAsync(userFileSystemNewPath);
 
                         // The file is marked as not in sync after move/rename. Marking it as in-sync.
                         PlaceholderItem placeholderItem = PlaceholderItem.GetItem(userFileSystemNewPath);

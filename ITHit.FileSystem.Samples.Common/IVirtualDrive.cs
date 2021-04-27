@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 
 namespace ITHit.FileSystem.Samples.Common
 {
@@ -56,18 +56,6 @@ namespace ITHit.FileSystem.Samples.Common
         /// </summary>
         /// <param name="enabled">Pass true to start synchronization. Pass false - to stop.</param>
         Task SetEnabledAsync(bool enabled);
-
-        /// <summary>
-        /// Use object returned by this method to process messages sent by the remote storage, 
-        /// such as files / folders creations, updates, deletes, etc.
-        /// </summary>
-        /// <param name="userFileSystemPath">Path in the user file system to send a notification about.</param>
-        /// <param name="logger">Logger.</param>
-        /// <remarks>
-        /// Call methods of the object returned by this method when the remote storage is notitying the client 
-        /// (via web sockets or other channel) about the changes made in the remote storage.
-        /// </remarks>
-        IServerNotifications ServerNotifications(string userFileSystemPath, ILogger logger);
 
         /// <summary>
         /// Use object returned by this method to send messages to the remote storage, 

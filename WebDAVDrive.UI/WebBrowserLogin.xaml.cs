@@ -1,4 +1,4 @@
-﻿using ITHit.WebDAV.Client;
+using ITHit.WebDAV.Client;
 using log4net;
 using Microsoft.Web.WebView2.Core;
 using System;

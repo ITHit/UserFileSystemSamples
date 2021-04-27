@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using log4net.Config;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -83,7 +83,7 @@ namespace VirtualFileSystem
                 // Start processing OS file system calls, monitoring changes in user file system and remote storge.
                 //engine.ChangesProcessingEnabled = false;
                 await VirtualDrive.StartAsync();
-                //await VirtualDrive.SyncService.StopAsync();
+                await VirtualDrive.SyncService.StopAsync();
 
 #if DEBUG
                 // Opens Windows File Manager with user file system folder and remote storage folder.

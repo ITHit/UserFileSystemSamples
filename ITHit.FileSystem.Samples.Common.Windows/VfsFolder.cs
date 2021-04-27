@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Enumeration;
@@ -17,7 +17,7 @@ using ITHit.FileSystem.Samples.Common.Windows.Syncronyzation;
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
     // In most cases you can use this class in your project without any changes.
-    //$<IFolder
+    
     /// <inheritdoc cref="IFolder"/>
     internal class VfsFolder : VfsFileSystemItem<IVirtualFolder>, IFolder
     {
@@ -37,11 +37,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             Logger.LogMessage($"IFolder.GetChildrenAsync({pattern})", UserFileSystemPath);
 
             IVirtualFolder userFolder = await VirtualDrive.GetItemAsync<IVirtualFolder>(UserFileSystemPath, Logger);
-            IEnumerable<FileSystemItemMetadata> children = await userFolder.EnumerateChildrenAsync(pattern);
+            IEnumerable<FileSystemItemMetadataExt> children = await userFolder.EnumerateChildrenAsync(pattern);
 
             // Filtering existing files/folders. This is only required to avoid extra errors in the log.
             List<IFileSystemItemMetadata> newChildren = new List<IFileSystemItemMetadata>();
-            foreach (FileSystemItemMetadata child in children)
+            foreach (FileSystemItemMetadataExt child in children)
             {
                 string userFileSystemItemPath = Path.Combine(UserFileSystemPath, child.Name);
                 if (!FsPath.Exists(userFileSystemItemPath))
@@ -65,7 +65,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
 
             // Save ETags, the read-only attribute and all custom columns data.
-            foreach (FileSystemItemMetadata child in children)
+            foreach (FileSystemItemMetadataExt child in children)
             {
                 string userFileSystemItemPath = Path.Combine(UserFileSystemPath, child.Name);
 
@@ -82,5 +82,5 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
         }
     }
-    //$>
+    
 }

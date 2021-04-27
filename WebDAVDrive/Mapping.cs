@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -75,17 +75,17 @@ namespace WebDAVDrive
         /// </summary>
         /// <param name="remoteStorageItem">Remote storage item info.</param>
         /// <returns>User file system item info.</returns>
-        public static FileSystemItemMetadata GetUserFileSystemItemMetadata(IHierarchyItemAsync remoteStorageItem)
+        public static FileSystemItemMetadataExt GetUserFileSystemItemMetadata(IHierarchyItemAsync remoteStorageItem)
         {
-            FileSystemItemMetadata userFileSystemItem;
+            FileSystemItemMetadataExt userFileSystemItem;
 
             if (remoteStorageItem is IFileAsync)
             {
-                userFileSystemItem = new FileMetadata();
+                userFileSystemItem = new FileMetadataExt();
             }
             else
             {
-                userFileSystemItem = new FolderMetadata();
+                userFileSystemItem = new FolderMetadataExt();
             }
 
             userFileSystemItem.Name = remoteStorageItem.DisplayName;
@@ -105,9 +105,9 @@ namespace WebDAVDrive
                 // We send the ETag to 
                 // the server inside If-Match header togeter with updated content from client.
                 // This will make sure the changes on the server is not overwritten.
-                ((FileMetadata)userFileSystemItem).ETag = ((IFileAsync)remoteStorageItem).Etag;
+                ((FileMetadataExt)userFileSystemItem).ETag = ((IFileAsync)remoteStorageItem).Etag;
 
-                ((FileMetadata)userFileSystemItem).Length = ((IFileAsync)remoteStorageItem).ContentLength;
+                ((FileMetadataExt)userFileSystemItem).Length = ((IFileAsync)remoteStorageItem).ContentLength;
             };
 
             // Set custom columns to be displayed in file manager.

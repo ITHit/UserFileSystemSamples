@@ -1,4 +1,4 @@
-﻿using ITHit.FileSystem;
+using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using log4net;
 using System;
@@ -55,10 +55,10 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
             //LogMessage("Synchronizing:", userFileSystemFolderPath);
 
             IVirtualFolder userFolder =  await virtualDrive.GetItemAsync<IVirtualFolder>(userFileSystemFolderPath, this);
-            IEnumerable<FileSystemItemMetadata> remoteStorageChildrenItems = await userFolder.EnumerateChildrenAsync("*");
+            IEnumerable<FileSystemItemMetadataExt> remoteStorageChildrenItems = await userFolder.EnumerateChildrenAsync("*");
 
             // Create new files/folders in the user file system.
-            foreach (FileSystemItemMetadata remoteStorageItem in remoteStorageChildrenItems)
+            foreach (FileSystemItemMetadataExt remoteStorageItem in remoteStorageChildrenItems)
             {
                 string userFileSystemPath = Path.Combine(userFileSystemFolderPath, remoteStorageItem.Name);
                 try
@@ -89,7 +89,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Syncronyzation
                 try
                 {
                     string itemName = Path.GetFileName(userFileSystemPath);
-                    FileSystemItemMetadata remoteStorageItem = remoteStorageChildrenItems.FirstOrDefault(x => x.Name.Equals(itemName, StringComparison.InvariantCultureIgnoreCase));
+                    FileSystemItemMetadataExt remoteStorageItem = remoteStorageChildrenItems.FirstOrDefault(x => x.Name.Equals(itemName, StringComparison.InvariantCultureIgnoreCase));
 
                     
                     if (!FsPath.AvoidSync(userFileSystemPath))

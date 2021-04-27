@@ -30,6 +30,7 @@ To simulate the remote storage, this sample is using a folder in the local file 
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.7" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="2.5.5091.0" />
     <ProjectReference Include="..\ITHit.FileSystem.Samples.Common.Windows\ITHit.FileSystem.Samples.Common.Windows.csproj" />
   </ItemGroup>
   <ItemGroup>
