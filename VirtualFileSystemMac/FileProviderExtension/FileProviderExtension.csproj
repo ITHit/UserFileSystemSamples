@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{30EDD98F-A449-4A9F-A718-EE480181C619}</ProjectGuid>
+    <ProjectTypeGuids>{10CE9E57-9141-4DF0-916A-2C4FD4EE2A73};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <RootNamespace>FileProviderExtension</RootNamespace>
+    <AssemblyName>FileProviderExtension</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
+    <ReleaseVersion>2.5.5091.0</ReleaseVersion>
+    <UseXamMacFullFramework>true</UseXamMacFullFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <EnableCodeSigning>true</EnableCodeSigning>
+    <CodeSigningKey>Mac Developer</CodeSigningKey>
+    <CreatePackage>false</CreatePackage>
+    <EnablePackageSigning>false</EnablePackageSigning>
+    <IncludeMonoRuntime>false</IncludeMonoRuntime>
+    <UseSGen>true</UseSGen>
+    <UseRefCounting>true</UseRefCounting>
+    <HttpClientHandler></HttpClientHandler>
+    <LinkMode>None</LinkMode>
+    <AOTMode>None</AOTMode>
+    <PackageSigningKey>3rd Party Mac Developer Installer</PackageSigningKey>
+    <CodeSignProvision>Automatic</CodeSignProvision>
+    <LangVersion>9.0</LangVersion>
+    <UseHardenedRuntime>true</UseHardenedRuntime>
+    <XamMacArch>x86_64</XamMacArch>
+    <CodeSignEntitlements>Entitlements.plist</CodeSignEntitlements>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <DefineConstants></DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <EnableCodeSigning>false</EnableCodeSigning>
+    <CreatePackage>true</CreatePackage>
+    <EnablePackageSigning>false</EnablePackageSigning>
+    <IncludeMonoRuntime>true</IncludeMonoRuntime>
+    <UseSGen>true</UseSGen>
+    <UseRefCounting>true</UseRefCounting>
+    <CodeSignEntitlements>Entitlements.plist</CodeSignEntitlements>
+    <LinkMode>None</LinkMode>
+    <HttpClientHandler></HttpClientHandler>
+    <AOTMode>None</AOTMode>
+    <LangVersion>9.0</LangVersion>
+    <UseHardenedRuntime>true</UseHardenedRuntime>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="Xamarin.Mac" />
+    <Reference Include="ITHit.FileSystem">
+      <HintPath>..\packages\ITHit.FileSystem.2.5.5091\lib\netstandard2.0\ITHit.FileSystem.dll</HintPath>
+    </Reference>
+	<Reference Include="ITHit.FileSystem.Mac">
+      <HintPath>..\packages\ITHit.FileSystem.Mac.2.5.5091-Alpha\lib\xamarinmac20\ITHit.FileSystem.Mac.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Resources\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Info.plist" />
+    <None Include="Entitlements.plist" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="VfsFolder.cs" />
+    <Compile Include="VfsEngine.cs" />
+    <Compile Include="VfsFile.cs" />
+    <Compile Include="VfsFileSystemItem.cs" />
+    <Compile Include="ConsoleLogger.cs" />
+    <Compile Include="Mapping.cs" />
+    <Compile Include="RemoteStorageMonitor.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ITHit.FileSystem.Mac\ITHit.FileSystem.Mac.csproj">
+      <Project>{32B330A5-C736-4962-93B7-E2261770497C}</Project>
+      <Name>ITHit.FileSystem.Mac</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\VirtualFilesystemCommon\VirtualFilesystemCommon.csproj">
+      <Project>{8A146BCC-DE6F-436F-9C25-67AD964E473F}</Project>
+      <Name>VirtualFilesystemCommon</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Xamarin\Mac\Xamarin.Mac.AppExtension.CSharp.targets" />
+</Project>
