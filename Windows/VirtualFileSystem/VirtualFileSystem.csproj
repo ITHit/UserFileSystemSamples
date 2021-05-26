@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <CsWinRTWindowsMetadata>10.0.19041.0</CsWinRTWindowsMetadata>
+    <Authors>IT Hit LTD.</Authors>
+    <Company>IT Hit LTD.</Company>
+    <Product>Virtual File System</Product>
+    <Copyright>IT Hit LTD.</Copyright>
+    <Platforms>AnyCPU</Platforms>
+    <Description>A simple virtual file system project in .NET with synchronization support, on-demand loading, upload and download progress. It synchronizes files and folders both from remote storage to the user file system and from the user file system to remote storage. 
+
+To simulate the remote storage, this sample is using a folder in the local file system on the same machine.  You can use this project as a quick starting point for creating a simple virtual file system.
+
+
+This project does not support ETags, locking, Microsoft Office documents editing and custom columns in Windows File Manager. For the above features see the Virtual Drive sample project.</Description>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Framework\**" />
+    <Compile Remove="RemoteStorageTemplate\**" />
+    <Compile Remove="RemoteStorage\Large\**" />
+    <EmbeddedResource Remove="Framework\**" />
+    <EmbeddedResource Remove="RemoteStorageTemplate\**" />
+    <EmbeddedResource Remove="RemoteStorage\Large\**" />
+    <None Remove="Framework\**" />
+    <None Remove="RemoteStorageTemplate\**" />
+    <None Remove="RemoteStorage\Large\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="SyncService.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.7" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="3.0.6973.0-Beta" />
+    <ProjectReference Include="..\Common\Common.Windows.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\Drive.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="log4net.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

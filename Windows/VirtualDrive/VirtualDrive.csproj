@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <CsWinRTWindowsMetadata>10.0.19041.0</CsWinRTWindowsMetadata>
+    <Authors>IT Hit LTD.</Authors>
+    <Company>IT Hit LTD.</Company>
+    <Product>Virtual Drive</Product>
+    <Copyright>IT Hit LTD.</Copyright>
+    <Platforms>AnyCPU</Platforms>
+    <Description>A virtual drive project in .NET/C# with synchronization support, on-demand loading, selective offline files support, upload and download progress. It synchronizes files and folders both from remote storage to the user file system and from the user file system to remote storage. 
+
+To simulate the remote storage, this sample is using a folder in the local file system on the same machine. You can use this project as a strting point for creating a Virtual Drive with advanced features.
+
+This is an advanced project with ETags support, Microsoft Office documents editing, automatic Microsoft Office documents locking, and custom columns in Windows File Manager.</Description>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Framework\**" />
+    <Compile Remove="RemoteStorageTemplate\**" />
+    <EmbeddedResource Remove="Framework\**" />
+    <EmbeddedResource Remove="RemoteStorageTemplate\**" />
+    <None Remove="Framework\**" />
+    <None Remove="RemoteStorageTemplate\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="SyncService.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.7" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="3.0.6973.0-Beta" />
+    <ProjectReference Include="..\Common\Common.Windows.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\Blank.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\Drive.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\Error.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\Locked.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\LockedByAnotherUser.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\LockedPending.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\Unlocked.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="log4net.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

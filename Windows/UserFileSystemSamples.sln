@@ -1,0 +1,61 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31019.35
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Common", "..\Common\Common.csproj", "{BDBB70BB-6343-4703-872B-C2C619C39EE4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Common.Windows", "Common\Common.Windows.csproj", "{F7EF0045-9B22-444A-991B-AC08CF77D3F6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtualFileSystem", "VirtualFileSystem\VirtualFileSystem.csproj", "{3A7779D2-FE00-418F-BF31-BB2EF4D6637D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtualDrive", "VirtualDrive\VirtualDrive.csproj", "{8391F42F-245B-4DD9-A171-1F6A9F3FD108}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebDAVDrive", "WebDAVDrive", "{264745B0-DF86-41E1-B400-3CAA1B403830}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebDAVDrive", "WebDAVDrive\WebDAVDrive\WebDAVDrive.csproj", "{C624F9B5-3EA1-416C-8592-37E6064C8247}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebDAVDrive.UI", "WebDAVDrive\WebDAVDrive.UI\WebDAVDrive.UI.csproj", "{51F6CFCC-AB57-40DD-AADA-6299A2C6B941}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BDBB70BB-6343-4703-872B-C2C619C39EE4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BDBB70BB-6343-4703-872B-C2C619C39EE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BDBB70BB-6343-4703-872B-C2C619C39EE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BDBB70BB-6343-4703-872B-C2C619C39EE4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7EF0045-9B22-444A-991B-AC08CF77D3F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7EF0045-9B22-444A-991B-AC08CF77D3F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7EF0045-9B22-444A-991B-AC08CF77D3F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7EF0045-9B22-444A-991B-AC08CF77D3F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A7779D2-FE00-418F-BF31-BB2EF4D6637D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A7779D2-FE00-418F-BF31-BB2EF4D6637D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A7779D2-FE00-418F-BF31-BB2EF4D6637D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A7779D2-FE00-418F-BF31-BB2EF4D6637D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8391F42F-245B-4DD9-A171-1F6A9F3FD108}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8391F42F-245B-4DD9-A171-1F6A9F3FD108}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8391F42F-245B-4DD9-A171-1F6A9F3FD108}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8391F42F-245B-4DD9-A171-1F6A9F3FD108}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C624F9B5-3EA1-416C-8592-37E6064C8247}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C624F9B5-3EA1-416C-8592-37E6064C8247}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C624F9B5-3EA1-416C-8592-37E6064C8247}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C624F9B5-3EA1-416C-8592-37E6064C8247}.Release|Any CPU.Build.0 = Release|Any CPU
+		{51F6CFCC-AB57-40DD-AADA-6299A2C6B941}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51F6CFCC-AB57-40DD-AADA-6299A2C6B941}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51F6CFCC-AB57-40DD-AADA-6299A2C6B941}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51F6CFCC-AB57-40DD-AADA-6299A2C6B941}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C624F9B5-3EA1-416C-8592-37E6064C8247} = {264745B0-DF86-41E1-B400-3CAA1B403830}
+		{51F6CFCC-AB57-40DD-AADA-6299A2C6B941} = {264745B0-DF86-41E1-B400-3CAA1B403830}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {740A716A-38A7-46BC-A21F-18336D0023B7}
+	EndGlobalSection
+EndGlobal
