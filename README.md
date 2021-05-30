@@ -20,7 +20,7 @@ This sample implements a virtual file system with synchronization support, on-de
 
 <a href="https://github.com/ITHit/UserFileSystemSamples/tree/master/macOS">
 <p>
-This sample implements a virtual file system for Mac with synchronization support and folders on-demand listing.&nbsp;It synchronizes files and folders from remote storage to the user file system.&nbsp;This sample is&nbsp;written in Xamarin,&nbsp;.NET/C#.&nbsp;To simulate th                                            <span>...</span>
+This sample implements a virtual file system for Mac with synchronization support and folders on-demand listing.&nbsp;It synchronizes files and folders both from remote storage to the user file system and from the user file system to remote storage. This                                             <span>...</span>
 </p>
 </a>
 </li>
