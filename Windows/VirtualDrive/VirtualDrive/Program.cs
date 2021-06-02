@@ -12,7 +12,7 @@ using log4net;
 using log4net.Config;
 
 using ITHit.FileSystem.Samples.Common.Windows;
-
+using VirtualDrive.ThumbnailProvider;
 
 namespace VirtualDrive
 {
@@ -88,6 +88,9 @@ namespace VirtualDrive
                 // Start processing OS file system calls.
                 await Engine.StartAsync();
 
+                // Register thumbnail provider
+                ThumbnailInstaller.Register();
+
 #if DEBUG
                 // Opens Windows File Manager with user file system folder and remote storage folder.
                 ShowTestEnvironment();
@@ -112,8 +115,11 @@ namespace VirtualDrive
                 log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
                 log.Info("\nAll files and folders placeholders are deleted.\n");
 
+                // Unregister thumbnail provider
+                ThumbnailInstaller.Unregister();
+
                 // Unregister during programm uninstall and delete all files/folder.
-                await Registrar.UnregisterAsync(SyncRootId);
+                await Registrar.UnregisterAsync(SyncRootId);           
 
                 try
                 {

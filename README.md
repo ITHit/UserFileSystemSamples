@@ -25,22 +25,22 @@ This sample implements a virtual file system for Mac with synchronization suppor
 </a>
 </li>
 <li>
-<a class="link-header" href="https://github.com/ITHit/UserFileSystemSamples/tree/master/Windows/VirtualDrive">
+<a class="link-header" href="https://github.com/ITHit/UserFileSystemSamples/tree/master/Windows/VirtualDrive/">
 <h2>Virtual Drive Sample in .NET, C#</h2>
 </a>
 
-<a href="https://github.com/ITHit/UserFileSystemSamples/tree/master/Windows/VirtualDrive">
+<a href="https://github.com/ITHit/UserFileSystemSamples/tree/master/Windows/VirtualDrive/">
 <p>
 This is a virtual drive implementation with Microsoft Office documents editing support and automatic Microsoft Office documents locking. It also demonstrates custom column support in Windows File Manager.&nbsp;To simulate the remote storage, this sample i                                            <span>...</span>
 </p>
 </a>
 </li>
 <li>
-<a class="link-header" href="https://github.com/ITHit/UserFileSystemSamples/tree/master/Windows/WebDAVDrive/WebDAVDrive">
+<a class="link-header" href="https://github.com/ITHit/UserFileSystemSamples/tree/master/Windows/WebDAVDrive/">
 <h2>WebDAV Drive Sample in .NET, C#</h2>
 </a>
 
-<a href="https://github.com/ITHit/UserFileSystemSamples/tree/master/Windows/WebDAVDrive/WebDAVDrive">
+<a href="https://github.com/ITHit/UserFileSystemSamples/tree/master/Windows/WebDAVDrive/">
 <p>
 This sample implements a virtual file system that displays documents from a WebDAV server. You can edit documents, upload and download documents as well as manage folders structure using Windows File Manager. This sample provides automatic documents                                             <span>...</span>
 </p>

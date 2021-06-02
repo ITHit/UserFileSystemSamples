@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <CsWinRTWindowsMetadata>10.0.19041.0</CsWinRTWindowsMetadata>
     <Authors>IT Hit LTD.</Authors>
@@ -29,11 +30,12 @@ This is an advanced project with ETags support, Microsoft Office documents editi
     <Compile Remove="SyncService.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.7" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="3.0.6973.0-Beta" />
-    <ProjectReference Include="..\Common\Common.Windows.csproj" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="3.0.7021.0-Beta" />
+    <ProjectReference Include="..\..\Common\Common.Windows.csproj" />
+    <ProjectReference Include="..\VirtualDrive.ThumbnailProvider\VirtualDrive.ThumbnailProvider.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json">
@@ -64,4 +66,11 @@ This is an advanced project with ETags support, Microsoft Office documents editi
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <!--Copy *.json deps files from VirtualDrive.ThumbnailProvider-->
+  <Target Name="CopyDepsFiles" AfterTargets="AfterBuild">
+    <ItemGroup>
+      <DepsFilePaths Include="..\VirtualDrive.ThumbnailProvider\bin\$(Configuration)\$(TargetFramework)\*.json" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DepsFilePaths)" DestinationFolder="$(OutDir)" />
+  </Target>
 </Project>

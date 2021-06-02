@@ -42,7 +42,7 @@ namespace VirtualFileSystem
 
             // Load Log4Net for net configuration.
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
-            XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
+            XmlConfigurator.Configure(logRepository, new FileInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "log4net.config")));
 
             // Enable UTF8 for Console Window
             Console.OutputEncoding = System.Text.Encoding.UTF8;

@@ -36,10 +36,6 @@ namespace VirtualFileSystem
         /// <inheritdoc/>
         public async Task CloseAsync(IOperationContext operationContext, IResultContext context)
         {
-            // Here, if the file in the user file system is modified (not in-sync), you will send the file content, 
-            // creation time, modification time and attributes to the remote storage.
-            // Typically you will also send the ETag, to make sure the changes on the server, if any, are not overwritten.
-
             Logger.LogMessage($"{nameof(IFile)}.{nameof(CloseAsync)}()", UserFileSystemPath);
         }
         
