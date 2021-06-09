@@ -102,10 +102,9 @@ namespace VirtualDrive
         /// </summary>
         private async void RenamedAsync(object sender, RenamedEventArgs e)
         {
-            // If the item and was previusly filtered by EngineWindows.FilterAsync(),
-            // for example temp MS Office file was renamed SGE4274H->file.xlsx,
+            // If the item was previously filtered by EngineWindows.FilterAsync(),
+            // for example temp MS Office file was renamed SGE4274H -> file.xlsx,
             // we need to convert the file to a pleaceholder and upload it to the remote storage.
-            // We must also 
 
             LogMessage("Renamed", e.OldFullPath, e.FullPath);
 
@@ -125,7 +124,7 @@ namespace VirtualDrive
                         else
                         {
                             LogMessage("Converting to placeholder", userFileSystemNewPath);
-                            PlaceholderItem.ConvertToPlaceholder(userFileSystemNewPath, null, false);
+                            PlaceholderItem.ConvertToPlaceholder(userFileSystemNewPath, null, null, false);
                             await engine.ClientNotifications(userFileSystemNewPath, this).UpdateAsync();
                             await engine.CustomDataManager(userFileSystemNewPath).RefreshCustomColumnsAsync();
                         }

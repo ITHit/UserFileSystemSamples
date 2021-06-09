@@ -50,23 +50,15 @@ namespace VirtualFileSystem
         }
         
         /// <inheritdoc/>
-        public override async Task<IFileSystemItem> GetFileSystemItemAsync(string path, FileSystemItemType itemType)
+        public override async Task<IFileSystemItem> GetFileSystemItemAsync(string userFileSystemPath, FileSystemItemType itemType, string itemId = null)
         {
-            // When a file or folder is deleted, the item may be already 
-            // deleted in user file system when this method is called
-            // The Engine calls IFile.CloseAsync() and IFileSystemItem.DeleteCompletionAsync() methods in this case.
-
-            // On macOS there is no access to the local file system. 
-            // You should NOT try to determine item type or read local files/folders on macOS.
-
-
             if (itemType == FileSystemItemType.File)
             {
-                return new VirtualFile(path, this);
+                return new VirtualFile(userFileSystemPath, this);
             }
             else
             {
-                return new VirtualFolder(path, this);
+                return new VirtualFolder(userFileSystemPath, this);
             }
         }
 

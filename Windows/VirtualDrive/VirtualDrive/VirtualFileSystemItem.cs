@@ -149,7 +149,7 @@ namespace VirtualDrive
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(LockAsync)}()", UserFileSystemPath);
 
-            CustomDataManager customDataManager = Engine.CustomDataManager(UserFileSystemPath, Logger);
+            ExternalDataManager customDataManager = Engine.CustomDataManager(UserFileSystemPath, Logger);
             LockManager lockManager = customDataManager.LockManager;
             if (!await lockManager.IsLockedAsync()
                 && !Engine.CustomDataManager(UserFileSystemPath).IsNew)
@@ -189,7 +189,7 @@ namespace VirtualDrive
                 throw new ClientLockFailedException("The file is blocked for writing.");
             }
 
-            CustomDataManager customDataManager = Engine.CustomDataManager(UserFileSystemPath, Logger);
+            ExternalDataManager customDataManager = Engine.CustomDataManager(UserFileSystemPath, Logger);
             LockManager lockManager = customDataManager.LockManager;
 
             // Set pending icon, so the user has a feedback as unlock operation may take some time.

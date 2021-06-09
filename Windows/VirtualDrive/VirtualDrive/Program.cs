@@ -34,7 +34,7 @@ namespace VirtualDrive
         /// </summary>
         public static VirtualEngine Engine;
 
-        static async Task<int> Main(string[] args)
+        static async Task Main(string[] args)
         {
             // Load Settings.
             IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
@@ -63,6 +63,9 @@ namespace VirtualDrive
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
                     Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
+
+                // Register thumbnail provider.
+                ThumbnailInstaller.Register();
             }
             else
             {
@@ -87,9 +90,6 @@ namespace VirtualDrive
 
                 // Start processing OS file system calls.
                 await Engine.StartAsync();
-
-                // Register thumbnail provider
-                ThumbnailInstaller.Register();
 
 #if DEBUG
                 // Opens Windows File Manager with user file system folder and remote storage folder.
@@ -143,8 +143,6 @@ namespace VirtualDrive
             {
                 log.Info("\n\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.\n");
             }
-
-            return 1;
         }
 
 #if DEBUG

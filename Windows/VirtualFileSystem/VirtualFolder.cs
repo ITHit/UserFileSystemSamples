@@ -28,7 +28,7 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task CreateFileAsync(IFileMetadata fileMetadata, Stream content = null)
+        public async Task<string> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", Path.Combine(UserFileSystemPath, fileMetadata.Name));
 
@@ -50,10 +50,13 @@ namespace VirtualFileSystem
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
             remoteStorageItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
+
+            // Return remote storage item ID.
+            return remoteStorageItem.FullName; 
         }
 
         /// <inheritdoc/>
-        public async Task CreateFolderAsync(IFolderMetadata folderMetadata)
+        public async Task<string> CreateFolderAsync(IFolderMetadata folderMetadata)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", Path.Combine(UserFileSystemPath, folderMetadata.Name));
 
@@ -66,6 +69,9 @@ namespace VirtualFileSystem
             remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
             remoteStorageItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
+
+            // Return remote storage item ID.
+            return remoteStorageItem.FullName;
         }
 
         /// <inheritdoc/>
@@ -84,7 +90,6 @@ namespace VirtualFileSystem
             foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
             {
                 IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
-                userFileSystemChildren.Add(itemInfo);
 
                 string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemInfo.Name);
 

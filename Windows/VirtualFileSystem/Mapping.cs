@@ -66,6 +66,11 @@ namespace VirtualFileSystem
                 userFileSystemItem = new FolderMetadata();
             }
 
+            // Store you item ID here. It will be passed to GetFileSystemItem() call during every operation.
+            // Note that the file is deleted during MS Office transactional save.
+            // See Virtual Drive sample for MS Office documents editing.
+            userFileSystemItem.ItemId = remoteStorageItem.FullName;
+
             userFileSystemItem.Name = remoteStorageItem.Name;
             userFileSystemItem.Attributes = remoteStorageItem.Attributes;
             userFileSystemItem.CreationTime = remoteStorageItem.CreationTime;

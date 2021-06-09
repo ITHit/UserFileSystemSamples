@@ -125,7 +125,7 @@ namespace WebDAVDrive
                         else
                         {
                             LogMessage("Converting to placeholder", userFileSystemNewPath);
-                            PlaceholderItem.ConvertToPlaceholder(userFileSystemNewPath, null, false);
+                            PlaceholderItem.ConvertToPlaceholder(userFileSystemNewPath, null, null, false);
                             await engine.ClientNotifications(userFileSystemNewPath, this).UpdateAsync();
                             await engine.CustomDataManager(userFileSystemNewPath).RefreshCustomColumnsAsync();
                         }

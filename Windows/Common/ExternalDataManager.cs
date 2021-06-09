@@ -11,13 +11,16 @@ using System.Linq;
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
     /// <summary>
-    /// Manages custom data associated with the item. 
+    /// Manages custom data associated with the item stored outside of the item, 
+    /// such as item ID, custom Windows Explorer columns, locks, ETags.
     /// </summary>
     /// <remarks>
-    /// We can not store custom data inside placeholder because of the MS Office transactional save, 
-    /// which renames and deletes the file, so all custom data is lost with it.
+    /// This class stores all custom data associated with the item outside of the placeholder.
+    /// We can not store item ID and custom data inside placeholder (using <see cref="IFileSystemItemMetadata.CustomData"/> 
+    /// and <see cref="ITHit.FileSystem.Windows.PlaceholderItem.GetCustomData"/>) because of the MS Office transactional save, 
+    /// which renames and deletes the file, so all custom data is lost.
     /// </remarks>
-    public class CustomDataManager
+    public class ExternalDataManager
     {
         /// <summary>
         /// Path in user file system with which this custom data corresponds.
@@ -57,7 +60,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
-        public CustomDataManager(
+        public ExternalDataManager(
             string userFileSystemPath, 
             string serverDataFolderPath, 
             string userFileSystemRootPath, 
@@ -77,8 +80,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Indicates if the item was saved to the remote storage.
         /// </summary>
         /// <remarks>
+        /// MS Office transactional save, deletes and recreates the file.
         /// To detect if this is a new file we must store some marker ouside of the file, 
-        /// for the marker to survive MS Office transactional save, which deletes and recreates the file.
+        /// for the marker to survive the transactional save operation.
         /// </remarks>
         public bool IsNew
         {

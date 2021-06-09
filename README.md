@@ -31,7 +31,7 @@ This sample implements a virtual file system for Mac with synchronization suppor
 
 <a href="https://github.com/ITHit/UserFileSystemSamples/tree/master/Windows/VirtualDrive/">
 <p>
-This is a virtual drive implementation with Microsoft Office documents editing support and automatic Microsoft Office documents locking. It also demonstrates custom column support in Windows File Manager.&nbsp;To simulate the remote storage, this sample i                                            <span>...</span>
+This is a virtual drive implementation with thumbnail support, Microsoft Office documents editing support, and automatic Microsoft Office documents locking. It also demonstrates custom column support in Windows File Manager.&nbsp;To simulate the remote st                                            <span>...</span>
 </p>
 </a>
 </li>

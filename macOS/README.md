@@ -64,5 +64,5 @@
 <p><span><img id="__mcenew" alt="Virtual File System Mac in .NET/C#" src="https://www.userfilesystem.com/media/2117/virtulfilesystemmac.png" rel="122138"></span></p>
 <p><span class="warn">Note, that every File Provider Extension runs in a sandbox, so access to the local filesystem restricted by OS except Downloads, Pictures, Music, Movies public directories.</span></p>
 <h3 class="para d-inline next-article-heading">Next Article:</h3>
-<a title="Virtual Drive Sample in .NET, C# with Microsoft Office documents editing support, automatic locking and custom columns support" href="https://www.userfilesystem.com/examples/virtual_drive/">Virtual Drive Sample in .NET, C#</a>
+<a title="Virtual Drive Sample in .NET, C# with thumbnail support Microsoft Office documents editing support, automatic locking and custom columns support" href="https://www.userfilesystem.com/examples/virtual_drive/">Virtual Drive Sample in .NET, C#</a>
 

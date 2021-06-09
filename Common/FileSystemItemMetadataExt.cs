@@ -12,6 +12,9 @@ namespace ITHit.FileSystem.Samples.Common
     /// </summary>
     public class FileSystemItemMetadataExt : IFileSystemItemMetadata
     {
+        /// <inheritdoc/>
+        public string ItemId { get; set; }
+
         ///<inheritdoc/>
         public string Name { get; set; }
 

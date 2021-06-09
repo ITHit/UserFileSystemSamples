@@ -82,7 +82,7 @@ namespace VirtualDrive
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath);
 
-            CustomDataManager customDataManager = Engine.CustomDataManager(UserFileSystemPath);
+            ExternalDataManager customDataManager = Engine.CustomDataManager(UserFileSystemPath);
             // Send the ETag to the server as part of the update to ensure the file in the remote storge is not modified since last read.
             string oldEtag = await customDataManager.ETagManager.GetETagAsync();
 

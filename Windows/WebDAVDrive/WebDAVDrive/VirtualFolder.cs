@@ -30,7 +30,7 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task CreateFileAsync(IFileMetadata fileMetadata, Stream content = null)
+        public async Task<string> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
@@ -54,7 +54,7 @@ namespace WebDAVDrive
                 string eTagNew = response.Headers["ETag"];
                 response.Close();
 
-                CustomDataManager customDataManager = Engine.CustomDataManager(userFileSystemNewItemPath);
+                ExternalDataManager customDataManager = Engine.CustomDataManager(userFileSystemNewItemPath);
 
                 // Store ETag unlil the next update.
                 // This will also mark the item as not new, which is required for correct MS Office saving opertions.
@@ -64,10 +64,12 @@ namespace WebDAVDrive
                 // Update ETag in custom column displayed in file manager.
                 await customDataManager.SetCustomColumnsAsync(new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
             }
+
+            return null;
         }
 
         /// <inheritdoc/>
-        public async Task CreateFolderAsync(IFolderMetadata folderMetadata)
+        public async Task<string> CreateFolderAsync(IFolderMetadata folderMetadata)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, folderMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
@@ -75,6 +77,8 @@ namespace WebDAVDrive
             Uri newFolderUri = new Uri(new Uri(RemoteStoragePath), folderMetadata.Name);
             await Program.DavClient.CreateFolderAsync(newFolderUri);
             // Engine.CustomDataManager(userFileSystemNewItemPath).IsNew = false;
+
+            return null;
         }
 
         /// <inheritdoc/>
@@ -104,7 +108,6 @@ namespace WebDAVDrive
             foreach (IHierarchyItemAsync remoteStorageItem in remoteStorageChildren)
             {
                 FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
-                userFileSystemChildren.Add(itemInfo);
 
                 string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemInfo.Name);
 
@@ -115,7 +118,7 @@ namespace WebDAVDrive
                     userFileSystemChildren.Add(itemInfo);
                 }
 
-                CustomDataManager customDataManager = Engine.CustomDataManager(userFileSystemItemPath);
+                ExternalDataManager customDataManager = Engine.CustomDataManager(userFileSystemItemPath);
 
                 // Mark this item as not new, which is required for correct MS Office saving opertions.
                 customDataManager.IsNew = false;
@@ -129,7 +132,7 @@ namespace WebDAVDrive
             foreach (FileSystemItemMetadataExt child in userFileSystemChildren)
             {
                 string userFileSystemItemPath = Path.Combine(UserFileSystemPath, child.Name);
-                CustomDataManager customDataManager = Engine.CustomDataManager(userFileSystemItemPath);
+                ExternalDataManager customDataManager = Engine.CustomDataManager(userFileSystemItemPath);
 
                 // Save ETag on the client side, to be sent to the remote storage as part of the update.
                 // Setting ETag also marks an item as not new.

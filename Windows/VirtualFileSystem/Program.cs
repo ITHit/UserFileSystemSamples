@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using log4net;
 using log4net.Config;
 
+using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 
 
@@ -34,7 +35,7 @@ namespace VirtualFileSystem
         /// </summary>
         public static VirtualEngine Engine;
 
-        static async Task<int> Main(string[] args)
+        static async Task Main(string[] args)
         {
             // Load Settings.
             IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
@@ -62,6 +63,12 @@ namespace VirtualFileSystem
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
                     Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
+
+
+                // Set root item ID. It will be passed to IEngine.GetFileSystemItemAsync() method 
+                // as itemId parameter when a root folder is requested. 
+                // In this sample we just use the remote storage path as item ID.
+                PlaceholderFolder.GetItem(Settings.UserFileSystemRootPath).SetItemId(Settings.RemoteStorageRootPath);
             }
             else
             {
@@ -120,8 +127,6 @@ namespace VirtualFileSystem
             {
                 log.Info("\n\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.\n");
             }
-
-            return 1;
         }
 
 #if DEBUG
