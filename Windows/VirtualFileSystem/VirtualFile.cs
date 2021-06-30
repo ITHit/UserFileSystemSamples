@@ -20,8 +20,9 @@ namespace VirtualFileSystem
         /// Creates instance of this class.
         /// </summary>
         /// <param name="path">File path in the user file system.</param>
+        /// <param name="itemId">Remote storage item ID.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFile(string path, ILogger logger) : base(path, logger)
+        public VirtualFile(string path, byte[] itemId, ILogger logger) : base(path, itemId, logger)
         {
 
         }

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using ITHit.FileSystem;
-
+using ITHit.FileSystem.Windows;
 
 namespace VirtualFileSystem
 {
@@ -17,21 +17,6 @@ namespace VirtualFileSystem
     /// </remarks>
     public static class Mapping
     {
-        /// <summary>
-        /// Returns a remote storage URI that corresponds to the user file system path.
-        /// </summary>
-        /// <param name="userFileSystemPath">Full path in the user file system.</param>
-        /// <returns>Remote storage URI that corresponds to the <paramref name="userFileSystemPath"/>.</returns>
-        public static string MapPath(string userFileSystemPath)
-        {
-            // Get path relative to the virtual root.
-            string relativePath = Path.TrimEndingDirectorySeparator(userFileSystemPath).Substring(
-                Path.TrimEndingDirectorySeparator(Program.Settings.UserFileSystemRootPath).Length);
-
-            string path = $"{Path.TrimEndingDirectorySeparator(Program.Settings.RemoteStorageRootPath)}{relativePath}";
-            return path;
-        }
-
         /// <summary>
         /// Returns a user file system path that corresponds to the remote storage URI.
         /// </summary>
@@ -66,10 +51,10 @@ namespace VirtualFileSystem
                 userFileSystemItem = new FolderMetadata();
             }
 
-            // Store you item ID here. It will be passed to GetFileSystemItem() call during every operation.
-            // Note that the file is deleted during MS Office transactional save.
+            // Store you item ID here. It will be passed to IEngine.GetFileSystemItemAsync() during every operation.
+            // Note that the file is deleted during MS Office transactional save and iten ID will be deleted with it.
             // See Virtual Drive sample for MS Office documents editing.
-            userFileSystemItem.ItemId = remoteStorageItem.FullName;
+            userFileSystemItem.ItemId = WindowsFileSystemItem.GetItemIdByPath(remoteStorageItem.FullName);
 
             userFileSystemItem.Name = remoteStorageItem.Name;
             userFileSystemItem.Attributes = remoteStorageItem.Attributes;

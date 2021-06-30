@@ -99,14 +99,14 @@ namespace VirtualFileSystem
                 {
                     string userFileSystemParentPath = Path.GetDirectoryName(userFileSystemPath);
 
-                    // Because of the on-demand population the file or folder placeholder may not exist in the user file system
-                    // or the folder may be offline.
                     FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
                     if (remoteStorageItem != null)
                     {
                         IFileSystemItemMetadata newItemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
                         if (await engine.ServerNotifications(userFileSystemParentPath).CreateAsync(new[] { newItemInfo }) > 0)
                         {
+                            // Because of the on-demand population, the parent folder placeholder may not exist in the user file system
+                            // or the folder may be offline. In this case the IServerNotifications.CreateAsync() call is ignored.
                             LogMessage($"Created succesefully", userFileSystemPath);
                         }
                     }
@@ -141,9 +141,10 @@ namespace VirtualFileSystem
                     FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
                     IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
 
-                    // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                     if (await engine.ServerNotifications(userFileSystemPath).UpdateAsync(itemInfo))
                     {
+                        // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
+                        // In this case the IServerNotifications.UpdateAsync() call is ignored.
                         LogMessage("Updated succesefully", userFileSystemPath);
                     }
                 }
@@ -176,9 +177,10 @@ namespace VirtualFileSystem
                 Thread.Sleep(2000); // This can be removed in a real-life application.
                 if (FsPath.Exists(userFileSystemPath))
                 {
-                    // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                     if (await engine.ServerNotifications(userFileSystemPath).DeleteAsync())
                     {
+                        // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
+                        // In this case the IServerNotifications.DeleteAsync() call is ignored.
                         LogMessage("Deleted succesefully", userFileSystemPath);
                     }
                 }
@@ -208,9 +210,10 @@ namespace VirtualFileSystem
                 Thread.Sleep(2000); // This can be removed in a real-life application.
                 if (FsPath.Exists(userFileSystemOldPath))
                 {
-                    // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                     if (await engine.ServerNotifications(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath))
                     {
+                        // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
+                        // In this case the IServerNotifications.MoveToAsync() call is ignored.
                         LogMessage("Renamed succesefully:", userFileSystemOldPath, userFileSystemNewPath);
                     }
                 }

@@ -33,7 +33,7 @@ namespace VirtualFileSystem
         /// Your file system tree will be located under this folder.
         /// </param>
         /// <param name="log">Logger.</param>
-        public VirtualEngine(string license, string userFileSystemRootPath, ILog log) : base(license, userFileSystemRootPath)
+        public VirtualEngine(string license, string userFileSystemRootPath, string remoteStorageRootPath, ILog log) : base(license, userFileSystemRootPath)
         {
             logger = new Logger("File System Engine", log);
 
@@ -45,20 +45,19 @@ namespace VirtualFileSystem
             Error += Engine_Error;
             Message += Engine_Message;
 
-            string remoteStorageRootPath = Mapping.MapPath(userFileSystemRootPath);
             RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log);
         }
         
         /// <inheritdoc/>
-        public override async Task<IFileSystemItem> GetFileSystemItemAsync(string userFileSystemPath, FileSystemItemType itemType, string itemId = null)
+        public override async Task<IFileSystemItem> GetFileSystemItemAsync(string userFileSystemPath, FileSystemItemType itemType, byte[] itemId = null)
         {
             if (itemType == FileSystemItemType.File)
             {
-                return new VirtualFile(userFileSystemPath, this);
+                return new VirtualFile(userFileSystemPath, itemId, this);
             }
             else
             {
-                return new VirtualFolder(userFileSystemPath, this);
+                return new VirtualFolder(userFileSystemPath, itemId, this);
             }
         }
 

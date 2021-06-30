@@ -67,8 +67,8 @@ namespace VirtualFileSystem
 
                 // Set root item ID. It will be passed to IEngine.GetFileSystemItemAsync() method 
                 // as itemId parameter when a root folder is requested. 
-                // In this sample we just use the remote storage path as item ID.
-                PlaceholderFolder.GetItem(Settings.UserFileSystemRootPath).SetItemId(Settings.RemoteStorageRootPath);
+                byte[] itemId = WindowsFileSystemItem.GetItemIdByPath(Settings.RemoteStorageRootPath);
+                PlaceholderFolder.GetItem(Settings.UserFileSystemRootPath).SetItemId(itemId);
             }
             else
             {
@@ -83,7 +83,7 @@ namespace VirtualFileSystem
 
             try
             {
-                Engine = new VirtualEngine(Settings.UserFileSystemLicense, Settings.UserFileSystemRootPath, log);
+                Engine = new VirtualEngine(Settings.UserFileSystemLicense, Settings.UserFileSystemRootPath, Settings.RemoteStorageRootPath, log);
 
                 // Start processing OS file system calls.
                 await Engine.StartAsync();

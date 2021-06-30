@@ -199,11 +199,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             new FileInfo(lockInfoFileTargetPath).Directory.Create();
             if (File.Exists(lockInfoFilePath))
             {
-                File.Move(lockInfoFilePath, lockInfoFileTargetPath);
+                File.Move(lockInfoFilePath, lockInfoFileTargetPath, true);
             }
             if (File.Exists(lockModeFilePath))
             {
-                File.Move(lockModeFilePath, lockModeFileTargetPath);
+                File.Move(lockModeFilePath, lockModeFileTargetPath, true);
             }
 
             // If this is a folder, move all data in this folder.

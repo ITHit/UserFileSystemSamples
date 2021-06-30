@@ -95,7 +95,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             new FileInfo(eTagFileTargetPath).Directory.Create();
             if (File.Exists(eTagFilePath))
             {
-                File.Move(eTagFilePath, eTagFileTargetPath);
+                File.Move(eTagFilePath, eTagFileTargetPath, true);
             }
 
             // If this is a folder, move all eTags in this folder.

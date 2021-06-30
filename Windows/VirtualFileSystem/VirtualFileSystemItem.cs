@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common.Windows;
-
+using ITHit.FileSystem.Windows;
 
 namespace VirtualFileSystem
 {
@@ -18,6 +18,11 @@ namespace VirtualFileSystem
         /// File or folder path in the user file system.
         /// </summary>
         protected readonly string UserFileSystemPath;
+
+        /// <summary>
+        /// File or folder item ID in the remote storage.
+        /// </summary>
+        protected readonly byte[] ItemId;
 
         /// <summary>
         /// Path of this file or folder in the remote storage.
@@ -33,28 +38,39 @@ namespace VirtualFileSystem
         /// Creates instance of this class.
         /// </summary>
         /// <param name="userFileSystemPath">File or folder path in the user file system.</param>
+        /// <param name="itemId">Remote storage item ID.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFileSystemItem(string userFileSystemPath, ILogger logger)
+        public VirtualFileSystemItem(string userFileSystemPath, byte[] itemId, ILogger logger)
         {
             if (string.IsNullOrEmpty(userFileSystemPath))
             {
                 throw new ArgumentNullException(nameof(userFileSystemPath));
             }
+            ItemId = itemId ?? throw new ArgumentNullException(nameof(itemId));
             Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             UserFileSystemPath = userFileSystemPath;
-            RemoteStoragePath = Mapping.MapPath(userFileSystemPath);
+
+            try
+            {
+                RemoteStoragePath = WindowsFileSystemItem.GetPathByItemId(ItemId);
+            }
+            catch(ArgumentException)
+            {
+                // When a file is deleted, the IFile.CloseAsync() is called for the deleted file.
+            }
         }
 
         
         ///<inheritdoc>
-        public async Task MoveToAsync(string userFileSystemNewPath, IOperationContext operationContext, IConfirmationResultContext resultContext)
+        public async Task MoveToAsync(string userFileSystemNewPath, byte[] newParentItemId, IOperationContext operationContext, IConfirmationResultContext resultContext)
         {
             string userFileSystemOldPath = this.UserFileSystemPath;
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath);
 
             string remoteStorageOldPath = RemoteStoragePath;
-            string remoteStorageNewPath = Mapping.MapPath(userFileSystemNewPath);
+            string remoteStorageNewParentPath = WindowsFileSystemItem.GetPathByItemId(newParentItemId);
+            string remoteStorageNewPath = Path.Combine(remoteStorageNewParentPath, Path.GetFileName(userFileSystemNewPath));
 
             FileSystemInfo remoteStorageOldItem = FsPath.GetFileSystemItem(remoteStorageOldPath);
             if (remoteStorageOldItem != null)

@@ -30,7 +30,7 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task<string> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null)
+        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
@@ -69,7 +69,7 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task<string> CreateFolderAsync(IFolderMetadata folderMetadata)
+        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, folderMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);

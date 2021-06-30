@@ -533,7 +533,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
             if (File.Exists(customColumnsFilePath))
             {
-                File.Move(customColumnsFilePath, customColumnsFileTargetPath);
+                File.Move(customColumnsFilePath, customColumnsFileTargetPath, true);
             }
 
             // If this is a folder, move all data in this folder.

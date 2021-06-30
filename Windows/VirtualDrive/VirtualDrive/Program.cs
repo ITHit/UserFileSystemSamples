@@ -2,17 +2,13 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
 using Windows.Storage;
-using Windows.Storage.Provider;
 using Microsoft.Extensions.Configuration;
 using log4net;
 using log4net.Config;
 
 using ITHit.FileSystem.Samples.Common.Windows;
-using VirtualDrive.ThumbnailProvider;
 
 namespace VirtualDrive
 {
@@ -42,7 +38,7 @@ namespace VirtualDrive
 
             // Load Log4Net for net configuration.
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
-            XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
+            XmlConfigurator.Configure(logRepository, new FileInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "log4net.config")));
 
             // Enable UTF8 for Console Window
             Console.OutputEncoding = System.Text.Encoding.UTF8;
@@ -63,9 +59,6 @@ namespace VirtualDrive
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
                     Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
-
-                // Register thumbnail provider.
-                ThumbnailInstaller.Register();
             }
             else
             {
@@ -114,9 +107,6 @@ namespace VirtualDrive
             {
                 log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
                 log.Info("\nAll files and folders placeholders are deleted.\n");
-
-                // Unregister thumbnail provider
-                ThumbnailInstaller.Unregister();
 
                 // Unregister during programm uninstall and delete all files/folder.
                 await Registrar.UnregisterAsync(SyncRootId);           

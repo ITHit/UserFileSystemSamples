@@ -21,14 +21,15 @@ namespace VirtualFileSystem
         /// Creates instance of this class.
         /// </summary>
         /// <param name="path">Folder path in the user file system.</param>
+        /// <param name="itemId">Remote storage item ID.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFolder(string path, ILogger logger) : base(path, logger)
+        public VirtualFolder(string path, byte[] itemId, ILogger logger) : base(path, itemId, logger)
         {
 
         }
 
         /// <inheritdoc/>
-        public async Task<string> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null)
+        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", Path.Combine(UserFileSystemPath, fileMetadata.Name));
 
@@ -51,12 +52,12 @@ namespace VirtualFileSystem
             remoteStorageItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
 
-            // Return remote storage item ID.
-            return remoteStorageItem.FullName; 
+            // Return remote storage item ID. It will be passed later into IEngine.GetFileSystemItemAsync() method.
+            return WindowsFileSystemItem.GetItemIdByPath(remoteStorageItem.FullName); 
         }
 
         /// <inheritdoc/>
-        public async Task<string> CreateFolderAsync(IFolderMetadata folderMetadata)
+        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", Path.Combine(UserFileSystemPath, folderMetadata.Name));
 
@@ -70,8 +71,8 @@ namespace VirtualFileSystem
             remoteStorageItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
 
-            // Return remote storage item ID.
-            return remoteStorageItem.FullName;
+            // Return remote storage item ID. It will be passed later into IEngine.GetFileSystemItemAsync() method.
+            return WindowsFileSystemItem.GetItemIdByPath(remoteStorageItem.FullName);
         }
 
         /// <inheritdoc/>

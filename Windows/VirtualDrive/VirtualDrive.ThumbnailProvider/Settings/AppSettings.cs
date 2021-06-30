@@ -1,4 +1,4 @@
-namespace VirtualFileSystem.ThumbnailProvider.Settings
+namespace VirtualDrive.ThumbnailProvider.Settings
 {
     public class AppSettings
     {
