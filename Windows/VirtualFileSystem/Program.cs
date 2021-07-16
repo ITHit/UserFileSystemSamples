@@ -1,19 +1,18 @@
+using log4net;
+using log4net.Appender;
+using log4net.Config;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
 using Windows.Storage;
-using Windows.Storage.Provider;
-using Microsoft.Extensions.Configuration;
-using log4net;
-using log4net.Config;
 
-using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
-
+using ITHit.FileSystem.Windows;
 
 namespace VirtualFileSystem
 {
@@ -48,7 +47,10 @@ namespace VirtualFileSystem
             // Enable UTF8 for Console Window
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-            log.Info($"\n{System.Diagnostics.Process.GetCurrentProcess().ProcessName} {Settings.AppID}");
+            log.Info($"\n{Process.GetCurrentProcess().ProcessName} {Settings.AppID}");
+            log.Info($"\nOS version: {RuntimeInformation.OSDescription}.");
+            log.Info($"\nEnv version: {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
+            log.Info($"\nLog path: {(logRepository.GetAppenders().Where(p=> p.GetType() == typeof(RollingFileAppender)).FirstOrDefault() as RollingFileAppender)?.File}.");
             log.Info("\nPress 'Q' to unregister file system, delete all files/folders and exit (simulate uninstall with full cleanup).");
             log.Info("\nPress 'q' to unregister file system and exit (simulate uninstall).");
             log.Info("\nPress any other key to exit without unregistering (simulate reboot).");
@@ -79,7 +81,7 @@ namespace VirtualFileSystem
             StorageFolder userFileSystemRootFolder = await StorageFolder.GetFolderFromPathAsync(Settings.UserFileSystemRootPath);
             log.Info($"\nIndexed state: {(await userFileSystemRootFolder.GetIndexedStateAsync())}\n");
 
-            ConsoleKeyInfo exitKey;
+            ConsoleKeyInfo? exitKey = null;
 
             try
             {
@@ -95,19 +97,23 @@ namespace VirtualFileSystem
                 // Keep this application running until user input.
                 exitKey = Console.ReadKey();
             }
+            catch (Exception ex)
+            {
+                log.Error(ex);
+            }
             finally
             {
                 Engine.Dispose();
             }
 
-            if (exitKey.KeyChar == 'q')
+            if (exitKey?.KeyChar == 'q')
             {
                 // Unregister during programm uninstall.
                 await Registrar.UnregisterAsync(SyncRootId);
                 log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
                 log.Info("\nAll empty file and folder placeholders are deleted. Hydrated placeholders are converted to regular files / folders.\n");
             }
-            else if (exitKey.KeyChar == 'Q')
+            else if (exitKey?.KeyChar == 'Q')
             {
                 log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
                 log.Info("\nAll files and folders placeholders are deleted.\n");

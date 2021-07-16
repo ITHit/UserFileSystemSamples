@@ -36,7 +36,7 @@ This project does not support ETags, locking, Microsoft Office documents editing
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.7" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="3.2.8901.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="3.2.8936.0" />
     <ProjectReference Include="..\Common\Common.Windows.csproj" />
   </ItemGroup>
   <ItemGroup>

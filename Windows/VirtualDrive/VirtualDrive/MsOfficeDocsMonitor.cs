@@ -46,7 +46,10 @@ namespace VirtualDrive
             watcher.IncludeSubdirectories = true;
             watcher.Path = userFileSystemRootPath;
             //watcher.Filter = "*.*";
-            watcher.NotifyFilter = NotifyFilters.FileName;
+
+            // Some applications, such as Notpad++, remove the Offline attribute, 
+            // Attributes filter is required to monitor the Changed event and convert the file back to the plceholder.
+            watcher.NotifyFilter = NotifyFilters.FileName | NotifyFilters.Attributes;
             watcher.Error += Error;
             watcher.Created += CreatedAsync;
             watcher.Changed += ChangedAsync;
@@ -87,6 +90,38 @@ namespace VirtualDrive
         private async void ChangedAsync(object sender, FileSystemEventArgs e)
         {
             LogMessage($"{e.ChangeType}", e.FullPath);
+
+            string userFileSystemPath = e.FullPath;
+            try
+            {
+                if (System.IO.File.Exists(userFileSystemPath)
+                    && !MsOfficeHelper.AvoidMsOfficeSync(userFileSystemPath))
+                {
+                    if (!PlaceholderItem.IsPlaceholder(userFileSystemPath))
+                    {
+                        if (engine.CustomDataManager(userFileSystemPath).IsNew)
+                        {
+                            await engine.ClientNotifications(userFileSystemPath, this).CreateAsync();
+                        }
+                        else
+                        {
+                            LogMessage("Converting to placeholder", userFileSystemPath);
+                            PlaceholderItem.ConvertToPlaceholder(userFileSystemPath, null, null, false);
+                            await engine.ClientNotifications(userFileSystemPath, this).UpdateAsync();
+                            await engine.CustomDataManager(userFileSystemPath).RefreshCustomColumnsAsync();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                string userFileSystemOldPath = null;
+                if (e is RenamedEventArgs)
+                {
+                    userFileSystemOldPath = (e as RenamedEventArgs).OldFullPath;
+                }
+                LogError($"{e.ChangeType} failed", userFileSystemOldPath, userFileSystemPath, ex);
+            }
         }
 
         /// <summary>
@@ -106,36 +141,7 @@ namespace VirtualDrive
             // for example temp MS Office file was renamed SGE4274H -> file.xlsx,
             // we need to convert the file to a pleaceholder and upload it to the remote storage.
 
-            LogMessage("Renamed", e.OldFullPath, e.FullPath);
-
-            string userFileSystemOldPath = e.OldFullPath;
-            string userFileSystemNewPath = e.FullPath;
-            try
-            {
-                if (System.IO.File.Exists(userFileSystemNewPath)
-                    && !MsOfficeHelper.AvoidMsOfficeSync(userFileSystemNewPath))
-                {
-                    if (!PlaceholderItem.IsPlaceholder(userFileSystemNewPath))
-                    {
-                        if (engine.CustomDataManager(userFileSystemNewPath).IsNew)
-                        {
-                            await engine.ClientNotifications(userFileSystemNewPath, this).CreateAsync();
-                        }
-                        else
-                        {
-                            LogMessage("Converting to placeholder", userFileSystemNewPath);
-                            PlaceholderItem.ConvertToPlaceholder(userFileSystemNewPath, null, null, false);
-                            await engine.ClientNotifications(userFileSystemNewPath, this).UpdateAsync();
-                            await engine.CustomDataManager(userFileSystemNewPath).RefreshCustomColumnsAsync();
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogError($"{e.ChangeType} failed", userFileSystemOldPath, userFileSystemNewPath, ex);
-            }
-
+            ChangedAsync(sender, e);
         }
 
         private void Error(object sender, ErrorEventArgs e)

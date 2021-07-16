@@ -1,24 +1,24 @@
+using log4net;
+using log4net.Appender;
+using log4net.Config;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using WebDAVDrive.UI;
+using WebDAVDrive.UI.ViewModels;
 using Windows.Storage;
-using Windows.Storage.Provider;
-using Microsoft.Extensions.Configuration;
-using System.Net;
-using System.Security;
-using log4net;
-using log4net.Config;
 
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.WebDAV.Client;
 using ITHit.WebDAV.Client.Exceptions;
-using WebDAVDrive.UI;
-using WebDAVDrive.UI.ViewModels;
-
 
 namespace WebDAVDrive
 {
@@ -58,7 +58,10 @@ namespace WebDAVDrive
             // Enable UTF8 for Console Window
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-            log.Info($"\n{System.Diagnostics.Process.GetCurrentProcess().ProcessName} {Settings.AppID}");
+            log.Info($"\n{Process.GetCurrentProcess().ProcessName} {Settings.AppID}");
+            log.Info($"\nOS version: {RuntimeInformation.OSDescription}.");
+            log.Info($"\nEnv version: {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
+            log.Info($"\nLog path: {(logRepository.GetAppenders().Where(p => p.GetType() == typeof(RollingFileAppender)).FirstOrDefault() as RollingFileAppender)?.File}.");
             log.Info("\nPress 'Q' to unregister file system, delete all files/folders and exit (simulate uninstall with full cleanup).");
             log.Info("\nPress 'q' to unregister file system and exit (simulate uninstall).");
             log.Info("\nPress any other key to exit without unregistering (simulate reboot).");
@@ -86,7 +89,7 @@ namespace WebDAVDrive
 
             ConfigureWebDAVClient();
 
-            ConsoleKeyInfo exitKey;
+            ConsoleKeyInfo? exitKey = null;
 
             // Event to be fired when any key will be pressed in the console or when the tray application exits.
             ConsoleManager.ConsoleExitEvent exitEvent = new ConsoleManager.ConsoleExitEvent();
@@ -118,19 +121,23 @@ namespace WebDAVDrive
                 exitEvent.WaitOne();
                 exitKey = exitEvent.KeyInfo;
             }
+            catch (Exception ex)
+            {
+                log.Error(ex);
+            }
             finally
             {
                 Engine.Dispose();
             }
 
-            if (exitKey.KeyChar == 'q')
+            if (exitKey?.KeyChar == 'q')
             {
                 // Unregister during programm uninstall.
                 await Registrar.UnregisterAsync(SyncRootId);
                 log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
                 log.Info("\nAll empty file and folder placeholders are deleted. Hydrated placeholders are converted to regular files / folders.\n");
             }
-            else if (exitKey.KeyChar == 'Q')
+            else if (exitKey?.KeyChar == 'Q')
             {
                 log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
                 log.Info("\nAll files and folders placeholders are deleted.\n");

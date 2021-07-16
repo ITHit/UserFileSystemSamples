@@ -56,6 +56,6 @@
 <h2>See Also:</h2>
 <ul>
 <li><a title="Quick Start" href="https://www.userfilesystem.com/programming/creating_virtual_file_system/">Creating Virtual File System in .NET Quick Start Guide</a></li>
-<li><a title="Locking" href="https://www.userfilesystem.com/programming/locking/">Locking Files and Folders in Virtual File System </a></li>
+<li><a title="Locking" href="https://www.userfilesystem.com/programming/previous_versions/virtual_file_system_v2/locking/">Locking Files and Folders in Virtual File System </a></li>
 </ul>
 

@@ -7,15 +7,12 @@
     <Company>IT Hit LTD.</Company>
     <Product>Virtual Drive</Product>
     <Copyright>IT Hit LTD.</Copyright>
-    <Platforms>AnyCPU</Platforms>
+    <Platforms>x64</Platforms>
     <Description>A virtual drive project in .NET/C# with synchronization support, on-demand loading, selective offline files support, upload and download progress. It synchronizes files and folders both from remote storage to the user file system and from the user file system to remote storage. 
 
 To simulate the remote storage, this sample is using a folder in the local file system on the same machine. You can use this project as a strting point for creating a Virtual Drive with advanced features.
 
 This is an advanced project with ETags support, Microsoft Office documents editing, automatic Microsoft Office documents locking, and custom columns in Windows File Manager.</Description>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Framework\**" />
@@ -32,9 +29,8 @@ This is an advanced project with ETags support, Microsoft Office documents editi
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="3.2.8901.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="3.2.8936.0" />
     <ProjectReference Include="..\..\Common\Common.Windows.csproj" />
-    <ProjectReference Include="..\VirtualDrive.ThumbnailProvider\VirtualDrive.ThumbnailProvider.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json">
@@ -68,11 +64,4 @@ This is an advanced project with ETags support, Microsoft Office documents editi
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <!--Copy *.json deps files from VirtualDrive.ThumbnailProvider-->
-  <Target Name="CopyDepsFiles" AfterTargets="AfterBuild">
-    <ItemGroup>
-      <DepsFilePaths Include="..\VirtualDrive.ThumbnailProvider\bin\$(Configuration)\$(TargetFramework)\*.json" />
-    </ItemGroup>
-    <Copy SourceFiles="@(DepsFilePaths)" DestinationFolder="$(OutDir)" />
-  </Target>
 </Project>

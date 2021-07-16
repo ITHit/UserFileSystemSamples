@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <EnableComHosting>True</EnableComHosting>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
