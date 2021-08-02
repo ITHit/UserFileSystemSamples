@@ -42,6 +42,14 @@ namespace VirtualDrive
             // Load Log4Net for net configuration.
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
             XmlConfigurator.Configure(logRepository, new FileInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "log4net.config")));
+            // Update log file path for msix package. 
+            RollingFileAppender rollingFileAppender = logRepository.GetAppenders().Where(p => p.GetType() == typeof(RollingFileAppender)).FirstOrDefault() as RollingFileAppender;
+            if (rollingFileAppender != null && rollingFileAppender.File.Contains("WindowsApps"))
+            {
+                rollingFileAppender.File = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "VirtualDrive", 
+                                                        Path.GetFileName(rollingFileAppender.File));
+            }
+            string logFilePath = rollingFileAppender?.File;
 
             // Enable UTF8 for Console Window
             Console.OutputEncoding = System.Text.Encoding.UTF8;
@@ -49,7 +57,7 @@ namespace VirtualDrive
             log.Info($"\n{Process.GetCurrentProcess().ProcessName} {Settings.AppID}");
             log.Info($"\nOS version: {RuntimeInformation.OSDescription}.");
             log.Info($"\nEnv version: {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
-            log.Info($"\nLog path: {(logRepository.GetAppenders().Where(p => p.GetType() == typeof(RollingFileAppender)).FirstOrDefault() as RollingFileAppender)?.File}.");
+            log.Info($"\nLog path: {logFilePath}.");
             log.Info("\nPress 'Q' to unregister file system, delete all files/folders and exit (simulate uninstall with full cleanup).");
             log.Info("\nPress 'q' to unregister file system and exit (simulate uninstall).");
             log.Info("\nPress any other key to exit without unregistering (simulate reboot).");
@@ -98,8 +106,8 @@ namespace VirtualDrive
                 exitKey = Console.ReadKey();
             }
             catch (Exception ex)
-            {      
-                log.Error(ex);           
+            {
+                log.Error(ex);
                 Console.ReadKey();
             }
             finally

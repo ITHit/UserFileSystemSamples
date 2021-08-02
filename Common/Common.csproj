@@ -8,6 +8,6 @@
     <Description>Contains functionality common for all Virtual Drive samples, both for Windows and macOS.</Description>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem" Version="3.2.8936.0" />
+    <PackageReference Include="ITHit.FileSystem" Version="3.3.9488.0" />
   </ItemGroup>
 </Project>

@@ -10,9 +10,12 @@ namespace VirtualDrive.ThumbnailProvider
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>")]
 
     [ComVisible(true)]
-    [ProgId("VirtualDrive.ThumbnailProvider"), Guid("05CF065E-E135-4B2B-9D4D-CFB3FBAC73A4")]
+    [ProgId("VirtualDrive.ThumbnailProvider"), Guid(ThumbnailClass)]
     public class ThumbnailProvider : ThumbnailProviderBase
     {
+        public const string ThumbnailClass = "05CF065E-E135-4B2B-9D4D-CFB3FBAC73A4";
+        public static readonly Guid ThumbnailClassGuid = Guid.Parse(ThumbnailClass);
+
         public override async Task<Bitmap> GetThumbnailsAsync(string filePath, uint size)
         {
             string sourcePath = Mapping.MapPath(filePath);

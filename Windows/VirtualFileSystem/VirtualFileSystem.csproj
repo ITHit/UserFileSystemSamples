@@ -36,7 +36,7 @@ This project does not support ETags, locking, Microsoft Office documents editing
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.7" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="3.2.8936.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="3.3.9488.0" />
     <ProjectReference Include="..\Common\Common.Windows.csproj" />
   </ItemGroup>
   <ItemGroup>
@@ -49,8 +49,5 @@ This project does not support ETags, locking, Microsoft Office documents editing
     <None Update="log4net.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <Content Include="RemoteStorage\**\*.*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 </Project>

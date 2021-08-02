@@ -10,7 +10,7 @@
 
   <Identity
     Name="38f8ee88-19d0-48a3-ad8e-904a6cf3ca17"
-    Publisher="CN=VirtualFileSystemPackagePublisher"
+    Publisher="CN=IT Hit LTD., O=IT Hit LTD., STREET=86 Kimbark blvd, L=Toronto, S=Ontario, PostalCode=M5N2Y1, C=CA"
     Version="1.0.0.0" />
 
   <Properties>
@@ -45,7 +45,7 @@
         <desktop3:Extension Category="windows.cloudFiles">
           <desktop3:CloudFiles>
             <desktop3:ThumbnailProviderHandler Clsid="05CF065E-E135-4B2B-9D4D-CFB3FBAC73A4"/>
-            <!--<desktop3:ThumbnailProviderHandler Clsid="b9e1bc83-84ed-4ff6-984b-818f9564a7eb"/>-->
+
             <desktop3:CustomStateHandler Clsid="20000000-0000-0000-0000-000000000001"/>
             <desktop3:ExtendedPropertyHandler Clsid="20000000-0000-0000-0000-000000000001"/>
             <desktop3:BannersHandler Clsid="20000000-0000-0000-0000-000000000001"/>
@@ -55,10 +55,11 @@
         <com:Extension Category="windows.comServer">
           <com:ComServer>
             <!-- When changing ProgId make sure to change it also in the ThumbnailProvider.cs -->
-            <com:SurrogateServer AppId="3000bacb-ea7c-4e37-a939-3b16154da364" DisplayName="VirtualDrive.ThumbnailProvider">
-              <com:Class Id="05CF065E-E135-4B2B-9D4D-CFB3FBAC73A4" Path="VirtualDrive.ThumbnailProvider\VirtualDrive.ThumbnailProvider.comhost.dll" ThreadingModel="Both" ProgId="VirtualDrive.ThumbnailProvider" />
-            </com:SurrogateServer>
-            <com:ProgId Id="VirtualDrive.ThumbnailProvider" Clsid="05CF065E-E135-4B2B-9D4D-CFB3FBAC73A4" />
+            
+            <com:ExeServer DisplayName="VirtualDrive.ThumbnailProvider" Executable="VirtualDrive.ThumbnailProvider\VirtualDrive.ThumbnailProvider.exe">
+              <com:Class Id="05CF065E-E135-4B2B-9D4D-CFB3FBAC73A4" />
+            </com:ExeServer>            
+            
           </com:ComServer>
         </com:Extension>
       </Extensions>

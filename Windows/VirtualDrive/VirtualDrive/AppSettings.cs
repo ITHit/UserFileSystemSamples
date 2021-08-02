@@ -63,8 +63,41 @@ namespace VirtualDrive
 
             if (!Path.IsPathRooted(settings.RemoteStorageRootPath))
             {
-                string execPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-                settings.RemoteStorageRootPath = Path.GetFullPath(Path.Combine(execPath, settings.RemoteStorageRootPath));
+                string execPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                // Path to RemoteStorage folder when Any CPU is selected.  
+                string remoteStorageRootPath = Path.GetFullPath(Path.Combine(execPath, "..", "..", "..", settings.RemoteStorageRootPath));
+
+                if (!Directory.Exists(remoteStorageRootPath))
+                {
+                    // Path to RemoteStorage folder when x64/x86 is selected.
+                    remoteStorageRootPath = Path.GetFullPath(Path.Combine(execPath, "..", "..", "..", "..", settings.RemoteStorageRootPath));
+                    
+                    if (execPath.Contains("WindowsApps"))
+                    {
+                        // Path to RemoteStorage for msix package.
+                        string applicationDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), settings.AppID);
+                        remoteStorageRootPath = Path.Combine(applicationDataPath, "RemoteStorage");
+
+                        if (!Directory.Exists(applicationDataPath))
+                        {
+                            Directory.CreateDirectory(applicationDataPath);
+                        }
+
+                        if (!Directory.Exists(remoteStorageRootPath))
+                        {
+                            // Copy RemoteStorage folder to ProgramData folder.
+                            CopyDirectoryRecursively(new DirectoryInfo(Path.GetFullPath(Path.Combine(execPath, settings.RemoteStorageRootPath))),
+                                new DirectoryInfo(remoteStorageRootPath));
+                        }
+                    }
+                    else if (!Directory.Exists(remoteStorageRootPath))
+                    {
+                        // Path to RemoteStorage folder when run VirtualDrive.Package project directly.
+                        remoteStorageRootPath = Path.GetFullPath(Path.Combine(execPath, "..", "..", "..", "..", "..", "..", "VirtualDrive", settings.RemoteStorageRootPath));
+                    }
+                }
+
+                settings.RemoteStorageRootPath = remoteStorageRootPath;
             }
 
             if (!Directory.Exists(settings.RemoteStorageRootPath))
@@ -95,6 +128,22 @@ namespace VirtualDrive
             settings.ServerDataFolderPath = Path.Combine(localApplicationDataFolderPath, settings.AppID, settings.UserFileSystemRootPath.Replace(":", ""), "ServerData");
 
             return settings;
+        }
+
+        /// <summary>
+        /// Copies directory.
+        /// </summary>
+        public static void CopyDirectoryRecursively(DirectoryInfo source, DirectoryInfo target)
+        {
+            foreach (DirectoryInfo dir in source.GetDirectories())
+            {
+                CopyDirectoryRecursively(dir, target.CreateSubdirectory(dir.Name));
+            }
+
+            foreach (FileInfo file in source.GetFiles())
+            {
+                file.CopyTo(Path.Combine(target.FullName, file.Name));
+            }
         }
     }
 }

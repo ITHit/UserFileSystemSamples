@@ -22,7 +22,14 @@ namespace VirtualDrive.ThumbnailProvider
 
         public ThumbnailProviderBase()
         {
+            ReferenceManager.AddObjectReference();
+
             Log = GetLogger();
+        }
+
+        ~ThumbnailProviderBase()
+        {
+            ReferenceManager.ReleaseObjectReference();
         }
 
         public override int Initialize(IShellItem shellItem, STGM accessMode)
@@ -105,7 +112,15 @@ namespace VirtualDrive.ThumbnailProvider
 
                 RollingFileAppender roller = new RollingFileAppender();
                 roller.AppendToFile = true;
-                roller.File = Path.Combine(assemblyPath, "ThumbnailProvider.log");
+                if (assemblyPath.Contains("WindowsApps"))
+                {
+                    roller.File = Path.Combine(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                        Mapping.AppSettings.AppID), "ThumbnailProvider.log");
+                }
+                else
+                {
+                    roller.File = Path.Combine(assemblyPath, "ThumbnailProvider.log");
+                }
                 roller.Layout = patternLayout;
                 roller.MaxSizeRollBackups = 5;
                 roller.MaximumFileSize = "10MB";

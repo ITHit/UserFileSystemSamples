@@ -58,8 +58,8 @@ namespace VirtualFileSystem
 
             if (!Path.IsPathRooted(settings.RemoteStorageRootPath))
             {
-                string execPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-                settings.RemoteStorageRootPath = Path.GetFullPath(Path.Combine(execPath, settings.RemoteStorageRootPath));
+                string execPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                settings.RemoteStorageRootPath = Path.GetFullPath(Path.Combine(execPath, "..", "..", "..", settings.RemoteStorageRootPath));
             }
 
             if (!Directory.Exists(settings.RemoteStorageRootPath))
