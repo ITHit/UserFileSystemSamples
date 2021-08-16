@@ -69,12 +69,14 @@ namespace VirtualFileSystem
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath);
 
             string remoteStorageOldPath = RemoteStoragePath;
-            string remoteStorageNewParentPath = WindowsFileSystemItem.GetPathByItemId(newParentItemId);
-            string remoteStorageNewPath = Path.Combine(remoteStorageNewParentPath, Path.GetFileName(userFileSystemNewPath));
-
             FileSystemInfo remoteStorageOldItem = FsPath.GetFileSystemItem(remoteStorageOldPath);
-            if (remoteStorageOldItem != null)
+
+            // newParentItemId is null if the hydrated file is moved outside of the virtual file system, for example to the recycle bin.
+            if ( (remoteStorageOldItem != null) && (newParentItemId != null) )
             {
+                string remoteStorageNewParentPath = WindowsFileSystemItem.GetPathByItemId(newParentItemId);
+                string remoteStorageNewPath = Path.Combine(remoteStorageNewParentPath, Path.GetFileName(userFileSystemNewPath));
+
                 if (remoteStorageOldItem is FileInfo)
                 {
                     (remoteStorageOldItem as FileInfo).MoveTo(remoteStorageNewPath, true);
