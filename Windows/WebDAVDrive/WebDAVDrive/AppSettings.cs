@@ -28,6 +28,11 @@ namespace WebDAVDrive
         public string WebDAVServerUrl { get; set; }
 
         /// <summary>
+        /// WebSocket server URL.
+        /// </summary>
+        public string WebSocketServerUrl { get; set; }
+
+        /// <summary>
         /// Path to the folder that stores custom data associated with files and folders.
         /// </summary>
         public string ServerDataFolderPath { get; set; }

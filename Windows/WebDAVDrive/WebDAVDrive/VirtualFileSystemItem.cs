@@ -58,7 +58,7 @@ namespace WebDAVDrive
         public async Task MoveToAsync(string userFileSystemNewPath, byte[] targetParentItemId, IOperationContext operationContext, IConfirmationResultContext resultContext)
         {
             string userFileSystemOldPath = this.UserFileSystemPath;
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath);
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
 
             string remoteStorageOldPath = RemoteStoragePath;
             string remoteStorageNewPath = Mapping.MapPath(userFileSystemNewPath);
@@ -73,13 +73,22 @@ namespace WebDAVDrive
         {
             string userFileSystemNewPath = this.UserFileSystemPath;
             string userFileSystemOldPath = moveCompletionContext.SourcePath;
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath);
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath, moveCompletionContext);
         }
 
         ///<inheritdoc>
         public async Task DeleteAsync(IOperationContext operationContext, IConfirmationResultContext resultContext)
         {
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", UserFileSystemPath, default, operationContext);
+
+            // To cancel the operation and prevent the file from being deleted, 
+            // call the resultContext.ReturnErrorResult() method or throw any exception inside this method.
+
+            // IMPOTRTANT! See Windows Cloud API delete prevention bug description here: 
+            // https://stackoverflow.com/questions/68887190/delete-in-cloud-files-api-stopped-working-on-windows-21h1
+            // https://docs.microsoft.com/en-us/answers/questions/75240/bug-report-cfapi-ackdelete-borken-on-win10-2004.html
+
+            // Note that some applications, such as Windows Explorer may call delete more than one time on the same file/folder.
         }
 
         /// <inheritdoc/>
@@ -89,7 +98,7 @@ namespace WebDAVDrive
             // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
             // Otherwise the folder will be deleted before files in it can be moved.
 
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", UserFileSystemPath, default, operationContext);
 
             await Program.DavClient.DeleteAsync(new Uri(RemoteStoragePath));
 
@@ -186,11 +195,12 @@ namespace WebDAVDrive
 
             // Read lock-token from lock-info file.
             string lockToken = (await lockManager.GetLockInfoAsync()).LockToken;
+            LockUriTokenPair[] lockTokens = new LockUriTokenPair[] { new LockUriTokenPair(new Uri(RemoteStoragePath), lockToken)};
 
             // Unlock the item in the remote storage.
             try
             {
-                await Program.DavClient.UnlockAsync(new Uri(RemoteStoragePath), lockToken);
+                await Program.DavClient.UnlockAsync(new Uri(RemoteStoragePath), lockTokens);
             }
             catch (ITHit.WebDAV.Client.Exceptions.ConflictException)
             {

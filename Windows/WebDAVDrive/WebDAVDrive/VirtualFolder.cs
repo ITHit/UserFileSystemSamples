@@ -1,17 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Enumeration;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 using ITHit.FileSystem;
-using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Samples.Common;
-using ITHit.WebDAV.Client;
+using Client = ITHit.WebDAV.Client;
 
 namespace WebDAVDrive
 {
@@ -39,31 +35,24 @@ namespace WebDAVDrive
 
             long contentLength = content != null ? content.Length : 0;
 
-            IWebRequestAsync request = await Program.DavClient.GetFileWriteRequestAsync(newFileUri, null, contentLength);
-
             // Update remote storage file content.
-            using (Stream davContentStream = await request.GetRequestStreamAsync())
-            {
+            // Get the new ETag returned by the server (if any).
+            string eTagNew = await Program.DavClient.FileWriteAsync(newFileUri, async (outputStream) => {
                 if (content != null)
                 {
-                    await content.CopyToAsync(davContentStream);
+                    await content.CopyToAsync(outputStream);
                 }
+            }, null, contentLength);
 
-                // Get the new ETag returned by the server (if any).
-                IWebResponseAsync response = await request.GetResponseAsync();
-                string eTagNew = response.Headers["ETag"];
-                response.Close();
+            ExternalDataManager customDataManager = Engine.CustomDataManager(userFileSystemNewItemPath);
 
-                ExternalDataManager customDataManager = Engine.CustomDataManager(userFileSystemNewItemPath);
+            // Store ETag unlil the next update.
+            // This will also mark the item as not new, which is required for correct MS Office saving opertions.
+            await customDataManager.ETagManager.SetETagAsync(eTagNew);
+            customDataManager.IsNew = false; // Mark file as not new just in case the server did not return the ETag.
 
-                // Store ETag unlil the next update.
-                // This will also mark the item as not new, which is required for correct MS Office saving opertions.
-                await customDataManager.ETagManager.SetETagAsync(eTagNew);
-                customDataManager.IsNew = false; // Mark file as not new just in case the server did not return the ETag.
-
-                // Update ETag in custom column displayed in file manager.
-                await customDataManager.SetCustomColumnsAsync(new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
-            }
+            // Update ETag in custom column displayed in file manager.
+            await customDataManager.SetCustomColumnsAsync(new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
 
             return null;
         }
@@ -89,23 +78,16 @@ namespace WebDAVDrive
             // - resultContext.ReturnChildren() method.
             // - resultContext.ReportProgress() method.
 
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath, default, operationContext);
 
-            IHierarchyItemAsync[] remoteStorageChildren = null;
+            Client.IHierarchyItem[] remoteStorageChildren = null;
             // Retry the request in case the log-in dialog is shown.
-            try
-            {
-                remoteStorageChildren = await Program.DavClient.GetChildrenAsync(new Uri(RemoteStoragePath), false);
-            }
-            catch (ITHit.WebDAV.Client.Exceptions.Redirect302Exception)
-            {
-                remoteStorageChildren = await Program.DavClient.GetChildrenAsync(new Uri(RemoteStoragePath), false);
-            }
+            remoteStorageChildren = await Program.DavClient.GetChildrenAsync(new Uri(RemoteStoragePath), false);
 
             List<FileSystemItemMetadataExt> userFileSystemChildren = new List<FileSystemItemMetadataExt>();
 
 
-            foreach (IHierarchyItemAsync remoteStorageItem in remoteStorageChildren)
+            foreach (Client.IHierarchyItem remoteStorageItem in remoteStorageChildren)
             {
                 FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
 
@@ -149,9 +131,10 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFolderMetadata folderMetadata)
+        public async Task WriteAsync(IFolderMetadata folderMetadata, IOperationContext operationContext = null)
         {
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath);
+            // We can not change any folder metadata on a WebDAV server, so this method is empty.
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
         }
     }
 }

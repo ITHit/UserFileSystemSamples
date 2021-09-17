@@ -442,6 +442,22 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 }
             }
 
+            FileInfo file = new FileInfo(userFileSystemPath);
+            if(!file.Exists)
+            {
+                return;
+            }
+
+            // Can not set provider properties on read-only files.
+            // Changing read-only attribute on folders triggers folders listing. Changing on files only.
+            bool readOnly = file.IsReadOnly;
+
+            // Remove read-only attribute.
+            if (readOnly && ((file.Attributes & System.IO.FileAttributes.Directory) == 0))
+            {
+                file.IsReadOnly = false;
+            }
+
             // This method may be called on temp files, typically created by MS Office, that exist for a short period of time.          
             IStorageItem storageItem = await FsPath.GetStorageItemAsync(userFileSystemPath);
             if (storageItem == null)
@@ -452,19 +468,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 return;
             }
 
-            FileInfo file = new FileInfo(userFileSystemPath);
-
-            // Can not set provider properties on read-only files.
-            // Changing read-only attribute on folders triggers folders listing. Changing on files only.
-            bool readOnly = file.IsReadOnly;
-
-            // Remove read-only attribute.
-            if (readOnly && ((file.Attributes & System.IO.FileAttributes.Directory) == 0))
-            {
-                file.IsReadOnly = false;
-                //new FileInfo(userFileSystemPath).Attributes &= ~System.IO.FileAttributes.ReadOnly;
-            }
-
             // Update columns data.
             await StorageProviderItemProperties.SetAsync(storageItem, customColumns);
 
@@ -472,7 +475,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             if (readOnly && ((file.Attributes & System.IO.FileAttributes.Directory) == 0))
             {
                 file.IsReadOnly = true;
-                //new FileInfo(userFileSystemPath).Attributes |= System.IO.FileAttributes.ReadOnly;
             }
         }
 

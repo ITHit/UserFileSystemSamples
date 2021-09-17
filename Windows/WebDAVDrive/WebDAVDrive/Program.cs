@@ -19,6 +19,8 @@ using Windows.Storage;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.WebDAV.Client;
 using ITHit.WebDAV.Client.Exceptions;
+using ITHit.WebDAV.Client.Logger;
+using System.Net.Http;
 
 namespace WebDAVDrive
 {
@@ -43,7 +45,7 @@ namespace WebDAVDrive
         /// <summary>
         /// WebDAV client for accessing the WebDAV server.
         /// </summary>
-        internal static WebDavSessionAsync DavClient;
+        internal static WebDavSession DavClient;
 
         static async Task Main(string[] args)
         {
@@ -87,7 +89,7 @@ namespace WebDAVDrive
             StorageFolder userFileSystemRootFolder = await StorageFolder.GetFolderFromPathAsync(Settings.UserFileSystemRootPath);
             log.Info($"\nIndexed state: {(await userFileSystemRootFolder.GetIndexedStateAsync())}\n");
 
-            ConfigureWebDAVClient();
+            ConfigureWebDavSession();
 
             ConsoleKeyInfo? exitKey = null;
 
@@ -98,8 +100,9 @@ namespace WebDAVDrive
             {
                 Engine = new VirtualEngine(
                     Settings.UserFileSystemLicense, 
-                    Settings.UserFileSystemRootPath, 
-                    Settings.ServerDataFolderPath, 
+                    Settings.UserFileSystemRootPath,                
+                    Settings.ServerDataFolderPath,
+                    Settings.WebSocketServerUrl,
                     Settings.IconsFolderPath, 
                     log);
                 Engine.AutoLock = Settings.AutoLock;
@@ -217,20 +220,33 @@ namespace WebDAVDrive
         /// <summary>
         /// Creates and configures WebDAV client to access the remote storage;
         /// </summary>
-        private static void ConfigureWebDAVClient()
+        /// <remarks>Set authentication credentials if needed. Supports Basic, Digest, NTLM, Kerberos.
+        /// DavClient.Credentials = new System.Net.NetworkCredential("User1", "pwd");
+        ///
+        /// Disable automatic redirect processing so we can process the 302 login redirect inside the error event handler.</remarks>
+        private static void ConfigureWebDavSession(HttpClientHandler handler = null)
         {
-            DavClient = new WebDavSessionAsync(Program.Settings.WebDAVClientLicense);
+            if (DavClient != null)
+                DavClient.Dispose();
+             
+            DavClient = new WebDavSession(Program.Settings.WebDAVClientLicense, handler);
 
-            // Set authentication credentials if needed. Supports Basic, Digest, NTLM, Kerberos.
-            // DavClient.Credentials = new System.Net.NetworkCredential("User1", "pwd");
-
-            // Disable automatic redirect processing so we can process the 
-            // 302 login redirect inside the error event handler.
-            DavClient.AllowAutoRedirect = false;
             DavClient.WebDavError += DavClient_WebDavError;
+            DavClient.WebDavMessage += DavClient_WebDAVMessage;
+        }
 
-            ITHit.WebDAV.Client.Logger.FileLogger.LogFile = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().CodeBase), "WebDAVLog.txt");
-            ITHit.WebDAV.Client.Logger.FileLogger.Level = ITHit.WebDAV.Client.Logger.LogLevel.All;
+        /// <summary>
+        /// Event handler to process WebDAV messages. 
+        /// </summary>
+        /// <param name="sender">Request to the WebDAV client.</param>
+        /// <param name="e">WebDAV message details.</param>
+        private static void DavClient_WebDAVMessage(ISession client, WebDavMessageEventArgs e)
+        {
+            string msg = $"\n{e.Message}";
+            if (e.LogLevel == LogLevel.Debug)
+                log.Debug($"{msg}\n");
+            else
+                log.Info(msg);
         }
 
         /// <summary>
@@ -249,7 +265,7 @@ namespace WebDAVDrive
         /// </summary>
         /// <param name="sender">Request to the WebDAV server.</param>
         /// <param name="e">WebDAV error details.</param>
-        private static void DavClient_WebDavError(IWebRequestAsync sender, WebDavErrorEventArgs e)
+        private static void DavClient_WebDavError(ISession sender, WebDavErrorEventArgs e)
         {
             WebDavHttpException httpException = e.Exception as WebDavHttpException;
             log.Info($"\n{httpException?.Status.Code} {httpException?.Status.Description} {e.Exception.Message} ");
@@ -273,13 +289,14 @@ namespace WebDAVDrive
 
                             WebDAVDrive.UI.WebBrowserLogin webBrowserLogin = null;
                             Thread thread = new Thread(() => {
-                                webBrowserLogin = new WebDAVDrive.UI.WebBrowserLogin(failedUri, e.Request, DavClient, log);
+                                webBrowserLogin = new WebDAVDrive.UI.WebBrowserLogin(failedUri, DavClient, log);
                                 webBrowserLogin.Title = Settings.ProductName;
                                 webBrowserLogin.ShowDialog();
                             });
                             thread.SetApartmentState(ApartmentState.STA);
                             thread.Start();
                             thread.Join();
+                            e.Result = WebDavErrorEventResult.ContinueProcessing;
 
                             /*
                             if (loginForm.Cookies != null)
@@ -310,6 +327,7 @@ namespace WebDAVDrive
                             {
                                 passwordCredential.RetrievePassword();
                                 DavClient.Credentials = new NetworkCredential(passwordCredential.UserName, passwordCredential.Password);
+                                e.Result = WebDavErrorEventResult.Repeat;
                             }
                             else
                             {
@@ -344,7 +362,9 @@ namespace WebDAVDrive
                                         CredentialManager.SaveCredentials(Settings.ProductName, login, password);
                                     }
                                     DavClient.Credentials = new NetworkCredential(login, password);
+                                    e.Result = WebDavErrorEventResult.Repeat;
                                 }
+                                e.Result = WebDavErrorEventResult.ContinueProcessing;
                             }
                         }
                         break;

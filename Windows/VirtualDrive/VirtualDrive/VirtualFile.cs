@@ -30,13 +30,13 @@ namespace VirtualDrive
         /// <inheritdoc/>
         public async Task OpenAsync(IOperationContext operationContext, IResultContext context)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(OpenAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(OpenAsync)}()", UserFileSystemPath, default, operationContext);
         }
 
         /// <inheritdoc/>
         public async Task CloseAsync(IOperationContext operationContext, IResultContext context)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(CloseAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(CloseAsync)}()", UserFileSystemPath, default, operationContext);
         }
         
         /// <inheritdoc/>
@@ -45,7 +45,7 @@ namespace VirtualDrive
             // On Windows this method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer call the resultContext.ReportProgress() or resultContext.ReturnData() method.
 
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
             SimulateNetworkDelay(length, resultContext);
 
@@ -63,7 +63,7 @@ namespace VirtualDrive
             // This method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer call the ReturnValidationResult() method or IContextWindows.ReportProgress() method.
 
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
             //SimulateNetworkDelay(length, resultContext);
 
@@ -73,14 +73,14 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null)
+        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null)
         {
             if(MsOfficeHelper.IsMsOfficeLocked(UserFileSystemPath)) // Required for PowerPoint. It does not block the for writing.
             {
                 throw new ClientLockFailedException("The file is blocked for writing.");
             }
 
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
             ExternalDataManager customDataManager = Engine.CustomDataManager(UserFileSystemPath);
             // Send the ETag to the server as part of the update to ensure the file in the remote storge is not modified since last read.

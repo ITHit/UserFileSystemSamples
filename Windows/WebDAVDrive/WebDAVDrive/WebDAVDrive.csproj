@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0-windows10.0.19041.0</TargetFramework>
     <CsWinRTWindowsMetadata>10.0.19041.0</CsWinRTWindowsMetadata>
     <Authors>IT Hit LTD.</Authors>
     <Company>IT Hit LTD.</Company>
@@ -26,7 +26,6 @@
     <Compile Remove="SyncService.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHitWebDAVClient" Version="4.0.1482-Beta" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.7" />
   </ItemGroup>
   <ItemGroup>

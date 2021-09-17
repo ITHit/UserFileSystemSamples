@@ -105,7 +105,7 @@ namespace VirtualDrive
             // - resultContext.ReturnChildren() method.
             // - resultContext.ReportProgress() method.
 
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath, default, operationContext);
 
             IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(RemoteStoragePath).EnumerateFileSystemInfos(pattern);
 
@@ -147,9 +147,9 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFolderMetadata folderMetadata)
+        public async Task WriteAsync(IFolderMetadata folderMetadata, IOperationContext operationContext = null)
         {
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
             DirectoryInfo remoteStorageItem = new DirectoryInfo(RemoteStoragePath);
 

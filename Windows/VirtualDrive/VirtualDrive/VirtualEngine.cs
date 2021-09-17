@@ -120,12 +120,12 @@ namespace VirtualDrive
 
         private void Engine_Message(IEngine sender, EngineMessageEventArgs e)
         {
-            logger.LogMessage(e.Message, e.SourcePath, e.TargetPath);
+            logger.LogMessage(e.Message, e.SourcePath, e.TargetPath, e.OperationContext);
         }
 
         private void Engine_Error(IEngine sender, EngineErrorEventArgs e)
         {
-            logger.LogError(e.Message, e.SourcePath, e.TargetPath, e.Exception);
+            logger.LogError(e.Message, e.SourcePath, e.TargetPath, e.Exception, e.OperationContext);
         }
 
         /// <summary>

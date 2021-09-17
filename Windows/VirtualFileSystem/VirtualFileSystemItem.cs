@@ -66,7 +66,7 @@ namespace VirtualFileSystem
         public async Task MoveToAsync(string userFileSystemNewPath, byte[] newParentItemId, IOperationContext operationContext, IConfirmationResultContext resultContext)
         {
             string userFileSystemOldPath = this.UserFileSystemPath;
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath);
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
 
             string remoteStorageOldPath = RemoteStoragePath;
             FileSystemInfo remoteStorageOldItem = FsPath.GetFileSystemItem(remoteStorageOldPath);
@@ -85,7 +85,7 @@ namespace VirtualFileSystem
                 {
                     (remoteStorageOldItem as DirectoryInfo).MoveTo(remoteStorageNewPath);
                 }
-                Logger.LogMessage("Moved item in remote storage succesefully", userFileSystemOldPath, userFileSystemNewPath);
+                Logger.LogMessage("Moved item in remote storage succesefully", userFileSystemOldPath, userFileSystemNewPath, operationContext);
             }
         }
         
@@ -95,24 +95,33 @@ namespace VirtualFileSystem
         {
             string userFileSystemNewPath = this.UserFileSystemPath;
             string userFileSystemOldPath = moveCompletionContext.SourcePath;
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath);
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath, moveCompletionContext);
         }
 
         
         ///<inheritdoc>
         public async Task DeleteAsync(IOperationContext operationContext, IConfirmationResultContext resultContext)
         {
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", this.UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", this.UserFileSystemPath, default, operationContext);
+
+            // To cancel the operation and prevent the file from being deleted, 
+            // call the resultContext.ReturnErrorResult() method or throw any exception inside this method.
+
+            // IMPOTRTANT! See Windows Cloud API delete prevention bug description here: 
+            // https://stackoverflow.com/questions/68887190/delete-in-cloud-files-api-stopped-working-on-windows-21h1
+            // https://docs.microsoft.com/en-us/answers/questions/75240/bug-report-cfapi-ackdelete-borken-on-win10-2004.html
+
+            // Note that some applications, such as Windows Explorer may call delete more than one time on the same file/folder.
         }
 
         /// <inheritdoc/>
         public async Task DeleteCompletionAsync(IOperationContext operationContext, IResultContext resultContext)
         {
-            // On Windows, for move with overwrite to function properly for folders, 
+            // On Windows, for rename with overwrite to function properly for folders, 
             // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
             // Otherwise the folder will be deleted before files in it can be moved.
 
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", this.UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", this.UserFileSystemPath, default, operationContext);
 
             FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(RemoteStoragePath);
             if (remoteStorageItem != null)
@@ -125,7 +134,7 @@ namespace VirtualFileSystem
                 {
                     (remoteStorageItem as DirectoryInfo).Delete(true);
                 }
-                Logger.LogMessage("Deleted item in remote storage succesefully", UserFileSystemPath);
+                Logger.LogMessage("Deleted item in remote storage succesefully", UserFileSystemPath, default, operationContext);
             }
         }
         

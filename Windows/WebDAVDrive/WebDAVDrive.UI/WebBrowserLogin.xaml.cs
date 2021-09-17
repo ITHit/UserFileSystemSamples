@@ -18,7 +18,7 @@ namespace WebDAVDrive.UI
         /// Succesefull server response or null if no succesefull response was 
         /// obtained (for example the window was closed by the user). 
         /// </summary>
-        public IWebResponseAsync Response;
+        public IWebResponse Response;
 
         /// <summary>
         /// Web browser cookies.
@@ -33,12 +33,12 @@ namespace WebDAVDrive.UI
         /// <summary>
         /// WebDAV request to send to the server. It will typically redirect tot the login page.
         /// </summary>
-        private IWebRequestAsync request;
+        private IWebRequest request;
 
         /// <summary>
-        /// WebDAV Session to make a test request to verify that user has loged-in succesefully.
+        /// WebDAV Client to make a test request to verify that user has loged-in succesefully.
         /// </summary>
-        private WebDavSessionAsync davClient;
+        private WebDavSession davClient;
 
         /// <summary>
         ///  Microsoft Edge Chromium instance.
@@ -66,10 +66,9 @@ namespace WebDAVDrive.UI
         /// Creates instance of this class.
         /// </summary>
         /// <param name="url">URL to navigate to. This URL must redirect to a log-in page.</param>
-        public WebBrowserLogin(Uri url, IWebRequestAsync request, WebDavSessionAsync davClient, ILog log)
+        public WebBrowserLogin(Uri url, WebDavSession davClient, ILog log)
         {
             this.url = url;
-            this.request = request;
             this.davClient = davClient;
             this.log = log;
             InitializeComponent();
@@ -139,27 +138,35 @@ namespace WebDAVDrive.UI
                 {
                     // Read cookies.
                     List<CoreWebView2Cookie> webViewcookies = await webView.CoreWebView2.CookieManager.GetCookiesAsync(url.OriginalString);
-                    CookieCollection netCookies = new CookieCollection();
-                    webViewcookies.ForEach((x) => { netCookies.Add(x.ToSystemNetCookie()); });
-
-                    // Copy cookies from web browser window into original  request.
-                    //request.CookieContainer.Add(netCookies);
-
-                    try
+                    if (webViewcookies.Count != 0)
                     {
-                        // Test if the original request works after we set cookies.
-                        // We do not want the error event to fire in this case.
-                        //Response = await request.GetResponseAsync(false);
+                        CookieCollection netCookies = new CookieCollection();
+                        webViewcookies.ForEach((x) => { netCookies.Add(x.ToSystemNetCookie()); });
 
-                        davClient.CookieContainer.Add(netCookies);
-                        await davClient.OpenItemAsync(url);
+                        // Copy cookies from web browser window into original  request.
+                        //request.CookieContainer.Add(netCookies);
 
-                        Cookies = netCookies;
+                        try
+                        {
+                            // Test if the original request works after we set cookies.
+                            // We do not want the error event to fire in this case.
+                            //Response = await request.GetResponseAsync(false);
 
-                        // Original request completed succesefully. Close the login form.
-                        this.Close();
+                            davClient.CookieContainer.Add(netCookies);
+                            // Can't validate cookies the following way, as it triggers a continues Login dialog appear if cookies are incorrect
+                            //await davClient.GetItemAsync(url);
+
+                            Cookies = netCookies;
+
+                            // Original request completed succesefully. Close the login form.
+                            this.Close();
+                        }
+                        catch
+                        {
+                            log.Error("Request failed. Login failed or did not complete yet.");
+                        }
                     }
-                    catch
+                    else
                     {
                         log.Error("Request failed. Login failed or did not complete yet.");
                     }

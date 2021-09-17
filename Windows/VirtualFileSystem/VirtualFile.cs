@@ -30,14 +30,14 @@ namespace VirtualFileSystem
         /// <inheritdoc/>
         public async Task OpenAsync(IOperationContext operationContext, IResultContext context)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(OpenAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(OpenAsync)}()", UserFileSystemPath, default, operationContext);
         }
 
         
         /// <inheritdoc/>
         public async Task CloseAsync(IOperationContext operationContext, IResultContext context)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(CloseAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(CloseAsync)}()", UserFileSystemPath, default, operationContext);
         }
         
 
@@ -48,7 +48,7 @@ namespace VirtualFileSystem
             // On Windows this method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer call the resultContext.ReportProgress() or resultContext.ReturnData() method.
 
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
             SimulateNetworkDelay(length, resultContext);
 
@@ -67,7 +67,7 @@ namespace VirtualFileSystem
             // This method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer call IContextWindows.ReportProgress() method.
 
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
             //SimulateNetworkDelay(length, resultContext);
 
@@ -77,9 +77,9 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null)
+        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
             FileInfo remoteStorageItem = new FileInfo(RemoteStoragePath);
 

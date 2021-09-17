@@ -14,6 +14,8 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
+using System.Net.WebSockets;
+using System.Linq;
 
 namespace WebDAVDrive
 {
@@ -25,9 +27,24 @@ namespace WebDAVDrive
     internal class RemoteStorageMonitor : Logger, IDisposable
     {
         /// <summary>
-        /// Remote storage path. Folder to monitor changes in.
+        /// Logger.
         /// </summary>
-        private string remoteStorageRootPath;
+        private readonly ILog log;
+
+        /// <summary>
+        /// WebSocket client.
+        /// </summary>
+        private readonly ClientWebSocket clientWebSocket;
+
+        /// <summary>
+        /// WebSocket server url.
+        /// </summary>
+        private readonly string webSocketServerUrl;
+
+        /// <summary>
+        /// WebSocket cancellation token.
+        /// </summary>
+        private CancellationTokenSource cancellationTokenSource;
 
         /// <summary>
         /// Virtul drive instance. This class will call <see cref="Engine"/> methods 
@@ -38,29 +55,54 @@ namespace WebDAVDrive
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
-        /// <param name="remoteStorageRootPath">Remote storage path. Folder that contains source files to monitor changes.</param>
+        /// <param name="webSocketServerUrl">WebSocket server url.</param>
         /// <param name="engine">Engine to send notifications about changes in the remote storage.</param>
         /// <param name="log">Logger.</param>
-        internal RemoteStorageMonitor(string remoteStorageRootPath, VirtualEngine engine, ILog log) : base("Remote Storage Monitor", log)
+        internal RemoteStorageMonitor(string webSocketServerUrl, VirtualEngine engine, ILog log) : base("Remote Storage Monitor", log)
         {
-            this.remoteStorageRootPath = remoteStorageRootPath;
+            this.clientWebSocket = new ClientWebSocket();
+            this.webSocketServerUrl = webSocketServerUrl;
             this.engine = engine;
+            this.log = log;
         }
 
         /// <summary>
         /// Starts monitoring changes in the remote storage.
         /// </summary>
-        internal void Start()
+        internal async Task StartAsync()
         {
+            cancellationTokenSource = new CancellationTokenSource();
+            await clientWebSocket.ConnectAsync(new Uri(webSocketServerUrl), CancellationToken.None);
 
+            await Task.Factory.StartNew(
+              async () =>
+              {
+                  var rcvBytes = new byte[128];
+                  var rcvBuffer = new ArraySegment<byte>(rcvBytes);
+                  while (true)
+                  {
+                      WebSocketReceiveResult rcvResult = await clientWebSocket.ReceiveAsync(rcvBuffer, cancellationTokenSource.Token);
+                      byte[] msgBytes = rcvBuffer.Skip(rcvBuffer.Offset).Take(rcvResult.Count).ToArray();
+                      string rcvMsg = Encoding.UTF8.GetString(msgBytes);
+                      log.Info($"\nRemote Storage Monitor Received: {rcvMsg}");
+                  }
+              }, cancellationTokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
         /// <summary>
         /// Stops monitoring changes in the remote storage.
         /// </summary>
-        internal void Stop()
+        internal async Task StopAsync()
         {
+            log.Info($"\nUser File System Monitor Stoping");
 
+            cancellationTokenSource.Cancel();
+            if (clientWebSocket.State != WebSocketState.Closed)
+            {   
+                await clientWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);           
+            }
+
+            log.Info($"\nUser File System Monitor Stoped");
         }
 
         private void Error(object sender, ErrorEventArgs e)
@@ -76,9 +118,8 @@ namespace WebDAVDrive
             if (!disposedValue)
             {
                 if (disposing)
-                {
-                    
-                    //LogMessage($"Disposed");
+                {        
+                    clientWebSocket.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.

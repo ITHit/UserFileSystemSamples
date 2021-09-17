@@ -7,6 +7,7 @@ using ITHit.FileSystem.Windows;
 
 using ITHit.FileSystem.Samples.Common.Windows;
 using System;
+using System.Net.WebSockets;
 
 namespace WebDAVDrive
 {
@@ -49,7 +50,7 @@ namespace WebDAVDrive
         /// <param name="serverDataFolderPath">Path to the folder that stores custom data associated with files and folders.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
         /// <param name="log">Logger.</param>
-        public VirtualEngine(string license, string userFileSystemRootPath, string serverDataFolderPath, string iconsFolderPath, ILog log) 
+        public VirtualEngine(string license, string userFileSystemRootPath, string serverDataFolderPath, string webSocketServerUrl, string iconsFolderPath, ILog log)
             : base(license, userFileSystemRootPath)
         {
             logger = new Logger("File System Engine", log) ?? throw new NullReferenceException(nameof(log));
@@ -64,8 +65,7 @@ namespace WebDAVDrive
             Error += Engine_Error;
             Message += Engine_Message;
 
-            string remoteStorageRootPath = Mapping.MapPath(userFileSystemRootPath);
-            RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log);
+            RemoteStorageMonitor = new RemoteStorageMonitor(webSocketServerUrl, this, log);
             msOfficeDocsMonitor = new MsOfficeDocsMonitor(userFileSystemRootPath, this, log);
         }
 
@@ -97,7 +97,7 @@ namespace WebDAVDrive
             else
             {
                 // Executed during rename/move operation.
-                return 
+                return
                        MsOfficeHelper.IsRecycleBin(userFileSystemNewPath) // When a hydrated file is deleted, it is moved to a Recycle Bin.
                     || MsOfficeHelper.AvoidMsOfficeSync(userFileSystemNewPath);
             }
@@ -107,25 +107,33 @@ namespace WebDAVDrive
         public override async Task StartAsync()
         {
             await base.StartAsync();
-            RemoteStorageMonitor.Start();
+            try
+            {
+                // Uncomment to enable websockets.
+                //await RemoteStorageMonitor.StartAsync();
+            }
+            catch (WebSocketException e) {
+                // Start socket after first success webdav propfind. Restart socket when it disconnects.
+                logger.LogError(e.Message);
+            };
             msOfficeDocsMonitor.Start();
         }
 
         public override async Task StopAsync()
         {
             await base.StopAsync();
-            RemoteStorageMonitor.Stop();
+            await RemoteStorageMonitor.StopAsync();
             msOfficeDocsMonitor.Stop();
         }
 
         private void Engine_Message(IEngine sender, EngineMessageEventArgs e)
         {
-            logger.LogMessage(e.Message, e.SourcePath, e.TargetPath);
+            logger.LogMessage(e.Message, e.SourcePath, e.TargetPath, e.OperationContext);
         }
 
         private void Engine_Error(IEngine sender, EngineErrorEventArgs e)
         {
-            logger.LogError(e.Message, e.SourcePath, e.TargetPath, e.Exception);
+            logger.LogError(e.Message, e.SourcePath, e.TargetPath, e.Exception, e.OperationContext);
         }
 
         /// <summary>
