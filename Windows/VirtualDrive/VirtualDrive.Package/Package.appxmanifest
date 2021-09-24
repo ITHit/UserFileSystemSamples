@@ -44,21 +44,30 @@
       <Extensions>
         <desktop3:Extension Category="windows.cloudFiles">
           <desktop3:CloudFiles>
+            <desktop3:CustomStateHandler Clsid="20000000-0000-0000-0000-000000000001"/>
             <desktop3:ThumbnailProviderHandler Clsid="05CF065E-E135-4B2B-9D4D-CFB3FBAC73A4"/>
 
-            <desktop3:CustomStateHandler Clsid="20000000-0000-0000-0000-000000000001"/>
+            
             <desktop3:ExtendedPropertyHandler Clsid="20000000-0000-0000-0000-000000000001"/>
             <desktop3:BannersHandler Clsid="20000000-0000-0000-0000-000000000001"/>
-            <desktop3:CloudFilesContextMenus />
+            
+            <desktop3:CloudFilesContextMenus>
+              <desktop3:Verb Id="LockCommand" Clsid="A22EBD03-343E-433C-98DF-372C6B3A1538" />
+            </desktop3:CloudFilesContextMenus>
+            
           </desktop3:CloudFiles>
         </desktop3:Extension>
         <com:Extension Category="windows.comServer">
           <com:ComServer>
             <!-- When changing ProgId make sure to change it also in the ThumbnailProvider.cs -->
             
-            <com:ExeServer DisplayName="VirtualDrive.ThumbnailProvider" Executable="VirtualDrive.ThumbnailProvider\VirtualDrive.ThumbnailProvider.exe">
+            <com:ExeServer DisplayName="VirtualDrive.ShellExtension" Executable="VirtualDrive.ShellExtension\VirtualDrive.ShellExtension.exe">
               <com:Class Id="05CF065E-E135-4B2B-9D4D-CFB3FBAC73A4" />
             </com:ExeServer>            
+            
+            <com:ExeServer DisplayName="VirtualDrive.ShellExtension" Executable="VirtualDrive.ShellExtension\VirtualDrive.ShellExtension.exe">
+              <com:Class Id="A22EBD03-343E-433C-98DF-372C6B3A1538" />
+            </com:ExeServer>
             
           </com:ComServer>
         </com:Extension>

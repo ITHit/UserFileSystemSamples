@@ -65,7 +65,6 @@
     <Reference Include="ITHit.FileSystem">
       <HintPath>..\packages\ITHit.FileSystem.3.0.6973-Beta\lib\netstandard2.0\ITHit.FileSystem.dll</HintPath>
     </Reference>
-	</Reference>
 	<Reference Include="ITHit.FileSystem.Mac">
       <HintPath>..\packages\ITHit.FileSystem.Mac.3.0.6973-Beta\lib\xamarinmac20\ITHit.FileSystem.Mac.dll</HintPath>
     </Reference>

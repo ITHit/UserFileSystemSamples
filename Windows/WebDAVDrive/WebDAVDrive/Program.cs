@@ -263,7 +263,7 @@ namespace WebDAVDrive
         /// Event handler to process WebDAV errors. 
         /// If server returns 401 or 302 response here we show the login dialog.
         /// </summary>
-        /// <param name="sender">Request to the WebDAV server.</param>
+        /// <param name="sender">WebDAV session.</param>
         /// <param name="e">WebDAV error details.</param>
         private static void DavClient_WebDavError(ISession sender, WebDavErrorEventArgs e)
         {
@@ -275,53 +275,33 @@ namespace WebDAVDrive
                 {
                     // 302 redirect to login page.
                     case 302:
-                        if (loginRetriesCurrent < loginRetriesMax)
-                        {
-                            loginRetriesCurrent++;
 
-                            // Show login dialog.
+                        // Show login dialog.
 
-                            // Azure AD can not navigate directly to login page - failed corelation.
-                            //string loginUrl = ((Redirect302Exception)e.Exception).Location;
-                            //Uri url = new System.Uri(loginUrl, System.UriKind.Absolute);
+                        // Azure AD can not navigate directly to login page - failed corelation.
+                        //string loginUrl = ((Redirect302Exception)e.Exception).Location;
+                        //Uri url = new System.Uri(loginUrl, System.UriKind.Absolute);
 
-                            Uri failedUri = (e.Exception as WebDavHttpException).Uri;
+                        Uri failedUri = (e.Exception as WebDavHttpException).Uri;
 
-                            WebDAVDrive.UI.WebBrowserLogin webBrowserLogin = null;
-                            Thread thread = new Thread(() => {
-                                webBrowserLogin = new WebDAVDrive.UI.WebBrowserLogin(failedUri, DavClient, log);
-                                webBrowserLogin.Title = Settings.ProductName;
-                                webBrowserLogin.ShowDialog();
-                            });
-                            thread.SetApartmentState(ApartmentState.STA);
-                            thread.Start();
-                            thread.Join();
-                            e.Result = WebDavErrorEventResult.ContinueProcessing;
+                        WebDAVDrive.UI.WebBrowserLogin webBrowserLogin = null;
+                        Thread thread = new Thread(() => {
+                            webBrowserLogin = new WebDAVDrive.UI.WebBrowserLogin(failedUri, DavClient, log);
+                            webBrowserLogin.Title = Settings.ProductName;
+                            webBrowserLogin.ShowDialog();
+                        });
+                        thread.SetApartmentState(ApartmentState.STA);
+                        thread.Start();
+                        thread.Join();
+                        e.Result = WebDavErrorEventResult.Repeat;
 
-                            /*
-                            if (loginForm.Cookies != null)
-                            {
-                                // Attach cookies to all future requests.
-                                DavClient.CookieContainer.Add(loginForm.Cookies);
-                                e.Result = WebDavErrorEventResult.Fail;
-
-                                // Set successful response and continue processing.
-                                e.Response = loginForm.Response;
-                                e.Result = WebDavErrorEventResult.ContinueProcessing;
-
-                                // Alternatively you can modify this request, attaching cookies or headers, and replay it.
-                                //e.Request.CookieContainer.Add(loginForm.Cookies);
-                                //e.Result = WebDavErrorEventResult.Repeat;
-                            }
-                            */
-                        }
                         break;
 
                     // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
                     case 401:
                         if (loginRetriesCurrent < loginRetriesMax)
                         {
-                            Uri failedUri = (e.Exception as WebDavHttpException).Uri;
+                            failedUri = (e.Exception as WebDavHttpException).Uri;
                             Windows.Security.Credentials.PasswordCredential passwordCredential = CredentialManager.GetCredentials(Settings.ProductName, log);
                             if (passwordCredential != null)
                             {
@@ -338,7 +318,7 @@ namespace WebDAVDrive
 
                                 // Show login dialog
                                 WebDAVDrive.UI.ChallengeLogin loginForm = null;
-                                Thread thread = new Thread(() =>
+                                thread = new Thread(() =>
                                 {
                                     loginForm = new WebDAVDrive.UI.ChallengeLogin();
                                     ((ChallengeLoginViewModel)loginForm.DataContext).Url = failedUri.OriginalString;
@@ -364,7 +344,6 @@ namespace WebDAVDrive
                                     DavClient.Credentials = new NetworkCredential(login, password);
                                     e.Result = WebDavErrorEventResult.Repeat;
                                 }
-                                e.Result = WebDavErrorEventResult.ContinueProcessing;
                             }
                         }
                         break;

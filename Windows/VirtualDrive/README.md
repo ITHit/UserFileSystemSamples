@@ -19,8 +19,18 @@
 <h2 class="heading-link" id="nav_runningthesample">Running the Sample<a class="list-link d-inline" href="https://www.userfilesystem.com/examples/virtual_file_system/#nav_runningthesample"></a></h2>
 <p>To run the sample open the project in Visual Studio and run the project in debug mode. When starting in the debug mode, it will automatically create a folder in which the virtual file system will reside, register the virtual drive with the platform and then open&nbsp;two instances of Windows File Manager, one of which will show a virtual drive and another a folder simulating remote storage.&nbsp;</p>
 <p>You can find more about running and stopping the sample as well as about basic synchronization features in the&nbsp;<a title="Virtual File System Sample for Windows" href="https://www.userfilesystem.com/examples/virtual_file_system/">Virtual File System</a>&nbsp;sample description.&nbsp;</p>
+<h2>Packaging Project</h2>
+<p>This sample provides a Windows Application Packaging Project which allows deployment of your application to the Windows Store, simplifies COM components debugging (thumbnails handler and Windows Explorer context menu), as well as your application can be installed without admin privileges. The&nbsp;package can be also used for direct&nbsp;<a href="https://www.youtube.com/watch?v=fJkbYPyd08w&amp;t=73s">deployment to users</a>.</p>
+<p>To start the project with thumbnails and context menu support follow these steps:</p>
+<ol>
+<li>Set the packaging project as your startup project.</li>
+<li>Set the VirtualDrive project under the packaging project as an Entry Point.</li>
+</ol>
+<p>Now run the project from Visual Studio. This will automatically register COM components as well as you can start debugging COM components without additional steps.</p>
 <h2>Thumbnails Support</h2>
 <p><span>The Virtual Drive sample provides a separate project with thumbnail provider implementation in the COM object. It loads thumbnails from files located in the remote storage simulation folder and displays them in Windows Explorer. You will adapt this project to load thumbnails from your real remote storage.</span></p>
+<p><span>The thumbnails provider is registered as an application extension by the packing project provided with the sample. To register thumbnails you will simply run the packaging project. You do NOT need to register the thumbnails handler using regsrv32 or any using any other COM registration technique.</span></p>
+<p>&nbsp;</p>
 <h2>Microsoft Office Editing Support</h2>
 <p>Another major difference between the Virtual Drive sample and the <a title="Virtual File System Sample for Windows" href="https://www.userfilesystem.com/examples/virtual_file_system/">Virtual File System</a> sample is its support for Microsoft Office Documents editing. This sample<span>&nbsp;supports synchronization of the MS Office documents, avoiding the creation of the temporary files in the remote storage as well as it does not rename or delete the document in your remote storage during MS Office transactional save operation, preserving all data associated with a file in your remote storage.</span></p>
 <p><span>This sample automatically locks the Microsoft Office document in the remote storage when a document is being opened for editing and automatically unlocks the document when the file is closed. When the document is opened you will see the lock icon&nbsp;<img id="__mcenew" alt="Lock icon" src="https://www.userfilesystem.com/media/2071/locked.png" rel="120785"> in the Status column in Windows File Manager:</span></p>
@@ -31,6 +41,7 @@
 <h2>Window File Manger Custom Columns Support</h2>
 <p><span>This sample registers and displays custom columns in Windows File Manager. For demo purposes the Registrar class add ETag column as well as columns that show information about the lock: Lock Owner, Lock Scope, Lock Expires:</span></p>
 <p><span>&nbsp;&nbsp;<img id="__mcenew" alt="Virtual Drive custom columns being displayed in Windows File Manger" src="https://www.userfilesystem.com/media/2132/customcolumnswindowsfilemanager.png" rel="122440"></span></p>
+<p>&nbsp;</p>
 <h3 class="para d-inline next-article-heading">Next Article:</h3>
 <a title="WebDAV Drive Sample in .NET, C#" href="https://www.userfilesystem.com/examples/webdav_drive/">WebDAV Drive Sample in .NET, C#</a>
 

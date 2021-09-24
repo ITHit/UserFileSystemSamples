@@ -17,11 +17,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VirtualDrive", "VirtualDriv
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtualDrive", "VirtualDrive\VirtualDrive\VirtualDrive.csproj", "{648FB01F-0C4A-409E-A48A-E6722F626AB8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtualDrive.ThumbnailProvider", "VirtualDrive\VirtualDrive.ThumbnailProvider\VirtualDrive.ThumbnailProvider.csproj", "{1E765516-497B-4546-8C38-DB452915ACBF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtualDrive.ShellExtension", "VirtualDrive\VirtualDrive.ShellExtension\VirtualDrive.ShellExtension.csproj", "{1E765516-497B-4546-8C38-DB452915ACBF}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtualFileSystem", "VirtualFileSystem\VirtualFileSystem.csproj", "{06E5D212-CAD4-4880-832D-69D8D69B8E3D}"
 EndProject
 Project("{C7167F0D-BC9F-4E6E-AFE1-012C56B48DB5}") = "VirtualDrive.Package", "VirtualDrive\VirtualDrive.Package\VirtualDrive.Package.wapproj", "{9CC25823-7D6C-4AAA-95A0-EE0514CCABD9}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtualDrive.Rpc", "VirtualDrive\VirtualDrive.Rpc\VirtualDrive.Rpc.csproj", "{8AF00927-2B21-4D1D-8767-73F025D73AF3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -205,6 +207,26 @@ Global
 		{9CC25823-7D6C-4AAA-95A0-EE0514CCABD9}.Release|x86.ActiveCfg = Release|x86
 		{9CC25823-7D6C-4AAA-95A0-EE0514CCABD9}.Release|x86.Build.0 = Release|x86
 		{9CC25823-7D6C-4AAA-95A0-EE0514CCABD9}.Release|x86.Deploy.0 = Release|x86
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Debug|ARM.Build.0 = Debug|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Debug|x64.Build.0 = Debug|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Debug|x86.Build.0 = Debug|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Release|ARM.ActiveCfg = Release|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Release|ARM.Build.0 = Release|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Release|ARM64.Build.0 = Release|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Release|x64.ActiveCfg = Release|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Release|x64.Build.0 = Release|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Release|x86.ActiveCfg = Release|Any CPU
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -215,6 +237,7 @@ Global
 		{648FB01F-0C4A-409E-A48A-E6722F626AB8} = {CAE8E8A6-2721-4C90-BCD9-F4B03C3D8F13}
 		{1E765516-497B-4546-8C38-DB452915ACBF} = {CAE8E8A6-2721-4C90-BCD9-F4B03C3D8F13}
 		{9CC25823-7D6C-4AAA-95A0-EE0514CCABD9} = {CAE8E8A6-2721-4C90-BCD9-F4B03C3D8F13}
+		{8AF00927-2B21-4D1D-8767-73F025D73AF3} = {CAE8E8A6-2721-4C90-BCD9-F4B03C3D8F13}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {740A716A-38A7-46BC-A21F-18336D0023B7}

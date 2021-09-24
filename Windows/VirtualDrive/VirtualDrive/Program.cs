@@ -90,8 +90,10 @@ namespace VirtualDrive
                 Engine = new VirtualEngine(
                     Settings.UserFileSystemLicense,
                     Settings.UserFileSystemRootPath,
+                    Settings.RemoteStorageRootPath,
                     Settings.ServerDataFolderPath,
                     Settings.IconsFolderPath,
+                    Settings.RpcCommunicationChannelName,
                     log);
                 Engine.AutoLock = Settings.AutoLock;
 

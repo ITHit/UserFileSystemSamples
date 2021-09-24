@@ -15,12 +15,6 @@ namespace WebDAVDrive.UI
     public partial class WebBrowserLogin : Window
     {
         /// <summary>
-        /// Succesefull server response or null if no succesefull response was 
-        /// obtained (for example the window was closed by the user). 
-        /// </summary>
-        public IWebResponse Response;
-
-        /// <summary>
         /// Web browser cookies.
         /// </summary>
         public CookieCollection Cookies;
@@ -29,11 +23,6 @@ namespace WebDAVDrive.UI
         /// URL to navigate to. This URL must redirect to a log-in page.
         /// </summary>
         private Uri url;
-
-        /// <summary>
-        /// WebDAV request to send to the server. It will typically redirect tot the login page.
-        /// </summary>
-        private IWebRequest request;
 
         /// <summary>
         /// WebDAV Client to make a test request to verify that user has loged-in succesefully.
@@ -123,7 +112,7 @@ namespace WebDAVDrive.UI
         /// <summary>
         /// WebResourceResponseReceived event hanlder
         /// </summary>
-        private async void WebResourceResponseReceived(object sender, Microsoft.Web.WebView2.Core.CoreWebView2WebResourceResponseReceivedEventArgs e)
+        private async void WebResourceResponseReceived(object sender, CoreWebView2WebResourceResponseReceivedEventArgs e)
         {
             // Here we test if the login is succeseful resending the original request to the server.
             // You may want to check the return URL or rely on the number of redirects instead of resending the request.
@@ -136,6 +125,9 @@ namespace WebDAVDrive.UI
                     && e.Request.Uri.Equals(url.OriginalString, StringComparison.InvariantCultureIgnoreCase)
                     && e.Request.Method == "GET")
                 {
+                    // Fix for a WebView2 bug with cached page replay workaround on an unsuccessful page load.
+                    await webView.ExecuteScriptAsync("window.location.reload();");
+
                     // Read cookies.
                     List<CoreWebView2Cookie> webViewcookies = await webView.CoreWebView2.CookieManager.GetCookiesAsync(url.OriginalString);
                     if (webViewcookies.Count != 0)
@@ -143,15 +135,8 @@ namespace WebDAVDrive.UI
                         CookieCollection netCookies = new CookieCollection();
                         webViewcookies.ForEach((x) => { netCookies.Add(x.ToSystemNetCookie()); });
 
-                        // Copy cookies from web browser window into original  request.
-                        //request.CookieContainer.Add(netCookies);
-
                         try
                         {
-                            // Test if the original request works after we set cookies.
-                            // We do not want the error event to fire in this case.
-                            //Response = await request.GetResponseAsync(false);
-
                             davClient.CookieContainer.Add(netCookies);
                             // Can't validate cookies the following way, as it triggers a continues Login dialog appear if cookies are incorrect
                             //await davClient.GetItemAsync(url);

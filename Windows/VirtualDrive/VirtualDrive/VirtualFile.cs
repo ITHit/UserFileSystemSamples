@@ -75,7 +75,7 @@ namespace VirtualDrive
         /// <inheritdoc/>
         public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null)
         {
-            if(MsOfficeHelper.IsMsOfficeLocked(UserFileSystemPath)) // Required for PowerPoint. It does not block the for writing.
+            if(MsOfficeHelper.IsMsOfficeLocked(UserFileSystemPath)) // Required for PowerPoint. It does not block the file for writing.
             {
                 throw new ClientLockFailedException("The file is blocked for writing.");
             }

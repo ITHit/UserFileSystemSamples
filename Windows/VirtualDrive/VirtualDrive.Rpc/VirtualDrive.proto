@@ -1,0 +1,19 @@
+﻿syntax = "proto3";
+
+package VirtualDrive.Rpc.Generated;
+
+service VirtualDriveRpc {
+	rpc SetLockStatus (ItemsStatusList) returns (EmptyMessage) {}
+	rpc GetLockStatus (ItemsPathList) returns (ItemsStatusList) {}
+}
+
+message ItemsPathList {
+    repeated string files = 1;
+}
+
+message ItemsStatusList {
+    map<string, bool> filesStatus = 1;	
+}
+
+message EmptyMessage {
+}

@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0-windows10.0.19041.0</TargetFramework>
-    <CsWinRTWindowsMetadata>10.0.19041.0</CsWinRTWindowsMetadata>
+    <TargetFramework>net5.0-windows10.0.18362.0</TargetFramework>
+    <CsWinRTWindowsMetadata>10.0.18362.0</CsWinRTWindowsMetadata>
     <Authors>IT Hit LTD.</Authors>
     <Company>IT Hit LTD.</Company>
     <Product>Virtual Drive</Product>
@@ -29,8 +29,9 @@ This is an advanced project with ETags support, Microsoft Office documents editi
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="4.0.10295.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="4.0.10312.0-Beta" />
     <ProjectReference Include="..\..\Common\Common.Windows.csproj" />
+    <ProjectReference Include="..\VirtualDrive.Rpc\VirtualDrive.Rpc.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json">

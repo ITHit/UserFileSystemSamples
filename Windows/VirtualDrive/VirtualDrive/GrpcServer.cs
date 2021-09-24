@@ -1,0 +1,69 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using ITHit.FileSystem;
+using ITHit.FileSystem.Windows;
+using VirtualDrive.Rpc.Generated;
+using GrpcDotNetNamedPipes;
+using ITHit.FileSystem.Samples.Common.Windows;
+using log4net;
+
+namespace VirtualDrive
+{
+    /// <summary>
+    /// Provides RPC methods thought name pipes channel and protobuf protocol.
+    /// </summary>
+    public class GrpcServer : Logger, IDisposable
+    {
+        private string rpcCommunicationChannelName;
+
+        private IDisposable namedPipeServer;
+
+        private EngineWindows engine;
+
+        public GrpcServer(string rpcCommunicationChannelName, EngineWindows engine, ILog log4net)
+            : base("gRPC Server", log4net)
+        {
+            this.rpcCommunicationChannelName = rpcCommunicationChannelName;
+
+            namedPipeServer = null;
+            this.engine = engine;
+        }
+
+        /// <summary>
+        /// Starts server and bind RPC methods handler.
+        /// </summary>
+        public void Start()
+        {
+            try
+            {
+                var server = new NamedPipeServer(rpcCommunicationChannelName);
+                VirtualDriveRpc.BindService(server.ServiceBinder, new GprcServerServiceImpl(engine, this));
+                server.Start();
+                namedPipeServer = server;
+
+                LogMessage("Started");
+            }
+            catch (Exception ex)
+            {
+                LogError(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Stops server.
+        /// </summary>
+        public void Stop()
+        {
+            namedPipeServer?.Dispose();
+            namedPipeServer = null;
+
+            LogMessage("Stopped");
+        }
+
+        public void Dispose()
+        {
+            Stop();
+        }
+    }
+}

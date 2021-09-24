@@ -79,7 +79,7 @@ namespace WebDAVDrive
         /// <inheritdoc/>
         public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null)
         {
-            if(MsOfficeHelper.IsMsOfficeLocked(UserFileSystemPath)) // Required for PowerPoint. It does not block the for writing.
+            if(MsOfficeHelper.IsMsOfficeLocked(UserFileSystemPath)) // Required for PowerPoint. It does not block the file for writing.
             {
                 throw new ClientLockFailedException("The file is blocked for writing.");
             }
@@ -103,6 +103,8 @@ namespace WebDAVDrive
                 string eTagNew = await Program.DavClient.FileWriteAsync(new Uri(RemoteStoragePath), async (outputStream) => {
                     if (content != null)
                     {
+                        // Rewind for new copy (e.g. retry)
+                        content.Position = 0;
                         await content.CopyToAsync(outputStream);
                     }
                 }, null, contentLength, 0, -1, lockTokens, oldEtag);

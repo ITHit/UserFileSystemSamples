@@ -21,7 +21,12 @@ namespace VirtualDrive
         /// <summary>
         /// Monitors changes in the remote storage, notifies the client and updates the user file system.
         /// </summary>
-        internal readonly RemoteStorageMonitor RemoteStorageMonitor;
+        internal readonly RemoteStorageMonitor remoteStorageMonitor;
+
+        /// <summary>
+        /// Gprc server control.
+        /// </summary>
+        internal readonly GrpcServer grpcServer;
 
         /// <summary>
         /// Monitors MS Office documents renames in the user file system.
@@ -48,11 +53,11 @@ namespace VirtualDrive
         /// </param>
         /// <param name="serverDataFolderPath">Path to the folder that stores custom data associated with files and folders.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
-        /// <param name="log">Logger.</param>
-        public VirtualEngine(string license, string userFileSystemRootPath, string serverDataFolderPath, string iconsFolderPath, ILog log) 
+        /// <param name="log4net">Log4net logger.</param>
+        public VirtualEngine(string license, string userFileSystemRootPath, string remoteStorageRootPath, string serverDataFolderPath, string iconsFolderPath, string rpcCommunicationChannelName, ILog log4net) 
             : base(license, userFileSystemRootPath)
         {
-            logger = new Logger("File System Engine", log) ?? throw new NullReferenceException(nameof(log));
+            logger = new Logger("File System Engine", log4net) ?? throw new NullReferenceException(nameof(log4net));
             this.serverDataFolderPath = serverDataFolderPath ?? throw new NullReferenceException(nameof(serverDataFolderPath));
             this.iconsFolderPath = iconsFolderPath ?? throw new NullReferenceException(nameof(iconsFolderPath));
 
@@ -64,9 +69,9 @@ namespace VirtualDrive
             Error += Engine_Error;
             Message += Engine_Message;
 
-            string remoteStorageRootPath = Mapping.MapPath(userFileSystemRootPath);
-            RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log);
-            msOfficeDocsMonitor = new MsOfficeDocsMonitor(userFileSystemRootPath, this, log);
+            remoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log4net);
+            msOfficeDocsMonitor = new MsOfficeDocsMonitor(userFileSystemRootPath, this, log4net);
+            grpcServer = new GrpcServer(rpcCommunicationChannelName, this, log4net);
         }
 
         /// <inheritdoc/>
@@ -107,15 +112,17 @@ namespace VirtualDrive
         public override async Task StartAsync()
         {
             await base.StartAsync();
-            RemoteStorageMonitor.Start();
+            remoteStorageMonitor.Start();
             msOfficeDocsMonitor.Start();
+            grpcServer.Start();
         }
 
         public override async Task StopAsync()
         {
             await base.StopAsync();
-            RemoteStorageMonitor.Stop();
+            remoteStorageMonitor.Stop();
             msOfficeDocsMonitor.Stop();
+            grpcServer.Stop();
         }
 
         private void Engine_Message(IEngine sender, EngineMessageEventArgs e)
@@ -154,7 +161,7 @@ namespace VirtualDrive
             {
                 if (disposing)
                 {
-                    RemoteStorageMonitor.Dispose();
+                    remoteStorageMonitor.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
