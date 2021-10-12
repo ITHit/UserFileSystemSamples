@@ -76,7 +76,7 @@ namespace VirtualDrive
                 Logger.LogMessage("Moved item in remote storage succesefully", userFileSystemOldPath, userFileSystemNewPath, operationContext);
             }
 
-            await Engine.CustomDataManager(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath);
+            await Engine.ExternalDataManager(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath);
         }
 
         /// <inheritdoc/>
@@ -100,16 +100,6 @@ namespace VirtualDrive
             // https://docs.microsoft.com/en-us/answers/questions/75240/bug-report-cfapi-ackdelete-borken-on-win10-2004.html
 
             // Note that some applications, such as Windows Explorer may call delete more than one time on the same file/folder.
-        }
-
-        /// <inheritdoc/>
-        public async Task DeleteCompletionAsync(IOperationContext operationContext, IResultContext resultContext)
-        {
-            // On Windows, for move with overwrite on folders to function correctly, 
-            // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
-            // Otherwise the folder will be deleted before files in it can be moved.
-
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", UserFileSystemPath, default, operationContext);
 
             FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(RemoteStoragePath);
             if (remoteStorageItem != null)
@@ -125,7 +115,19 @@ namespace VirtualDrive
                 Logger.LogMessage("Deleted item in remote storage succesefully", UserFileSystemPath, default, operationContext);
             }
 
-            Engine.CustomDataManager(UserFileSystemPath, Logger).Delete();
+            Engine.ExternalDataManager(UserFileSystemPath, Logger).Delete();
+        }
+
+        /// <inheritdoc/>
+        public async Task DeleteCompletionAsync(IOperationContext operationContext, IResultContext resultContext)
+        {
+            // On Windows, for move with overwrite on folders to function correctly, 
+            // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
+            // Otherwise the folder will be deleted before files in it can be moved.
+
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", UserFileSystemPath, default, operationContext);
+
+
         }
 
         ///<inheritdoc>
@@ -154,14 +156,13 @@ namespace VirtualDrive
         }
 
         ///<inheritdoc>
-        public async Task LockAsync(LockMode lockMode)
+        public async Task LockAsync(LockMode lockMode, IOperationContext operationContext = null)
         {
-            Logger.LogMessage($"{nameof(ILock)}.{nameof(LockAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(ILock)}.{nameof(LockAsync)}()", UserFileSystemPath, default, operationContext);
 
-            ExternalDataManager customDataManager = Engine.CustomDataManager(UserFileSystemPath, Logger);
+            ExternalDataManager customDataManager = Engine.ExternalDataManager(UserFileSystemPath, Logger);
             LockManager lockManager = customDataManager.LockManager;
-            if (!await lockManager.IsLockedAsync()
-                && !Engine.CustomDataManager(UserFileSystemPath).IsNew)
+            if (!Engine.ExternalDataManager(UserFileSystemPath).IsNew)
             {
                 // Set pending icon, so the user has a feedback as lock operation may take some time.
                 await customDataManager.SetLockPendingIconAsync(true);
@@ -179,26 +180,23 @@ namespace VirtualDrive
                 // Set lock icon and lock info in custom columns.
                 await customDataManager.SetLockInfoAsync(lockInfo);
 
-                Logger.LogMessage("Locked in remote storage succesefully.", UserFileSystemPath);
+                Logger.LogMessage("Locked in remote storage succesefully.", UserFileSystemPath, default, operationContext);
             }
         }
 
         ///<inheritdoc>
-        public async Task<LockMode> GetLockModeAsync()
+        public async Task<LockMode> GetLockModeAsync(IOperationContext operationContext = null)
         {
-            LockManager lockManager = Engine.CustomDataManager(UserFileSystemPath, Logger).LockManager;
+            LockManager lockManager = Engine.ExternalDataManager(UserFileSystemPath, Logger).LockManager;
             return await lockManager.GetLockModeAsync();
         }
 
         ///<inheritdoc>
-        public async Task UnlockAsync()
+        public async Task UnlockAsync(IOperationContext operationContext = null)
         {
-            if (MsOfficeHelper.IsMsOfficeLocked(UserFileSystemPath)) // Required for PowerPoint. It does not block the for writing.
-            {
-                throw new ClientLockFailedException("The file is blocked for writing.");
-            }
+            Logger.LogMessage($"{nameof(ILock)}.{nameof(UnlockAsync)}()", UserFileSystemPath, default, operationContext);
 
-            ExternalDataManager customDataManager = Engine.CustomDataManager(UserFileSystemPath, Logger);
+            ExternalDataManager customDataManager = Engine.ExternalDataManager(UserFileSystemPath, Logger);
             LockManager lockManager = customDataManager.LockManager;
 
             // Set pending icon, so the user has a feedback as unlock operation may take some time.
@@ -215,7 +213,7 @@ namespace VirtualDrive
             // Remove lock icon and lock info in custom columns.
             await customDataManager.SetLockInfoAsync(null);
 
-            Logger.LogMessage("Unlocked in the remote storage succesefully", UserFileSystemPath);
+            Logger.LogMessage("Unlocked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
         }
 
     }

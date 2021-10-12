@@ -19,14 +19,13 @@ namespace VirtualDrive
 
         private IDisposable namedPipeServer;
 
-        private EngineWindows engine;
+        private readonly EngineWindows engine;
 
         public GrpcServer(string rpcCommunicationChannelName, EngineWindows engine, ILog log4net)
             : base("gRPC Server", log4net)
         {
             this.rpcCommunicationChannelName = rpcCommunicationChannelName;
 
-            namedPipeServer = null;
             this.engine = engine;
         }
 
@@ -37,7 +36,12 @@ namespace VirtualDrive
         {
             try
             {
-                var server = new NamedPipeServer(rpcCommunicationChannelName);
+                if (namedPipeServer != null)
+                {
+                    Stop();
+                }
+
+                NamedPipeServer server = new NamedPipeServer(rpcCommunicationChannelName);
                 VirtualDriveRpc.BindService(server.ServiceBinder, new GprcServerServiceImpl(engine, this));
                 server.Start();
                 namedPipeServer = server;
@@ -55,10 +59,13 @@ namespace VirtualDrive
         /// </summary>
         public void Stop()
         {
-            namedPipeServer?.Dispose();
-            namedPipeServer = null;
+            if (namedPipeServer != null)
+            {
+                namedPipeServer.Dispose();
+                namedPipeServer = null;
 
-            LogMessage("Stopped");
+                LogMessage("Stopped");
+            }
         }
 
         public void Dispose()

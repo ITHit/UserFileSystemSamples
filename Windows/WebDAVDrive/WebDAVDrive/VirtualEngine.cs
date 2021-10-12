@@ -8,6 +8,8 @@ using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 using System;
 using System.Net.WebSockets;
+using System.Threading;
+using System.Net;
 
 namespace WebDAVDrive
 {
@@ -25,9 +27,10 @@ namespace WebDAVDrive
         internal readonly RemoteStorageMonitor RemoteStorageMonitor;
 
         /// <summary>
-        /// Monitors MS Office documents renames in the user file system.
+        /// Monitors documents renames and attributes changes in the user file system. 
+        /// Required for transactional saves performed by MS Office, AutoCAD, as well as for Notepad++, etc.
         /// </summary>
-        private readonly MsOfficeDocsMonitor msOfficeDocsMonitor;
+        private readonly FilteredDocsMonitor filteredDocsMonitor;
 
         /// <summary>
         /// Path to the folder that custom data associated with files and folders.
@@ -38,6 +41,11 @@ namespace WebDAVDrive
         /// Path to the icons folder.
         /// </summary>
         private readonly string iconsFolderPath;
+
+        /// <summary>
+        /// Gets or sets a value that indicates whether to send an authenticate header with the websocket.
+        /// </summary>
+        public NetworkCredential WebSocketCredentials { get; set; }
 
         /// <summary>
         /// Creates a vitual file system Engine.
@@ -66,7 +74,7 @@ namespace WebDAVDrive
             Message += Engine_Message;
 
             RemoteStorageMonitor = new RemoteStorageMonitor(webSocketServerUrl, this, log);
-            msOfficeDocsMonitor = new MsOfficeDocsMonitor(userFileSystemRootPath, this, log);
+            filteredDocsMonitor = new FilteredDocsMonitor(userFileSystemRootPath, this, log);
         }
 
         /// <inheritdoc/>
@@ -83,23 +91,34 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public override async Task<bool> FilterAsync(string userFileSystemPath, string userFileSystemNewPath = null)
+        public override async Task<bool> FilterAsync(OperationType operationType, string userFileSystemPath, string userFileSystemNewPath = null, IOperationContext operationContext = null)
         {
-            // IsMsOfficeLocked() check is required for MS Office PowerPoint. 
-            // PowerPoint does not block the file for reading when the file is opened for editing.
-            // As a result the file will be sent to the remote storage during each file save operation.
+            try
+            {
+                switch (operationType)
+                {
+                    case OperationType.Update:
+                        // PowerPoint does not block the file for reading when the file is opened for editing.
+                        // As a result the file will be sent to the remote storage during each file save operation.
+                        // This also improves performance of the file save including for AutoCAD files.
+                        return FilterHelper.AvoidSync(userFileSystemPath)
+                            || FilterHelper.IsAppLocked(userFileSystemPath);
 
-            if (userFileSystemNewPath == null)
-            {
-                // Executed during create, update, delete, open, close.
-                return MsOfficeHelper.AvoidMsOfficeSync(userFileSystemPath);
+                    case OperationType.Move:
+                        // When a hydrated file is deleted, it is moved to a Recycle Bin.
+                        return FilterHelper.IsRecycleBin(userFileSystemNewPath)
+                            || FilterHelper.AvoidSync(userFileSystemNewPath);
+
+                    default:
+                        return FilterHelper.AvoidSync(userFileSystemPath);
+                }
             }
-            else
+            catch (FileNotFoundException ex)
             {
-                // Executed during rename/move operation.
-                return
-                       MsOfficeHelper.IsRecycleBin(userFileSystemNewPath) // When a hydrated file is deleted, it is moved to a Recycle Bin.
-                    || MsOfficeHelper.AvoidMsOfficeSync(userFileSystemNewPath);
+                // Typically the file is not found in case of some temporary file that is being deleted.
+                // We do not want to continue processing this file, and we do not want any exceptions in the log as this is a normal behaviour.
+                LogMessage(ex.Message, userFileSystemPath, userFileSystemNewPath, operationContext);
+                return true;
             }
         }
 
@@ -107,23 +126,15 @@ namespace WebDAVDrive
         public override async Task StartAsync()
         {
             await base.StartAsync();
-            try
-            {
-                // Uncomment to enable websockets.
-                //await RemoteStorageMonitor.StartAsync();
-            }
-            catch (WebSocketException e) {
-                // Start socket after first success webdav propfind. Restart socket when it disconnects.
-                logger.LogError(e.Message);
-            };
-            msOfficeDocsMonitor.Start();
+            await RemoteStorageMonitor.StartAsync(WebSocketCredentials);
+            filteredDocsMonitor.Start();
         }
 
         public override async Task StopAsync()
         {
             await base.StopAsync();
             await RemoteStorageMonitor.StopAsync();
-            msOfficeDocsMonitor.Stop();
+            filteredDocsMonitor.Stop();
         }
 
         private void Engine_Message(IEngine sender, EngineMessageEventArgs e)
@@ -147,9 +158,9 @@ namespace WebDAVDrive
         }
 
         /// <summary>
-        /// Manages custom data associated with the item. 
+        /// Manages custom data associated with the item and stored outside of the item. 
         /// </summary>
-        internal ExternalDataManager CustomDataManager(string userFileSystemPath, ILogger logger = null)
+        internal ExternalDataManager ExternalDataManager(string userFileSystemPath, ILogger logger = null)
         {
             return new ExternalDataManager(userFileSystemPath, serverDataFolderPath, Path, iconsFolderPath, logger ?? this.logger);
         }
@@ -163,6 +174,7 @@ namespace WebDAVDrive
                 if (disposing)
                 {
                     RemoteStorageMonitor.Dispose();
+                    filteredDocsMonitor.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer

@@ -94,7 +94,7 @@ namespace VirtualFileSystem
                 string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
 
                 // This check is only required because we can not prevent circular calls because of the simplicity of this example.
-                // In your real-life application you will not sent updates from server back to client that issued the update.
+                // In your real-life application you will not send updates from server back to client that issued the update.
                 if (!FsPath.Exists(userFileSystemPath))
                 {
                     string userFileSystemParentPath = Path.GetDirectoryName(userFileSystemPath);
@@ -135,7 +135,7 @@ namespace VirtualFileSystem
                 userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
 
                 // This check is only required because we can not prevent circular calls because of the simplicity of this example.
-                // In your real-life application you will not sent updates from server back to client that issued the update.
+                // In your real-life application you will not send updates from server back to client that issued the update.
                 if (IsModified(userFileSystemPath, remoteStoragePath))
                 {
                     FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
@@ -173,7 +173,7 @@ namespace VirtualFileSystem
                 string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
 
                 // This check is only required because we can not prevent circular calls because of the simplicity of this example.
-                // In your real-life application you will not sent updates from server back to client that issued the update.
+                // In your real-life application you will not send updates from server back to client that issued the update.
                 Thread.Sleep(2000); // This can be removed in a real-life application.
                 if (FsPath.Exists(userFileSystemPath))
                 {
@@ -206,7 +206,7 @@ namespace VirtualFileSystem
                 string userFileSystemNewPath = Mapping.ReverseMapPath(remoteStorageNewPath);
 
                 // This check is only required because we can not prevent circular calls because of the simplicity of this example.
-                // In your real-life application you will not sent updates from server back to client that issued the update.
+                // In your real-life application you will not send updates from server back to client that issued the update.
                 Thread.Sleep(2000); // This can be removed in a real-life application.
                 if (FsPath.Exists(userFileSystemOldPath))
                 {
@@ -282,6 +282,14 @@ namespace VirtualFileSystem
             {
                 if (new FileInfo(filePath1).Length == new FileInfo(filePath2).Length)
                 {
+                    // Verify that the file is not offline,
+                    // therwise the file will be hydrated when the file stream is opened.
+                    if (new FileInfo(filePath1).Attributes.HasFlag(System.IO.FileAttributes.Offline)
+                        || new FileInfo(filePath1).Attributes.HasFlag(System.IO.FileAttributes.Offline))
+                    {
+                        return false;
+                    }
+
                     byte[] hash1;
                     byte[] hash2;
                     using (var alg = System.Security.Cryptography.MD5.Create())

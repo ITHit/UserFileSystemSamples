@@ -98,7 +98,7 @@ namespace VirtualDrive
                     else if (!Directory.Exists(remoteStorageRootPath))
                     {
                         // Path to RemoteStorage folder when run VirtualDrive.Package project directly.
-                        remoteStorageRootPath = Path.GetFullPath(Path.Combine(execPath, "..", "..", "..", "..", "..", "..", "VirtualDrive", settings.RemoteStorageRootPath));
+                        remoteStorageRootPath = Path.GetFullPath(Path.Combine(execPath, "..", "..", "..", "..", "..", "..", settings.AppID, settings.RemoteStorageRootPath));
                     }
                 }
 
@@ -113,11 +113,6 @@ namespace VirtualDrive
             if (!Directory.Exists(settings.UserFileSystemRootPath))
             {
                 settings.UserFileSystemRootPath = Environment.ExpandEnvironmentVariables(settings.UserFileSystemRootPath);
-            }
-
-            if (!Directory.Exists(settings.UserFileSystemRootPath))
-            {
-                Directory.CreateDirectory(settings.UserFileSystemRootPath);
             }
 
             string assemblyLocation = Assembly.GetEntryAssembly().Location;

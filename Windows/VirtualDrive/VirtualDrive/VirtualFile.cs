@@ -75,14 +75,9 @@ namespace VirtualDrive
         /// <inheritdoc/>
         public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null)
         {
-            if(MsOfficeHelper.IsMsOfficeLocked(UserFileSystemPath)) // Required for PowerPoint. It does not block the file for writing.
-            {
-                throw new ClientLockFailedException("The file is blocked for writing.");
-            }
-
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
-            ExternalDataManager customDataManager = Engine.CustomDataManager(UserFileSystemPath);
+            ExternalDataManager customDataManager = Engine.ExternalDataManager(UserFileSystemPath);
             // Send the ETag to the server as part of the update to ensure the file in the remote storge is not modified since last read.
             string oldEtag = await customDataManager.ETagManager.GetETagAsync();
 

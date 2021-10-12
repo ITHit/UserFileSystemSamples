@@ -57,7 +57,7 @@ namespace WebDAVDrive
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
             XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
 
-            // Enable UTF8 for Console Window
+            // Enable UTF8 for Console Window.
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
             log.Info($"\n{Process.GetCurrentProcess().ProcessName} {Settings.AppID}");
@@ -127,6 +127,7 @@ namespace WebDAVDrive
             catch (Exception ex)
             {
                 log.Error(ex);
+                exitKey = Console.ReadKey();
             }
             finally
             {
@@ -159,7 +160,9 @@ namespace WebDAVDrive
 
                 try
                 {
-                    Directory.Delete(Settings.ServerDataFolderPath, true);
+                    string localApplicationDataFolderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                    string appDataPath = Path.Combine(localApplicationDataFolderPath, Settings.AppID);
+                    Directory.Delete(appDataPath, true);
                 }
                 catch (Exception ex)
                 {
@@ -243,10 +246,10 @@ namespace WebDAVDrive
         private static void DavClient_WebDAVMessage(ISession client, WebDavMessageEventArgs e)
         {
             string msg = $"\n{e.Message}";
-            if (e.LogLevel == LogLevel.Debug)
-                log.Debug($"{msg}\n");
-            else
-                log.Info(msg);
+            //if (e.LogLevel == LogLevel.Debug)
+            //    log.Debug($"{msg}\n");
+            //else
+                log.Info($"{msg}\n");
         }
 
         /// <summary>
@@ -294,7 +297,6 @@ namespace WebDAVDrive
                         thread.Start();
                         thread.Join();
                         e.Result = WebDavErrorEventResult.Repeat;
-
                         break;
 
                     // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
@@ -306,7 +308,8 @@ namespace WebDAVDrive
                             if (passwordCredential != null)
                             {
                                 passwordCredential.RetrievePassword();
-                                DavClient.Credentials = new NetworkCredential(passwordCredential.UserName, passwordCredential.Password);
+                                Engine.WebSocketCredentials = new NetworkCredential(passwordCredential.UserName, passwordCredential.Password);
+                                DavClient.Credentials = Engine.WebSocketCredentials;
                                 e.Result = WebDavErrorEventResult.Repeat;
                             }
                             else
@@ -341,7 +344,8 @@ namespace WebDAVDrive
                                     {
                                         CredentialManager.SaveCredentials(Settings.ProductName, login, password);
                                     }
-                                    DavClient.Credentials = new NetworkCredential(login, password);
+                                    Engine.WebSocketCredentials = new NetworkCredential(login, password);
+                                    DavClient.Credentials = Engine.WebSocketCredentials;
                                     e.Result = WebDavErrorEventResult.Repeat;
                                 }
                             }

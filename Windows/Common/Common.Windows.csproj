@@ -12,7 +12,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="4.0.10312.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="4.0.10509.0-Beta" />
     <ProjectReference Include="..\..\Common\Common.csproj" />
   </ItemGroup>
 </Project>

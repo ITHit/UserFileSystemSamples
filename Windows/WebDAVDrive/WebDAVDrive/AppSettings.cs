@@ -76,11 +76,6 @@ namespace WebDAVDrive
                 settings.UserFileSystemRootPath = Environment.ExpandEnvironmentVariables(settings.UserFileSystemRootPath);
             }
 
-            if (!Directory.Exists(settings.UserFileSystemRootPath))
-            {
-                Directory.CreateDirectory(settings.UserFileSystemRootPath);
-            }
-
             string assemblyLocation = Assembly.GetEntryAssembly().Location;
 
             // Icons folder.

@@ -37,14 +37,14 @@ namespace WebDAVDrive
 
             // Update remote storage file content.
             // Get the new ETag returned by the server (if any).
-            string eTagNew = await Program.DavClient.FileWriteAsync(newFileUri, async (outputStream) => {
+            string eTagNew = await Program.DavClient.UploadAsync(newFileUri, async (outputStream) => {
                 if (content != null)
                 {
                     await content.CopyToAsync(outputStream);
                 }
             }, null, contentLength);
 
-            ExternalDataManager customDataManager = Engine.CustomDataManager(userFileSystemNewItemPath);
+            ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemNewItemPath);
 
             // Store ETag unlil the next update.
             // This will also mark the item as not new, which is required for correct MS Office saving opertions.
@@ -100,7 +100,7 @@ namespace WebDAVDrive
                     userFileSystemChildren.Add(itemInfo);
                 }
 
-                ExternalDataManager customDataManager = Engine.CustomDataManager(userFileSystemItemPath);
+                ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemItemPath);
 
                 // Mark this item as not new, which is required for correct MS Office saving opertions.
                 customDataManager.IsNew = false;
@@ -114,7 +114,7 @@ namespace WebDAVDrive
             foreach (FileSystemItemMetadataExt child in userFileSystemChildren)
             {
                 string userFileSystemItemPath = Path.Combine(UserFileSystemPath, child.Name);
-                ExternalDataManager customDataManager = Engine.CustomDataManager(userFileSystemItemPath);
+                ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemItemPath);
 
                 // Save ETag on the client side, to be sent to the remote storage as part of the update.
                 // Setting ETag also marks an item as not new.
@@ -125,7 +125,8 @@ namespace WebDAVDrive
                 await customDataManager.ETagManager.SetETagAsync(child.ETag);
 
                 // Set the read-only attribute and all custom columns data.
-                await customDataManager.SetLockedByAnotherUserAsync(child.LockedByAnotherUser);
+                bool isLockedByThisUser = await customDataManager.LockManager.IsLockedByThisUserAsync();
+                await customDataManager.SetLockedByAnotherUserAsync(child.IsLocked && !isLockedByThisUser);
                 await customDataManager.SetCustomColumnsAsync(child.CustomProperties);
             }
         }

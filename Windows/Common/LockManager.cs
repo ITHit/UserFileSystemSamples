@@ -11,7 +11,7 @@ using ITHit.FileSystem.Windows;
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
     /// <summary>
-    /// Manages lock-info and lock mode files that correspond with the file in the user file system. 
+    /// Manages lock-info and lock-mode files that correspond with the file in the user file system. 
     /// </summary>
     /// <remarks>
     /// <para>
@@ -19,6 +19,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
     /// is renamed and deleted during MS Office transactional save operation. 
     /// The lock must remain regardless of the transactional save.
     /// </para>
+    /// <para>The lock-info file contains information about the lock. The file may be locked either by this user or by another user.</para>
+    /// <para>The lock-mode file indicates if the file should be unlocked automatically. This file exists only if the file is locked by this user.</para>
     /// </remarks>
     public class LockManager
     {
@@ -52,8 +54,14 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         private readonly ILogger logger;
 
+        /// <summary>
+        /// Lock-mode file extension.
+        /// </summary>
         private const string lockModeExt = ".lockmode";
 
+        /// <summary>
+        /// Lock-info file extension.
+        /// </summary>
         private const string lockInfoExt = ".lockinfo";
 
         /// <summary>
@@ -97,7 +105,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <returns>Lock mode or <see cref="LockMode.None"/> if the file is not locked.</returns>
         public async Task<LockMode> GetLockModeAsync()
         {
-            if(!File.Exists(lockModeFilePath))
+            if(!File.Exists(lockModeFilePath) || (new FileInfo(lockModeFilePath).Length==0) )
             {
                 return LockMode.None;
             }
@@ -109,11 +117,23 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <summary>
-        /// Returns true if the file or folder is locked. 
+        /// Creates an empty lock-mode file to indicate that the lock was started by this user on this machine.
         /// </summary>
-        public async Task<bool> IsLockedAsync()
+        public async Task SetLockPending()
         {
-            return File.Exists(lockInfoFilePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(lockModeFilePath));
+            using (FileStream stream = File.Open(lockModeFilePath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            {
+
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the file or folder is locked by this user on this machine.
+        /// </summary>
+        public async Task<bool> IsLockedByThisUserAsync()
+        {
+            return File.Exists(lockModeFilePath);
         }
 
         /// <summary>
@@ -151,22 +171,28 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         public void DeleteLock()
         {
-            try
+            if (File.Exists(lockModeFilePath))
             {
-                File.Delete(lockModeFilePath);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError("Failed to delete lock-mode file.", userFileSystemPath, null, ex);
+                try
+                {
+                    File.Delete(lockModeFilePath);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError("Failed to delete lock-mode file.", userFileSystemPath, null, ex);
+                }
             }
 
-            try
+            if (File.Exists(lockInfoFilePath))
             {
-                File.Delete(lockInfoFilePath);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError("Failed to delete lock-token file.", userFileSystemPath, null, ex);
+                try
+                {
+                    File.Delete(lockInfoFilePath);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError("Failed to delete lock-token file.", userFileSystemPath, null, ex);
+                }
             }
         }
 

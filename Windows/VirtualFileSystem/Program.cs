@@ -100,6 +100,7 @@ namespace VirtualFileSystem
             catch (Exception ex)
             {
                 log.Error(ex);
+                exitKey = Console.ReadKey();
             }
             finally
             {

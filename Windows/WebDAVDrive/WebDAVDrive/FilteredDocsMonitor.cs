@@ -10,12 +10,13 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 
-namespace VirtualDrive
+namespace WebDAVDrive
 {
     /// <summary>
-    /// Monitors MS Office files renames in the user file system and sends changes to the remote storage.
+    /// Monitors MS Office amd AutoCAD file renames and updates in the user file system and sends changes to the remote storage. 
+    /// Also monitors Notepad++ offline attribute removal.
     /// </summary>
-    internal class MsOfficeDocsMonitor : Logger, IDisposable
+    internal class FilteredDocsMonitor : Logger, IDisposable
     {
         /// <summary>
         /// User file system watcher.
@@ -34,8 +35,8 @@ namespace VirtualDrive
         /// <param name="userFileSystemRootPath">User file system root path.</param>
         /// <param name="engine">Engine.</param>
         /// <param name="logger">Logger.</param>
-        internal MsOfficeDocsMonitor(string userFileSystemRootPath, VirtualEngine engine, ILog log)
-            : base("MS Office docs Monitor", log)
+        internal FilteredDocsMonitor(string userFileSystemRootPath, VirtualEngine engine, ILog log)
+            : base("Filtered Docs Monitor", log)
         {
             if(string.IsNullOrEmpty(userFileSystemRootPath))
             {
@@ -81,7 +82,15 @@ namespace VirtualDrive
         /// </summary>
         private async void CreatedAsync(object sender, FileSystemEventArgs e)
         {
-            LogMessage("Creating", e.FullPath);
+            LogMessage(e.ChangeType.ToString(), e.FullPath);
+        }
+
+        /// <summary>
+        /// Called when a file or folder is deleted in the user file system.
+        /// </summary>
+        private async void DeletedAsync(object sender, FileSystemEventArgs e)
+        {
+            LogMessage(e.ChangeType.ToString(), e.FullPath);
         }
 
         /// <summary>
@@ -90,16 +99,38 @@ namespace VirtualDrive
         private async void ChangedAsync(object sender, FileSystemEventArgs e)
         {
             LogMessage($"{e.ChangeType}", e.FullPath);
+            await CreateOrUpdateAsync(sender, e);
+        }
 
+        /// <summary>
+        /// Called when a file or folder is renamed in the user file system.
+        /// </summary>
+        private async void RenamedAsync(object sender, RenamedEventArgs e)
+        {
+            // If the item was previously filtered by EngineWindows.FilterAsync(),
+            // for example temp MS Office file was renamed SGE4274H -> file.xlsx,
+            // we need to convert the file to a pleaceholder and upload it to the remote storage.
+
+            LogMessage($"{e.ChangeType}", e.OldFullPath, e.FullPath);
+            await CreateOrUpdateAsync(sender, e);
+            //await engine.CustomDataManager(e.OldFullPath).RefreshCustomColumnsAsync(); // Update data on custom props columns. For example remove lock on AutoCAD .bak files.
+        }
+
+        /// <summary>
+        /// Creates the item in the remote storate if the item is new. 
+        /// Updates the item in the remote storage if the item in not new.
+        /// </summary>
+        private async Task CreateOrUpdateAsync(object sender, FileSystemEventArgs e)
+        {
             string userFileSystemPath = e.FullPath;
             try
             {
                 if (System.IO.File.Exists(userFileSystemPath)
-                    && !MsOfficeHelper.AvoidMsOfficeSync(userFileSystemPath))
+                    && !FilterHelper.AvoidSync(userFileSystemPath))
                 {
                     if (!PlaceholderItem.IsPlaceholder(userFileSystemPath))
                     {
-                        if (engine.CustomDataManager(userFileSystemPath).IsNew)
+                        if (engine.ExternalDataManager(userFileSystemPath).IsNew)
                         {
                             await engine.ClientNotifications(userFileSystemPath, this).CreateAsync();
                         }
@@ -108,7 +139,7 @@ namespace VirtualDrive
                             LogMessage("Converting to placeholder", userFileSystemPath);
                             PlaceholderItem.ConvertToPlaceholder(userFileSystemPath, null, null, false);
                             await engine.ClientNotifications(userFileSystemPath, this).UpdateAsync();
-                            await engine.CustomDataManager(userFileSystemPath).RefreshCustomColumnsAsync();
+                            await engine.ExternalDataManager(userFileSystemPath).RefreshCustomColumnsAsync();
                         }
                     }
                 }
@@ -122,26 +153,6 @@ namespace VirtualDrive
                 }
                 LogError($"{e.ChangeType} failed", userFileSystemOldPath, userFileSystemPath, ex);
             }
-        }
-
-        /// <summary>
-        /// Called when a file or folder is deleted in the user file system.
-        /// </summary>
-        private async void DeletedAsync(object sender, FileSystemEventArgs e)
-        {
-            LogMessage(e.ChangeType.ToString(), e.FullPath);
-        }
-
-        /// <summary>
-        /// Called when a file or folder is renamed in the user file system.
-        /// </summary>
-        private async void RenamedAsync(object sender, RenamedEventArgs e)
-        {
-            // If the item was previously filtered by EngineWindows.FilterAsync(),
-            // for example temp MS Office file was renamed SGE4274H -> file.xlsx,
-            // we need to convert the file to a pleaceholder and upload it to the remote storage.
-
-            ChangedAsync(sender, e);
         }
 
         private void Error(object sender, ErrorEventArgs e)

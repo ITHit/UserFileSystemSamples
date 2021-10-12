@@ -56,7 +56,7 @@ namespace VirtualDrive
             // Get ETag from server here and save it on the client.
             string newEtag = "1234567890";
 
-            ExternalDataManager customDataManager = Engine.CustomDataManager(userFileSystemNewItemPath);
+            ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemNewItemPath);
 
             // Mark this item as not new, which is required for correct MS Office saving opertions.
             customDataManager.IsNew = false;
@@ -88,7 +88,7 @@ namespace VirtualDrive
             // Get ETag from server here and save it on the client.
             string newEtag = "1234567890";
 
-            ExternalDataManager customDataManager = Engine.CustomDataManager(userFileSystemNewItemPath);
+            ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemNewItemPath);
 
             customDataManager.IsNew = false;
             await customDataManager.ETagManager.SetETagAsync(newEtag);
@@ -123,7 +123,7 @@ namespace VirtualDrive
                     userFileSystemChildren.Add(itemInfo);
                 }
 
-                ExternalDataManager customDataManager = Engine.CustomDataManager(userFileSystemItemPath);
+                ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemItemPath);
 
                 // Mark this item as not new, which is required for correct MS Office saving opertions.
                 customDataManager.IsNew = false;
@@ -142,7 +142,7 @@ namespace VirtualDrive
                 string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemInfo.Name);
 
                 FileSystemItemPropertyData eTagColumn = new FileSystemItemPropertyData((int)CustomColumnIds.ETag, "1234567890");
-                await Engine.CustomDataManager(userFileSystemItemPath).SetCustomColumnsAsync(new []{ eTagColumn });
+                await Engine.ExternalDataManager(userFileSystemItemPath).SetCustomColumnsAsync(new []{ eTagColumn });
             }
         }
 

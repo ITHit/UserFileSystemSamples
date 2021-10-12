@@ -46,7 +46,7 @@ namespace VirtualDrive.ShellExtension
                 else
                 {
                     // Path to RemoteStorage folder when run VirtualDrive.Package project directly.
-                    remoteStorageRootPath = Path.GetFullPath(Path.Combine(assemblyPath, "..", "..", "..", "..", "..", "..", "VirtualDrive", settings.RemoteStorageRootPath));
+                    remoteStorageRootPath = Path.GetFullPath(Path.Combine(assemblyPath, "..", "..", "..", "..", "..", "..", settings.AppID, settings.RemoteStorageRootPath));
                 }
                 settings.RemoteStorageRootPath = remoteStorageRootPath;
             }

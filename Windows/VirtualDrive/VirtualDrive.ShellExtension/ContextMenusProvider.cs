@@ -1,19 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
-using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using VirtualDrive.ShellExtension.Interop;
-using VirtualDrive.Rpc;
 using VirtualDrive.Rpc.Generated;
-using GrpcDotNetNamedPipes;
 
 namespace VirtualDrive.ShellExtension
 {
     /// <summary>
-    /// Implements context menu logic.
+    /// Implements Windows Explorer context menu logic.
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>")]
     [ComVisible(true)]
@@ -23,26 +20,35 @@ namespace VirtualDrive.ShellExtension
         public const string ContextMenusClass = "A22EBD03-343E-433C-98DF-372C6B3A1538";
         public static readonly Guid ContextMenusClassGuid = Guid.Parse(ContextMenusClass);
 
-        private bool actionLock = true;
+        public const string LockCommandIcon = "Locked.ico";
+        public const string UnlockCommandIcon = "Unlocked.ico";
 
         /// <summary>
-        /// Returns menu title depends on response from server.
+        /// Selected items status. True - if all items are locked. False - if all items are unlocked.
         /// </summary>
+        private bool isLocked = true;
+
+        /// <summary>
+        /// Gets menu title.
+        /// </summary>
+        /// <param name="filesPath">List of selected items.</param>
+        /// <returns>Menu title string.</returns>
         public override async Task<string> GetMenuTitleAsync(IEnumerable<string> filesPath)
         {
-            actionLock = await GetLockStatusAsync(filesPath);
+            isLocked = await GetLockStatusAsync(filesPath);
 
             bool multyFiles = filesPath.Count() > 1;
 
-            string action = actionLock ? "Unlock " : "Lock ";
+            string action = isLocked ? "Unlock " : "Lock ";
             string objects = multyFiles ? "files" : "file";
 
             return action + objects;
         }
 
         /// <summary>
-        /// Call server to change files lock status.
+        /// Sets files lock status.
         /// </summary>
+        /// <param name="filesPath">List of selected items.</param>
         public override async Task InvokeMenuCommandAsync(IEnumerable<string> filesPath)
         {
             if (!filesPath.Any())
@@ -50,26 +56,28 @@ namespace VirtualDrive.ShellExtension
 
             GrpcClient grpcClient = new GrpcClient();
 
-            var request = new ItemsStatusList();
+            ItemsStatusList itemStatusList = new ItemsStatusList();
             
             foreach (string path in filesPath)
             {
-                request.FilesStatus.Add(path, !actionLock);
+                itemStatusList.FilesStatus.Add(path, !isLocked);
             }
 
-            await grpcClient.RpcClient.SetLockStatusAsync(request);
+            await grpcClient.RpcClient.SetLockStatusAsync(itemStatusList);
 
             await Task.CompletedTask;
         }
 
         /// <summary>
-        /// Returns display or hiden menu item depends on files lock states.
+        /// Gets menu state - visible or hidden, depending on the selected items lock state.
         /// </summary>
+        /// <param name="filesPath">List of selected items.</param>
+        /// <returns>Item state.</returns>
         public override async Task<EXPCMDSTATE> GetMenuStateAsync(IEnumerable<string> filesPath)
         {
             try
             {
-                actionLock = await GetLockStatusAsync(filesPath);
+                isLocked = await GetLockStatusAsync(filesPath);
 
                 return EXPCMDSTATE.ECS_ENABLED;
             }
@@ -80,10 +88,23 @@ namespace VirtualDrive.ShellExtension
         }
 
         /// <summary>
-        /// Calls server to get files lock state and check if they are same
+        /// Returns path to icon file or resource.
         /// </summary>
-        /// <param name="filesPath"></param>
-        /// <returns></returns>
+        /// <param name="filesPath">List of selected items.</param>
+        /// <returns>Path to icon file or resource.</returns>
+        public override async Task<string> GetIconAsync(IEnumerable<string> filesPath)
+        {
+            string iconName = isLocked ? UnlockCommandIcon : LockCommandIcon;
+            string iconPath = Path.Combine(Path.GetDirectoryName(typeof(ContextMenusProvider).Assembly.Location), iconName);
+
+            return iconPath;
+        }
+
+        /// <summary>
+        /// Calls main application to get files lock state and checks if all items have the same state.
+        /// </summary>
+        /// <param name="filesPath">List of items to get state for.</param>
+        /// <returns>True if all items has locked state. False if all items has unlocked state.</returns>
         private async Task<bool> GetLockStatusAsync(IEnumerable<string> filesPath)
         {
             if (!filesPath.Any())

@@ -35,10 +35,10 @@
 <p><strong>Download profiles and certificates in XCode.</strong>&nbsp;Run XCode and go to Xcode Menu &gt; Preferences -&gt; Accounts tab. Select team and click on “Download Manual Profiles”. You can find more detailed instructions:&nbsp;<a href="https://docs.microsoft.com/en-us/xamarin/mac/deploy-test/publishing-to-the-app-store/profiles" rel="nofollow">here</a></p>
 </li>
 <li>
-<p><strong>Set bundle identifier name in Container project.</strong>&nbsp;The bundle identifier is located in VirtualFilesystemMacApp/Info.plist file. You can edit it either in Visual Studio or directly in Info.plist file in the CFBundleIdentifier field (by default it is set to <span class="code">com.userfilesystem.vfs.app</span>). You must set this identifier to the value specified in Step 1.</p>
+<p><strong>Set bundle identifier name in Container project.</strong>&nbsp;The bundle identifier is located in VirtualFilesystemMacApp/Info.plist file. You can edit it either in Visual Studio or directly in Info.plist file in the CFBundleIdentifier field (by default it is set to <span class="code">com.userfilesystem.vfs.app</span>). You must set this identifier to the value specified in Step 2.</p>
 </li>
 <li>
-<p><strong>Set bundle identifier name in the Extension project.</strong>&nbsp;The bundle identifier is located in FileProviderExtension/Info.plist file. You can edit it either in Visual Studio or directly in Info.plist file in the CFBundleIdentifier field (by default it is set to <span class="code">com.userfilesystem.vfs.app.extension</span>). You must set this identifier to the value specified in Step 1.</p>
+<p><strong>Set bundle identifier name in the Extension project.</strong>&nbsp;The bundle identifier is located in FileProviderExtension/Info.plist file. You can edit it either in Visual Studio or directly in Info.plist file in the CFBundleIdentifier field (by default it is set to <span class="code">com.userfilesystem.vfs.app.extension</span>). You must set this identifier to the value specified in Step 2.</p>
 </li>
 <li>
 <p><strong>Configure macOS bundle signing in Container and Extension projects.</strong>&nbsp;For each project in Visual Studio go to the project Options. Select Mac Signing and check 'Sign the application bundle'. Select Identity and Provisioning profile.</p>

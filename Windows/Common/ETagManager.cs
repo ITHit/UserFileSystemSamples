@@ -111,14 +111,19 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         internal void DeleteETag()
         {
-            File.Delete(eTagFilePath);
+            if (File.Exists(eTagFilePath))
+            {
+                File.Delete(eTagFilePath);
+            }
 
+            /*
             // If this is a folder, delete all eTags in this folder.
             string eTagFolderPath = GetETagFilePath(userFileSystemPath);
             if (Directory.Exists(eTagFolderPath))
             {
                 Directory.Delete(eTagFolderPath, true);
             }
+            */
         }
 
         /// <summary>

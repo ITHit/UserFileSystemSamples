@@ -42,16 +42,9 @@ namespace ITHit.FileSystem.Samples.Common
         public string ETag { get; set; }
 
         /// <summary>
-        /// Indicates if the item is locked by another user in the remote storage.
-        /// This will set a read-only flag on this item.
+        /// Indicates if the item is locked in the remote storage.
         /// </summary>
-        /// <remarks>
-        /// Note that the read-only flag is a convenience-only feature. 
-        /// Typically the user will be notified by the application that the item can not be saved if 
-        /// she/he tries to update this item . 
-        /// Read-only flag does not protect this item from modifications.
-        /// </remarks>
-        public bool LockedByAnotherUser { get; set; } = false;
+        public bool IsLocked { get; set; } = false;
 
         /// <summary>
         /// Custom columns data to be displayed in the file manager.

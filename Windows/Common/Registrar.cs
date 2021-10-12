@@ -120,18 +120,21 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <summary>
         /// Determins if the syn root is registered for specified folder.
         /// </summary>
-        /// <param name="path"></param>
+        /// <param name="path">Sync root path.</param>
         /// <returns>True if the sync root is registered, false otherwise.</returns>
         public static async Task<bool> IsRegisteredAsync(string path)
         {
-            StorageFolder storageFolder = await StorageFolder.GetFolderFromPathAsync(path);
-            try
+            if (Directory.Exists(path))
             {
-                StorageProviderSyncRootManager.GetSyncRootInformationForFolder(storageFolder);
-                return true;
-            }
-            catch 
-            { 
+                StorageFolder storageFolder = await StorageFolder.GetFolderFromPathAsync(path);
+                try
+                {
+                    StorageProviderSyncRootManager.GetSyncRootInformationForFolder(storageFolder);
+                    return true;
+                }
+                catch
+                {
+                }
             }
 
             return false;

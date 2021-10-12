@@ -65,7 +65,7 @@ namespace WebDAVDrive
 
             await Program.DavClient.MoveToAsync(new Uri(remoteStorageOldPath), new Uri(remoteStorageNewPath), true);
 
-            await Engine.CustomDataManager(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath);
+            await Engine.ExternalDataManager(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath);
         }
 
         /// <inheritdoc/>
@@ -102,7 +102,7 @@ namespace WebDAVDrive
 
             await Program.DavClient.DeleteAsync(new Uri(RemoteStoragePath));
 
-            Engine.CustomDataManager(UserFileSystemPath, Logger).Delete();
+            Engine.ExternalDataManager(UserFileSystemPath, Logger).Delete();
         }
 
         ///<inheritdoc>
@@ -132,15 +132,17 @@ namespace WebDAVDrive
 
         
         ///<inheritdoc>
-        public async Task LockAsync(LockMode lockMode)
+        public async Task LockAsync(LockMode lockMode, IOperationContext operationContext = null)
         {
-            Logger.LogMessage($"{nameof(ILock)}.{nameof(LockAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(ILock)}.{nameof(LockAsync)}()", UserFileSystemPath, default, operationContext);
 
-            ExternalDataManager customDataManager = Engine.CustomDataManager(UserFileSystemPath, Logger);
+            ExternalDataManager customDataManager = Engine.ExternalDataManager(UserFileSystemPath, Logger);
             LockManager lockManager = customDataManager.LockManager;
-            if (!await lockManager.IsLockedAsync()
-                && !Engine.CustomDataManager(UserFileSystemPath).IsNew)
+            if (!Engine.ExternalDataManager(UserFileSystemPath).IsNew)
             {
+                // Indicate that lock has started by this user on this machine.
+                await lockManager.SetLockPending();
+
                 // Set pending icon, so the user has a feedback as lock operation may take some time.
                 await customDataManager.SetLockPendingIconAsync(true);
 
@@ -171,23 +173,20 @@ namespace WebDAVDrive
 
         
         ///<inheritdoc>
-        public async Task<LockMode> GetLockModeAsync()
+        public async Task<LockMode> GetLockModeAsync(IOperationContext operationContext = null)
         {
-            LockManager lockManager = Engine.CustomDataManager(UserFileSystemPath, Logger).LockManager;
+            LockManager lockManager = Engine.ExternalDataManager(UserFileSystemPath, Logger).LockManager;
             return await lockManager.GetLockModeAsync();
         }
         
 
         
         ///<inheritdoc>
-        public async Task UnlockAsync()
+        public async Task UnlockAsync(IOperationContext operationContext = null)
         {
-            if (MsOfficeHelper.IsMsOfficeLocked(UserFileSystemPath)) // Required for PowerPoint. It does not block the for writing.
-            {
-                throw new ClientLockFailedException("The file is blocked for writing.");
-            }
+            Logger.LogMessage($"{nameof(ILock)}.{nameof(UnlockAsync)}()", UserFileSystemPath, default, operationContext);
 
-            ExternalDataManager customDataManager = Engine.CustomDataManager(UserFileSystemPath, Logger);
+            ExternalDataManager customDataManager = Engine.ExternalDataManager(UserFileSystemPath, Logger);
             LockManager lockManager = customDataManager.LockManager;
 
             // Set pending icon, so the user has a feedback as unlock operation may take some time.

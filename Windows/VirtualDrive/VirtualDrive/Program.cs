@@ -42,16 +42,17 @@ namespace VirtualDrive
             // Load Log4Net for net configuration.
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
             XmlConfigurator.Configure(logRepository, new FileInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "log4net.config")));
+
             // Update log file path for msix package. 
             RollingFileAppender rollingFileAppender = logRepository.GetAppenders().Where(p => p.GetType() == typeof(RollingFileAppender)).FirstOrDefault() as RollingFileAppender;
             if (rollingFileAppender != null && rollingFileAppender.File.Contains("WindowsApps"))
             {
-                rollingFileAppender.File = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "VirtualDrive", 
+                rollingFileAppender.File = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), Settings.AppID, 
                                                         Path.GetFileName(rollingFileAppender.File));
             }
             string logFilePath = rollingFileAppender?.File;
 
-            // Enable UTF8 for Console Window
+            // Enable UTF8 for Console Window.
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
             log.Info($"\n{Process.GetCurrentProcess().ProcessName} {Settings.AppID}");
@@ -110,7 +111,7 @@ namespace VirtualDrive
             catch (Exception ex)
             {
                 log.Error(ex);
-                Console.ReadKey();
+                exitKey = Console.ReadKey();
             }
             finally
             {
@@ -143,7 +144,9 @@ namespace VirtualDrive
 
                 try
                 {
-                    Directory.Delete(Settings.ServerDataFolderPath, true);
+                    string localApplicationDataFolderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                    string appDataPath = Path.Combine(localApplicationDataFolderPath, Settings.AppID);
+                    Directory.Delete(appDataPath, true);
                 }
                 catch (Exception ex)
                 {

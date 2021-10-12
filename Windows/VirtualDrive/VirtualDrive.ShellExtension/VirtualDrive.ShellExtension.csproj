@@ -11,6 +11,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="..\VirtualDrive\Images\Locked.ico" Link="Locked.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\VirtualDrive\Images\Unlocked.ico" Link="Unlocked.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\VirtualDrive\appsettings.json" Link="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

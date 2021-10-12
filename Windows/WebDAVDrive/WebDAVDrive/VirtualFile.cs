@@ -54,7 +54,7 @@ namespace WebDAVDrive
                 // If we read entire file, do not add Range header. Pass -1 to not add it.
                 offset = -1;
             }
-            using (Stream stream = await Program.DavClient.FileReadAsync(new Uri(RemoteStoragePath), offset, length))
+            using (Stream stream = await Program.DavClient.DownloadAsync(new Uri(RemoteStoragePath), offset, length))
             {
                 const int bufferSize = 0x500000; // 5Mb. Buffer size must be multiple of 4096 bytes for optimal performance.
                 await stream.CopyToAsync(output, bufferSize, length);
@@ -79,14 +79,9 @@ namespace WebDAVDrive
         /// <inheritdoc/>
         public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null)
         {
-            if(MsOfficeHelper.IsMsOfficeLocked(UserFileSystemPath)) // Required for PowerPoint. It does not block the file for writing.
-            {
-                throw new ClientLockFailedException("The file is blocked for writing.");
-            }
-
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
-            ExternalDataManager customDataManager = Engine.CustomDataManager(UserFileSystemPath);
+            ExternalDataManager customDataManager = Engine.ExternalDataManager(UserFileSystemPath);
             // Send the ETag to the server as part of the update to ensure the file in the remote storge is not modified since last read.
             string oldEtag = await customDataManager.ETagManager.GetETagAsync();
 
@@ -100,7 +95,7 @@ namespace WebDAVDrive
 
                 // Update remote storage file content.
                 // Get the new ETag returned by the server (if any).
-                string eTagNew = await Program.DavClient.FileWriteAsync(new Uri(RemoteStoragePath), async (outputStream) => {
+                string eTagNew = await Program.DavClient.UploadAsync(new Uri(RemoteStoragePath), async (outputStream) => {
                     if (content != null)
                     {
                         // Rewind for new copy (e.g. retry)

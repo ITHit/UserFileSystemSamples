@@ -16,8 +16,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
     /// </summary>
     /// <remarks>
     /// This class stores all custom data associated with the item outside of the placeholder.
-    /// We can not store item ID and custom data inside placeholder (using <see cref="IFileSystemItemMetadata.CustomData"/> 
-    /// and <see cref="ITHit.FileSystem.Windows.PlaceholderItem.GetCustomData"/>) because of the MS Office transactional save, 
+    /// We can not store item ID and custom data inside of the placeholder (using <see cref="IFileSystemItemMetadata.CustomData"/> 
+    /// and <see cref="ITHit.FileSystem.Windows.PlaceholderItem.GetCustomData"/>) because of the MS Office and AutoCAD transactional save, 
     /// which renames and deletes the file, so all custom data is lost.
     /// </remarks>
     public class ExternalDataManager
@@ -80,8 +80,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Indicates if the item was saved to the remote storage.
         /// </summary>
         /// <remarks>
-        /// MS Office transactional save, deletes and recreates the file.
-        /// To detect if this is a new file we must store some marker ouside of the file, 
+        /// MS Office and AutoCAD transactional save, deletes and recreates the file.
+        /// To detect if this is a new file, we must store some marker ouside of the file, 
         /// for the marker to survive the transactional save operation.
         /// </remarks>
         public bool IsNew
@@ -226,68 +226,16 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
         }
 
-        /*
         /// <summary>
-        /// Sets or removes icon.
+        /// Indicates if the item is locked by another user in the remote storage.
+        /// This will call sets or removes the read-only flag in case the item is a file.
         /// </summary>
-        /// <param name="set">True to display the icon. False - to remove the icon.</param>
-        private async Task SetIconAsync(bool set, int? id = null, string iconFile = null, string description = null)
-        {
-            IStorageItem storageItem = await FsPath.GetStorageItemAsync(userFileSystemPath);
-
-            if (storageItem == null)
-            {
-                // This method may be called on temp files, typically created by MS Office, that exist for a short period of time.
-                // StorageProviderItemProperties.SetAsync(null,) causes AccessViolationException 
-                // which is not handled by .NET (or handled by HandleProcessCorruptedStateExceptions) and causes a fatal crush.
-                return;
-            }
-
-            try
-            {
-                if (set)
-                {
-                    StorageProviderItemProperty propState = new StorageProviderItemProperty()
-                    {
-                        Id = id.Value,
-                        Value = description,
-                        IconResource = Path.Combine(virtualDrive.Settings.IconsFolderPath, iconFile)
-                    };
-                    await StorageProviderItemProperties.SetAsync(storageItem, new StorageProviderItemProperty[] { propState });
-                }
-                else
-                {
-                    await StorageProviderItemProperties.SetAsync(storageItem, new StorageProviderItemProperty[] { });
-                }
-            }
-
-            // Setting status icon failes for blocked files.
-            catch (FileNotFoundException)
-            {
-
-            }
-            catch (COMException)
-            {
-                // "Error HRESULT E_FAIL has been returned from a call to a COM component."
-            }
-            catch (Exception ex)
-            {
-                if (ex.HResult == -2147024499)
-                {
-                    // "The operation failed due to a conflicting cloud file property lock. (0x8007018D)"
-                }
-                else
-                {
-                    // Rethrow the exception preserving stack trace of the original exception.
-                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
-                }
-            }
-        }
-        */
-        
-        /// <summary>
-        /// Sets or removes read-only attribute on files.
-        /// </summary>
+        /// <remarks>
+        /// Call this method if the item is locked by another user. This will set read-only arrtibute on files. 
+        /// Note that the read-only flag is a convenience-only feature. It does not protect files from modifications.
+        /// Typically the user will be notified by the application that the item can not be saved if 
+        /// the application tries to update this item. 
+        /// </remarks>
         /// <param name="set">True to set the read-only attribute. False - to remove the read-only attribute.</param>
         public async Task<bool> SetLockedByAnotherUserAsync(bool set)
         {
@@ -549,11 +497,22 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <summary>
         /// Deletes all custom data associated with the item.
         /// </summary>
-        public void Delete()
+        /// <param name="recursive">Deletes all data for subfolders if true.</param>
+        public void Delete(bool recursive = true)
         {
             DeleteCustomColumns();
             ETagManager.DeleteETag();
             LockManager.DeleteLock();
+
+            if(recursive)
+            {
+                // If this is a folder, delete all custom columns in this folder.
+                string customColumnsFolderPath = GetColumnsFilePath(userFileSystemPath);
+                if (Directory.Exists(customColumnsFolderPath))
+                {
+                    Directory.Delete(customColumnsFolderPath, true);
+                }
+            }
         }
 
         /// <summary>
@@ -561,13 +520,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         private void DeleteCustomColumns()
         {
-            File.Delete(customColumnsFilePath);
-
-            // If this is a folder, delete all custom columns in this folder.
-            string customColumnsFolderPath = GetColumnsFilePath(userFileSystemPath);
-            if (Directory.Exists(customColumnsFolderPath))
+            if (File.Exists(customColumnsFilePath))
             {
-                Directory.Delete(customColumnsFolderPath, true);
+                File.Delete(customColumnsFilePath);
             }
         }
     }
