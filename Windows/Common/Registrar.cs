@@ -22,7 +22,10 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="path">A root folder of your user file system. Your file system tree will be located under this folder.</param>
         /// <param name="displayName">Human readable display name.</param>
         /// <param name="iconPath">Path to the drive ico file.</param>
-        /// <remarks>Call this method during application installation.</remarks>
+        /// <remarks>
+        /// In the case of a packaged installer (msix) call this method during first program start.
+        /// In the case of a regular installer (msi) call this method during installation.
+        /// </remarks>
         public static async Task RegisterAsync(string syncRootId, string path, string displayName, string iconPath)
         {
             StorageProviderSyncRootInfo storageInfo = new StorageProviderSyncRootInfo();
@@ -145,8 +148,16 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         /// <param name="syncRootId">ID of the sync root.</param>
         /// <remarks>
-        /// Call this method during application ununstall. 
+        /// <para>
+        /// In the case of a packaged installer (msix) you do not need to call this method. 
+        /// The platform will automatically delete sync root registartion during program uninstall.
+        /// </para>
+        /// <para>
+        /// In the case of a regular installer (msi) call this method during uninstall.
+        /// </para>
+        /// <para>
         /// All file and folder placeholders are converted into regular files/folders during this call. 
+        /// </para>
         /// </remarks>
         public static async Task UnregisterAsync(string syncRootId)
         {

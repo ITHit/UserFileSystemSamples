@@ -112,10 +112,8 @@ namespace VirtualDrive
                 {
                     (remoteStorageItem as DirectoryInfo).Delete(true);
                 }
-                Logger.LogMessage("Deleted item in remote storage succesefully", UserFileSystemPath, default, operationContext);
+                Engine.ExternalDataManager(UserFileSystemPath, Logger).Delete();
             }
-
-            Engine.ExternalDataManager(UserFileSystemPath, Logger).Delete();
         }
 
         /// <inheritdoc/>

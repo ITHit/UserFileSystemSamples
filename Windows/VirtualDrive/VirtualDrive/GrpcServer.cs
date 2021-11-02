@@ -15,7 +15,7 @@ namespace VirtualDrive
     /// </summary>
     public class GrpcServer : Logger, IDisposable
     {
-        private string rpcCommunicationChannelName;
+        private readonly string rpcCommunicationChannelName;
 
         private IDisposable namedPipeServer;
 
@@ -46,7 +46,7 @@ namespace VirtualDrive
                 server.Start();
                 namedPipeServer = server;
 
-                LogMessage("Started");
+                LogMessage("Started", rpcCommunicationChannelName);
             }
             catch (Exception ex)
             {
@@ -64,7 +64,7 @@ namespace VirtualDrive
                 namedPipeServer.Dispose();
                 namedPipeServer = null;
 
-                LogMessage("Stopped");
+                LogMessage("Stopped", rpcCommunicationChannelName);
             }
         }
 

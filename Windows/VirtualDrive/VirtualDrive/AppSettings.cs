@@ -33,6 +33,11 @@ namespace VirtualDrive
         /// Communication channel name is used by RPC to establish connection over named pipes.
         /// </summary>
         public string RpcCommunicationChannelName { get; set; }
+
+        /// <summary>
+        /// Full synchronization interval in milliseconds.
+        /// </summary>
+        public double SyncIntervalMs { get; set; }
     }
 
     /// <summary>

@@ -10,13 +10,13 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 
-namespace WebDAVDrive
+namespace ITHit.FileSystem.Samples.Common.Windows
 {
     /// <summary>
     /// Monitors MS Office amd AutoCAD file renames and updates in the user file system and sends changes to the remote storage. 
     /// Also monitors Notepad++ offline attribute removal.
     /// </summary>
-    internal class FilteredDocsMonitor : Logger, IDisposable
+    public class FilteredDocsMonitor : Logger, IDisposable
     {
         /// <summary>
         /// User file system watcher.
@@ -26,7 +26,7 @@ namespace WebDAVDrive
         /// <summary>
         /// Engine.
         /// </summary>
-        private readonly VirtualEngine engine;
+        private readonly VirtualEngineBase engine;
 
 
         /// <summary>
@@ -35,7 +35,7 @@ namespace WebDAVDrive
         /// <param name="userFileSystemRootPath">User file system root path.</param>
         /// <param name="engine">Engine.</param>
         /// <param name="logger">Logger.</param>
-        internal FilteredDocsMonitor(string userFileSystemRootPath, VirtualEngine engine, ILog log)
+        internal FilteredDocsMonitor(string userFileSystemRootPath, VirtualEngineBase engine, ILog log)
             : base("Filtered Docs Monitor", log)
         {
             if(string.IsNullOrEmpty(userFileSystemRootPath))
@@ -64,7 +64,7 @@ namespace WebDAVDrive
         public void Start()
         {
             watcher.EnableRaisingEvents = true;
-            LogMessage("Started");
+            LogMessage("Started", watcher.Path);
         }
 
         /// <summary>
@@ -73,7 +73,7 @@ namespace WebDAVDrive
         public void Stop() 
         {
             watcher.EnableRaisingEvents = false;
-            LogMessage("Stopped");
+            LogMessage("Stopped", watcher.Path);
         }
 
 
@@ -113,7 +113,6 @@ namespace WebDAVDrive
 
             LogMessage($"{e.ChangeType}", e.OldFullPath, e.FullPath);
             await CreateOrUpdateAsync(sender, e);
-            //await engine.CustomDataManager(e.OldFullPath).RefreshCustomColumnsAsync(); // Update data on custom props columns. For example remove lock on AutoCAD .bak files.
         }
 
         /// <summary>
@@ -123,34 +122,19 @@ namespace WebDAVDrive
         private async Task CreateOrUpdateAsync(object sender, FileSystemEventArgs e)
         {
             string userFileSystemPath = e.FullPath;
+            string userFileSystemOldPath = (e is RenamedEventArgs) ? (e as RenamedEventArgs).OldFullPath : null;
             try
             {
-                if (System.IO.File.Exists(userFileSystemPath)
-                    && !FilterHelper.AvoidSync(userFileSystemPath))
-                {
-                    if (!PlaceholderItem.IsPlaceholder(userFileSystemPath))
-                    {
-                        if (engine.ExternalDataManager(userFileSystemPath).IsNew)
-                        {
-                            await engine.ClientNotifications(userFileSystemPath, this).CreateAsync();
-                        }
-                        else
-                        {
-                            LogMessage("Converting to placeholder", userFileSystemPath);
-                            PlaceholderItem.ConvertToPlaceholder(userFileSystemPath, null, null, false);
-                            await engine.ClientNotifications(userFileSystemPath, this).UpdateAsync();
-                            await engine.ExternalDataManager(userFileSystemPath).RefreshCustomColumnsAsync();
-                        }
-                    }
-                }
+                await ClientToServerSync.CreateOrUpdateAsync(userFileSystemPath, engine, this);
+            }
+            catch (FileNotFoundException ex)
+            {
+                // Some temp file was renamed or deleted.
+                LogMessage($"{e.ChangeType} failed", userFileSystemOldPath, userFileSystemPath);
             }
             catch (Exception ex)
             {
-                string userFileSystemOldPath = null;
-                if (e is RenamedEventArgs)
-                {
-                    userFileSystemOldPath = (e as RenamedEventArgs).OldFullPath;
-                }
+
                 LogError($"{e.ChangeType} failed", userFileSystemOldPath, userFileSystemPath, ex);
             }
         }

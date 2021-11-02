@@ -1,6 +1,3 @@
-using log4net;
-using log4net.Appender;
-using log4net.Config;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Diagnostics;
@@ -11,7 +8,12 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Windows.Storage;
 
+using log4net;
+using log4net.Appender;
+using log4net.Config;
 using ITHit.FileSystem.Samples.Common.Windows;
+using ITHit.FileSystem;
+using ITHit.FileSystem.Samples.Common;
 
 namespace VirtualDrive
 {
@@ -28,6 +30,11 @@ namespace VirtualDrive
         private static readonly ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         /// <summary>
+        /// Log file path.
+        /// </summary>
+        private static string LogFilePath;
+
+        /// <summary>
         /// Processes OS file system calls, 
         /// synchronizes user file system to remote storage. 
         /// </summary>
@@ -39,6 +46,63 @@ namespace VirtualDrive
             IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
             Settings = configuration.ReadSettings();
 
+            // Configure log4net and set log file path.
+            LogFilePath = ConfigureLogger();
+
+            // Enable UTF8 for Console Window.
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+            PrintHelp();
+
+            // Register sync root and create app folders.
+            await RegisterSyncRootAsync();
+
+            // Log indexed state.
+            StorageFolder userFileSystemRootFolder = await StorageFolder.GetFolderFromPathAsync(Settings.UserFileSystemRootPath);
+            log.Info($"\nIndexed state: {(await userFileSystemRootFolder.GetIndexedStateAsync())}\n");
+            
+            Logger.PrintHeader(log);
+
+            try
+            {
+                Engine = new VirtualEngine(
+                    Settings.UserFileSystemLicense,
+                    Settings.UserFileSystemRootPath,
+                    Settings.RemoteStorageRootPath,
+                    Settings.ServerDataFolderPath,
+                    Settings.IconsFolderPath,
+                    Settings.RpcCommunicationChannelName,
+                    Settings.SyncIntervalMs,
+                    log);
+                Engine.AutoLock = Settings.AutoLock;
+
+                // Start processing OS file system calls.
+                await Engine.StartAsync();
+
+#if DEBUG
+                // Opens Windows File Manager with user file system folder and remote storage folder.
+                ShowTestEnvironment();
+#endif
+                // Keep this application running and reading user input.
+                await ProcessUserInputAsync();
+            }
+            catch (Exception ex)
+            {
+                log.Error(ex);
+                await ProcessUserInputAsync();
+            }
+            finally
+            {
+                Engine.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Configures log4net logger.
+        /// </summary>
+        /// <returns>Log file path.</returns>
+        private static string ConfigureLogger()
+        {
             // Load Log4Net for net configuration.
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
             XmlConfigurator.Configure(logRepository, new FileInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "log4net.config")));
@@ -47,25 +111,142 @@ namespace VirtualDrive
             RollingFileAppender rollingFileAppender = logRepository.GetAppenders().Where(p => p.GetType() == typeof(RollingFileAppender)).FirstOrDefault() as RollingFileAppender;
             if (rollingFileAppender != null && rollingFileAppender.File.Contains("WindowsApps"))
             {
-                rollingFileAppender.File = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), Settings.AppID, 
+                rollingFileAppender.File = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), Settings.AppID,
                                                         Path.GetFileName(rollingFileAppender.File));
             }
-            string logFilePath = rollingFileAppender?.File;
+            return rollingFileAppender?.File;
+        }
 
-            // Enable UTF8 for Console Window.
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
-
-            log.Info($"\n{Process.GetCurrentProcess().ProcessName} {Settings.AppID}");
-            log.Info($"\nOS version: {RuntimeInformation.OSDescription}.");
-            log.Info($"\nEnv version: {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
-            log.Info($"\nLog path: {logFilePath}.");
-            log.Info("\nPress 'Q' to unregister file system, delete all files/folders and exit (simulate uninstall with full cleanup).");
-            log.Info("\nPress 'q' to unregister file system and exit (simulate uninstall).");
-            log.Info("\nPress any other key to exit without unregistering (simulate reboot).");
+        private static void PrintHelp()
+        {
+            log.Info($"\n{"AppID:", -15} {Settings.AppID}");
+            log.Info($"\n{"Engine version:",-15} {typeof(IEngine).Assembly.GetName().Version}");
+            log.Info($"\n{"OS version:", -15} {RuntimeInformation.OSDescription}");
+            log.Info($"\n{"Env version:", -15} {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
+            log.Info("\n\nPress Esc to unregister file system, delete all files/folders and exit (simulate uninstall).");
+            log.Info("\nPress Spacebar to exit without unregistering (simulate reboot).");
+            log.Info("\nPress 'e' to start/stop the Engine and all sync services.");
+            log.Info("\nPress 's' to start/stop full synchronization service.");
+            log.Info("\nPress 'm' to start/stop remote storage monitor.");
+            log.Info($"\nPress 'l' to open log file. ({LogFilePath})");
+            log.Info($"\nPress 'b' to submit support tickets, report bugs, suggest features. (https://userfilesystem.com/support/)");
             log.Info("\n----------------------\n");
+        }
 
-            // Typically you will register sync root during your application installation.
-            // Here we register it during first program start for the sake of the development convenience.
+        private static async Task ProcessUserInputAsync()
+        {
+            do
+            {
+                switch (Console.ReadKey(true).KeyChar)
+                {
+                    case (char)ConsoleKey.F1:
+                    case 'h':
+                        // Print help info.
+                        PrintHelp();
+                        break;
+
+                    case 'e':
+                        // Start/stop the Engine and all sync services.
+                        if (Engine.State == EngineState.Running)
+                        {
+                            await Engine.StopAsync();
+                        }
+                        else if (Engine.State == EngineState.Stopped)
+                        {
+                            await Engine.StartAsync();
+                        }
+                        break;
+
+                    case 's':
+                        // Start/stop full synchronization.
+                        if (Engine.SyncService.SyncState == SynchronizationState.Disabled)
+                        {
+                            if(Engine.State != EngineState.Running)
+                            {
+                                Engine.SyncService.LogError("Failed to start. The Engine must be running.");
+                                break;
+                            }
+                            await Engine.SyncService.StartAsync();
+                        }
+                        else
+                        {
+                            await Engine.SyncService.StopAsync();
+                        }
+                        break;
+
+                    case 'm':
+                        // Start/stop remote storage monitor.
+                        if (Engine.RemoteStorageMonitor.SyncState == SynchronizationState.Disabled)
+                        {
+                            if (Engine.State != EngineState.Running)
+                            {
+                                Engine.RemoteStorageMonitor.LogError("Failed to start. The Engine must be running.");
+                                break;
+                            }
+                            Engine.RemoteStorageMonitor.Start();
+                        }
+                        else
+                        {
+                            Engine.RemoteStorageMonitor.Stop();
+                        }
+                        break;
+
+                    case 'l':
+                        // Open log file.
+                        ProcessStartInfo psiLog = new ProcessStartInfo(LogFilePath);
+                        psiLog.UseShellExecute = true;
+                        using (Process.Start(psiLog))
+                        {
+                        }
+                        break;
+
+                    case 'b':
+                        // Submit support tickets, report bugs, suggest features.
+                        ProcessStartInfo psiSupport = new ProcessStartInfo("https://www.userfilesystem.com/support/");
+                        psiSupport.UseShellExecute = true;
+                        using (Process.Start(psiSupport))
+                        {
+                        }
+                        break;
+
+                    case 'q':
+                        // Unregister during programm uninstall.
+                        Engine.Dispose();
+                        await UnregisterSyncRootAsync();
+                        log.Info("\nAll empty file and folder placeholders are deleted. Hydrated placeholders are converted to regular files / folders.\n");
+                        return;
+
+                    case (char)ConsoleKey.Escape:
+                    case 'Q':
+                        // Unregister during programm uninstall.                        
+                        Engine.Dispose();
+                        await UnregisterSyncRootAsync();
+
+                        // Delete all files/folders.
+                        CleanupAppFolders();
+                        return;
+
+                    case (char)ConsoleKey.Spacebar :
+                        log.Info("\n\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.\n");
+                        return;
+
+                    default:
+                        break;
+                }
+
+
+            } while (true);
+        }
+
+        /// <summary>
+        /// Registers sync root and creates application folders.
+        /// </summary>
+        /// <remarks>
+        /// In the case of a packaged installer (msix) call this method during first program start.
+        /// In the case of a regular installer (msi) call this method during installation.
+        /// </remarks>
+        private static async Task RegisterSyncRootAsync()
+        {
             if (!await Registrar.IsRegisteredAsync(Settings.UserFileSystemRootPath))
             {
                 log.Info($"\nRegistering {Settings.UserFileSystemRootPath} sync root.");
@@ -79,83 +260,47 @@ namespace VirtualDrive
             {
                 log.Info($"\n{Settings.UserFileSystemRootPath} sync root already registered.");
             }
+        }
 
-            // Log indexed state.
-            StorageFolder userFileSystemRootFolder = await StorageFolder.GetFolderFromPathAsync(Settings.UserFileSystemRootPath);
-            log.Info($"\nIndexed state: {(await userFileSystemRootFolder.GetIndexedStateAsync())}\n");
+        /// <summary>
+        /// Unregisters sync root.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// In the case of a packaged installer (msix) you do not need to call this method. 
+        /// The platform will automatically delete sync root registartion during program uninstall.
+        /// </para>
+        /// <para>
+        /// In the case of a regular installer (msi) call this method during uninstall.
+        /// </para>
+        /// </remarks>
+        private static async Task UnregisterSyncRootAsync()
+        {
+            log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
+            await Registrar.UnregisterAsync(SyncRootId);
+        }
 
-            ConsoleKeyInfo? exitKey = null;
-
+        private static void CleanupAppFolders()
+        {
+            log.Info("\nDeleting all file and folder placeholders.\n");
             try
             {
-                Engine = new VirtualEngine(
-                    Settings.UserFileSystemLicense,
-                    Settings.UserFileSystemRootPath,
-                    Settings.RemoteStorageRootPath,
-                    Settings.ServerDataFolderPath,
-                    Settings.IconsFolderPath,
-                    Settings.RpcCommunicationChannelName,
-                    log);
-                Engine.AutoLock = Settings.AutoLock;
-
-                // Start processing OS file system calls.
-                await Engine.StartAsync();
-
-#if DEBUG
-                // Opens Windows File Manager with user file system folder and remote storage folder.
-                ShowTestEnvironment();
-#endif
-                // Keep this application running until user input.
-                exitKey = Console.ReadKey();
+                Directory.Delete(Settings.UserFileSystemRootPath, true);
             }
             catch (Exception ex)
             {
-                log.Error(ex);
-                exitKey = Console.ReadKey();
-            }
-            finally
-            {
-                Engine.Dispose();
+                log.Error($"\n{ex}");
             }
 
-            if (exitKey?.KeyChar == 'q')
+            try
             {
-                // Unregister during programm uninstall.
-                await Registrar.UnregisterAsync(SyncRootId);
-                log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
-                log.Info("\nAll empty file and folder placeholders are deleted. Hydrated placeholders are converted to regular files / folders.\n");
+                string localApplicationDataFolderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                string appDataPath = Path.Combine(localApplicationDataFolderPath, Settings.AppID);
+                Directory.Delete(appDataPath, true);
             }
-            else if (exitKey?.KeyChar == 'Q')
+            catch (Exception ex)
             {
-                log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
-                log.Info("\nAll files and folders placeholders are deleted.\n");
-
-                // Unregister during programm uninstall and delete all files/folder.
-                await Registrar.UnregisterAsync(SyncRootId);
-
-                try
-                {
-                    Directory.Delete(Settings.UserFileSystemRootPath, true);
-                }
-                catch (Exception ex)
-                {
-                    log.Error($"\n{ex}");
-                }
-
-                try
-                {
-                    string localApplicationDataFolderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                    string appDataPath = Path.Combine(localApplicationDataFolderPath, Settings.AppID);
-                    Directory.Delete(appDataPath, true);
-                }
-                catch (Exception ex)
-                {
-                    log.Error($"\n{ex}");
-                }
-            }
-            else
-            {
-                log.Info("\n\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.\n");
+                log.Error($"\n{ex}");
             }
         }
 

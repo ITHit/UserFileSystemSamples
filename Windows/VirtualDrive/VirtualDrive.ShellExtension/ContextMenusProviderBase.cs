@@ -61,7 +61,7 @@ namespace VirtualDrive.ShellExtension
 
             try
             {
-                IEnumerable<string> files = itemArray.GetFilesPath();
+                IEnumerable<string> files = itemArray.GetFilesPath().Where(Mapping.IsVirtualDriveFolder);
                 if (!files.All(File.Exists))
                     return WinError.E_NOTIMPL;
 
@@ -90,7 +90,7 @@ namespace VirtualDrive.ShellExtension
         {
             try
             {
-                IEnumerable<string> files = itemArray.GetFilesPath();
+                IEnumerable<string> files = itemArray.GetFilesPath().Where(Mapping.IsVirtualDriveFolder);
 
                 if (!files.All(File.Exists))
                     return WinError.E_NOTIMPL;
@@ -119,7 +119,7 @@ namespace VirtualDrive.ShellExtension
 
             try
             {
-                IEnumerable<string> files = itemArray.GetFilesPath();
+                IEnumerable<string> files = itemArray.GetFilesPath().Where(Mapping.IsVirtualDriveFolder);
 
                 if (!files.All(File.Exists))
                     return WinError.E_NOTIMPL;
@@ -155,7 +155,7 @@ namespace VirtualDrive.ShellExtension
 
             try
             {
-                IEnumerable<string> files = itemArray.GetFilesPath();
+                IEnumerable<string> files = itemArray.GetFilesPath().Where(Mapping.IsVirtualDriveFolder);
                 if (!files.All(File.Exists))
                     return WinError.E_NOTIMPL;
 

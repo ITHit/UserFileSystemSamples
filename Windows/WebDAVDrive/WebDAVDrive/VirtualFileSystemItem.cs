@@ -89,6 +89,16 @@ namespace WebDAVDrive
             // https://docs.microsoft.com/en-us/answers/questions/75240/bug-report-cfapi-ackdelete-borken-on-win10-2004.html
 
             // Note that some applications, such as Windows Explorer may call delete more than one time on the same file/folder.
+
+            try
+            {
+                await Program.DavClient.DeleteAsync(new Uri(RemoteStoragePath));
+                Engine.ExternalDataManager(UserFileSystemPath, Logger).Delete();
+            }
+            catch(Exception ex)
+            {
+                Logger.LogMessage(ex.Message);
+            }
         }
 
         /// <inheritdoc/>
@@ -99,10 +109,6 @@ namespace WebDAVDrive
             // Otherwise the folder will be deleted before files in it can be moved.
 
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", UserFileSystemPath, default, operationContext);
-
-            await Program.DavClient.DeleteAsync(new Uri(RemoteStoragePath));
-
-            Engine.ExternalDataManager(UserFileSystemPath, Logger).Delete();
         }
 
         ///<inheritdoc>

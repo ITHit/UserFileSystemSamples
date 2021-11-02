@@ -22,6 +22,7 @@
     <None Remove="RemoteStorageTemplate\**" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="FilteredDocsMonitor.cs" />
     <Compile Remove="MsOfficeDocsMonitor.cs" />
     <Compile Remove="MsOfficeHelper.cs" />
     <Compile Remove="RemoteStorageMonitor1.cs" />

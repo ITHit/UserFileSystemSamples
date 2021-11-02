@@ -22,7 +22,7 @@ namespace WebDAVDrive.UI
         /// <param name="virtualDrive">VirtualDriveBase, need to get syncService and fileSystemMonitor.</param>
         /// <param name="exitEvent">ManualResetEvent, used to stop application.</param>
         /// <returns></returns>
-        public static Thread CreateTrayInterface(string productName, IEngine virtualDrive, ConsoleManager.ConsoleExitEvent exitEvent) 
+        public static Thread CreateTrayInterface(string productName, IEngine virtualDrive, EventWaitHandle exitEvent) 
         {
             // Start tray application.
             Thread thread = new Thread(() => {

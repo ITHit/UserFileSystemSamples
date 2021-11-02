@@ -25,6 +25,16 @@ namespace VirtualDrive.ShellExtension
         }
 
         /// <summary>
+        /// Returns is path to virtual drive folder
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public static bool IsVirtualDriveFolder(string path)
+        {
+            return !string.IsNullOrEmpty(path) && path.TrimStart().StartsWith(AppSettings.UserFileSystemRootPath);
+        }
+
+        /// <summary>
         /// Reads settings from appsettings.json.
         /// </summary>
         private static AppSettings ReadAppSettings()

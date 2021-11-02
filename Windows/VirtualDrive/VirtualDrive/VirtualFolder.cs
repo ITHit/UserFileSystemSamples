@@ -15,7 +15,7 @@ using ITHit.FileSystem.Samples.Common;
 namespace VirtualDrive
 {
     /// <inheritdoc cref="IFolder"/>
-    public class VirtualFolder : VirtualFileSystemItem, IFolder
+    public class VirtualFolder : VirtualFileSystemItem, IFolder, IVirtualFolder
     {
         /// <summary>
         /// Creates instance of this class.
@@ -54,17 +54,14 @@ namespace VirtualDrive
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
 
             // Get ETag from server here and save it on the client.
-            string newEtag = "1234567890";
+            string eTagNew = "1234567890";
 
             ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemNewItemPath);
-
-            // Mark this item as not new, which is required for correct MS Office saving opertions.
-            customDataManager.IsNew = false;
-
-            await customDataManager.ETagManager.SetETagAsync(newEtag);
-
-            // Update ETag in custom column displayed in file manager.
-            await customDataManager.SetCustomColumnsAsync(new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, newEtag) });
+            // Store ETag unlil the next update.
+            await customDataManager.SetCustomDataAsync(
+                eTagNew,
+                false,
+                new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
 
             return null;
         }
@@ -86,13 +83,13 @@ namespace VirtualDrive
             remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
 
             // Get ETag from server here and save it on the client.
-            string newEtag = "1234567890";
+            string eTagNew = "1234567890";
 
             ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemNewItemPath);
-
-            customDataManager.IsNew = false;
-            await customDataManager.ETagManager.SetETagAsync(newEtag);
-            await customDataManager.SetCustomColumnsAsync(new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, newEtag) });
+            await customDataManager.SetCustomDataAsync(
+                eTagNew,
+                false,
+                new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
 
             return null;
         }
@@ -107,43 +104,52 @@ namespace VirtualDrive
 
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath, default, operationContext);
 
-            IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(RemoteStoragePath).EnumerateFileSystemInfos(pattern);
+            IEnumerable<FileSystemItemMetadataExt> remoteStorageChildren = await EnumerateChildrenAsync(pattern);
 
-            List<IFileSystemItemMetadata> userFileSystemChildren = new List<IFileSystemItemMetadata>();
-            foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
+            List<FileSystemItemMetadataExt> userFileSystemChildren = new List<FileSystemItemMetadataExt>();
+            foreach (FileSystemItemMetadataExt itemMetadata in remoteStorageChildren)
             {
-                IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
-
-                string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemInfo.Name);
+                string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemMetadata.Name);
 
                 // Filtering existing files/folders. This is only required to avoid extra errors in the log.
                 if (!FsPath.Exists(userFileSystemItemPath))
                 {
                     Logger.LogMessage("Creating", userFileSystemItemPath);
-                    userFileSystemChildren.Add(itemInfo);
+                    userFileSystemChildren.Add(itemMetadata);
                 }
 
                 ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemItemPath);
 
                 // Mark this item as not new, which is required for correct MS Office saving opertions.
                 customDataManager.IsNew = false;
-
-                // Save ETag on the client side, to be sent to the remote storage as part of the update.
-                await customDataManager.ETagManager.SetETagAsync("1234567890");
             }
 
             // To signal that the children enumeration is completed 
             // always call ReturnChildren(), even if the folder is empty.
             resultContext.ReturnChildren(userFileSystemChildren.ToArray(), userFileSystemChildren.Count());
 
-            // Show some custom column in file manager for demo purposes.
-            foreach (IFileSystemItemMetadata itemInfo in userFileSystemChildren)
+            // Save ETags, the read-only attribute and all custom columns data.
+            foreach (FileSystemItemMetadataExt itemMetadata in userFileSystemChildren)
             {
-                string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemInfo.Name);
+                string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemMetadata.Name);
+                ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemItemPath);
 
-                FileSystemItemPropertyData eTagColumn = new FileSystemItemPropertyData((int)CustomColumnIds.ETag, "1234567890");
-                await Engine.ExternalDataManager(userFileSystemItemPath).SetCustomColumnsAsync(new []{ eTagColumn });
+                // Save ETag on the client side, to be sent to the remote storage as part of the update.
+                await customDataManager.SetCustomDataAsync(itemMetadata.ETag, itemMetadata.IsLocked, itemMetadata.CustomProperties);
             }
+        }
+
+        public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern)
+        {
+            IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(RemoteStoragePath).EnumerateFileSystemInfos(pattern);
+
+            List<FileSystemItemMetadataExt> userFileSystemChildren = new List<FileSystemItemMetadataExt>();
+            foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
+            {
+                FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                userFileSystemChildren.Add(itemInfo);
+            }
+            return userFileSystemChildren;
         }
 
         /// <inheritdoc/>

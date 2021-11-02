@@ -112,16 +112,6 @@ namespace VirtualFileSystem
             // https://docs.microsoft.com/en-us/answers/questions/75240/bug-report-cfapi-ackdelete-borken-on-win10-2004.html
 
             // Note that some applications, such as Windows Explorer may call delete more than one time on the same file/folder.
-        }
-
-        /// <inheritdoc/>
-        public async Task DeleteCompletionAsync(IOperationContext operationContext, IResultContext resultContext)
-        {
-            // On Windows, for rename with overwrite to function properly for folders, 
-            // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
-            // Otherwise the folder will be deleted before files in it can be moved.
-
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", this.UserFileSystemPath, default, operationContext);
 
             FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(RemoteStoragePath);
             if (remoteStorageItem != null)
@@ -136,6 +126,16 @@ namespace VirtualFileSystem
                 }
                 Logger.LogMessage("Deleted item in remote storage succesefully", UserFileSystemPath, default, operationContext);
             }
+        }
+
+        /// <inheritdoc/>
+        public async Task DeleteCompletionAsync(IOperationContext operationContext, IResultContext resultContext)
+        {
+            // On Windows, for rename with overwrite to function properly for folders, 
+            // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
+            // Otherwise the folder will be deleted before files in it can be moved.
+
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", this.UserFileSystemPath, default, operationContext);
         }
         
 

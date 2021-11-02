@@ -4,11 +4,12 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using log4net;
+using System.Linq;
 
+using log4net;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common.Windows;
-using System.Linq;
+using ITHit.FileSystem.Samples.Common;
 
 namespace VirtualDrive
 {
@@ -22,12 +23,18 @@ namespace VirtualDrive
     /// In your application, instead of using FileWatchWrapper, you will connect to your remote storage using web sockets 
     /// or use any other technology to get notifications about changes in your remote storage.
     /// </remarks>
-    internal class RemoteStorageMonitor : Logger, IDisposable
+    public class RemoteStorageMonitor : Logger, IDisposable
     {
         /// <summary>
-        /// Remote storage path. Folder to monitor for changes.
+        /// Current synchronization state.
         /// </summary>
-        private readonly string remoteStorageRootPath;
+        public virtual SynchronizationState SyncState 
+        {
+            get 
+            {
+                return watcher.EnableRaisingEvents ? SynchronizationState.Enabled : SynchronizationState.Disabled;
+            } 
+        }
 
         /// <summary>
         /// Virtul drive instance. This class will call <see cref="Engine"/> methods 
@@ -48,7 +55,6 @@ namespace VirtualDrive
         /// <param name="log">Logger.</param>
         internal RemoteStorageMonitor(string remoteStorageRootPath, VirtualEngine engine, ILog log) : base("Remote Storage Monitor", log)
         {
-            this.remoteStorageRootPath = remoteStorageRootPath;
             this.engine = engine;
 
             watcher.IncludeSubdirectories = true;
@@ -69,7 +75,7 @@ namespace VirtualDrive
         internal void Start()
         {
             watcher.EnableRaisingEvents = true;
-            LogMessage($"Started");
+            LogMessage($"Started", watcher.Path);
         }
 
         /// <summary>
@@ -78,7 +84,7 @@ namespace VirtualDrive
         internal void Stop()
         {
             watcher.EnableRaisingEvents = false;
-            LogMessage($"Stopped");
+            LogMessage($"Stopped", watcher.Path);
         }
 
         /// <summary>
@@ -137,7 +143,7 @@ namespace VirtualDrive
 
                 // This check is only required because we can not prevent circular calls because of the simplicity of this example.
                 // In your real-life application you will not send updates from server back to client that issued the update.
-                if (IsModified(userFileSystemPath, remoteStoragePath))
+                if (Mapping.IsModified(userFileSystemPath, remoteStoragePath))
                 {
                     FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
                     IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
@@ -263,58 +269,6 @@ namespace VirtualDrive
             Dispose(true);
             // TODO: uncomment the following line if the finalizer is overridden above.
             // GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
-        /// Compares two files contents.
-        /// </summary>
-        /// <param name="filePath1">File or folder 1 to compare.</param>
-        /// <param name="filePath2">File or folder 2 to compare.</param>
-        /// <returns>True if file is modified. False - otherwise.</returns>
-        private static bool IsModified(string filePath1, string filePath2)
-        {
-            if(FsPath.IsFolder(filePath1) && FsPath.IsFolder(filePath2))
-            {
-                return false;
-            }
-
-            try
-            {
-                if (new FileInfo(filePath1).Length == new FileInfo(filePath2).Length)
-                {
-                    // Verify that the file is not offline,
-                    // therwise the file will be hydrated when the file stream is opened.
-                    if( new FileInfo(filePath1).Attributes.HasFlag(System.IO.FileAttributes.Offline)
-                        || new FileInfo(filePath1).Attributes.HasFlag(System.IO.FileAttributes.Offline))
-                    {
-                        return false;
-                    }
-
-                    byte[] hash1;
-                    byte[] hash2;
-                    using (var alg = System.Security.Cryptography.MD5.Create())
-                    {
-                        // This code for demo purposes only. We do not block files for writing, which is required by some apps, for example by AutoCAD.
-                        using (FileStream stream = new FileStream(filePath1, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
-                        {
-                            hash1 = alg.ComputeHash(stream);
-                        }
-                        using (FileStream stream = new FileStream(filePath2, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
-                        {
-                            hash2 = alg.ComputeHash(stream);
-                        }
-                    }
-
-                    return !hash1.SequenceEqual(hash2);
-                }
-            }
-            catch(IOException)
-            {
-                // One of the files is blocked. Can not compare files and start sychronization.
-                return false;
-            }
-
-            return true;
         }
     }
 }

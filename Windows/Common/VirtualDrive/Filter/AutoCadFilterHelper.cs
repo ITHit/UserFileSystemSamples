@@ -13,7 +13,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
     /// <remarks>
     /// AutoCAD lock files (.dwl and .dwl2), are marked as hidden and filtered by the <see cref="FilterHelper.IsHiddenOrTemp"/> method.
     /// </remarks>
-    internal class AutoCadFilterHelper
+    public class AutoCadFilterHelper
     {
         /// <summary>
         /// Returns true if the file should NOT be synched to the remote storage. False - otherwise.
@@ -48,7 +48,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// system that corresponds to the provided path to AutoCAD file. False - otherwise.
         /// </summary>
         /// <param name="path">Path to the AutoCAD file.</param>
-        internal static bool IsAutoCadLocked(string path)
+        public static bool IsAutoCadLocked(string path)
         {
             string lockPath = GetLockPathFromAutoCadPath(path);
             return lockPath != null;

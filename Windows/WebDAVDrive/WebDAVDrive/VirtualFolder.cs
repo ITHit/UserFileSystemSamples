@@ -12,7 +12,7 @@ using Client = ITHit.WebDAV.Client;
 namespace WebDAVDrive
 {
     /// <inheritdoc cref="IFolder"/>
-    public class VirtualFolder : VirtualFileSystemItem, IFolder
+    public class VirtualFolder : VirtualFileSystemItem, IFolder, IVirtualFolder
     {
         /// <summary>
         /// Creates instance of this class.
@@ -47,12 +47,10 @@ namespace WebDAVDrive
             ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemNewItemPath);
 
             // Store ETag unlil the next update.
-            // This will also mark the item as not new, which is required for correct MS Office saving opertions.
-            await customDataManager.ETagManager.SetETagAsync(eTagNew);
-            customDataManager.IsNew = false; // Mark file as not new just in case the server did not return the ETag.
-
-            // Update ETag in custom column displayed in file manager.
-            await customDataManager.SetCustomColumnsAsync(new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
+            await customDataManager.SetCustomDataAsync(
+                eTagNew, 
+                false,
+                new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
 
             return null;
         }
@@ -80,24 +78,18 @@ namespace WebDAVDrive
 
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath, default, operationContext);
 
-            Client.IHierarchyItem[] remoteStorageChildren = null;
-            // Retry the request in case the log-in dialog is shown.
-            remoteStorageChildren = await Program.DavClient.GetChildrenAsync(new Uri(RemoteStoragePath), false);
+            IEnumerable<FileSystemItemMetadataExt> remoteStorageChildren = await EnumerateChildrenAsync(pattern);
 
             List<FileSystemItemMetadataExt> userFileSystemChildren = new List<FileSystemItemMetadataExt>();
-
-
-            foreach (Client.IHierarchyItem remoteStorageItem in remoteStorageChildren)
+            foreach (FileSystemItemMetadataExt itemMetadata in remoteStorageChildren)
             {
-                FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
-
-                string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemInfo.Name);
+                string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemMetadata.Name);
 
                 // Filtering existing files/folders. This is only required to avoid extra errors in the log.
                 if (!FsPath.Exists(userFileSystemItemPath))
                 {
                     Logger.LogMessage("Creating", userFileSystemItemPath);
-                    userFileSystemChildren.Add(itemInfo);
+                    userFileSystemChildren.Add(itemMetadata);
                 }
 
                 ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemItemPath);
@@ -111,24 +103,30 @@ namespace WebDAVDrive
             resultContext.ReturnChildren(userFileSystemChildren.ToArray(), userFileSystemChildren.Count());
 
             // Save ETags, the read-only attribute and all custom columns data.
-            foreach (FileSystemItemMetadataExt child in userFileSystemChildren)
+            foreach (FileSystemItemMetadataExt itemMetadata in userFileSystemChildren)
             {
-                string userFileSystemItemPath = Path.Combine(UserFileSystemPath, child.Name);
+                string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemMetadata.Name);
                 ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemItemPath);
 
                 // Save ETag on the client side, to be sent to the remote storage as part of the update.
-                // Setting ETag also marks an item as not new.
-
-                // ETags must correspond with a server file/folder, NOT with a client placeholder. 
-                // It should NOT be moved/deleted/updated when a placeholder in the user file system is moved/deleted/updated.
-                // It should be moved/deleted when a file/folder in the remote storage is moved/deleted.
-                await customDataManager.ETagManager.SetETagAsync(child.ETag);
-
-                // Set the read-only attribute and all custom columns data.
-                bool isLockedByThisUser = await customDataManager.LockManager.IsLockedByThisUserAsync();
-                await customDataManager.SetLockedByAnotherUserAsync(child.IsLocked && !isLockedByThisUser);
-                await customDataManager.SetCustomColumnsAsync(child.CustomProperties);
+                await customDataManager.SetCustomDataAsync(itemMetadata.ETag, itemMetadata.IsLocked, itemMetadata.CustomProperties);
             }
+        }
+
+        public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern)
+        {
+            // WebDAV Client lib will retry the request in case authentication is requested by the server.
+            Client.IHierarchyItem[] remoteStorageChildren = await Program.DavClient.GetChildrenAsync(new Uri(RemoteStoragePath));
+
+            List<FileSystemItemMetadataExt> userFileSystemChildren = new List<FileSystemItemMetadataExt>();
+
+            foreach (Client.IHierarchyItem remoteStorageItem in remoteStorageChildren)
+            {
+                FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
+                userFileSystemChildren.Add(itemInfo);
+            }
+
+            return userFileSystemChildren;
         }
 
         /// <inheritdoc/>

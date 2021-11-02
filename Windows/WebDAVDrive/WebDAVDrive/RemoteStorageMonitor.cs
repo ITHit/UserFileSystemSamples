@@ -23,6 +23,25 @@ namespace WebDAVDrive
     internal class RemoteStorageMonitor : Logger, IDisposable
     {
         /// <summary>
+        /// Current synchronization state.
+        /// </summary>
+        public virtual SynchronizationState SyncState
+        {
+            get
+            {
+                return
+                (clientWebSocket != null
+                    && (clientWebSocket?.State == WebSocketState.Open || clientWebSocket?.State == WebSocketState.CloseSent || clientWebSocket?.State == WebSocketState.CloseReceived))
+                    ? SynchronizationState.Enabled : SynchronizationState.Disabled;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a value that indicates whether to send an authenticate header with the websocket.
+        /// </summary>
+        public NetworkCredential WebSocketCredentials { get; set; }
+
+        /// <summary>
         /// WebSocket client.
         /// </summary>
         private ClientWebSocket clientWebSocket;
@@ -58,7 +77,7 @@ namespace WebDAVDrive
         /// <summary>
         /// Starts monitoring changes in the remote storage.
         /// </summary>
-        internal async Task StartMonitoringAsync(NetworkCredential credentials)
+        private async Task StartMonitoringAsync(NetworkCredential credentials)
         {
             cancellationTokenSource = new CancellationTokenSource();
             clientWebSocket = new ClientWebSocket();
@@ -67,7 +86,7 @@ namespace WebDAVDrive
 
             await clientWebSocket.ConnectAsync(new Uri(webSocketServerUrl), CancellationToken.None);
 
-            LogMessage("Started");
+            LogMessage("Started", webSocketServerUrl);
 
             var rcvBuffer = new ArraySegment<byte>(new byte[2048]);
             while (true)
@@ -82,7 +101,7 @@ namespace WebDAVDrive
         /// <summary>
         /// Starts websockets to monitor changes in remote storage.
         /// </summary>
-        internal async Task StartAsync(NetworkCredential WebSocketCredentials)
+        internal async Task StartAsync()
         {
             await Task.Factory.StartNew(
               async () =>
@@ -99,7 +118,10 @@ namespace WebDAVDrive
                       {
                           // Start socket after first success webdav propfind. Restart socket when it disconnects.
                           if (clientWebSocket != null && clientWebSocket?.State != WebSocketState.Closed)
-                              LogError(e.Message);
+                          {
+                              LogError(e.Message, webSocketServerUrl);
+                          }
+
                           // Delay websocket connect to not overload it on network disappear.
                           await Task.Delay(TimeSpan.FromSeconds(2));
                           repeat = true;
@@ -116,16 +138,17 @@ namespace WebDAVDrive
             try
             {
                 cancellationTokenSource?.Cancel();
-                if (clientWebSocket != null && clientWebSocket?.State != WebSocketState.Closed)
+                if (clientWebSocket != null 
+                    && (clientWebSocket?.State == WebSocketState.Open || clientWebSocket?.State == WebSocketState.CloseSent || clientWebSocket?.State == WebSocketState.CloseReceived) )
                 {
                     await clientWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
                 }
             }
             catch (WebSocketException ex) {
-                LogError("Failed to close websocket.", null, null, ex);
+                LogError("Failed to close websocket.", webSocketServerUrl, null, ex);
             };
 
-            LogMessage("Stoped");
+            LogMessage("Stoped", webSocketServerUrl);
         }
 
         /// <summary>
@@ -183,19 +206,12 @@ namespace WebDAVDrive
 
                     if (remoteStorageItem != null)
                     {
-                        FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
-                        if (await engine.ServerNotifications(userFileSystemParentPath).CreateAsync(new[] { itemInfo }) > 0)
+                        FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
+                        if (await engine.ServerNotifications(userFileSystemParentPath).CreateAsync(new[] { itemMetadata }) > 0)
                         {
                             ExternalDataManager customDataManager = engine.ExternalDataManager(userFileSystemPath);
 
-                            // Save ETag on the client side, to be sent to the remote storage as part of the update.
-                            // Setting ETag also marks an item as not new.
-                            await customDataManager.ETagManager.SetETagAsync(itemInfo.ETag);
-
-                            // Set the read-only attribute and all custom columns data.
-                            bool lockedByThisUser = await customDataManager.LockManager.IsLockedByThisUserAsync();
-                            await customDataManager.SetLockedByAnotherUserAsync(itemInfo.IsLocked && !lockedByThisUser);
-                            await customDataManager.SetCustomColumnsAsync(itemInfo.CustomProperties);
+                            await customDataManager.SetCustomDataAsync(itemMetadata.ETag, itemMetadata.IsLocked, itemMetadata.CustomProperties);
 
                             // Because of the on-demand population, the parent folder placeholder may not exist in the user file system
                             // or the folder may be offline. In this case the IServerNotifications.CreateAsync() call is ignored.
@@ -231,16 +247,10 @@ namespace WebDAVDrive
                     IHierarchyItem remoteStorageItem = await Program.DavClient.GetItemAsync(new Uri(remoteStoragePath));
                     if (remoteStorageItem != null)
                     {
-                        FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
+                        FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
                         ExternalDataManager customDataManager = engine.ExternalDataManager(userFileSystemPath);
-                        
-                        // Save new ETag.
-                        await customDataManager.ETagManager.SetETagAsync(itemInfo.ETag);
 
-                        // Set the read-only attribute and all custom columns data.
-                        bool lockedByThisUser = await customDataManager.LockManager.IsLockedByThisUserAsync();
-                        await customDataManager.SetLockedByAnotherUserAsync(itemInfo.IsLocked && !lockedByThisUser);
-                        await customDataManager.SetCustomColumnsAsync(itemInfo.CustomProperties);
+                        await customDataManager.SetCustomDataAsync(itemMetadata.ETag, itemMetadata.IsLocked, itemMetadata.CustomProperties);
 
                         // Can not update read-only files, read-only attribute must be removed.
                         FileInfo userFileSystemFile = new FileInfo(userFileSystemPath);
@@ -250,7 +260,7 @@ namespace WebDAVDrive
                             userFileSystemFile.IsReadOnly = false;
                         }
 
-                        if (await engine.ServerNotifications(userFileSystemPath).UpdateAsync(itemInfo))
+                        if (await engine.ServerNotifications(userFileSystemPath).UpdateAsync(itemMetadata))
                         {
                             LogMessage("Updated succesefully", userFileSystemPath);
                         }
@@ -364,12 +374,9 @@ namespace WebDAVDrive
                     IHierarchyItem remoteStorageItem = await Program.DavClient.GetItemAsync(new Uri(remoteStoragePath));
                     if (remoteStorageItem != null)
                     {
-                        FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
+                        FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
 
-                        // Set the read-only attribute and all custom columns data.
-                        bool lockedByThisUser = await customDataManager.LockManager.IsLockedByThisUserAsync();
-                        await customDataManager.SetLockedByAnotherUserAsync(itemInfo.IsLocked && !lockedByThisUser);
-                        await customDataManager.SetCustomColumnsAsync(itemInfo.CustomProperties);
+                        await customDataManager.SetCustomDataAsync(itemMetadata.ETag, itemMetadata.IsLocked, itemMetadata.CustomProperties);
 
                         LogMessage("Locked succesefully", userFileSystemPath);
                     }
@@ -430,6 +437,7 @@ namespace WebDAVDrive
                 if (disposing)
                 {        
                     clientWebSocket.Dispose();
+                    LogMessage($"Disposed");
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.

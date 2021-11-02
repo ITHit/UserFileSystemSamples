@@ -33,11 +33,6 @@ namespace ITHit.FileSystem.Samples.Common
         public string UserFileSystemRootPath { get; set; }
 
         /// <summary>
-        /// Full synchronization interval in milliseconds.
-        /// </summary>
-        public double SyncIntervalMs { get; set; }
-
-        /// <summary>
         /// Network delay in milliseconds. When this parameter is > 0 the file download will be delayd to demonstrate file transfer progress.
         /// Set this parameter to 0 to avoid any network simulation delays.
         /// </summary>

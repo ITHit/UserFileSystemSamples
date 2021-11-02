@@ -104,12 +104,10 @@ namespace WebDAVDrive
                     }
                 }, null, contentLength, 0, -1, lockTokens, oldEtag);
 
-                // Store ETag unlil the next update.
-                // This will also mark the item as not new, which is required for correct MS Office saving opertions.
-                await customDataManager.ETagManager.SetETagAsync(eTagNew);
-
-                // Update ETag in custom column displayed in file manager.
-                await customDataManager.SetCustomColumnsAsync(new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
+                await customDataManager.SetCustomDataAsync(
+                    eTagNew, 
+                    null,
+                    new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
             }
         }
     }

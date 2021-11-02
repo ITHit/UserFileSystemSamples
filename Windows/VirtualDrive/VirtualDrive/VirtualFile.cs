@@ -104,9 +104,11 @@ namespace VirtualDrive
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
 
             // Get the new ETag from server here as part of the update and save it on the client.
-            string newEtag = "1234567890";
-            await customDataManager.ETagManager.SetETagAsync(newEtag);
-            await customDataManager.SetCustomColumnsAsync(new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, newEtag) });
+            string eTagNew = "1234567890";
+            await customDataManager.SetCustomDataAsync(
+                eTagNew,
+                null,
+                new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
         }
     }
 }

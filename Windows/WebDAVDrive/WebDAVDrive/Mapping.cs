@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-
+using System.Threading.Tasks;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
@@ -14,8 +14,15 @@ namespace WebDAVDrive
     /// Maps a user file system path to the remote storage path and back. 
     /// </summary>
     /// <remarks>You will change methods of this class to map the user file system path to your remote storage path.</remarks>
-    internal static class Mapping
+    internal class Mapping : IMapping
     {
+        private readonly VirtualEngineBase engine;
+
+        internal Mapping(VirtualEngineBase engine)
+        {
+            this.engine = engine;
+        }
+
         /// <summary>
         /// Returns a remote storage URI that corresponds to the user file system path.
         /// </summary>
@@ -96,6 +103,7 @@ namespace WebDAVDrive
             if (remoteStorageItem is Client.IFile)
             {
                 userFileSystemItem = new FileMetadataExt();
+                ((FileMetadataExt)userFileSystemItem).Length = ((Client.IFile)remoteStorageItem).ContentLength;
             }
             else
             {
@@ -117,8 +125,6 @@ namespace WebDAVDrive
                 // the server inside If-Match header togeter with updated content from client.
                 // This will make sure the changes on the server is not overwritten.
                 ((FileMetadataExt)userFileSystemItem).ETag = ((Client.IFile)remoteStorageItem).Etag;
-
-                ((FileMetadataExt)userFileSystemItem).Length = ((Client.IFile)remoteStorageItem).ContentLength;
             };
 
             // Set custom columns to be displayed in file manager.
@@ -150,6 +156,12 @@ namespace WebDAVDrive
             userFileSystemItem.CustomProperties = customProps;
 
             return userFileSystemItem;
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> IsModifiedAsync(string userFileSystemPath, FileSystemItemMetadataExt remoteStorageItemMetadata, ILogger logger)
+        {
+            return !await engine.ExternalDataManager(userFileSystemPath, logger).ETagManager.ETagEqualsAsync(remoteStorageItemMetadata);
         }
     }
 }

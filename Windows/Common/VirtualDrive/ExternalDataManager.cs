@@ -297,7 +297,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Adds or updates custom columns data, preserving existing columns.
         /// </summary>
         /// <param name="customColumnsData">List of columns to add or update.</param>
-        public async Task SetCustomColumnsAsync(IEnumerable<FileSystemItemPropertyData> customColumnsData)
+        private async Task SetCustomColumnsAsync(IEnumerable<FileSystemItemPropertyData> customColumnsData)
         {
             // All cutom columns must be set togather, otherwise columns data will be wiped.
 
@@ -524,6 +524,24 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             {
                 File.Delete(customColumnsFilePath);
             }
+        }
+
+        public async Task SetCustomDataAsync(string eTag, bool? locked, IEnumerable<FileSystemItemPropertyData> customColumnsData)
+        {
+            // Setting ETag also marks an item as not new.
+
+            // ETags must correspond with a server file/folder, NOT with a client placeholder. 
+            // It should NOT be moved/deleted/updated when a placeholder in the user file system is moved/deleted/updated.
+            // It should be moved/deleted when a file/folder in the remote storage is moved/deleted.
+            await ETagManager.SetETagAsync(eTag);
+
+            if (locked != null)
+            {
+                // Set the read-only attribute and all custom columns data.
+                bool isLockedByThisUser = await LockManager.IsLockedByThisUserAsync();
+                await SetLockedByAnotherUserAsync(locked.Value && !isLockedByThisUser);
+            }
+            await SetCustomColumnsAsync(customColumnsData);
         }
     }
 }

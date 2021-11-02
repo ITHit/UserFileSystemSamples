@@ -18,12 +18,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <summary>
         /// Name of the component that is writing to the log.
         /// </summary>
-        private string componentName;
+        private readonly string componentName;
 
         /// <summary>
         /// Log4Net Logger.
         /// </summary>
-        protected ILog Log;
+        protected readonly ILog Log;
 
         /// <summary>
         /// Creates instance of this class.
@@ -43,7 +43,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             string process = null;
             byte? priorityHint = null;
             long? clientFileId = null;
-            string serverItemId = null;
 
             if (operationContext != null)
             {
@@ -51,10 +50,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 process = System.IO.Path.GetFileName(processInfo.ImagePath);
                 priorityHint = operationContext.PriorityHint;
                 clientFileId = (operationContext as IWindowsOperationContext).FileId;
-                //serverItemId = Convert.ToBase64String(operationContext.ItemId);
             }
 
-            Log.Error($"\n{DateTimeOffset.Now.ToString("hh:mm:ss.fff")} [{process,-25}] {priorityHint,2} {componentName,-26}{message,-45} {sourcePath,-80} {att} ", ex);
+            Log.Error($"{Format(DateTimeOffset.Now.ToString("hh:mm:ss.fff"), process, priorityHint?.ToString(), componentName, message, sourcePath, att, targetPath)}{Environment.NewLine}", ex);
         }
 
         /// <inheritdoc/>
@@ -64,7 +62,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             string process = null;
             byte? priorityHint = null;
             long? clientFileId = null;
-            string serverItemId = null;
             string size = null;
 
             if (operationContext != null)
@@ -74,10 +71,20 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 priorityHint = operationContext.PriorityHint;
                 clientFileId = (operationContext as IWindowsOperationContext).FileId;
                 size = FsPath.FormatBytes((operationContext as IWindowsOperationContext).FileSize);
-                //serverItemId = Convert.ToBase64String(operationContext.ItemId);
             }
 
-            Log.Debug($"\n{DateTimeOffset.Now.ToString("hh:mm:ss.fff")} [{process,-25}] {priorityHint,2} {componentName,-26}{message,-45} {sourcePath,-80} {size,7} {att} {targetPath}");
+            Log.Debug(Format(DateTimeOffset.Now.ToString("hh:mm:ss.fff"), process, priorityHint?.ToString(), componentName, message, sourcePath, att, targetPath));
+        }
+
+        private static string Format(string date, string process, string priorityHint, string componentName, string message, string sourcePath, string attributes, string targetPath)
+        {
+            return $"{Environment.NewLine}|{date, -12}| {process,-25}| {priorityHint,-5}| {componentName,-26}| {message,-45}| {sourcePath,-80}| {attributes, -22}| {targetPath}";
+        }
+
+        public static void PrintHeader(ILog logger)
+        {
+            logger.Info(Format("Time", "Process Name", "Prty", "Component", "Operation", "Source Path", "Attributes", "Target Path"));
+            logger.Info(Format("----", "------------", "----", "---------", "---------", "-----------", "----------", "-----------"));
         }
     }
 }

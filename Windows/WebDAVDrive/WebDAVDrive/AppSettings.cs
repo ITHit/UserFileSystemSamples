@@ -36,6 +36,16 @@ namespace WebDAVDrive
         /// Path to the folder that stores custom data associated with files and folders.
         /// </summary>
         public string ServerDataFolderPath { get; set; }
+
+        /// <summary>
+        /// Communication channel name is used by RPC to establish connection over named pipes.
+        /// </summary>
+        public string RpcCommunicationChannelName { get; set; }
+
+        /// <summary>
+        /// Full synchronization interval in milliseconds.
+        /// </summary>
+        public double SyncIntervalMs { get; set; }
     }
 
     /// <summary>

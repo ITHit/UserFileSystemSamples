@@ -35,6 +35,11 @@ namespace VirtualDrive.ShellExtension.Thumbnails
                 return WinError.E_UNEXPECTED;
             }
 
+            if (!Mapping.IsVirtualDriveFolder(path))
+            {
+                return WinError.E_UNEXPECTED;
+            }
+
             // Show thumbnails only for files (Dont show thumbnails for directories)
             if (!File.Exists(path))
             {

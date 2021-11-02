@@ -4,11 +4,12 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using log4net;
+using System.Linq;
 
+using log4net;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common.Windows;
-using System.Linq;
+using ITHit.FileSystem.Samples.Common;
 
 namespace VirtualFileSystem
 {
@@ -25,9 +26,15 @@ namespace VirtualFileSystem
     internal class RemoteStorageMonitor : Logger, IDisposable
     {
         /// <summary>
-        /// Remote storage path. Folder to monitor for changes.
+        /// Current synchronization state.
         /// </summary>
-        private readonly string remoteStorageRootPath;
+        public virtual SynchronizationState SyncState
+        {
+            get
+            {
+                return watcher.EnableRaisingEvents ? SynchronizationState.Enabled : SynchronizationState.Disabled;
+            }
+        }
 
         /// <summary>
         /// Engine instance. We will call <see cref="Engine"/> methods 
@@ -48,7 +55,6 @@ namespace VirtualFileSystem
         /// <param name="log">Logger.</param>
         internal RemoteStorageMonitor(string remoteStorageRootPath, Engine engine, ILog log) : base("Remote Storage Monitor", log)
         {
-            this.remoteStorageRootPath = remoteStorageRootPath;
             this.engine = engine;
 
             watcher.IncludeSubdirectories = true;
@@ -69,7 +75,7 @@ namespace VirtualFileSystem
         internal void Start()
         {
             watcher.EnableRaisingEvents = true;
-            LogMessage($"Started");
+            LogMessage($"Started", watcher.Path);
         }
 
         /// <summary>
@@ -78,7 +84,7 @@ namespace VirtualFileSystem
         internal void Stop()
         {
             watcher.EnableRaisingEvents = false;
-            LogMessage($"Stopped");
+            LogMessage($"Stopped", watcher.Path);
         }
 
         /// <summary>
@@ -294,11 +300,11 @@ namespace VirtualFileSystem
                     byte[] hash2;
                     using (var alg = System.Security.Cryptography.MD5.Create())
                     {
-                        using (FileStream stream = new FileStream(filePath1, FileMode.Open, FileAccess.Read, FileShare.None))
+                        using (FileStream stream = new FileStream(filePath1, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
                         {
                             hash1 = alg.ComputeHash(stream);
                         }
-                        using (FileStream stream = new FileStream(filePath2, FileMode.Open, FileAccess.Read, FileShare.None))
+                        using (FileStream stream = new FileStream(filePath2, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
                         {
                             hash2 = alg.ComputeHash(stream);
                         }
