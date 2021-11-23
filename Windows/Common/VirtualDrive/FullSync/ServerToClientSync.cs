@@ -45,10 +45,13 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             // In case of on-demand loading the user file system contains only a subset of the server files and folders.
             // Here we sync folder only if its content already loaded into user file system (folder is not offline).
-            // The folder content is loaded inside IFolder.GetChildrenAsync() method.
-            if (new DirectoryInfo(userFileSystemFolderPath).Attributes.HasFlag(System.IO.FileAttributes.Offline))
+            // We also skip regular folders (that are not placeholders), for example new folders.
+            FileAttributes folderAttributes = new DirectoryInfo(userFileSystemFolderPath).Attributes;
+            if (   (folderAttributes & FileAttributes.Offline) != 0
+                || (folderAttributes & FileAttributes.ReparsePoint) == 0
+                )
             {
-                // LogMessage("Folder offline, skipping:", userFileSystemFolderPath);
+                // LogMessage("Folder is offline or is new, skipping:", userFileSystemFolderPath);
                 return;
             }
 

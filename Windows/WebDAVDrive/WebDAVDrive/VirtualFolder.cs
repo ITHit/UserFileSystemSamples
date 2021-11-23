@@ -63,7 +63,16 @@ namespace WebDAVDrive
 
             Uri newFolderUri = new Uri(new Uri(RemoteStoragePath), folderMetadata.Name);
             await Program.DavClient.CreateFolderAsync(newFolderUri);
-            // Engine.CustomDataManager(userFileSystemNewItemPath).IsNew = false;
+
+            ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemNewItemPath);
+
+            string eTagNew = ""; // WebDAV server sypically does not provide eTags for folders.
+
+            // Store ETag unlil the next update.
+            await customDataManager.SetCustomDataAsync(
+                eTagNew,
+                false,
+                new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
 
             return null;
         }

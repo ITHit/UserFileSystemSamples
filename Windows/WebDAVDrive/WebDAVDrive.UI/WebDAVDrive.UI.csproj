@@ -1,10 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 
   <PropertyGroup>
-    <TargetFramework>net5.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework>net5.0-windows10.0.18362.0</TargetFramework>
     <CsWinRTWindowsMetadata>10.0.19041.0</CsWinRTWindowsMetadata>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>True</UseWindowsForms>
+    <Copyright>IT Hit LTD.</Copyright>
+    <Company>IT Hit LTD.</Company>
+    <Authors>IT Hit LTD.</Authors>
+    <Product>WebDAV Drive</Product>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,13 +16,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="log4net" Version="2.0.12" />
+    <PackageReference Include="log4net" Version="2.0.13" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.774.44" />
-    <PackageReference Include="ITHitWebDAVClient" Version="5.0.2310-Beta" />
+    <PackageReference Include="ITHitWebDAVClient" Version="5.0.2450" />
   </ItemGroup>
 
-  <ItemGroup>  
-    <ProjectReference Include="..\..\Common\Common.Windows.csproj" />
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Common\Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>

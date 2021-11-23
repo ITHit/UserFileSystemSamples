@@ -6,8 +6,9 @@
     <Product>IT Hit User File System</Product>
     <Copyright>IT Hit User File System</Copyright>
     <Description>Contains functionality common for all Virtual Drive samples, both for Windows and macOS.</Description>
+    <RootNamespace>ITHit.FileSystem.Samples.Common</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem" Version="4.0.10902.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem" Version="4.0.11187.0-Beta" />
   </ItemGroup>
 </Project>

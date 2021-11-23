@@ -204,7 +204,8 @@ namespace WebDAVDrive
                 {
                     IHierarchyItem remoteStorageItem = await Program.DavClient.GetItemAsync(new Uri(remoteStoragePath));
 
-                    if (remoteStorageItem != null)
+                    if (remoteStorageItem != null
+                        && !FsPath.Exists(userFileSystemPath))
                     {
                         FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
                         if (await engine.ServerNotifications(userFileSystemParentPath).CreateAsync(new[] { itemMetadata }) > 0)

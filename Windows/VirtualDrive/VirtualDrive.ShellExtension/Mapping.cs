@@ -1,7 +1,5 @@
-using System;
 using System.IO;
-using Microsoft.Extensions.Configuration;
-using VirtualDrive.ShellExtension.Settings;
+using ITHit.FileSystem.Samples.Common.Windows.ShellExtension;
 
 namespace VirtualDrive.ShellExtension
 {
@@ -10,7 +8,7 @@ namespace VirtualDrive.ShellExtension
     /// </summary>
     internal static class Mapping
     {
-        public static AppSettings AppSettings = ReadAppSettings();  
+        public static AppSettings AppSettings => ShellExtensionConfiguration.AppSettings as AppSettings;
 
         /// <summary>
         /// Returns a remote storage URI that corresponds to the user file system path.
@@ -22,50 +20,6 @@ namespace VirtualDrive.ShellExtension
 
             string path = $"{Path.TrimEndingDirectorySeparator(AppSettings.RemoteStorageRootPath)}{relativePath}";
             return path;
-        }
-
-        /// <summary>
-        /// Returns is path to virtual drive folder
-        /// </summary>
-        /// <param name="path"></param>
-        /// <returns></returns>
-        public static bool IsVirtualDriveFolder(string path)
-        {
-            return !string.IsNullOrEmpty(path) && path.TrimStart().StartsWith(AppSettings.UserFileSystemRootPath);
-        }
-
-        /// <summary>
-        /// Reads settings from appsettings.json.
-        /// </summary>
-        private static AppSettings ReadAppSettings()
-        {
-            string assemblyPath = Path.GetDirectoryName(typeof(Mapping).Assembly.Location);
-
-            AppSettings settings = AppSettings.Load();
-
-            // Update settings
-            if (!Path.IsPathRooted(settings.RemoteStorageRootPath))
-            {
-                string remoteStorageRootPath = string.Empty;
-                if (assemblyPath.Contains("WindowsApps"))
-                {
-                    // Path to RemoteStorage for msix package.
-                    string applicationDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), settings.AppID);
-                    remoteStorageRootPath = Path.Combine(applicationDataPath, "RemoteStorage");                  
-                }
-                else
-                {
-                    // Path to RemoteStorage folder when run VirtualDrive.Package project directly.
-                    remoteStorageRootPath = Path.GetFullPath(Path.Combine(assemblyPath, "..", "..", "..", "..", "..", "..", settings.AppID, settings.RemoteStorageRootPath));
-                }
-                settings.RemoteStorageRootPath = remoteStorageRootPath;
-            }
-
-            if (!Directory.Exists(settings.UserFileSystemRootPath))
-            {
-                settings.UserFileSystemRootPath = Environment.ExpandEnvironmentVariables(settings.UserFileSystemRootPath);
-            }
-            return settings;
         }
     }
 }

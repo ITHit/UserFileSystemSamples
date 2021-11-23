@@ -1,12 +1,10 @@
-using System.IO;
+using System;
 using System.Threading.Tasks;
 using log4net;
-
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
-
 using ITHit.FileSystem.Samples.Common.Windows;
-using System;
+using ITHit.FileSystem.Samples.Common.Windows.Rpc;
 
 namespace VirtualDrive
 {
@@ -17,12 +15,6 @@ namespace VirtualDrive
         /// Monitors changes in the remote storage, notifies the client and updates the user file system.
         /// </summary>
         public readonly RemoteStorageMonitor RemoteStorageMonitor;
-
-        /// <summary>
-        /// Gprc server control to communicate with Windows Explorer 
-        /// context menu and other components on this machine.
-        /// </summary>
-        private readonly GrpcServer grpcServer;
 
         /// <summary>
         /// Creates a vitual file system Engine.
@@ -50,7 +42,6 @@ namespace VirtualDrive
             : base(license, userFileSystemRootPath, remoteStorageRootPath, serverDataFolderPath, iconsFolderPath, rpcCommunicationChannelName, syncIntervalMs, log4net)
         {
             RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log4net);
-            grpcServer = new GrpcServer(rpcCommunicationChannelName, this, log4net);
         }
 
         /// <inheritdoc/>
@@ -73,14 +64,12 @@ namespace VirtualDrive
         {
             await base.StartAsync();
             RemoteStorageMonitor.Start();
-            grpcServer.Start();
         }
 
         public override async Task StopAsync()
         {
             await base.StopAsync();
             RemoteStorageMonitor.Stop();
-            grpcServer.Stop();
         }
 
         private bool disposedValue;
@@ -92,7 +81,6 @@ namespace VirtualDrive
                 if (disposing)
                 {
                     RemoteStorageMonitor.Dispose();
-                    grpcServer.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
@@ -100,6 +88,15 @@ namespace VirtualDrive
                 disposedValue = true;
             }
             base.Dispose(disposing);
+        }
+
+        /// <summary>
+        /// Current implementation doesn't use rpc for VirtualDrive system.
+        /// Can be implemented if need to move loading thumbnail logic from ShellExtension into VirtualDrive level.
+        /// </summary>
+        public override async Task<byte[]> GetThumbnailAsync(string path, uint size)
+        {
+            return ThumbnailExtractor.GetThumbnail(path, size);
         }
     }
 }

@@ -68,10 +68,7 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.18362.0" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\VirtualDrive.ShellExtension\VirtualDrive.ShellExtension.csproj">
-      <SkipGetTargetFrameworkProperties>True</SkipGetTargetFrameworkProperties>
-      <!--<PublishProfile>Properties\PublishProfiles\$(Configuration)_$(Platform).pubxml</PublishProfile>-->
-    </ProjectReference>
+    <ProjectReference Include="..\VirtualDrive.ShellExtension\VirtualDrive.ShellExtension.csproj" />
     <ProjectReference Include="..\VirtualDrive\VirtualDrive.csproj">
       <SkipGetTargetFrameworkProperties>True</SkipGetTargetFrameworkProperties>
     </ProjectReference>

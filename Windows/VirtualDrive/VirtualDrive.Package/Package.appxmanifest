@@ -52,7 +52,7 @@
             <desktop3:BannersHandler Clsid="20000000-0000-0000-0000-000000000001"/>
             
             <desktop3:CloudFilesContextMenus>
-              <desktop3:Verb Id="LockCommand" Clsid="A22EBD03-343E-433C-98DF-372C6B3A1538" />
+              <desktop3:Verb Id="LockCommand" Clsid="9C923BF3-3A4B-487B-AB4E-B4CF87FD1C25" />
             </desktop3:CloudFilesContextMenus>
             
           </desktop3:CloudFiles>
@@ -66,7 +66,7 @@
             </com:ExeServer>            
             
             <com:ExeServer DisplayName="VirtualDrive.ShellExtension" Executable="VirtualDrive.ShellExtension\VirtualDrive.ShellExtension.exe">
-              <com:Class Id="A22EBD03-343E-433C-98DF-372C6B3A1538" />
+              <com:Class Id="9C923BF3-3A4B-487B-AB4E-B4CF87FD1C25" />
             </com:ExeServer>
             
           </com:ComServer>

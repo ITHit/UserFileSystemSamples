@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0-windows10.0.18362.0</TargetFramework>
+    <CsWinRTWindowsMetadata>10.0.18362.0</CsWinRTWindowsMetadata>
+    <Description>This project contains protocol description, common for IT Hit Virtual Drive samples.</Description>
+    <Company>IT Hit LTD.</Company>
+    <Authors>IT Hit LTD.</Authors>
+    <Product>IT Hit User File System</Product>
+    <Copyright>IT Hit LTD.</Copyright>
+    <RootNamespace>ITHit.FileSystem.Samples.Common.Windows.Rpc.Proto</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.Tools" Version="2.40.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="GrpcDotNetNamedPipes" Version="1.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="*.proto" />
+  </ItemGroup>  
+
+</Project>

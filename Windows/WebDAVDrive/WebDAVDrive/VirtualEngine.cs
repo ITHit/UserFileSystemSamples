@@ -1,11 +1,10 @@
 using System.IO;
 using System.Threading.Tasks;
 using log4net;
-
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
-
 using ITHit.FileSystem.Samples.Common.Windows;
+using ITHit.FileSystem.Samples.Common.Windows.Rpc;
 using System;
 using System.Net.WebSockets;
 using System.Threading;
@@ -94,6 +93,18 @@ namespace WebDAVDrive
                 disposedValue = true;
             }
             base.Dispose(disposing);
+        }
+
+        /// <summary>
+        /// Returns thumbnail for item.
+        /// Or throw NotImplementedException if thumbnail is not availible.
+        /// Also as option might be returned empty array of null as indication of non existed thumbnail.
+        /// </summary>
+        public override async Task<byte[]> GetThumbnailAsync(string path, uint size)
+        {
+            //return File.ReadAllBytes(@".\images\test.jpg");
+
+            throw new NotImplementedException();
         }
     }
 }

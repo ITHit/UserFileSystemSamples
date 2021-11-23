@@ -40,7 +40,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="userFileSystemFolderPath">Folder path in the user file system.</param>
         /// <remarks>
         /// Synchronizes only folders already loaded into the user file system.
-        /// This method does not sync moved and deleted files. 
+        /// This method does not sync moved and deleted items. 
         /// </remarks>
         internal async Task SyncronizeFolderAsync(string userFileSystemFolderPath)
         {
@@ -88,12 +88,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Creates the item in the remote storate if the item is new. 
         /// Updates the item in the remote storage if the item in not new.
         /// </summary>
-        /// <param name="userFileSystemPath">File or folder path the user file system. This can be a placeholder or a regular file/folder.</param>
+        /// <param name="userFileSystemPath">File or folder path in the user file system. This can be a placeholder or a regular file/folder path.</param>
         /// <param name="engine">Engine instance.</param>
         /// <param name="logger">Logger instance.</param>
         internal static async Task CreateOrUpdateAsync(string userFileSystemPath, VirtualEngineBase engine, ILogger logger)
         {
-            if (System.IO.File.Exists(userFileSystemPath)
+            if (FsPath.Exists(userFileSystemPath)
                 && !FilterHelper.AvoidSync(userFileSystemPath))
             {
                 if (engine.ExternalDataManager(userFileSystemPath, logger).IsNew)
@@ -111,13 +111,10 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                         // The item was converted to a regular file during MS Office or AutoCAD transactiona save,
                         // converting it back to placeholder and uploading to the remote storage.
 
-                        //if (!AutoCadFilterHelper.IsAutoCadLocked(userFileSystemPath))
-                        //{
-                            logger.LogMessage("Converting to placeholder", userFileSystemPath);
-                            PlaceholderItem.ConvertToPlaceholder(userFileSystemPath, null, null, false);
-                            await engine.ClientNotifications(userFileSystemPath, logger).UpdateAsync();
-                            await engine.ExternalDataManager(userFileSystemPath).RefreshCustomColumnsAsync();
-                        //}
+                        logger.LogMessage("Converting to placeholder", userFileSystemPath);
+                        PlaceholderItem.ConvertToPlaceholder(userFileSystemPath, null, null, false);
+                        await engine.ClientNotifications(userFileSystemPath, logger).UpdateAsync();
+                        await engine.ExternalDataManager(userFileSystemPath).RefreshCustomColumnsAsync();
                     }
                     else if (!PlaceholderItem.GetItem(userFileSystemPath).GetInSync())
                     {

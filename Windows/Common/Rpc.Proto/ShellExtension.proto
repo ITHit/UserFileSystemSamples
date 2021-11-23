@@ -1,0 +1,29 @@
+﻿syntax = "proto3";
+
+package ITHit.FileSystem.Samples.Common.Windows.Rpc.Generated;
+
+service ShellExtensionRpc {
+	rpc SetLockStatus (ItemsStatusList) returns (EmptyMessage) {}
+	rpc GetLockStatus (ItemsPathList) returns (ItemsStatusList) {}
+	rpc GetThumbnail (ThumbnailRequest) returns (Thumbnail) {}
+}
+
+message ItemsPathList {
+    repeated string files = 1;
+}
+
+message ItemsStatusList {
+    map<string, bool> filesStatus = 1;	
+}
+
+message ThumbnailRequest {
+    string path = 1;	
+    uint32 size = 2;
+}
+
+message Thumbnail {
+    bytes image = 1;	
+}
+
+message EmptyMessage {
+}

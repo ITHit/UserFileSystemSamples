@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework>net5.0-windows10.0.18362.0</TargetFramework>
     <CsWinRTWindowsMetadata>10.0.19041.0</CsWinRTWindowsMetadata>
     <Authors>IT Hit LTD.</Authors>
     <Company>IT Hit LTD.</Company>
     <Product>WebDAV Drive</Product>
     <Copyright>IT Hit LTD.</Copyright>
     <Platforms>AnyCPU</Platforms>
-    <Description>A virtual file system in .NET/C# that displays documents from a WebDAV server. You can edit documents, upload and download files as well as manage folders structure using Windows File Manager. This application provides automatic documents locking for Microsoft Office documents. It supports synchronization, on-demand loading, selective offline files support, upload and download progress, and error reporting. It synchronizes files and folders both from a WebDAV server to the local user file system and from the local user file system to WebDAV server.</Description>
+    <Description>A virtual file system in .NET/C# that displays documents from a WebDAV server. You can edit documents, upload and download files as well as manage folders structure using Windows File Manager. This application provides automatic documents locking for Microsoft Office and AutoCAD documents. It supports synchronization, on-demand loading, selective offline files support, upload and download progress, and error reporting. It synchronizes files and folders both from a WebDAV server to the local user file system and from the local user file system to WebDAV server.</Description>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
@@ -29,10 +29,11 @@
     <Compile Remove="SyncService.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.7" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Common\Common.Windows.csproj" />
+    <ProjectReference Include="..\..\Common\VirtualDrive\Common.Windows.VirtualDrive.csproj" />
     <ProjectReference Include="..\WebDAVDrive.UI\WebDAVDrive.UI.csproj" />
   </ItemGroup>
   <ItemGroup>

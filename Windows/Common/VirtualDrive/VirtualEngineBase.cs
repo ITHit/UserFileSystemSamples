@@ -1,12 +1,12 @@
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using log4net;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
-
 using ITHit.FileSystem.Samples.Common.Windows;
-using System;
+using ITHit.FileSystem.Samples.Common.Windows.Rpc;
 
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
@@ -16,7 +16,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <summary>
         /// Monitors changes in the remote storage, notifies the client and updates the user file system.
         /// </summary>
-//        public readonly RemoteStorageMonitor RemoteStorageMonitor;
+        //  public readonly RemoteStorageMonitor RemoteStorageMonitor;
 
         /// <summary>
         /// Monitors documents renames and attributes changes in the user file system. 
@@ -29,12 +29,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// In case any changes are lost (app restart, lost connection, etc.) this service will sync all changes.
         /// </summary>
         public readonly FullSyncService SyncService;
-
-        /// <summary>
-        /// Gprc server control to communicate with Windows Explorer 
-        /// context menu and other components on this machine.
-        /// </summary>
-//        private readonly GrpcServer grpcServer;
 
         /// <summary>
         /// Logger.
@@ -50,6 +44,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Path to the icons folder.
         /// </summary>
         private readonly string iconsFolderPath;
+
+        /// <summary>
+        /// Gprc server control to communicate with Windows Explorer 
+        /// context menu and other components on this machine.
+        /// </summary>
+        private readonly GrpcServer grpcServer;
 
         /// <summary>
         /// Creates a vitual file system Engine.
@@ -79,6 +79,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             logger = new Logger("File System Engine", log4net) ?? throw new NullReferenceException(nameof(log4net));
             this.serverDataFolderPath = serverDataFolderPath ?? throw new NullReferenceException(nameof(serverDataFolderPath));
             this.iconsFolderPath = iconsFolderPath ?? throw new NullReferenceException(nameof(iconsFolderPath));
+            this.grpcServer = new GrpcServer(rpcCommunicationChannelName, this, log4net);
 
             // We want our file system to run regardless of any errors.
             // If any request to file system fails in user code or in Engine itself we continue processing.
@@ -91,7 +92,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             //RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log4net);
             FilteredDocsMonitor = new FilteredDocsMonitor(userFileSystemRootPath, this, log4net);
             SyncService = new FullSyncService(syncIntervalMs, userFileSystemRootPath, this, log4net);
-            //grpcServer = new GrpcServer(rpcCommunicationChannelName, this, log4net);
         }
 
         public abstract IMapping Mapping { get; }
@@ -137,7 +137,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             //RemoteStorageMonitor.Start();
             FilteredDocsMonitor.Start();
             await SyncService.StartAsync();
-            //grpcServer.Start();
+            grpcServer.Start();
         }
 
         public override async Task StopAsync()
@@ -146,7 +146,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             //RemoteStorageMonitor.Stop();
             FilteredDocsMonitor.Stop();
             await SyncService.StopAsync();
-            //grpcServer.Stop();
+            grpcServer.Stop();
         }
 
         private void Engine_Message(IEngine sender, EngineMessageEventArgs e)
@@ -177,6 +177,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             return new ExternalDataManager(userFileSystemPath, serverDataFolderPath, Path, iconsFolderPath, logger ?? this.logger);
         }
 
+        /// <summary>
+        /// Returns thumbnail.
+        /// </summary>
+        public abstract Task<byte[]> GetThumbnailAsync(string path, uint size);
+
         private bool disposedValue;
 
         protected override void Dispose(bool disposing)
@@ -188,7 +193,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                     //RemoteStorageMonitor.Dispose();
                     FilteredDocsMonitor.Dispose();
                     SyncService.Dispose();
-                    //grpcServer.Dispose();
+                    grpcServer.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer

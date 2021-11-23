@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common;
-using ITHit.FileSystem.Samples.Common.Windows;
+using System.Reflection;
 
 namespace WebDAVDrive.UI
 {
@@ -15,6 +16,8 @@ namespace WebDAVDrive.UI
     /// </summary>
     public class WindowsTrayInterface
     {
+        private string imageFolder;
+
         /// <summary>
         /// Create new tray icon.
         /// </summary>s
@@ -43,7 +46,7 @@ namespace WebDAVDrive.UI
         {
             notifyIcon.Text = Title + $"\n{Localization.Resources.Idle}";
             notifyIcon.ContextMenuStrip.Items[0].Text = Localization.Resources.StopSync;
-            notifyIcon.Icon = new System.Drawing.Icon("Images\\Drive.ico"); ;
+            notifyIcon.Icon = new System.Drawing.Icon($"{imageFolder}\\Drive.ico"); ;
         }
 
         /// <summary>
@@ -53,14 +56,14 @@ namespace WebDAVDrive.UI
         {
             notifyIcon.Text = Title + $"\n{Localization.Resources.StatusSync}";
             notifyIcon.ContextMenuStrip.Items[0].Text = Localization.Resources.StopSync;
-            notifyIcon.Icon = new System.Drawing.Icon("Images\\DriveSync.ico"); ;
+            notifyIcon.Icon = new System.Drawing.Icon($"{imageFolder}\\DriveSync.ico"); ;
         }
 
         private void StatusToSyncStopped() 
         {
             notifyIcon.Text = Title + $"\n{Localization.Resources.StatusSyncStopped}";
             notifyIcon.ContextMenuStrip.Items[0].Text = Localization.Resources.StartSync;
-            notifyIcon.Icon = new System.Drawing.Icon("Images\\DrivePause.ico"); ;
+            notifyIcon.Icon = new System.Drawing.Icon($"{imageFolder}\\DrivePause.ico"); ;
         }
         /// <summary>
         /// Icon in the status bar notification area.
@@ -91,11 +94,13 @@ namespace WebDAVDrive.UI
         /// </param>
         public WindowsTrayInterface(string title, IEngine virtualDrive) 
         {
+            imageFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\Images";
+
             Title = title;
             notifyIcon = new NotifyIcon();
 
             notifyIcon.Visible = true;
-            notifyIcon.Icon = new System.Drawing.Icon("Images\\Drive.ico");
+            notifyIcon.Icon = new System.Drawing.Icon($"{imageFolder}\\Drive.ico");
             notifyIcon.Text = title;
 
             ContextMenuStrip contextMenu = new ContextMenuStrip();

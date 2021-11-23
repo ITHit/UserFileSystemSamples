@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 using ITHit.FileSystem.Samples.Common;
 
@@ -23,17 +21,6 @@ namespace VirtualDrive
         /// In your real-life application you will read data from your cloud storage, database or any other location, instead of this folder.
         /// </remarks>
         public string RemoteStorageRootPath { get; set; }
-
-        /// <summary>
-        /// Path to the folder that stores custom data associated with files and folders.
-        /// </summary>
-        public string ServerDataFolderPath { get; set; }
-
-        /// <summary>
-        /// Communication channel name is used by RPC to establish connection over named pipes.
-        /// </summary>
-        public string RpcCommunicationChannelName { get; set; }
-
         /// <summary>
         /// Full synchronization interval in milliseconds.
         /// </summary>

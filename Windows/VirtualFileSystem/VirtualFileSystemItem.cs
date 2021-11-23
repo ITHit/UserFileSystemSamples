@@ -68,24 +68,35 @@ namespace VirtualFileSystem
             string userFileSystemOldPath = this.UserFileSystemPath;
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
 
-            string remoteStorageOldPath = RemoteStoragePath;
-            FileSystemInfo remoteStorageOldItem = FsPath.GetFileSystemItem(remoteStorageOldPath);
-
-            // newParentItemId is null if the hydrated file is moved outside of the virtual file system, for example to the recycle bin.
-            if ( (remoteStorageOldItem != null) && (newParentItemId != null) )
+            if (userFileSystemNewPath.StartsWith(Program.Settings.UserFileSystemRootPath))
             {
-                string remoteStorageNewParentPath = WindowsFileSystemItem.GetPathByItemId(newParentItemId);
-                string remoteStorageNewPath = Path.Combine(remoteStorageNewParentPath, Path.GetFileName(userFileSystemNewPath));
+                // The item is moved within the virtual file system.
+                
+                string remoteStorageOldPath = RemoteStoragePath;
+                FileSystemInfo remoteStorageOldItem = FsPath.GetFileSystemItem(remoteStorageOldPath);
 
-                if (remoteStorageOldItem is FileInfo)
+                // newParentItemId is null if the hydrated file is moved outside of the virtual file system, for example to the recycle bin.
+                if ((remoteStorageOldItem != null) && (newParentItemId != null))
                 {
-                    (remoteStorageOldItem as FileInfo).MoveTo(remoteStorageNewPath, true);
+                    string remoteStorageNewParentPath = WindowsFileSystemItem.GetPathByItemId(newParentItemId);
+                    string remoteStorageNewPath = Path.Combine(remoteStorageNewParentPath, Path.GetFileName(userFileSystemNewPath));
+
+                    if (remoteStorageOldItem is FileInfo)
+                    {
+                        (remoteStorageOldItem as FileInfo).MoveTo(remoteStorageNewPath, true);
+                    }
+                    else
+                    {
+                        (remoteStorageOldItem as DirectoryInfo).MoveTo(remoteStorageNewPath);
+                    }
+
+                    Logger.LogMessage("Moved item in remote storage succesefully", userFileSystemOldPath, userFileSystemNewPath, operationContext);
                 }
-                else
-                {
-                    (remoteStorageOldItem as DirectoryInfo).MoveTo(remoteStorageNewPath);
-                }
-                Logger.LogMessage("Moved item in remote storage succesefully", userFileSystemOldPath, userFileSystemNewPath, operationContext);
+            }
+            else
+            {
+                // The move target path is outside of the virtual file system - delete the item.
+                await DeleteAsync(operationContext, resultContext);
             }
         }
         
@@ -96,6 +107,13 @@ namespace VirtualFileSystem
             string userFileSystemNewPath = this.UserFileSystemPath;
             string userFileSystemOldPath = moveCompletionContext.SourcePath;
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath, moveCompletionContext);
+
+            if(FsPath.IsFolder(userFileSystemNewPath))
+            {
+                // In this sample the folder does not have any metadata that can be modified on the client
+                // and should be synched to the remote storage, just marking the folder as in-sync after the move.
+                PlaceholderItem.GetItem(userFileSystemNewPath).SetInSync(true);
+            }
         }
 
         

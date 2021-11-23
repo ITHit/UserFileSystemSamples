@@ -167,7 +167,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             //            await SetIconAsync(set, 2, "Up.ico", "Upload to server pending");
         }
-        */
+        
 
         /// <summary>
         /// Sets or removes "Conflict" icon.
@@ -177,6 +177,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             await SetIconAsync(set, (int)CustomColumnIds.ConflictIcon, "Error.ico", "Conflict. File is modified both on the server and on the client.");
         }
+        */
 
         /// <summary>
         /// Sets or removes "Lock" icon and all lock properties.
@@ -406,23 +407,29 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 file.IsReadOnly = false;
             }
 
-            // This method may be called on temp files, typically created by MS Office, that exist for a short period of time.          
-            IStorageItem storageItem = await FsPath.GetStorageItemAsync(userFileSystemPath);
-            if (storageItem == null)
+            IStorageItem storageItem = null;
+            try
             {
-                // This method may be called on temp files, typically created by MS Office, that exist for a short period of time.
-                // StorageProviderItemProperties.SetAsync(null,) causes AccessViolationException 
-                // which is not handled by .NET (nor handled by HandleProcessCorruptedStateExceptions) and causes a fatal crush.
-                return;
+                // This method may be called on temp files, typically created by MS Office, that exist for a short period of time.          
+                storageItem = await FsPath.GetStorageItemAsync(userFileSystemPath);
+                if (storageItem == null)
+                {
+                    // This method may be called on temp files, typically created by MS Office, that exist for a short period of time.
+                    // StorageProviderItemProperties.SetAsync(null,) causes AccessViolationException 
+                    // which is not handled by .NET (nor handled by HandleProcessCorruptedStateExceptions) and causes a fatal crush.
+                    return;
+                }
+
+                // Update columns data.
+                await StorageProviderItemProperties.SetAsync(storageItem, customColumns);
             }
-
-            // Update columns data.
-            await StorageProviderItemProperties.SetAsync(storageItem, customColumns);
-
-            // Set read-only attribute.
-            if (readOnly && ((file.Attributes & System.IO.FileAttributes.Directory) == 0))
+            finally
             {
-                file.IsReadOnly = true;
+                // Set read-only attribute.
+                if (readOnly && (storageItem!=null) && ((file.Attributes & System.IO.FileAttributes.Directory) == 0))
+                {
+                    file.IsReadOnly = true;
+                }
             }
         }
 

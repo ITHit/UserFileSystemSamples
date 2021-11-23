@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net5.0-windows10.0.18362.0</TargetFramework>
+    <CsWinRTWindowsMetadata>10.0.18362.0</CsWinRTWindowsMetadata>
+    <Description>Contains functionality common for all Windows Virtual Drive samples.</Description>
+    <Authors>IT Hit LTD.</Authors>
+    <Product>IT Hit User File System</Product>
+    <Copyright>IT Hit LTD.</Copyright>
+    <RootNamespace>ITHit.FileSystem.Samples.Common.Windows.Rpc</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="log4net" Version="2.0.13" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Rpc.Proto\Common.Windows.Rpc.Proto.csproj" />
+  </ItemGroup>
+</Project>
