@@ -13,7 +13,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="4.0.11187.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="4.0.11250.0-Beta" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Core\Common.Windows.Core.csproj" />
     <ProjectReference Include="..\Rpc.Proto\Common.Windows.Rpc.Proto.csproj" />

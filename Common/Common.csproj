@@ -9,6 +9,6 @@
     <RootNamespace>ITHit.FileSystem.Samples.Common</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem" Version="4.0.11187.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem" Version="4.0.11250.0-Beta" />
   </ItemGroup>
 </Project>

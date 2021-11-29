@@ -113,13 +113,13 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
             }
             catch (NotImplementedException)
             {
+                logger.LogMessage("Thumbnail is not implemented", path);
                 string msg = $"Thumbnail for {path} is not implemented";
-                logger.LogMessage(msg);
                 throw new RpcException(new Status(StatusCode.Internal, msg));
             }
             catch (Exception ex)
             {
-                logger.LogError(ex.Message);
+                logger.LogError("Error getting thumbnail", path, null, ex);
                 throw new RpcException(new Status(StatusCode.Internal, ex.Message));
             }
         }

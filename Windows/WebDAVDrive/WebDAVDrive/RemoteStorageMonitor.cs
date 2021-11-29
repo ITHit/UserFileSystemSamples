@@ -39,7 +39,6 @@ namespace WebDAVDrive
         /// <summary>
         /// Gets or sets a value that indicates whether to send an authenticate header with the websocket.
         /// </summary>
-        public NetworkCredential WebSocketCredentials { get; set; }
 
         /// <summary>
         /// WebSocket client.
@@ -112,7 +111,7 @@ namespace WebDAVDrive
                       try
                       {
                           repeat = false;
-                          await StartMonitoringAsync(WebSocketCredentials);
+                          await StartMonitoringAsync(engine.Credentials);
                       }
                       catch (Exception e) when (e is WebSocketException || e is AggregateException)
                       {
@@ -157,30 +156,34 @@ namespace WebDAVDrive
         internal async Task ProcessAsync(string jsonString)
         {
             WebSocketMessage jsonMessage = JsonSerializer.Deserialize<WebSocketMessage>(jsonString);
-            LogMessage($"EventType: {jsonMessage.EventType}", jsonMessage.ItemPath, jsonMessage.TargetPath);
-
             string remoteStoragePath = Mapping.GetAbsoluteUri(jsonMessage.ItemPath);
-            switch (jsonMessage.EventType)
+
+            // check if remote url starts with WebDAVServerUrl
+            if (remoteStoragePath.StartsWith(Program.Settings.WebDAVServerUrl))
             {
-                case "created":
-                    await CreatedAsync(remoteStoragePath);
-                    break;
-                case "updated":
-                    await ChangedAsync(remoteStoragePath);
-                    break;
-                case "moved":
-                    string remoteStorageNewPath = Mapping.GetAbsoluteUri(jsonMessage.TargetPath);
-                    await MovedAsync(remoteStoragePath, remoteStorageNewPath);
-                    break;
-                case "deleted":
-                    await DeletedAsync(remoteStoragePath);
-                    break;
-                case "locked":
-                    await LockedAsync(remoteStoragePath);
-                    break;
-                case "unlocked":
-                    await UnlockedAsync(remoteStoragePath);
-                    break;
+                LogMessage($"EventType: {jsonMessage.EventType}", jsonMessage.ItemPath, jsonMessage.TargetPath);
+                switch (jsonMessage.EventType)
+                {
+                    case "created":
+                        await CreatedAsync(remoteStoragePath);
+                        break;
+                    case "updated":
+                        await ChangedAsync(remoteStoragePath);
+                        break;
+                    case "moved":
+                        string remoteStorageNewPath = Mapping.GetAbsoluteUri(jsonMessage.TargetPath);
+                        await MovedAsync(remoteStoragePath, remoteStorageNewPath);
+                        break;
+                    case "deleted":
+                        await DeletedAsync(remoteStoragePath);
+                        break;
+                    case "locked":
+                        await LockedAsync(remoteStoragePath);
+                        break;
+                    case "unlocked":
+                        await UnlockedAsync(remoteStoragePath);
+                        break;
+                }
             }
         }
 

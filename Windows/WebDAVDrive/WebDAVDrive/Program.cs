@@ -263,7 +263,7 @@ namespace WebDAVDrive
                                 passwordCredential.RetrievePassword();
                                 NetworkCredential networkCredential = new NetworkCredential(passwordCredential.UserName, passwordCredential.Password);
                                 DavClient.Credentials = networkCredential;
-                                Engine.RemoteStorageMonitor.WebSocketCredentials = networkCredential;
+                                Engine.Credentials = networkCredential;
                                 e.Result = WebDavErrorEventResult.Repeat;
                             }
                             else
@@ -299,7 +299,7 @@ namespace WebDAVDrive
                                         CredentialManager.SaveCredentials(Settings.ProductName, login, password);
                                     }
                                     NetworkCredential newNetworkCredential = new NetworkCredential(login, password);
-                                    Engine.RemoteStorageMonitor.WebSocketCredentials = newNetworkCredential;
+                                    Engine.Credentials = newNetworkCredential;
                                     DavClient.Credentials = newNetworkCredential;
                                     e.Result = WebDavErrorEventResult.Repeat;
                                 }

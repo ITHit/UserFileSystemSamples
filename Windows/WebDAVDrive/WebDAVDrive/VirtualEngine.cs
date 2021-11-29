@@ -2,13 +2,10 @@ using System.IO;
 using System.Threading.Tasks;
 using log4net;
 using ITHit.FileSystem;
-using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
-using ITHit.FileSystem.Samples.Common.Windows.Rpc;
 using System;
-using System.Net.WebSockets;
-using System.Threading;
 using System.Net;
+using System.Linq;
 
 namespace WebDAVDrive
 {
@@ -19,6 +16,11 @@ namespace WebDAVDrive
         /// Monitors changes in the remote storage, notifies the client and updates the user file system.
         /// </summary>
         internal readonly RemoteStorageMonitor RemoteStorageMonitor;
+
+        /// <summary>
+        /// Gets or sets a value that indicates whether to send an authenticate header with the websocket.
+        /// </summary>
+        public NetworkCredential Credentials { get; set; }
 
         /// <summary>
         /// Creates a vitual file system Engine.
@@ -97,14 +99,43 @@ namespace WebDAVDrive
 
         /// <summary>
         /// Returns thumbnail for item.
-        /// Or throw NotImplementedException if thumbnail is not availible.
+        /// Or throw NotImplementedException if thumbnail is not available.
         /// Also as option might be returned empty array of null as indication of non existed thumbnail.
         /// </summary>
         public override async Task<byte[]> GetThumbnailAsync(string path, uint size)
         {
-            //return File.ReadAllBytes(@".\images\test.jpg");
+            string[] exts = Program.Settings.RequestThumbnailsFor.Trim().Split("|");
+            string ext = System.IO.Path.GetExtension(path).TrimStart('.');
 
-            throw new NotImplementedException();
+            if (exts.Any(ext.Equals) || exts.Any("*".Equals))
+            {
+                string ThumbnailGeneratorUrl = Program.Settings.ThumbnailGeneratorUrl.Replace("{thumbnail width}", ""+size).Replace("{thumbnail height}", "" + size);
+                string filePathRemote = ThumbnailGeneratorUrl.Replace("{path to file}", WebDAVDrive.Mapping.MapPath(path));
+
+                try
+                {
+                    using Stream stream = await Program.DavClient.DownloadAsync(new Uri(filePathRemote));
+                    return await StreamToByteArrayAsync(stream);
+                }
+                catch (WebException we)
+                {
+                    LogMessage(we.Message, path);
+                }
+                catch (Exception e)
+                {
+                    LogError("Failed to load thumbnail", path, null, e);
+                }
+            }
+            return null;
+        }
+
+        private static async Task<byte[]> StreamToByteArrayAsync(Stream stream)
+        {
+            using (MemoryStream memoryStream = new())
+            {
+                await stream.CopyToAsync(memoryStream);
+                return memoryStream.ToArray();
+            }
         }
     }
 }

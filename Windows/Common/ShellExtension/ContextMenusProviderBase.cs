@@ -118,9 +118,16 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
 
             try
             {
+                if (itemArray is null)
+                {
+                    return WinError.E_NOTIMPL;
+                }
+
                 IEnumerable<string> files = itemArray.GetFilesPath().Where(ShellExtensionConfiguration.IsVirtualDriveFolder);
                 if (!files.Any() || !files.All(File.Exists))
+                {
                     return WinError.E_NOTIMPL;
+                }
 
                 Log.Info($"\nGetting menu state for {string.Join(",", files)}");
 

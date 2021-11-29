@@ -35,6 +35,20 @@ namespace WebDAVDrive
         /// Full synchronization interval in milliseconds.
         /// </summary>
         public double SyncIntervalMs { get; set; }
+        /// <summary>
+        /// URL to get a thumbnail for Windows Explorer thumbnails mode.
+        /// Your server must return 404 Not Found if the thumbnail can not be generated.
+        /// If incorrect size is returned, the image will be resized automatically to show the thumbnail.
+        /// "ThumbnailGeneratorUrl": "{path to file}?width={thumbnail width}&height={thumbnail height}"
+        /// </summary>
+        public string ThumbnailGeneratorUrl { get; set; }
+        /// <summary>
+        /// File types to request thumbnails for.
+        /// To request thumbnails for specific file types, list file types using '|' separator.
+        /// To request thumbnails for all file types set the value to "*".
+        /// "RequestThumbnailsFor": "*|png|jpg|jpeg|gif|bmp|tiff|"
+        /// </summary>
+        public string RequestThumbnailsFor { get; set; }
     }
 
     /// <summary>
