@@ -158,8 +158,8 @@ namespace WebDAVDrive
             WebSocketMessage jsonMessage = JsonSerializer.Deserialize<WebSocketMessage>(jsonString);
             string remoteStoragePath = Mapping.GetAbsoluteUri(jsonMessage.ItemPath);
 
-            // check if remote url starts with WebDAVServerUrl
-            if (remoteStoragePath.StartsWith(Program.Settings.WebDAVServerUrl))
+            // Check if remote URL starts with WebDAVServerUrl.
+            if (remoteStoragePath.StartsWith(Program.Settings.WebDAVServerUrl, StringComparison.InvariantCultureIgnoreCase))
             {
                 LogMessage($"EventType: {jsonMessage.EventType}", jsonMessage.ItemPath, jsonMessage.TargetPath);
                 switch (jsonMessage.EventType)

@@ -3,6 +3,9 @@ using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows.Rpc.Generated;
 using GrpcDotNetNamedPipes;
 using log4net;
+using System.IO.Pipes;
+using System.Security.Principal;
+using System.Security.AccessControl;
 
 namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
 {
@@ -37,7 +40,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
                     Stop();
                 }
 
-                NamedPipeServer server = new NamedPipeServer(rpcCommunicationChannelName);
+                NamedPipeServer server = new NamedPipeServer(rpcCommunicationChannelName, new NamedPipeServerOptions() {
+                    CurrentUserOnly = true
+                });
                 ShellExtensionRpc.BindService(server.ServiceBinder, new GprcServerServiceImpl(engine, this));
                 server.Start();
                 namedPipeServer = server;
@@ -48,6 +53,19 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
             {
                 LogError(ex.Message);
             }
+        }
+
+        // Creates a PipeSecurity that allows users read/write access
+        PipeSecurity CreateSystemIOPipeSecurity()
+        {
+            PipeSecurity pipeSecurity = new PipeSecurity();
+
+            var id = new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null);
+
+            // Allow Everyone read and write access to the pipe. 
+            pipeSecurity.SetAccessRule(new PipeAccessRule(id, PipeAccessRights.ReadWrite, AccessControlType.Allow));
+
+            return pipeSecurity;
         }
 
         /// <summary>

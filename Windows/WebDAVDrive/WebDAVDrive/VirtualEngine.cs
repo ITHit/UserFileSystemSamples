@@ -98,19 +98,24 @@ namespace WebDAVDrive
         }
 
         /// <summary>
-        /// Returns thumbnail for item.
-        /// Or throw NotImplementedException if thumbnail is not available.
-        /// Also as option might be returned empty array of null as indication of non existed thumbnail.
+        /// Returns thumbnail for specified path in the user file system.
         /// </summary>
-        public override async Task<byte[]> GetThumbnailAsync(string path, uint size)
+        /// <remarks>
+        /// Throw <see cref="NotImplementedException"/> if thumbnail is not available.
+        /// You may also return empty array of null as indication of non existed thumbnail.
+        /// </remarks>
+        /// <param name="userFileSystemPath">Path in user file system.</param>
+        /// <param name="size">Thumbnail size in pixels.</param>
+        /// <returns>Thumbnail bitmap or null if the thumbnail handler is not found.</returns>
+        public override async Task<byte[]> GetThumbnailAsync(string userFileSystemPath, uint size)
         {
             string[] exts = Program.Settings.RequestThumbnailsFor.Trim().Split("|");
-            string ext = System.IO.Path.GetExtension(path).TrimStart('.');
+            string ext = System.IO.Path.GetExtension(userFileSystemPath).TrimStart('.');
 
             if (exts.Any(ext.Equals) || exts.Any("*".Equals))
             {
                 string ThumbnailGeneratorUrl = Program.Settings.ThumbnailGeneratorUrl.Replace("{thumbnail width}", ""+size).Replace("{thumbnail height}", "" + size);
-                string filePathRemote = ThumbnailGeneratorUrl.Replace("{path to file}", WebDAVDrive.Mapping.MapPath(path));
+                string filePathRemote = ThumbnailGeneratorUrl.Replace("{path to file}", WebDAVDrive.Mapping.MapPath(userFileSystemPath));
 
                 try
                 {
@@ -119,11 +124,11 @@ namespace WebDAVDrive
                 }
                 catch (WebException we)
                 {
-                    LogMessage(we.Message, path);
+                    LogMessage(we.Message, userFileSystemPath);
                 }
                 catch (Exception e)
                 {
-                    LogError("Failed to load thumbnail", path, null, e);
+                    LogError("Failed to load thumbnail", userFileSystemPath, null, e);
                 }
             }
             return null;

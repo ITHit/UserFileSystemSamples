@@ -7,7 +7,6 @@ using log4net.Layout;
 using log4net.Repository.Hierarchy;
 using Microsoft.Extensions.Configuration;
 
-using ITHit.FileSystem.Samples.Common;
 
 namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
 {
@@ -21,10 +20,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
         /// </summary>
         public static Settings AppSettings { get; private set; }
 
+        private static ILog Log { get; set; }
+
         /// <summary>
         /// Initialize or load settings.
         /// </summary>
-        public static void Initialize(Settings settings = null)
+        public static void Initialize(Settings settings = null, ILog log = null)
         {
             if (settings != null)
             {
@@ -34,6 +35,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
             {
                 AppSettings = Load();
             }
+            Log = log;
         }
 
         /// <summary>
@@ -53,6 +55,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
         /// </summary>
         public static ILog GetLogger(string logName)
         {
+            if (Log != null)
+                return Log;
+
             string assemblyPath = Path.GetDirectoryName(typeof(ShellExtensionConfiguration).Assembly.Location);
             Hierarchy hierarchy = (Hierarchy)LogManager.GetRepository(typeof(ShellExtensionConfiguration).Assembly);
 
@@ -71,11 +76,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
                             Path.Combine(
                                 Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), 
                                 AppSettings.AppID),
-                            "ShelIExtension.log");
+                            logName);
                 }
                 else
                 {
-                    roller.File = Path.Combine(assemblyPath, "ShelIExtension.log");
+                    roller.File = Path.Combine(assemblyPath, logName);
                 }
                 roller.Layout = patternLayout;
                 roller.MaxSizeRollBackups = 5;

@@ -37,7 +37,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             storageInfo.RecycleBinUri = new Uri("https://userfilesystem.com/recyclebin");
             storageInfo.Context = CryptographicBuffer.ConvertStringToBinary(path, BinaryStringEncoding.Utf8);
 
-            storageInfo.HydrationPolicy = StorageProviderHydrationPolicy.Progressive;
+            // To open mp4 files using Windows Movies & TV application the Hydration Policy must be set to Full.
+            storageInfo.HydrationPolicy = StorageProviderHydrationPolicy.Full;
             storageInfo.HydrationPolicyModifier = StorageProviderHydrationPolicyModifier.AutoDehydrationAllowed; //| StorageProviderHydrationPolicyModifier.ValidationRequired;
 
             // To implement folders on-demand placeholders population set the 

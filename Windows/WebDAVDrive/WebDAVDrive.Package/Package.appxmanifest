@@ -11,7 +11,7 @@
   <Identity
     Name="002B4E63-F09E-41B2-B183-4CA36C13DCAA"
     Publisher="CN=IT Hit LTD., O=IT Hit LTD., STREET=86 Kimbark blvd, L=Toronto, S=Ontario, PostalCode=M5N2Y1, C=CA"
-    Version="1.0.0.0" />
+    Version="1.0.24.0" />
 
   <Properties>
     <DisplayName>WebDAVDrive.Package</DisplayName>

@@ -4,6 +4,14 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using ITHit.FileSystem.Samples.Common.Windows.ShellExtension;
 using ITHit.FileSystem.Samples.Common.Windows.ShellExtension.ComInfrastructure;
+using ITHit.FileSystem.Samples.Common;
+using System.Reflection;
+using System.IO;
+using System.Linq;
+using log4net;
+using log4net.Appender;
+using log4net.Config;
+
 
 namespace VirtualDrive.ShellExtension
 {
@@ -21,7 +29,12 @@ namespace VirtualDrive.ShellExtension
 
             // Load and initialize settings.
             IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
-            ShellExtensionConfiguration.Initialize(configuration.ReadSettings());
+            Settings settings = configuration.ReadSettings();
+
+            ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+            ConfigureLogger(settings);
+
+            ShellExtensionConfiguration.Initialize(settings, log);
 
             try
             {
@@ -36,6 +49,25 @@ namespace VirtualDrive.ShellExtension
             catch (Exception ex)
             {
                 Debug.WriteLine(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Configures log4net logger.
+        /// </summary>
+        /// <returns>Log file path.</returns>
+        private static void ConfigureLogger(Settings settings)
+        {
+            // Load Log4Net for net configuration.
+            var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
+            XmlConfigurator.Configure(logRepository, new FileInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "log4net.config")));
+
+            // Update log file path for msix package. 
+            RollingFileAppender rollingFileAppender = logRepository.GetAppenders().Where(p => p.GetType() == typeof(RollingFileAppender)).FirstOrDefault() as RollingFileAppender;
+            if (rollingFileAppender != null && rollingFileAppender.File.Contains("WindowsApps"))
+            {
+                rollingFileAppender.File = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), settings.AppID + ".ShellExtension",
+                                                        Path.GetFileName(rollingFileAppender.File));
             }
         }
     }

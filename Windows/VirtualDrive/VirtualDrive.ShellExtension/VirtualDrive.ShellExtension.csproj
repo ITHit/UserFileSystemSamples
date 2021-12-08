@@ -15,6 +15,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Mapping.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="..\VirtualDrive\Images\Locked.ico" Link="Locked.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -37,6 +41,12 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Common\ShellExtension\Common.Windows.ShellExtension.csproj" />
     <ProjectReference Include="..\VirtualDrive\VirtualDrive.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="log4net.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

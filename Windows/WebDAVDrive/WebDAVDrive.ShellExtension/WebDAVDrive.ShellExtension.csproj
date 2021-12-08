@@ -39,4 +39,10 @@
     <ProjectReference Include="..\..\Common\ShellExtension\Common.Windows.ShellExtension.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="log4net.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
