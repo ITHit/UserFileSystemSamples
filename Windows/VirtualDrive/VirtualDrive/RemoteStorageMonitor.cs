@@ -114,7 +114,6 @@ namespace VirtualDrive
                         if (await engine.ServerNotifications(userFileSystemParentPath).CreateAsync(new[] { newItemInfo }) > 0)
                         {
                             LogMessage($"Created succesefully", userFileSystemPath);
-                            engine.ExternalDataManager(userFileSystemPath, this).IsNew = false;
                         }
                     }
                 }
@@ -151,6 +150,9 @@ namespace VirtualDrive
                     // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                     if (await engine.ServerNotifications(userFileSystemPath).UpdateAsync(itemInfo))
                     {
+                        // Update ETag.
+                        //await engine.Mapping.UpdateETagAsync(remoteStoragePath, userFileSystemPath);
+
                         LogMessage("Updated succesefully", userFileSystemPath);
                     }
                 }
@@ -180,7 +182,6 @@ namespace VirtualDrive
 
                 // This check is only required because we can not prevent circular calls because of the simplicity of this example.
                 // In your real-life application you will not send updates from server back to client that issued the update.
-                Thread.Sleep(2000); // This can be removed in a real-life application.
                 if (FsPath.Exists(userFileSystemPath))
                 {
                     // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
@@ -188,7 +189,6 @@ namespace VirtualDrive
                     {
                         LogMessage("Deleted succesefully", userFileSystemPath);
                     }
-                    engine.ExternalDataManager(userFileSystemPath, this).Delete();
                 }
             }
             catch (Exception ex)
@@ -203,7 +203,7 @@ namespace VirtualDrive
         /// <remarks>In this method we rename corresponding file/folder in user file system.</remarks>
         private async void RenamedAsync(object sender, RenamedEventArgs e)
         {
-            LogMessage("Renamed:", e.OldFullPath, e.FullPath);
+            LogMessage("Renamed", e.OldFullPath, e.FullPath);
             string remoteStorageOldPath = e.OldFullPath;
             string remoteStorageNewPath = e.FullPath;
             try 
@@ -213,16 +213,18 @@ namespace VirtualDrive
 
                 // This check is only required because we can not prevent circular calls because of the simplicity of this example.
                 // In your real-life application you will not send updates from server back to client that issued the update.
-                Thread.Sleep(2000); // This can be removed in a real-life application.
                 if (FsPath.Exists(userFileSystemOldPath))
                 {
                     // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                     if (await engine.ServerNotifications(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath))
                     {
-                        LogMessage("Renamed succesefully:", userFileSystemOldPath, userFileSystemNewPath);
+                        // As soon as in this sample we use USN as a ETag, and USN chandes on move,
+                        // we need to update it for hydrated files.
+                        //await engine.Mapping.UpdateETagAsync(remoteStorageNewPath, userFileSystemNewPath);
+
+                        LogMessage("Renamed succesefully", userFileSystemOldPath, userFileSystemNewPath);
                     }
                 }
-                await engine.ExternalDataManager(userFileSystemOldPath, this).MoveToAsync(userFileSystemNewPath);
             }
             catch (Exception ex)
             {

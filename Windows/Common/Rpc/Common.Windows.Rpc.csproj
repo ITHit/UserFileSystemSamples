@@ -7,6 +7,7 @@
     <Product>IT Hit User File System</Product>
     <Copyright>IT Hit LTD.</Copyright>
     <RootNamespace>ITHit.FileSystem.Samples.Common.Windows.Rpc</RootNamespace>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="log4net" Version="2.0.13" />

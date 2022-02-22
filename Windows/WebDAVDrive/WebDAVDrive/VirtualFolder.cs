@@ -8,6 +8,7 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Samples.Common;
 using Client = ITHit.WebDAV.Client;
+using ITHit.FileSystem.Windows;
 
 namespace WebDAVDrive
 {
@@ -31,27 +32,27 @@ namespace WebDAVDrive
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
 
+            // Create a new file in the remote storage.
             Uri newFileUri = new Uri(new Uri(RemoteStoragePath), fileMetadata.Name);
 
             long contentLength = content != null ? content.Length : 0;
 
             // Update remote storage file content.
-            // Get the new ETag returned by the server (if any).
-            string eTagNew = await Program.DavClient.UploadAsync(newFileUri, async (outputStream) => {
+            // Get the new ETag returned by the server, if any.
+            string eTag = await Program.DavClient.UploadAsync(newFileUri, async (outputStream) => {
                 if (content != null)
                 {
+                    // Setting position to 0 is required in case of retry.
+                    content.Position = 0;
                     await content.CopyToAsync(outputStream);
                 }
             }, null, contentLength);
 
-            ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemNewItemPath);
-
-            // Store ETag unlil the next update.
-            await customDataManager.SetCustomDataAsync(
-                eTagNew, 
-                false,
-                new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
-
+            // Store ETag it in persistent placeholder properties untill the next update.
+            PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemNewItemPath);
+            await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
+            
+            // WebDAV does not use any item IDs, returning null.
             return null;
         }
 
@@ -64,16 +65,12 @@ namespace WebDAVDrive
             Uri newFolderUri = new Uri(new Uri(RemoteStoragePath), folderMetadata.Name);
             await Program.DavClient.CreateFolderAsync(newFolderUri);
 
-            ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemNewItemPath);
+            // WebDAV server sypically does not provide eTags for folders.
+            // Store ETag (if any) unlil the next update here.
+            //PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemNewItemPath);
+            //await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
 
-            string eTagNew = ""; // WebDAV server sypically does not provide eTags for folders.
-
-            // Store ETag unlil the next update.
-            await customDataManager.SetCustomDataAsync(
-                eTagNew,
-                false,
-                new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
-
+            // WebDAV does not use any item IDs, returning null.
             return null;
         }
 
@@ -100,25 +97,18 @@ namespace WebDAVDrive
                     Logger.LogMessage("Creating", userFileSystemItemPath);
                     userFileSystemChildren.Add(itemMetadata);
                 }
-
-                ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemItemPath);
-
-                // Mark this item as not new, which is required for correct MS Office saving opertions.
-                customDataManager.IsNew = false;
             }
 
             // To signal that the children enumeration is completed 
             // always call ReturnChildren(), even if the folder is empty.
-            resultContext.ReturnChildren(userFileSystemChildren.ToArray(), userFileSystemChildren.Count());
+            await resultContext.ReturnChildrenAsync(userFileSystemChildren.ToArray(), userFileSystemChildren.Count());
 
-            // Save ETags, the read-only attribute and all custom columns data.
+            // Save data that will be displayes in custom columns in file manager
+            // as well as any additional custom data required by the client.
             foreach (FileSystemItemMetadataExt itemMetadata in userFileSystemChildren)
             {
                 string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemMetadata.Name);
-                ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemItemPath);
-
-                // Save ETag on the client side, to be sent to the remote storage as part of the update.
-                await customDataManager.SetCustomDataAsync(itemMetadata.ETag, itemMetadata.IsLocked, itemMetadata.CustomProperties);
+                await Engine.Placeholders.GetItem(userFileSystemItemPath).SavePropertiesAsync(itemMetadata);
             }
         }
 
@@ -141,7 +131,7 @@ namespace WebDAVDrive
         /// <inheritdoc/>
         public async Task WriteAsync(IFolderMetadata folderMetadata, IOperationContext operationContext = null)
         {
-            // We can not change any folder metadata on a WebDAV server, so this method is empty.
+            // Typically we can not change any folder metadata on a WebDAV server, just logging the call.
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
         }
     }

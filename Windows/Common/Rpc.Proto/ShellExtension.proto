@@ -6,6 +6,9 @@ service ShellExtensionRpc {
 	rpc SetLockStatus (ItemsStatusList) returns (EmptyMessage) {}
 	rpc GetLockStatus (ItemsPathList) returns (ItemsStatusList) {}
 	rpc GetThumbnail (ThumbnailRequest) returns (Thumbnail) {}
+    rpc LogMessage (LogMessageRequest) returns (EmptyMessage) {}
+    rpc LogError (LogErrorRequest) returns (EmptyMessage) {}
+    rpc GetItemProperties (ItemPropertyRequest) returns (ItemsPropertyList) {}
 }
 
 message ItemsPathList {
@@ -25,5 +28,34 @@ message Thumbnail {
     bytes image = 1;	
 }
 
+message LogMessageRequest {
+    string componentName = 1;
+    string message = 2;
+    string sourcePath = 3;
+    string targetPath = 4;
+}
+
+message LogErrorRequest {
+    string componentName = 1;
+    string message = 2;
+    string sourcePath = 3;
+    string targetPath = 4;
+    string exSerialized = 5;
+}
+
 message EmptyMessage {
+}
+
+message ItemProperty {
+    string iconResource = 1;
+    int32 id = 2;
+    string value = 3;
+}
+
+message ItemsPropertyList {
+    repeated ItemProperty properties = 1;
+}
+
+message ItemPropertyRequest {
+    string path = 1;
 }

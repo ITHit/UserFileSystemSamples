@@ -50,15 +50,33 @@ namespace WebDAVDrive
 
             SimulateNetworkDelay(length, resultContext);
 
-            if (offset == 0 && length == operationContext.FileSize) {
+            if (offset == 0 && length == operationContext.FileSize) 
+            {
                 // If we read entire file, do not add Range header. Pass -1 to not add it.
                 offset = -1;
             }
-            using (Stream stream = await Program.DavClient.DownloadAsync(new Uri(RemoteStoragePath), offset, length))
+
+            string eTag = null;
+
+            // Buffer size must be multiple of 4096 bytes for optimal performance.
+            const int bufferSize = 0x500000; // 5Mb.
+            using (Client.IWebResponse response = await Program.DavClient.DownloadAsync(new Uri(RemoteStoragePath), offset, length))
             {
-                const int bufferSize = 0x500000; // 5Mb. Buffer size must be multiple of 4096 bytes for optimal performance.
-                await stream.CopyToAsync(output, bufferSize, length);
+                using (Stream stream = await response.GetResponseStreamAsync())
+                {
+                    await stream.CopyToAsync(output, bufferSize, length);
+                }
+                eTag = response.GetHeaderValue("ETag");
             }
+
+            //// Store ETag here.
+            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
+            await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
+
+            //using (Stream stream = await Program.DavClient.DownloadAsync(new Uri(RemoteStoragePath), offset, length))
+            //{
+            //    await stream.CopyToAsync(output, bufferSize, length);
+            //}
         }
 
         /// <inheritdoc/>
@@ -81,33 +99,41 @@ namespace WebDAVDrive
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
-            ExternalDataManager customDataManager = Engine.ExternalDataManager(UserFileSystemPath);
-            // Send the ETag to the server as part of the update to ensure the file in the remote storge is not modified since last read.
-            string oldEtag = await customDataManager.ETagManager.GetETagAsync();
-
-            // Send the lock-token to the server as part of the update.
-            string lockToken = (await customDataManager.LockManager.GetLockInfoAsync())?.LockToken;
-            Client.LockUriTokenPair[] lockTokens = new Client.LockUriTokenPair[] { new Client.LockUriTokenPair(new Uri(RemoteStoragePath), lockToken) };
-
             if (content != null)
             {
-                long contentLength = content != null ? content.Length : 0;
+                // Send the ETag to the server as part of the update to ensure
+                // the file in the remote storge is not modified since last read.
+                PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
 
-                // Update remote storage file content.
-                // Get the new ETag returned by the server (if any).
-                string eTagNew = await Program.DavClient.UploadAsync(new Uri(RemoteStoragePath), async (outputStream) => {
-                    if (content != null)
+                string oldEtag = null; //await placeholder.Properties["ETag"].GetValueAsync<string>();
+
+                if (placeholder.Properties.TryGetValue("ETag", out IDataItem propETag))
+                {
+                    propETag.TryGetValue<string>(out oldEtag);
+                }
+
+                // Read the lock-token and send it to the server as part of the update.
+                Client.LockUriTokenPair[] lockTokens = null;
+                IDataItem propLockInfo;
+                if (placeholder.Properties.TryGetValue("LockInfo", out propLockInfo))
+                {
+                    ServerLockInfo lockInfo;
+                    if (propLockInfo.TryGetValue<ServerLockInfo>(out lockInfo))
                     {
-                        // Rewind for new copy (e.g. retry)
-                        content.Position = 0;
-                        await content.CopyToAsync(outputStream);
+                        string lockToken = lockInfo.LockToken;
+                        lockTokens = new Client.LockUriTokenPair[] { new Client.LockUriTokenPair(new Uri(RemoteStoragePath), lockToken) };
                     }
-                }, null, contentLength, 0, -1, lockTokens, oldEtag);
+                }
 
-                await customDataManager.SetCustomDataAsync(
-                    eTagNew, 
-                    null,
-                    new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
+                // Update remote storage file content,
+                // also get and save a new ETag returned by the server, if any.
+                string newEtag = await Program.DavClient.UploadAsync(new Uri(RemoteStoragePath), async (outputStream) => {                    
+                    // Setting position to 0 is required in case of retry.
+                    content.Position = 0;
+                    await content.CopyToAsync(outputStream);
+                }, null, content.Length, 0, -1, lockTokens, oldEtag);
+
+                await placeholder.Properties.AddOrUpdateAsync("ETag", newEtag);
             }
         }
     }

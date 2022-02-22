@@ -62,11 +62,17 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             {
                 try
                 {
-                    await CreateOrUpdateAsync(userFileSystemPath, engine, this);
+                    await engine.ClientNotifications(userFileSystemPath, this).CreateOrUpdateAsync();
+                }
+                catch (ClientLockFailedException ex)
+                {
+                    // Blocked for create/update/lock/unlock operation from another thread.
+                    // Thrown by CreateAsync()/UpdateAsync() call. This is a normal behaviour.
+                    LogMessage(ex.Message, ex.Path);
                 }
                 catch (Exception ex)
                 {
-                    LogError("Update failed", userFileSystemPath, null, ex);
+                    LogError("Creation or update failed", userFileSystemPath, null, ex);
                 }
 
                 // Synchronize subfolders.
@@ -79,52 +85,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 }
                 catch (Exception ex)
                 {
-                    LogError("Folder sync failed:", userFileSystemPath, null, ex);
+                    LogError("Folder sync failed", userFileSystemPath, null, ex);
                 }
             }
         }
-        
-        /// <summary>
-        /// Creates the item in the remote storate if the item is new. 
-        /// Updates the item in the remote storage if the item in not new.
-        /// </summary>
-        /// <param name="userFileSystemPath">File or folder path in the user file system. This can be a placeholder or a regular file/folder path.</param>
-        /// <param name="engine">Engine instance.</param>
-        /// <param name="logger">Logger instance.</param>
-        internal static async Task CreateOrUpdateAsync(string userFileSystemPath, VirtualEngineBase engine, ILogger logger)
-        {
-            if (FsPath.Exists(userFileSystemPath)
-                && !FilterHelper.AvoidSync(userFileSystemPath))
-            {
-                if (engine.ExternalDataManager(userFileSystemPath, logger).IsNew)
-                {
-                    if (!PlaceholderItem.IsPlaceholder(userFileSystemPath))
-                    {
-                        // New file/folder, creating new item in the remote storage.
-                        await engine.ClientNotifications(userFileSystemPath, logger).CreateAsync();
-                    }
-                }
-                else
-                {
-                    if (!PlaceholderItem.IsPlaceholder(userFileSystemPath))
-                    {
-                        // The item was converted to a regular file during MS Office or AutoCAD transactiona save,
-                        // converting it back to placeholder and uploading to the remote storage.
-
-                        logger.LogMessage("Converting to placeholder", userFileSystemPath);
-                        PlaceholderItem.ConvertToPlaceholder(userFileSystemPath, null, null, false);
-                        await engine.ClientNotifications(userFileSystemPath, logger).UpdateAsync();
-                        await engine.ExternalDataManager(userFileSystemPath).RefreshCustomColumnsAsync();
-                    }
-                    else if (!PlaceholderItem.GetItem(userFileSystemPath).GetInSync())
-                    {
-                        // The item is modified in the user file system, uploading to the remote storage.
-                        await engine.ClientNotifications(userFileSystemPath, logger).UpdateAsync();
-                        await engine.ExternalDataManager(userFileSystemPath).RefreshCustomColumnsAsync();
-                    }
-                }
-            }
-        }
-        
     }
 }

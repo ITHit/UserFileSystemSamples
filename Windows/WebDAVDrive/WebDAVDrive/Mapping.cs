@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
+using ITHit.FileSystem.Windows;
 using Client = ITHit.WebDAV.Client;
 
 namespace WebDAVDrive
@@ -14,14 +15,14 @@ namespace WebDAVDrive
     /// Maps a user file system path to the remote storage path and back. 
     /// </summary>
     /// <remarks>You will change methods of this class to map the user file system path to your remote storage path.</remarks>
-    internal class Mapping : IMapping
+    internal static class Mapping // : IMapping
     {
-        private readonly VirtualEngineBase engine;
+        //private readonly VirtualEngineBase engine;
 
-        internal Mapping(VirtualEngineBase engine)
-        {
-            this.engine = engine;
-        }
+        //internal Mapping(VirtualEngineBase engine)
+        //{
+        //    this.engine = engine;
+        //}
 
         /// <summary>
         /// Returns a remote storage URI that corresponds to the user file system path.
@@ -117,51 +118,54 @@ namespace WebDAVDrive
             userFileSystemItem.LastAccessTime = remoteStorageItem.LastModified;
             userFileSystemItem.ChangeTime = remoteStorageItem.LastModified;
 
-            userFileSystemItem.IsLocked = remoteStorageItem.ActiveLocks.Length > 0;
-
-            if (remoteStorageItem is Client.IFile)
-            {
-                // We send the ETag to 
-                // the server inside If-Match header togeter with updated content from client.
-                // This will make sure the changes on the server is not overwritten.
-                ((FileMetadataExt)userFileSystemItem).ETag = ((Client.IFile)remoteStorageItem).Etag;
-            };
-
-            // Set custom columns to be displayed in file manager.
-            // We create property definitions when registering the sync root with corresponding IDs.
-            List<FileSystemItemPropertyData> customProps = new List<FileSystemItemPropertyData>();
-
-            // Set lock properties.
+            // Ser information about third-party lock if any.
             Client.LockInfo lockInfo = remoteStorageItem.ActiveLocks.FirstOrDefault();
             if (lockInfo != null)
             {
-                ServerLockInfo serverLockInfo = new ServerLockInfo()
+                userFileSystemItem.Lock = new ServerLockInfo()
                 {
                     LockToken = lockInfo.LockToken.LockToken,
                     Owner = lockInfo.Owner,
                     Exclusive = lockInfo.LockScope == Client.LockScope.Exclusive,
                     LockExpirationDateUtc = DateTimeOffset.Now.Add(lockInfo.TimeOut)
                 };
-                customProps.AddRange(
-                    serverLockInfo.GetLockProperties(Path.Combine(Program.Settings.IconsFolderPath, "Locked.ico"))
-                );            
             }
 
-            // Set ETag property.
-            if (remoteStorageItem is Client.IFile file)
-            {
-                customProps.Add(new FileSystemItemPropertyData((int)CustomColumnIds.ETag, file.Etag));
-            };
 
-            userFileSystemItem.CustomProperties = customProps;
+            /*
+            // Set custom columns to be displayed in file manager.
+            // We create property definitions when registering the sync root with corresponding IDs.
+            // The columns are rendered in IVirtualEngine.GetItemPropertiesAsync() call.
+            userFileSystemItem.CustomProperties = ;
+            */
 
             return userFileSystemItem;
         }
 
         /// <inheritdoc/>
-        public async Task<bool> IsModifiedAsync(string userFileSystemPath, FileSystemItemMetadataExt remoteStorageItemMetadata, ILogger logger)
+        //public async Task<bool> IsModifiedAsync(string userFileSystemPath, FileSystemItemMetadataExt remoteStorageItemMetadata, ILogger logger)
+        //{
+        //    return !await engine.ExternalDataManager(userFileSystemPath, logger).ETagManager.ETagEqualsAsync(remoteStorageItemMetadata);
+        //}
+
+
+        /// <summary>
+        /// Saves all data that is displayed in custom columns in file manager
+        /// as well as any additional custom data required by the client.
+        /// </summary>
+        public static async Task SavePropertiesAsync(this PlaceholderItem placeholder, FileSystemItemMetadataExt metadata)
         {
-            return !await engine.ExternalDataManager(userFileSystemPath, logger).ETagManager.ETagEqualsAsync(remoteStorageItemMetadata);
+            // Save lock applied by other users.
+            if (metadata.Lock != null)
+            {
+                await placeholder.Properties.AddOrUpdateAsync("ThirdPartyLockInfo", metadata.Lock);
+            }
+
+            //foreach (FileSystemItemPropertyData prop in itemMetadata.CustomProperties)
+            //{
+            //    string key = ((CustomColumnIds)prop.Id).ToString();
+            //    await placeholder.Properties.AddOrUpdateAsync(key, prop);
+            //}
         }
     }
 }

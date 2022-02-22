@@ -180,7 +180,6 @@ namespace VirtualFileSystem
 
                 // This check is only required because we can not prevent circular calls because of the simplicity of this example.
                 // In your real-life application you will not send updates from server back to client that issued the update.
-                Thread.Sleep(2000); // This can be removed in a real-life application.
                 if (FsPath.Exists(userFileSystemPath))
                 {
                     if (await engine.ServerNotifications(userFileSystemPath).DeleteAsync())
@@ -203,7 +202,7 @@ namespace VirtualFileSystem
         /// <remarks>In this method we rename corresponding file/folder in user file system.</remarks>
         private async void RenamedAsync(object sender, RenamedEventArgs e)
         {
-            LogMessage("Renamed:", e.OldFullPath, e.FullPath);
+            LogMessage("Renamed", e.OldFullPath, e.FullPath);
             string remoteStorageOldPath = e.OldFullPath;
             string remoteStorageNewPath = e.FullPath;
             try 
@@ -213,7 +212,6 @@ namespace VirtualFileSystem
 
                 // This check is only required because we can not prevent circular calls because of the simplicity of this example.
                 // In your real-life application you will not send updates from server back to client that issued the update.
-                Thread.Sleep(2000); // This can be removed in a real-life application.
                 if (FsPath.Exists(userFileSystemOldPath))
                 {
                     if (await engine.ServerNotifications(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath))

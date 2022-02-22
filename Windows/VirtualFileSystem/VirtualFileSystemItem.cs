@@ -22,12 +22,7 @@ namespace VirtualFileSystem
         /// <summary>
         /// File or folder item ID in the remote storage.
         /// </summary>
-        protected readonly byte[] ItemId;
-
-        /// <summary>
-        /// Path of this file or folder in the remote storage.
-        /// </summary>
-        protected readonly string RemoteStoragePath;
+        protected readonly byte[] RemoteStorageItemId;
 
         /// <summary>
         /// Logger.
@@ -38,100 +33,90 @@ namespace VirtualFileSystem
         /// Creates instance of this class.
         /// </summary>
         /// <param name="userFileSystemPath">File or folder path in the user file system.</param>
-        /// <param name="itemId">Remote storage item ID.</param>
+        /// <param name="remoteStorageItemId">Remote storage item ID.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFileSystemItem(string userFileSystemPath, byte[] itemId, ILogger logger)
+        public VirtualFileSystemItem(string userFileSystemPath, byte[] remoteStorageItemId, ILogger logger)
         {
-            if (string.IsNullOrEmpty(userFileSystemPath))
-            {
-                throw new ArgumentNullException(nameof(userFileSystemPath));
-            }
-            ItemId = itemId ?? throw new ArgumentNullException(nameof(itemId));
+            UserFileSystemPath = string.IsNullOrEmpty(userFileSystemPath) ? throw new ArgumentNullException(nameof(userFileSystemPath)) : userFileSystemPath;
+            RemoteStorageItemId = remoteStorageItemId ?? throw new ArgumentNullException(nameof(remoteStorageItemId));
             Logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-            UserFileSystemPath = userFileSystemPath;
-
-            try
-            {
-                RemoteStoragePath = WindowsFileSystemItem.GetPathByItemId(ItemId);
-            }
-            catch(ArgumentException)
-            {
-                // When a file is deleted, the IFile.CloseAsync() is called for the deleted file.
-            }
         }
 
         
         ///<inheritdoc>
-        public async Task MoveToAsync(string userFileSystemNewPath, byte[] newParentItemId, IOperationContext operationContext, IConfirmationResultContext resultContext)
+        public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null)
         {
+            string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
+        }
 
-            if (userFileSystemNewPath.StartsWith(Program.Settings.UserFileSystemRootPath))
+        /// <inheritdoc/>
+        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IResultContext resultContext = null)
+        {
+            string userFileSystemNewPath = targetUserFileSystemPath; 
+            string userFileSystemOldPath = this.UserFileSystemPath;
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
+
+            string remoteStorageOldPath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            FileSystemInfo remoteStorageOldItem = FsPath.GetFileSystemItem(remoteStorageOldPath);
+
+            if (remoteStorageOldItem != null)
             {
-                // The item is moved within the virtual file system.
-                
-                string remoteStorageOldPath = RemoteStoragePath;
-                FileSystemInfo remoteStorageOldItem = FsPath.GetFileSystemItem(remoteStorageOldPath);
+                string remoteStorageNewParentPath = WindowsFileSystemItem.GetPathByItemId(targetFolderRemoteStorageItemId);
+                string remoteStorageNewPath = Path.Combine(remoteStorageNewParentPath, Path.GetFileName(targetUserFileSystemPath));
 
-                // newParentItemId is null if the hydrated file is moved outside of the virtual file system, for example to the recycle bin.
-                if ((remoteStorageOldItem != null) && (newParentItemId != null))
+                if (remoteStorageOldItem is FileInfo)
                 {
-                    string remoteStorageNewParentPath = WindowsFileSystemItem.GetPathByItemId(newParentItemId);
-                    string remoteStorageNewPath = Path.Combine(remoteStorageNewParentPath, Path.GetFileName(userFileSystemNewPath));
-
-                    if (remoteStorageOldItem is FileInfo)
-                    {
-                        (remoteStorageOldItem as FileInfo).MoveTo(remoteStorageNewPath, true);
-                    }
-                    else
-                    {
-                        (remoteStorageOldItem as DirectoryInfo).MoveTo(remoteStorageNewPath);
-                    }
-
-                    Logger.LogMessage("Moved item in remote storage succesefully", userFileSystemOldPath, userFileSystemNewPath, operationContext);
+                    (remoteStorageOldItem as FileInfo).MoveTo(remoteStorageNewPath, true);
                 }
-            }
-            else
-            {
-                // The move target path is outside of the virtual file system - delete the item.
-                await DeleteAsync(operationContext, resultContext);
+                else
+                {
+                    (remoteStorageOldItem as DirectoryInfo).MoveTo(remoteStorageNewPath);
+                }
+
+                Logger.LogMessage("Moved item in remote storage succesefully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
             }
         }
         
-
-        /// <inheritdoc/>
-        public async Task MoveToCompletionAsync(IMoveCompletionContext moveCompletionContext, IResultContext resultContext)
-        {
-            string userFileSystemNewPath = this.UserFileSystemPath;
-            string userFileSystemOldPath = moveCompletionContext.SourcePath;
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath, moveCompletionContext);
-
-            if(FsPath.IsFolder(userFileSystemNewPath))
-            {
-                // In this sample the folder does not have any metadata that can be modified on the client
-                // and should be synched to the remote storage, just marking the folder as in-sync after the move.
-                PlaceholderItem.GetItem(userFileSystemNewPath).SetInSync(true);
-            }
-        }
 
         
         ///<inheritdoc>
-        public async Task DeleteAsync(IOperationContext operationContext, IConfirmationResultContext resultContext)
+        public async Task DeleteAsync(IOperationContext operationContext = null, IConfirmationResultContext resultContext = null)
         {
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", this.UserFileSystemPath, default, operationContext);
 
             // To cancel the operation and prevent the file from being deleted, 
             // call the resultContext.ReturnErrorResult() method or throw any exception inside this method.
 
-            // IMPOTRTANT! See Windows Cloud API delete prevention bug description here: 
+            // IMPOTRTANT!
+            // Make sure you have all Windows updates installed.
+            // See Windows Cloud API delete prevention bug description here: 
             // https://stackoverflow.com/questions/68887190/delete-in-cloud-files-api-stopped-working-on-windows-21h1
             // https://docs.microsoft.com/en-us/answers/questions/75240/bug-report-cfapi-ackdelete-borken-on-win10-2004.html
+        }
 
-            // Note that some applications, such as Windows Explorer may call delete more than one time on the same file/folder.
+        /// <inheritdoc/>
+        public async Task DeleteCompletionAsync(IOperationContext operationContext = null, IResultContext resultContext = null)
+        {
+            // On Windows, for rename with overwrite to function properly for folders, 
+            // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
+            // Otherwise the source folder will be deleted before files in it can be moved.
 
-            FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(RemoteStoragePath);
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", this.UserFileSystemPath, default, operationContext);
+
+            string remoteStoragePath;
+            try
+            {
+                remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            }
+            catch(FileNotFoundException)
+            {
+                // Windows Explorer may call delete more than one time on the same file/folder.
+                return;
+            }
+
+            FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
             if (remoteStorageItem != null)
             {
                 if (remoteStorageItem is FileInfo)
@@ -144,16 +129,6 @@ namespace VirtualFileSystem
                 }
                 Logger.LogMessage("Deleted item in remote storage succesefully", UserFileSystemPath, default, operationContext);
             }
-        }
-
-        /// <inheritdoc/>
-        public async Task DeleteCompletionAsync(IOperationContext operationContext, IResultContext resultContext)
-        {
-            // On Windows, for rename with overwrite to function properly for folders, 
-            // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
-            // Otherwise the folder will be deleted before files in it can be moved.
-
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", this.UserFileSystemPath, default, operationContext);
         }
         
 

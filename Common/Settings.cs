@@ -50,14 +50,9 @@ namespace ITHit.FileSystem.Samples.Common
         public string ProductName { get; set; }
 
         /// <summary>
-        /// Automatically lock the file in remote storage when a file handle is being opened for writing, unlock on close.
+        /// Automatically lock the file in the remote storage when a file handle is being opened for writing, unlock on close.
         /// </summary>
         public bool AutoLock { get; set; }
-
-        /// <summary>
-        /// Path to the folder that stores custom data associated with files and folders.
-        /// </summary>
-        public string ServerDataFolderPath { get; set; }
 
         /// <summary>
         /// Communication channel name is used by RPC to establish connection over named pipes.

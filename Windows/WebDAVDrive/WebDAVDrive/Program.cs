@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -10,15 +9,20 @@ using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.Storage;
+using Microsoft.Extensions.Configuration;
 
 using log4net;
 using log4net.Appender;
 using log4net.Config;
+using ITHit.FileSystem;
+using ITHit.FileSystem.Windows;
+using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
+
 using ITHit.WebDAV.Client;
 using ITHit.WebDAV.Client.Exceptions;
-using ITHit.FileSystem;
-using ITHit.FileSystem.Samples.Common;
+using System.Net.Http;
+
 using WebDAVDrive.UI;
 using WebDAVDrive.UI.ViewModels;
 
@@ -91,47 +95,47 @@ namespace WebDAVDrive
 
             Logger.PrintHeader(log);
 
-            ConfigureWebDavSession();
-
-            try
+            using (DavClient = ConfigureWebDavSession())
             {
-                Engine = new VirtualEngine(
-                    Settings.UserFileSystemLicense, 
-                    Settings.UserFileSystemRootPath,
-                    Settings.WebDAVServerUrl,
-                    Settings.ServerDataFolderPath,
-                    Settings.WebSocketServerUrl,
-                    Settings.IconsFolderPath,
-                    Settings.RpcCommunicationChannelName,
-                    Settings.SyncIntervalMs,
-                    log);
-                Engine.AutoLock = Settings.AutoLock;
+                try
+                {
+                    Engine = new VirtualEngine(
+                        Settings.UserFileSystemLicense,
+                        Settings.UserFileSystemRootPath,
+                        Settings.WebDAVServerUrl,
+                        Settings.WebSocketServerUrl,
+                        Settings.IconsFolderPath,
+                        Settings.RpcCommunicationChannelName,
+                        Settings.SyncIntervalMs,
+                        log);
+                    Engine.AutoLock = Settings.AutoLock;
 
-                // Start tray application in a separate thread.
-                WindowsTrayInterface.CreateTrayInterface(Settings.ProductName, Engine, exitEvent);
+                    // Start tray application in a separate thread.
+                    WindowsTrayInterface.CreateTrayInterface(Settings.ProductName, Engine, exitEvent);
 
-                // Start processing OS file system calls.
-                await Engine.StartAsync();
+                    // Start processing OS file system calls.
+                    await Engine.StartAsync();
 
 #if DEBUG
-                // Opens Windows File Manager with user file system folder and remote storage folder.
-                ShowTestEnvironment();
+                    // Opens Windows File Manager with user file system folder and remote storage folder.
+                    ShowTestEnvironment();
 #endif
-                // Read console input in a separate thread.
-                await ConsoleReadKeyAsync();
+                    // Read console input in a separate thread.
+                    await ConsoleReadKeyAsync();
 
-                // Keep this application running and reading user input
-                // untill the tray app exits or an exit key in the console is selected. 
-                exitEvent.WaitOne();
-            }
-            catch (Exception ex)
-            {
-                log.Error(ex);
-                await ProcessUserInputAsync();
-            }
-            finally
-            {
-                Engine.Dispose();
+                    // Keep this application running and reading user input
+                    // untill the tray app exits or an exit key in the console is selected. 
+                    exitEvent.WaitOne();
+                }
+                catch (Exception ex)
+                {
+                    log.Error(ex);
+                    await ProcessUserInputAsync();
+                }
+                finally
+                {
+                    Engine.Dispose();
+                }
             }
         }
 
@@ -169,13 +173,13 @@ namespace WebDAVDrive
 
             }
 
-            // Open Windows File Manager with custom data storage. Uncomment this to debug custom data storage management.
-            ProcessStartInfo serverDataInfo = new ProcessStartInfo(Program.Settings.ServerDataFolderPath);
-            serverDataInfo.UseShellExecute = true; // Open window only if not opened already.
-            using (Process serverDataWinFileManager = Process.Start(serverDataInfo))
-            {
+            //// Open Windows File Manager with custom data storage. Uncomment this to debug custom data storage management.
+            //ProcessStartInfo serverDataInfo = new ProcessStartInfo(Program.Settings.ServerDataFolderPath);
+            //serverDataInfo.UseShellExecute = true; // Open window only if not opened already.
+            //using (Process serverDataWinFileManager = Process.Start(serverDataInfo))
+            //{
 
-            }
+            //}
         }
 #endif
 
@@ -194,11 +198,20 @@ namespace WebDAVDrive
         /// <summary>
         /// Creates and configures WebDAV client to access the remote storage.
         /// </summary>
-        private static void ConfigureWebDavSession()
+        private static WebDavSession ConfigureWebDavSession()
         {
-            DavClient = new WebDavSession(Program.Settings.WebDAVClientLicense);
-            DavClient.WebDavError += DavClient_WebDavError;
-            DavClient.WebDavMessage += DavClient_WebDAVMessage;
+            HttpClientHandler handler = new HttpClientHandler()
+            {
+                AllowAutoRedirect = false,
+
+                // Enable pre-authentication to avoid double requests.
+                // This option improves performance but is less secure. 
+                // PreAuthenticate = true,
+            };
+            WebDavSession davClient = new WebDavSession(Program.Settings.WebDAVClientLicense);
+            davClient.WebDavError += DavClient_WebDavError;
+            davClient.WebDavMessage += DavClient_WebDAVMessage;
+            return davClient;
         }
 
         /// <summary>
@@ -424,23 +437,23 @@ namespace WebDAVDrive
 
                     case 'q':
                         // Unregister during programm uninstall.
-                        await Engine.StopAsync();
+                        Engine.Dispose();
                         await UnregisterSyncRootAsync();
                         log.Info("\nAll empty file and folder placeholders are deleted. Hydrated placeholders are converted to regular files / folders.\n");
                         return;
 
                     case (char)ConsoleKey.Escape:
                     case 'Q':
-                        // Unregister during programm uninstall.                        
-                        await Engine.StopAsync();
+                        Engine.Dispose();
+
+                        // Call the code below during programm uninstall using classic msi.
                         await UnregisterSyncRootAsync();
 
                         // Delete all files/folders.
-                        CleanupAppFolders();
+                        await CleanupAppFoldersAsync();
                         return;
 
                     case (char)ConsoleKey.Spacebar:
-                        await Engine.StopAsync();
                         log.Info("\n\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.\n");
                         return;
 
@@ -465,7 +478,6 @@ namespace WebDAVDrive
             {
                 log.Info($"\nRegistering {Settings.UserFileSystemRootPath} sync root.");
                 Directory.CreateDirectory(Settings.UserFileSystemRootPath);
-                Directory.CreateDirectory(Settings.ServerDataFolderPath);
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
                     Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
@@ -494,7 +506,7 @@ namespace WebDAVDrive
             await Registrar.UnregisterAsync(SyncRootId);
         }
 
-        private static void CleanupAppFolders()
+        private static async Task CleanupAppFoldersAsync()
         {
             log.Info("\nDeleting all file and folder placeholders.\n");
             try
@@ -508,9 +520,7 @@ namespace WebDAVDrive
 
             try
             {
-                string localApplicationDataFolderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                string appDataPath = Path.Combine(localApplicationDataFolderPath, Settings.AppID);
-                Directory.Delete(appDataPath, true);
+                await ((EngineWindows)Engine).UninstallCleanupAsync();
             }
             catch (Exception ex)
             {

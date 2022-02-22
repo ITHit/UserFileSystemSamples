@@ -14,13 +14,13 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension.Thumbnails
 
         private string filePath = null;
 
-        protected ILog Log { get; }
+        protected ILogger Log { get; }
 
         public ThumbnailProviderBase()
         {
             ReferenceManager.AddObjectReference();
 
-            Log = ShellExtensionConfiguration.GetLogger("ThumbnailProvider.log");
+            Log = new GrpcLogger("Thumbnail Provider");
         }
 
         ~ThumbnailProviderBase()
@@ -57,7 +57,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension.Thumbnails
 
             try
             {
-                Log.Info($"\nGetting thumbnail for {filePath}");
+                //Log.LogMessage($"{nameof(ThumbnailProviderBase)}.{nameof(GetThumbnail)}()", filePath);
 
                 byte[] bitmapData = GetThumbnailsAsync(filePath, cx).GetAwaiter().GetResult();
 
@@ -75,9 +75,13 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension.Thumbnails
 
                 return WinError.S_OK;
             }
+            catch (NotImplementedException)
+            {
+                return WinError.E_FAIL;
+            }
             catch (Exception ex)
             {
-                Log.Error(ex);
+                Log.LogError("", null, null, ex);
                 return WinError.E_FAIL;
             }
         }

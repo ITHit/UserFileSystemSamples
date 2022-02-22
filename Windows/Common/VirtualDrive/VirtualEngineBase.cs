@@ -7,6 +7,7 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Samples.Common.Windows.Rpc;
+using System.Collections.Generic;
 
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
@@ -19,12 +20,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         //  public readonly RemoteStorageMonitor RemoteStorageMonitor;
 
         /// <summary>
-        /// Monitors documents renames and attributes changes in the user file system. 
-        /// Required for transactional saves performed by MS Office, AutoCAD, as well as for Notepad++, etc.
-        /// </summary>
-        public readonly FilteredDocsMonitor FilteredDocsMonitor;
-
-        /// <summary>
         /// Full synchronization service.
         /// In case any changes are lost (app restart, lost connection, etc.) this service will sync all changes.
         /// </summary>
@@ -34,11 +29,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Logger.
         /// </summary>
         private readonly ILogger logger;
-
-        /// <summary>
-        /// Path to the folder that stores custom data associated with files and folders.
-        /// </summary>
-        private readonly string serverDataFolderPath;
 
         /// <summary>
         /// Path to the icons folder.
@@ -60,7 +50,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Your file system tree will be located under this folder.
         /// </param>
         /// <param name="remoteStorageRootPath">Path to the remote storage root.</param>
-        /// <param name="serverDataFolderPath">Path to the folder that stores custom data associated with files and folders.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
         /// <param name="rpcCommunicationChannelName">Channel name to communicate with Windows Explorer context menu and other components on this machine.</param>
         /// <param name="syncIntervalMs">Full synchronization interval in milliseconds.</param>
@@ -69,7 +58,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             string license, 
             string userFileSystemRootPath, 
             string remoteStorageRootPath, 
-            string serverDataFolderPath, 
             string iconsFolderPath, 
             string rpcCommunicationChannelName,
             double syncIntervalMs,
@@ -77,7 +65,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             : base(license, userFileSystemRootPath)
         {
             logger = new Logger("File System Engine", log4net) ?? throw new NullReferenceException(nameof(log4net));
-            this.serverDataFolderPath = serverDataFolderPath ?? throw new NullReferenceException(nameof(serverDataFolderPath));
             this.iconsFolderPath = iconsFolderPath ?? throw new NullReferenceException(nameof(iconsFolderPath));
             this.grpcServer = new GrpcServer(rpcCommunicationChannelName, this, log4net);
 
@@ -90,11 +77,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             Message += Engine_Message;
 
             //RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log4net);
-            FilteredDocsMonitor = new FilteredDocsMonitor(userFileSystemRootPath, this, log4net);
             SyncService = new FullSyncService(syncIntervalMs, userFileSystemRootPath, this, log4net);
         }
 
-        public abstract IMapping Mapping { get; }
+        //public abstract IMapping Mapping { get; }
+
+        public string IconsFolderPath => iconsFolderPath;
 
         /// <inheritdoc/>
         public override async Task<bool> FilterAsync(OperationType operationType, string userFileSystemPath, string userFileSystemNewPath = null, IOperationContext operationContext = null)
@@ -103,11 +91,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             { 
                 switch(operationType)
                 {
-                    case OperationType.Update:
+                    // To send file content to the remote storage only when the MS Office or
+                    // AutoCAD document is closed, uncommnt the Create and Update cases below.
+                    //case OperationType.Create:
+                    //case OperationType.Update:
+
                     case OperationType.Unlock:
-                        // PowerPoint does not block the file for reading when the file is opened for editing.
-                        // As a result the file will be sent to the remote storage during each file save operation.
-                        // This also improves performance of the file save including for AutoCAD files.
                         return FilterHelper.AvoidSync(userFileSystemPath) 
                             || FilterHelper.IsAppLocked(userFileSystemPath);
 
@@ -135,8 +124,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             await base.StartAsync();
             //RemoteStorageMonitor.Start();
-            FilteredDocsMonitor.Start();
-            await SyncService.StartAsync();
+            //await SyncService.StartAsync();
             grpcServer.Start();
         }
 
@@ -144,7 +132,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             await base.StopAsync();
             //RemoteStorageMonitor.Stop();
-            FilteredDocsMonitor.Stop();
             await SyncService.StopAsync();
             grpcServer.Stop();
         }
@@ -170,17 +157,27 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <summary>
-        /// Manages custom data associated with the item and stored outside of the item. 
+        /// Gets thumbnail.
         /// </summary>
-        public ExternalDataManager ExternalDataManager(string userFileSystemPath, ILogger logger = null)
-        {
-            return new ExternalDataManager(userFileSystemPath, serverDataFolderPath, Path, iconsFolderPath, logger ?? this.logger);
-        }
+        /// <param name="userFileSystemPath">Path in the user file system.</param>
+        /// <param name="size">Thumbnail size in pixels.</param>
+        /// <remarks>
+        /// Throws <see cref="NotImplementedException"/> if thumbnail is not available.
+        /// </remarks>
+        /// <returns>
+        /// Thumbnail bitmap or null if no thumbnail should be displayed in the file manager for this item.
+        /// </returns>
+        public abstract Task<byte[]> GetThumbnailAsync(string userFileSystemPath, uint size);
 
         /// <summary>
-        /// Returns thumbnail.
+        /// Gets list of item properties.
         /// </summary>
-        public abstract Task<byte[]> GetThumbnailAsync(string path, uint size);
+        /// <param name="userFileSystemPath">Path in the user file system.</param>
+        /// <returns>
+        /// List of properties to be displayed in the file manager that correspond to the path 
+        /// provided in the <paramref name="userFileSystemPath"/> parameter.
+        /// </returns>
+        public abstract Task<IEnumerable<FileSystemItemPropertyData>> GetItemPropertiesAsync(string userFileSystemPath);
 
         private bool disposedValue;
 
@@ -191,7 +188,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 if (disposing)
                 {
                     //RemoteStorageMonitor.Dispose();
-                    FilteredDocsMonitor.Dispose();
                     SyncService.Dispose();
                     grpcServer.Dispose();
                 }

@@ -20,9 +20,10 @@ namespace VirtualDrive
         /// Creates instance of this class.
         /// </summary>
         /// <param name="path">File path in the user file system.</param>
+        /// <param name="remoteStorageItemId">Remote storage item ID.</param>
         /// <param name="engine">Engine instance.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFile(string path, VirtualEngine engine, ILogger logger) : base(path, engine, logger)
+        public VirtualFile(string path, byte[] remoteStorageItemId, VirtualEngine engine, ILogger logger) : base(path, remoteStorageItemId, engine, logger)
         {
 
         }
@@ -49,12 +50,19 @@ namespace VirtualDrive
 
             SimulateNetworkDelay(length, resultContext);
 
-            await using (FileStream stream = System.IO.File.OpenRead(RemoteStoragePath))
+            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            await using (FileStream stream = System.IO.File.OpenRead(remoteStoragePath))
             {
                 stream.Seek(offset, SeekOrigin.Begin);
                 const int bufferSize = 0x500000; // 5Mb. Buffer size must be multiple of 4096 bytes for optimal performance.
                 await stream.CopyToAsync(output, bufferSize, length);
             }
+
+            // Store ETag here.
+            // In this sample we use file USN (USN changes on every file update) as a ETag for demo purposes.
+            string eTag = (await WindowsFileSystemItem.GetUsnByPathAsync(remoteStoragePath)).ToString();
+            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
+            await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
         }
 
         /// <inheritdoc/>
@@ -77,18 +85,37 @@ namespace VirtualDrive
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
-            ExternalDataManager customDataManager = Engine.ExternalDataManager(UserFileSystemPath);
-            // Send the ETag to the server as part of the update to ensure the file in the remote storge is not modified since last read.
-            string oldEtag = await customDataManager.ETagManager.GetETagAsync();
+            // Send the ETag to the server as part of the update to ensure
+            // the file in the remote storge is not modified since last read.
+            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
+            string oldEtag = await placeholder.Properties["ETag"].GetValueAsync<string>();
 
             // Send the lock-token to the server as part of the update.
-            string lockToken = (await customDataManager.LockManager.GetLockInfoAsync())?.LockToken;
+            string lockToken;
+            IDataItem propLockInfo;
+            if (placeholder.Properties.TryGetValue("LockInfo", out propLockInfo))
+            {
+                ServerLockInfo lockInfo;
+                if (propLockInfo.TryGetValue<ServerLockInfo>(out lockInfo))
+                {
+                    lockToken = lockInfo.LockToken;
+                }
+            }
 
-            FileInfo remoteStorageItem = new FileInfo(RemoteStoragePath);
+            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            FileInfo remoteStorageItem = new FileInfo(remoteStoragePath);
 
             if (content != null)
             {
-                // Upload remote storage file content.
+                // Typically you will compare ETags on the server.
+                // Here we compare ETags before the update for the demo purposes. 
+                //string eTag = (await WindowsFileSystemItem.GetUsnByPathAsync(remoteStoragePath)).ToString();
+                //if(oldEtag != eTag)
+                //{
+                //    throw new ConflictException(Modified.Server, "The file is modified in remote storage.");
+                //}
+
+                // Upload file content to the remote storage.
                 await using (FileStream remoteStorageStream = remoteStorageItem.Open(FileMode.Open, FileAccess.Write, FileShare.Delete))
                 {
                     await content.CopyToAsync(remoteStorageStream);
@@ -104,11 +131,13 @@ namespace VirtualDrive
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
 
             // Get the new ETag from server here as part of the update and save it on the client.
-            string eTagNew = "1234567890";
-            await customDataManager.SetCustomDataAsync(
-                eTagNew,
-                null,
-                new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
+            string newEtag = (await WindowsFileSystemItem.GetUsnByPathAsync(remoteStoragePath)).ToString();
+            await placeholder.Properties.AddOrUpdateAsync("ETag", newEtag);
+
+            //await customDataManager.SetCustomDataAsync(
+            //    eTagNew,
+            //    null,
+            //    new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
         }
     }
 }

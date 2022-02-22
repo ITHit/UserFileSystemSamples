@@ -20,9 +20,9 @@ namespace VirtualFileSystem
         /// Creates instance of this class.
         /// </summary>
         /// <param name="path">File path in the user file system.</param>
-        /// <param name="itemId">Remote storage item ID.</param>
+        /// <param name="remoteStorageItemId">Remote storage item ID.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFile(string path, byte[] itemId, ILogger logger) : base(path, itemId, logger)
+        public VirtualFile(string path, byte[] remoteStorageItemId, ILogger logger) : base(path, remoteStorageItemId, logger)
         {
 
         }
@@ -52,7 +52,8 @@ namespace VirtualFileSystem
 
             SimulateNetworkDelay(length, resultContext);
 
-            await using (FileStream stream = System.IO.File.OpenRead(RemoteStoragePath))
+            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            await using (FileStream stream = System.IO.File.OpenRead(remoteStoragePath))
             {
                 stream.Seek(offset, SeekOrigin.Begin);
                 const int bufferSize = 0x500000; // 5Mb. Buffer size must be multiple of 4096 bytes for optimal performance.
@@ -81,7 +82,8 @@ namespace VirtualFileSystem
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
-            FileInfo remoteStorageItem = new FileInfo(RemoteStoragePath);
+            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            FileInfo remoteStorageItem = new FileInfo(remoteStoragePath);
 
             if (content != null)
             {

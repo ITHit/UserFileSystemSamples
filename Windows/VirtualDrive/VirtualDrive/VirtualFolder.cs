@@ -21,9 +21,10 @@ namespace VirtualDrive
         /// Creates instance of this class.
         /// </summary>
         /// <param name="path">Folder path in the user file system.</param>
+        /// <param name="remoteStorageItemId">Remote storage item ID.</param>
         /// <param name="engine">Engine instance.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFolder(string path, VirtualEngine engine, ILogger logger) : base(path, engine, logger)
+        public VirtualFolder(string path, byte[] remoteStorageItemId, VirtualEngine engine, ILogger logger) : base(path, remoteStorageItemId, engine, logger)
         {
 
         }
@@ -34,9 +35,10 @@ namespace VirtualDrive
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
 
-            FileInfo remoteStorageItem = new FileInfo(Path.Combine(RemoteStoragePath, fileMetadata.Name));
+            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            FileInfo remoteStorageItem = new FileInfo(Path.Combine(remoteStoragePath, fileMetadata.Name));
 
-            // Upload remote storage file content.
+            // Upload file content to the remote storage.
             await using (FileStream remoteStorageStream = remoteStorageItem.Open(FileMode.CreateNew, FileAccess.Write, FileShare.Delete))
             {
                 if (content != null)
@@ -53,26 +55,25 @@ namespace VirtualDrive
             remoteStorageItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
 
-            // Get ETag from server here and save it on the client.
-            string eTagNew = "1234567890";
+            // Get ETag from your remote storage here and save it in
+            // persistent placeholder properties unlil the next update.
+            string eTag = (await WindowsFileSystemItem.GetUsnByPathAsync(remoteStorageItem.FullName)).ToString();
+            PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemNewItemPath);
+            await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
 
-            ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemNewItemPath);
-            // Store ETag unlil the next update.
-            await customDataManager.SetCustomDataAsync(
-                eTagNew,
-                false,
-                new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
-
-            return null;
+            // Return remote storage item ID. It will be passed later
+            // into IEngine.GetFileSystemItemAsync() method on every call.
+            return WindowsFileSystemItem.GetItemIdByPath(remoteStorageItem.FullName);
         }
 
         /// <inheritdoc/>
         public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, folderMetadata.Name);
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}() Start", userFileSystemNewItemPath);
 
-            DirectoryInfo remoteStorageItem = new DirectoryInfo(Path.Combine(RemoteStoragePath, folderMetadata.Name));
+            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            DirectoryInfo remoteStorageItem = new DirectoryInfo(Path.Combine(remoteStoragePath, folderMetadata.Name));
             remoteStorageItem.Create();
 
             // Update remote storage folder metadata.
@@ -82,16 +83,14 @@ namespace VirtualDrive
             remoteStorageItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
 
-            // Get ETag from server here and save it on the client.
-            string eTagNew = "1234567890";
+            // Get ETag from your remote storage here and save it in persistent placeholder properties.
+            string eTag = (await WindowsFileSystemItem.GetUsnByPathAsync(remoteStorageItem.FullName)).ToString();
+            PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemNewItemPath);
+            await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
 
-            ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemNewItemPath);
-            await customDataManager.SetCustomDataAsync(
-                eTagNew,
-                false,
-                new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
-
-            return null;
+            // Return remote storage item ID. It will be passed later
+            // into IEngine.GetFileSystemItemAsync() method on every call.
+            return WindowsFileSystemItem.GetItemIdByPath(remoteStorageItem.FullName);
         }
 
         /// <inheritdoc/>
@@ -117,31 +116,25 @@ namespace VirtualDrive
                     Logger.LogMessage("Creating", userFileSystemItemPath);
                     userFileSystemChildren.Add(itemMetadata);
                 }
-
-                ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemItemPath);
-
-                // Mark this item as not new, which is required for correct MS Office saving opertions.
-                customDataManager.IsNew = false;
             }
 
             // To signal that the children enumeration is completed 
             // always call ReturnChildren(), even if the folder is empty.
-            resultContext.ReturnChildren(userFileSystemChildren.ToArray(), userFileSystemChildren.Count());
+            await resultContext.ReturnChildrenAsync(userFileSystemChildren.ToArray(), userFileSystemChildren.Count());
 
-            // Save ETags, the read-only attribute and all custom columns data.
-            foreach (FileSystemItemMetadataExt itemMetadata in userFileSystemChildren)
-            {
-                string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemMetadata.Name);
-                ExternalDataManager customDataManager = Engine.ExternalDataManager(userFileSystemItemPath);
-
-                // Save ETag on the client side, to be sent to the remote storage as part of the update.
-                await customDataManager.SetCustomDataAsync(itemMetadata.ETag, itemMetadata.IsLocked, itemMetadata.CustomProperties);
-            }
+            // Save data that you wish to display in custom columns here.
+            //foreach (FileSystemItemMetadataExt itemMetadata in userFileSystemChildren)
+            //{
+            //    string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemMetadata.Name);
+            //    PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemItemPath);
+            //    await placeholder.Properties.AddOrUpdateAsync("SomeData", someData);
+            //}
         }
 
         public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern)
         {
-            IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(RemoteStoragePath).EnumerateFileSystemInfos(pattern);
+            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(remoteStoragePath).EnumerateFileSystemInfos(pattern);
 
             List<FileSystemItemMetadataExt> userFileSystemChildren = new List<FileSystemItemMetadataExt>();
             foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
@@ -157,7 +150,8 @@ namespace VirtualDrive
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
-            DirectoryInfo remoteStorageItem = new DirectoryInfo(RemoteStoragePath);
+            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            DirectoryInfo remoteStorageItem = new DirectoryInfo(remoteStoragePath);
 
             // Update remote storage folder metadata.
             remoteStorageItem.Attributes = folderMetadata.Attributes;

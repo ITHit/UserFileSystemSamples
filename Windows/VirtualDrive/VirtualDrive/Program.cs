@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -7,13 +6,16 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Windows.Storage;
+using Microsoft.Extensions.Configuration;
 
 using log4net;
 using log4net.Appender;
 using log4net.Config;
-using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem;
+using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
+using ITHit.FileSystem.Samples.Common.Windows;
+
 
 namespace VirtualDrive
 {
@@ -69,12 +71,16 @@ namespace VirtualDrive
                     Settings.UserFileSystemLicense,
                     Settings.UserFileSystemRootPath,
                     Settings.RemoteStorageRootPath,
-                    Settings.ServerDataFolderPath,
                     Settings.IconsFolderPath,
                     Settings.RpcCommunicationChannelName,
                     Settings.SyncIntervalMs,
                     log);
                 Engine.AutoLock = Settings.AutoLock;
+
+                // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
+                // method as a remoteStorageItemId parameter when a root folder is requested. 
+                byte[] itemId = WindowsFileSystemItem.GetItemIdByPath(Settings.RemoteStorageRootPath);
+                Engine.Placeholders.GetItem(Settings.UserFileSystemRootPath).SetRemoteStorageItemId(itemId);
 
                 // Start processing OS file system calls.
                 await Engine.StartAsync();
@@ -218,12 +224,13 @@ namespace VirtualDrive
 
                     case (char)ConsoleKey.Escape:
                     case 'Q':
-                        // Unregister during programm uninstall.                        
                         Engine.Dispose();
+
+                        // Call the code below during programm uninstall using classic msi.
                         await UnregisterSyncRootAsync();
 
                         // Delete all files/folders.
-                        CleanupAppFolders();
+                        await CleanupAppFoldersAsync();
                         return;
 
                     case (char)ConsoleKey.Spacebar :
@@ -251,7 +258,6 @@ namespace VirtualDrive
             {
                 log.Info($"\nRegistering {Settings.UserFileSystemRootPath} sync root.");
                 Directory.CreateDirectory(Settings.UserFileSystemRootPath);
-                Directory.CreateDirectory(Settings.ServerDataFolderPath);
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
                     Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
@@ -280,7 +286,7 @@ namespace VirtualDrive
             await Registrar.UnregisterAsync(SyncRootId);
         }
 
-        private static void CleanupAppFolders()
+        private static async Task CleanupAppFoldersAsync()
         {
             log.Info("\nDeleting all file and folder placeholders.\n");
             try
@@ -294,9 +300,7 @@ namespace VirtualDrive
 
             try
             {
-                string localApplicationDataFolderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                string appDataPath = Path.Combine(localApplicationDataFolderPath, Settings.AppID);
-                Directory.Delete(appDataPath, true);
+                await ((EngineWindows)Engine).UninstallCleanupAsync();
             }
             catch (Exception ex)
             {
@@ -311,14 +315,6 @@ namespace VirtualDrive
         /// <remarks>This method is provided solely for the development and testing convenience.</remarks>
         private static void ShowTestEnvironment()
         {
-            // Open Windows File Manager with user file system.
-            ProcessStartInfo ufsInfo = new ProcessStartInfo(Program.Settings.UserFileSystemRootPath);
-            ufsInfo.UseShellExecute = true; // Open window only if not opened already.
-            using (Process ufsWinFileManager = Process.Start(ufsInfo))
-            {
-
-            }
-
             // Open Windows File Manager with remote storage.
             ProcessStartInfo rsInfo = new ProcessStartInfo(Program.Settings.RemoteStorageRootPath);
             rsInfo.UseShellExecute = true; // Open window only if not opened already.
@@ -327,10 +323,10 @@ namespace VirtualDrive
 
             }
 
-            // Open Windows File Manager with custom data storage. Uncomment this to debug custom data storage management.
-            ProcessStartInfo serverDataInfo = new ProcessStartInfo(Program.Settings.ServerDataFolderPath);
-            serverDataInfo.UseShellExecute = true; // Open window only if not opened already.
-            using (Process serverDataWinFileManager = Process.Start(serverDataInfo))
+            // Open Windows File Manager with user file system.
+            ProcessStartInfo ufsInfo = new ProcessStartInfo(Program.Settings.UserFileSystemRootPath);
+            ufsInfo.UseShellExecute = true; // Open window only if not opened already.
+            using (Process ufsWinFileManager = Process.Start(ufsInfo))
             {
 
             }

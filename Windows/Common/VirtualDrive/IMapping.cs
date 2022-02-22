@@ -35,6 +35,17 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="userFileSystemPath">User file system path.</param>
         /// <param name="remoteStorageItem">Remote storage item metadata.</param>
         /// <returns></returns>
-        Task<bool> IsModifiedAsync(string userFileSystemPath, FileSystemItemMetadataExt remoteStorageItemMetadata, ILogger logger);
+        //Task<bool> IsModifiedAsync(string userFileSystemPath, FileSystemItemMetadataExt remoteStorageItemMetadata, ILogger logger);
+
+        /// <summary>
+        /// Reads ETag from the remote storage item and updates it on the user file system item.
+        /// </summary>
+        /// <param name="remoteStoragePath">Remote storage path.</param>
+        /// <param name="userFileSystemPath">User file system path.</param>
+        /// <returns>
+        /// True if the ETag was updated succesefully. False - if the call was ignored 
+        /// (becuse the user file system item is offline or the call is for a folder item).
+        /// </returns>
+        //Task<bool> UpdateETagAsync(string remoteStoragePath, string userFileSystemPath);
     }
 }

@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 using System.IO;
 using log4net;
 using ITHit.FileSystem.Samples.Common.Windows.ShellExtension.Interop;
+using ITHit.FileSystem.Samples.Common.Windows.Rpc;
+using ITHit.FileSystem.Samples.Common.Windows.Rpc.Generated;
+using System.Xml.Serialization;
 
 namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
 {
@@ -37,7 +40,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
         /// <param name="filesPath">List of selected items.</param>
         public abstract Task<string> GetIconAsync(IEnumerable<string> filesPath);
 
-        protected ILog Log { get; }
+        protected ILogger Log { get; }
 
         /// <summary>
         /// Creates instance of this class.
@@ -46,7 +49,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
         {
             ReferenceManager.AddObjectReference();
 
-            Log = ShellExtensionConfiguration.GetLogger("ContextMenus.log");
+            Log = new GrpcLogger("Context Menu Provider");
         }
 
         ~ContextMenusProviderBase()
@@ -65,7 +68,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
                 if (!files.Any() || !files.All(File.Exists))
                     return WinError.E_NOTIMPL;
 
-                Log.Info($"\nGetting menu title for {string.Join(",", files)}");
+                Log.LogMessage($"{nameof(ContextMenusProviderBase)}.{nameof(GetTitle)}()", string.Join(", ", files));
 
                 title = GetMenuTitleAsync(files).GetAwaiter().GetResult();
 
@@ -80,7 +83,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
             }
             catch (Exception ex)
             {
-                Log.Error(ex);
+                Log.LogError("", null, null, ex);
                 return WinError.E_FAIL;
             }
         }
@@ -94,7 +97,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
                 if (!files.Any() || !files.All(File.Exists))
                     return WinError.E_NOTIMPL;
 
-                Log.Info($"\nInvoke menu command for {string.Join(",", files)}");
+                Log.LogMessage($"{nameof(ContextMenusProviderBase)}.{nameof(Invoke)}()", string.Join(", ", files));
 
                 InvokeMenuCommandAsync(files).GetAwaiter().GetResult();
 
@@ -106,7 +109,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
             }
             catch (Exception ex)
             {
-                Log.Error(ex);
+                Log.LogError("", null, null, ex);
                 return WinError.E_FAIL;
             }
         }
@@ -129,7 +132,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
                     return WinError.E_NOTIMPL;
                 }
 
-                Log.Info($"\nGetting menu state for {string.Join(",", files)}");
+                Log.LogMessage($"{nameof(ContextMenusProviderBase)}.{nameof(GetState)}()", string.Join(", ", files));
 
                 commandState = GetMenuStateAsync(files).GetAwaiter().GetResult();
 
@@ -141,7 +144,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
             }
             catch (Exception ex)
             {
-                Log.Error(ex);
+                Log.LogError("", null, null, ex);
                 return WinError.E_FAIL;
             }
         }
@@ -164,7 +167,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
                 if (!files.Any() || !files.All(File.Exists))
                     return WinError.E_NOTIMPL;
 
-                Log.Info($"\nGetting menu icon for {string.Join(",", files)}");
+                Log.LogMessage($"{nameof(ContextMenusProviderBase)}.{nameof(GetIcon)}()", string.Join(", ", files));
 
                 resourceString = GetIconAsync(files).GetAwaiter().GetResult();
 
@@ -179,7 +182,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
             }
             catch (Exception ex)
             {
-                Log.Error(ex);
+                Log.LogError("", null, null, ex);
                 return WinError.E_FAIL;
             }
         }
@@ -204,6 +207,5 @@ namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
             commandEnum = null;
             return WinError.E_NOTIMPL;
         }
-
     }
 }

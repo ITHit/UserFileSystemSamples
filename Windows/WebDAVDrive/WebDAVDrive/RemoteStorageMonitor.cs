@@ -1,6 +1,7 @@
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
+using ITHit.FileSystem.Windows;
 using ITHit.WebDAV.Client;
 using log4net;
 using System;
@@ -213,9 +214,7 @@ namespace WebDAVDrive
                         FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
                         if (await engine.ServerNotifications(userFileSystemParentPath).CreateAsync(new[] { itemMetadata }) > 0)
                         {
-                            ExternalDataManager customDataManager = engine.ExternalDataManager(userFileSystemPath);
-
-                            await customDataManager.SetCustomDataAsync(itemMetadata.ETag, itemMetadata.IsLocked, itemMetadata.CustomProperties);
+                            await engine.Placeholders.GetItem(userFileSystemPath).SavePropertiesAsync(itemMetadata);
 
                             // Because of the on-demand population, the parent folder placeholder may not exist in the user file system
                             // or the folder may be offline. In this case the IServerNotifications.CreateAsync() call is ignored.
@@ -252,9 +251,8 @@ namespace WebDAVDrive
                     if (remoteStorageItem != null)
                     {
                         FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
-                        ExternalDataManager customDataManager = engine.ExternalDataManager(userFileSystemPath);
 
-                        await customDataManager.SetCustomDataAsync(itemMetadata.ETag, itemMetadata.IsLocked, itemMetadata.CustomProperties);
+                        await engine.Placeholders.GetItem(userFileSystemPath).SavePropertiesAsync(itemMetadata);
 
                         // Can not update read-only files, read-only attribute must be removed.
                         FileInfo userFileSystemFile = new FileInfo(userFileSystemPath);
@@ -307,10 +305,7 @@ namespace WebDAVDrive
                     // Source item is loaded, move it to a new location or delete.
                     if (await engine.ServerNotifications(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath))
                     {
-                        // The target parent folder exists and is online, the item moved. Move custom data.
-                        await engine.ExternalDataManager(userFileSystemOldPath, this).MoveToAsync(userFileSystemNewPath);
-
-                        LogMessage("Moved succesefully:", userFileSystemOldPath, userFileSystemNewPath);
+                        LogMessage("Moved succesefully", userFileSystemOldPath, userFileSystemNewPath);
                     }
                     else
                     {
@@ -345,8 +340,6 @@ namespace WebDAVDrive
                 {
                     if (await engine.ServerNotifications(userFileSystemPath).DeleteAsync())
                     {
-                        engine.ExternalDataManager(userFileSystemPath, this).Delete();
-
                         // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                         // In this case the IServerNotifications.DeleteAsync() call is ignored.
                         LogMessage("Deleted succesefully", userFileSystemPath);
@@ -373,16 +366,15 @@ namespace WebDAVDrive
 
                 if (FsPath.Exists(userFileSystemPath))
                 {
-                    ExternalDataManager customDataManager = engine.ExternalDataManager(userFileSystemPath);
-
                     IHierarchyItem remoteStorageItem = await Program.DavClient.GetItemAsync(new Uri(remoteStoragePath));
                     if (remoteStorageItem != null)
                     {
                         FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
 
-                        await customDataManager.SetCustomDataAsync(itemMetadata.ETag, itemMetadata.IsLocked, itemMetadata.CustomProperties);
+                        // Save info about the third-party lock.
+                        await engine.Placeholders.GetItem(userFileSystemPath).SavePropertiesAsync(itemMetadata);
 
-                        LogMessage("Locked succesefully", userFileSystemPath);
+                        LogMessage("Third-party lock info added", userFileSystemPath);
                     }
                 }
             }
@@ -405,18 +397,23 @@ namespace WebDAVDrive
 
                 if (FsPath.Exists(userFileSystemPath))
                 {
-                    ExternalDataManager customDataManager = engine.ExternalDataManager(userFileSystemPath);
-
-                    if (!await customDataManager.LockManager.IsLockedByThisUserAsync())
+                    if(engine.Placeholders.GetItem(userFileSystemPath).Properties.Remove("ThirdPartyLockInfo"))
                     {
-                        // Remove the read-only attribute and all custom columns data.
-                        await customDataManager.SetLockedByAnotherUserAsync(false);
-
-                        // Remove lock icon and lock info in custom columns.
-                        await customDataManager.SetLockInfoAsync(null);
-
-                        LogMessage("Unlocked succesefully", userFileSystemPath);
+                        LogMessage("Third-party lock info deleted", userFileSystemPath);
                     }
+
+                    //ExternalDataManager customDataManager = engine.ExternalDataManager(userFileSystemPath);
+
+                    //if (!await customDataManager.LockManager.IsLockedByThisUserAsync())
+                    //{
+                    //    // Remove the read-only attribute and all custom columns data.
+                    //    await customDataManager.SetLockedByAnotherUserAsync(false);
+
+                    //    // Remove lock icon and lock info in custom columns.
+                    //    await customDataManager.SetLockInfoAsync(null);
+
+                    //    LogMessage("Unlocked succesefully", userFileSystemPath);
+                    //}
                 }
             }
             catch (Exception ex)

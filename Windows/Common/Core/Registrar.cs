@@ -59,7 +59,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
 
             // Adds columns to Windows File Manager. 
-            // Show/hide columns in the "More..." context menu on the columns header.
+            // Show/hide columns in the "More..." context menu on the columns header in Windows Explorer.
             var proDefinitions = storageInfo.StorageProviderItemPropertyDefinitions;
             proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Lock Owner"   , Id = (int)CustomColumnIds.LockOwnerIcon });            
             proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Lock Scope"   , Id = (int)CustomColumnIds.LockScope });

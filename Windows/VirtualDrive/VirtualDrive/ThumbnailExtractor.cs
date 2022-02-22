@@ -24,7 +24,7 @@ namespace VirtualDrive
             {
                 if (bitmap == null)
                 {
-                    throw new NotImplementedException();
+                    return null;
                 }
 
                 using (MemoryStream stream = new MemoryStream())

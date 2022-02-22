@@ -49,15 +49,15 @@ namespace VirtualFileSystem
         }
         
         /// <inheritdoc/>
-        public override async Task<IFileSystemItem> GetFileSystemItemAsync(string userFileSystemPath, FileSystemItemType itemType, byte[] itemId = null)
+        public override async Task<IFileSystemItem> GetFileSystemItemAsync(string userFileSystemPath, FileSystemItemType itemType, byte[] remoteStorageItemId = null)
         {
             if (itemType == FileSystemItemType.File)
             {
-                return new VirtualFile(userFileSystemPath, itemId, this);
+                return new VirtualFile(userFileSystemPath, remoteStorageItemId, this);
             }
             else
             {
-                return new VirtualFolder(userFileSystemPath, itemId, this);
+                return new VirtualFolder(userFileSystemPath, remoteStorageItemId, this);
             }
         }
 

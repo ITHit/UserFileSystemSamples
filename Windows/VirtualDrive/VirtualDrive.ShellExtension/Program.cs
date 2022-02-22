@@ -31,10 +31,7 @@ namespace VirtualDrive.ShellExtension
             IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
             Settings settings = configuration.ReadSettings();
 
-            ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-            ConfigureLogger(settings);
-
-            ShellExtensionConfiguration.Initialize(settings, log);
+            ShellExtensionConfiguration.Initialize(settings);
 
             try
             {
@@ -49,25 +46,6 @@ namespace VirtualDrive.ShellExtension
             catch (Exception ex)
             {
                 Debug.WriteLine(ex.Message);
-            }
-        }
-
-        /// <summary>
-        /// Configures log4net logger.
-        /// </summary>
-        /// <returns>Log file path.</returns>
-        private static void ConfigureLogger(Settings settings)
-        {
-            // Load Log4Net for net configuration.
-            var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
-            XmlConfigurator.Configure(logRepository, new FileInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "log4net.config")));
-
-            // Update log file path for msix package. 
-            RollingFileAppender rollingFileAppender = logRepository.GetAppenders().Where(p => p.GetType() == typeof(RollingFileAppender)).FirstOrDefault() as RollingFileAppender;
-            if (rollingFileAppender != null && rollingFileAppender.File.Contains("WindowsApps"))
-            {
-                rollingFileAppender.File = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), settings.AppID + ".ShellExtension",
-                                                        Path.GetFileName(rollingFileAppender.File));
             }
         }
     }

@@ -120,7 +120,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 await new ClientToServerSync(engine, Log).SyncronizeFolderAsync(userFileSystemRootPath);
 
                 // UFS <- RS. Recursivery synchronize all updated/created/deleted file and folders present in the user file system.
-                await new ServerToClientSync(engine, Log).SyncronizeFolderAsync(userFileSystemRootPath);
+                //await new ServerToClientSync(engine, Log).SyncronizeFolderAsync(userFileSystemRootPath);
 
                 InvokeSyncEvent(SynchronizationState.Idle);
             }

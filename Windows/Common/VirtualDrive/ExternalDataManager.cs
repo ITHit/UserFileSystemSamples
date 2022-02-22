@@ -20,7 +20,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
     /// and <see cref="ITHit.FileSystem.Windows.PlaceholderItem.GetCustomData"/>) because of the MS Office and AutoCAD transactional save, 
     /// which renames and deletes the file, so all custom data is lost.
     /// </remarks>
-    public class ExternalDataManager
+    public class ExternalDataManager : IExternalDataManager
     {
         /// <summary>
         /// Path in user file system with which this custom data corresponds.
@@ -61,9 +61,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Creates instance of this class.
         /// </summary>
         public ExternalDataManager(
-            string userFileSystemPath, 
-            string serverDataFolderPath, 
-            string userFileSystemRootPath, 
+            string userFileSystemPath,
+            string serverDataFolderPath,
+            string userFileSystemRootPath,
             string iconsFolderPath,
             ILogger logger)
         {
@@ -86,7 +86,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </remarks>
         public bool IsNew
         {
-            get 
+            get
             {
                 // If ETag file exists, this means the data was succcesefully saved to the server.
                 ETagManager eTagManager = new ETagManager(userFileSystemPath, serverDataFolderPath, userFileSystemRootPath, logger);
@@ -95,7 +95,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             set
             {
                 ETagManager eTagManager = new ETagManager(userFileSystemPath, serverDataFolderPath, userFileSystemRootPath, logger);
-                if(value)
+                if (value)
                 {
                     eTagManager.DeleteETag();
                 }
@@ -104,6 +104,13 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                     eTagManager.EnsureETagExists();
                 }
             }
+        }
+
+        /// <inheritdoc/>
+        public byte[] RemoteStorageItemId 
+        {
+            get { throw new NotImplementedException(); }
+            set { throw new NotImplementedException(); } 
         }
 
         /*
@@ -214,16 +221,16 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="set">True to display the icon. False - to remove the icon.</param>
         private async Task SetIconAsync(bool set, int id, string iconFile = null, string description = null)
         {
-            if(set)
+            if (set)
             {
                 string iconFilePath = Path.Combine(iconsFolderPath, iconFile);
                 FileSystemItemPropertyData propData = new FileSystemItemPropertyData((int)id, description, iconFilePath);
-                await SetCustomColumnsAsync(new []{ propData });
+                await SetCustomColumnsAsync(new[] { propData });
             }
             else
             {
                 FileSystemItemPropertyData propData = new FileSystemItemPropertyData((int)id, null);
-                await RemoveCustomColumnsAsync(new []{ propData });
+                await RemoveCustomColumnsAsync(new[] { propData });
             }
         }
 
@@ -310,7 +317,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             foreach (var curColumn in allColumns)
             {
                 var column = customColumnsData.FirstOrDefault(x => x.Id == curColumn.Id);
-                if(column == null)
+                if (column == null)
                 {
                     newColumns.Add(curColumn);
                 }
@@ -392,7 +399,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
 
             FileInfo file = new FileInfo(userFileSystemPath);
-            if(!file.Exists)
+            if (!file.Exists)
             {
                 return;
             }
@@ -421,12 +428,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 }
 
                 // Update columns data.
-                await StorageProviderItemProperties.SetAsync(storageItem, customColumns);
+                //await StorageProviderItemProperties.SetAsync(storageItem, customColumns);
             }
             finally
             {
                 // Set read-only attribute.
-                if (readOnly && (storageItem!=null) && ((file.Attributes & System.IO.FileAttributes.Directory) == 0))
+                if (readOnly && (storageItem != null) && ((file.Attributes & System.IO.FileAttributes.Directory) == 0))
                 {
                     file.IsReadOnly = true;
                 }
@@ -458,7 +465,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             await CustomColumnsMoveToAsync(userFileSystemNewPath);
             await ETagManager.MoveToAsync(userFileSystemNewPath);
-            await LockManager.MoveToAsync(userFileSystemNewPath);            
+            await LockManager.MoveToAsync(userFileSystemNewPath);
         }
 
         /// <summary>
@@ -511,7 +518,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             ETagManager.DeleteETag();
             LockManager.DeleteLock();
 
-            if(recursive)
+            if (recursive)
             {
                 // If this is a folder, delete all custom columns in this folder.
                 string customColumnsFolderPath = GetColumnsFilePath(userFileSystemPath);

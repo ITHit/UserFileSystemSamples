@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
+using ITHit.FileSystem.Windows;
 
 namespace VirtualDrive
 {
@@ -17,7 +18,7 @@ namespace VirtualDrive
     /// <remarks>
     /// You will change methods of this class to map the user file system path to your remote storage path.
     /// </remarks>
-    public class Mapping : IMapping
+    public class Mapping //: IMapping
     {
         private readonly VirtualEngineBase engine;
 
@@ -57,6 +58,21 @@ namespace VirtualDrive
         }
 
         /// <summary>
+        /// Gets remote storage path by remote storage item ID.
+        /// </summary>
+        /// <remarks>
+        /// As soon as System.IO .NET classes require path as an input parameter, 
+        /// this function maps remote storage ID to the remote storge path.
+        /// In your real-life file system you will typically request your remote storage 
+        /// items by ID instead of using this method.
+        /// </remarks>
+        /// <returns>Path in the remote storage.</returns>
+        public static string GetRemoteStoragePathById(byte[] remoteStorageId)
+        {
+            return WindowsFileSystemItem.GetPathByItemId(remoteStorageId);
+        }
+
+        /// <summary>
         /// Gets a user file system item info from the remote storage data.
         /// </summary>
         /// <param name="remoteStorageItem">Remote storage item info.</param>
@@ -75,6 +91,10 @@ namespace VirtualDrive
                 userFileSystemItem = new FolderMetadataExt();
             }
 
+            // Store you remote storage item ID in this property.
+            // It will be passed to IEngine.GetFileSystemItemAsync() during every operation.
+            userFileSystemItem.RemoteStorageItemId = WindowsFileSystemItem.GetItemIdByPath(remoteStorageItem.FullName);
+
             userFileSystemItem.Name = remoteStorageItem.Name;
             userFileSystemItem.Attributes = remoteStorageItem.Attributes;
             userFileSystemItem.CreationTime = remoteStorageItem.CreationTime;
@@ -82,28 +102,27 @@ namespace VirtualDrive
             userFileSystemItem.LastAccessTime = remoteStorageItem.LastAccessTime;
             userFileSystemItem.ChangeTime = remoteStorageItem.LastWriteTime;
 
-            userFileSystemItem.IsLocked = false;
-
-            string eTag = "1234567890";
-            if (userFileSystemItem is IFileMetadata)
-            {
-                ((FileMetadataExt)userFileSystemItem).ETag = eTag;
-            };
-
             // Set custom columns to be displayed in file manager.
             // We create property definitions when registering the sync root with corresponding IDs.
-            List<FileSystemItemPropertyData> customProps = new List<FileSystemItemPropertyData>();
-
-            // Set ETag property.
-            if (userFileSystemItem is IFileMetadata)
-            {
-                customProps.Add(new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTag));
-            };
-
-            userFileSystemItem.CustomProperties = customProps;
+            // The columns are rendered in IVirtualEngine.GetItemPropertiesAsync() call.           
+            //userFileSystemItem.CustomProperties = ;
 
             return userFileSystemItem;
         }
+
+
+        //public async Task<bool> UpdateETagAsync(string remoteStoragePath, string userFileSystemPath)
+        //{
+        //    PlaceholderItem placeholder = engine.Placeholders.GetItem(userFileSystemPath);
+        //    if (placeholder.Type == FileSystemItemType.File
+        //        && ((File.GetAttributes(userFileSystemPath) & System.IO.FileAttributes.Offline) == 0))
+        //    {
+        //        string eTag = (await WindowsFileSystemItem.GetUsnByPathAsync(remoteStoragePath)).ToString();
+        //        await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
+        //        return true;
+        //    }
+        //    return false;
+        //}
 
         public async Task<bool> IsModifiedAsync(string userFileSystemPath, FileSystemItemMetadataExt remoteStorageItemMetadata, ILogger logger)
         {

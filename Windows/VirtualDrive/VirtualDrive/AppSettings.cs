@@ -115,10 +115,6 @@ namespace VirtualDrive
             // Load product name from entry exe file.
             settings.ProductName = FileVersionInfo.GetVersionInfo(assemblyLocation).ProductName;
 
-            // Folder where custom data is stored.
-            string localApplicationDataFolderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            settings.ServerDataFolderPath = Path.Combine(localApplicationDataFolderPath, settings.AppID, settings.UserFileSystemRootPath.Replace(":", ""), "ServerData");
-
             return settings;
         }
 

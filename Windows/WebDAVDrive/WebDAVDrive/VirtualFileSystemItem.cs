@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using ITHit.FileSystem;
-using ITHit.FileSystem.Samples.Common.Windows;
+using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Windows;
 using ITHit.WebDAV.Client;
 
@@ -55,40 +55,25 @@ namespace WebDAVDrive
         }
 
         ///<inheritdoc>
-        public async Task MoveToAsync(string userFileSystemNewPath, byte[] targetParentItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null)
+        public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetParentItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null)
         {
+            string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
-
-            if (userFileSystemNewPath.StartsWith(Program.Settings.UserFileSystemRootPath))
-            {
-                // The item is moved within the virtual file system.
-                string remoteStorageOldPath = RemoteStoragePath;
-                string remoteStorageNewPath = Mapping.MapPath(userFileSystemNewPath);
-
-                await Program.DavClient.MoveToAsync(new Uri(remoteStorageOldPath), new Uri(remoteStorageNewPath), true);
-                await Engine.ExternalDataManager(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath);
-            }
-            else
-            {
-                // The move target path is outside of the virtual file system - delete the item.
-                await DeleteAsync(operationContext, resultContext);
-            }
         }
 
         /// <inheritdoc/>
-        public async Task MoveToCompletionAsync(IMoveCompletionContext moveCompletionContext = null, IResultContext resultContext = null)
+        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IResultContext resultContext = null)
         {
-            string userFileSystemNewPath = this.UserFileSystemPath;
-            string userFileSystemOldPath = moveCompletionContext.SourcePath;
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath, moveCompletionContext);
+            string userFileSystemNewPath = targetUserFileSystemPath;
+            string userFileSystemOldPath = this.UserFileSystemPath;
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
 
-            if (FsPath.IsFolder(userFileSystemNewPath))
-            {
-                // In this sample the folder does not have any metadata that can be modified on the client
-                // and should be synched to the remote storage, just marking the folder as in-sync after the move.
-                PlaceholderItem.GetItem(userFileSystemNewPath).SetInSync(true);
-            }
+            string remoteStorageOldPath = RemoteStoragePath;
+            string remoteStorageNewPath = Mapping.MapPath(userFileSystemNewPath);
+
+            await Program.DavClient.MoveToAsync(new Uri(remoteStorageOldPath), new Uri(remoteStorageNewPath), true);
+            Logger.LogMessage("Moved in the remote storage succesefully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
         }
 
         ///<inheritdoc>
@@ -104,16 +89,6 @@ namespace WebDAVDrive
             // https://docs.microsoft.com/en-us/answers/questions/75240/bug-report-cfapi-ackdelete-borken-on-win10-2004.html
 
             // Note that some applications, such as Windows Explorer may call delete more than one time on the same file/folder.
-
-            try
-            {
-                await Program.DavClient.DeleteAsync(new Uri(RemoteStoragePath));
-                Engine.ExternalDataManager(UserFileSystemPath, Logger).Delete();
-            }
-            catch(Exception ex)
-            {
-                Logger.LogMessage(ex.Message);
-            }
         }
 
         /// <inheritdoc/>
@@ -124,6 +99,17 @@ namespace WebDAVDrive
             // Otherwise the folder will be deleted before files in it can be moved.
 
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", UserFileSystemPath, default, operationContext);
+
+            try
+            {
+                await Program.DavClient.DeleteAsync(new Uri(RemoteStoragePath));
+                Logger.LogMessage("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+            }
+            catch (Exception ex)
+            {
+                // Windows Explorer may call delete more than one time on the same file/folder.
+                Logger.LogMessage(ex.Message);
+            }
         }
 
         ///<inheritdoc>
@@ -157,38 +143,25 @@ namespace WebDAVDrive
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(LockAsync)}()", UserFileSystemPath, default, operationContext);
 
-            ExternalDataManager customDataManager = Engine.ExternalDataManager(UserFileSystemPath, Logger);
-            LockManager lockManager = customDataManager.LockManager;
-            if (!Engine.ExternalDataManager(UserFileSystemPath).IsNew)
+            // Call your remote storage here to lock the item.
+            // Save the lock token and other lock info received from the remote storage on the client.
+            // Supply the lock-token as part of each remote storage update in IFile.WriteAsync() method.
+
+            LockInfo lockInfo = await Program.DavClient.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, null, TimeSpan.MaxValue);
+            ServerLockInfo serverLockInfo = new ServerLockInfo
             {
-                // Indicate that lock has started by this user on this machine.
-                await lockManager.SetLockPending();
+                LockToken = lockInfo.LockToken.LockToken,
+                Exclusive = lockInfo.LockScope == LockScope.Exclusive,
+                Owner = lockInfo.Owner,
+                LockExpirationDateUtc = DateTimeOffset.Now.Add(lockInfo.TimeOut)
+            };
 
-                // Set pending icon, so the user has a feedback as lock operation may take some time.
-                await customDataManager.SetLockPendingIconAsync(true);
+            // Save lock-token and lock-mode.
+            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
+            await placeholder.Properties.AddOrUpdateAsync("LockInfo", serverLockInfo);
+            await placeholder.Properties.AddOrUpdateAsync("LockMode", lockMode);
 
-                // Call your remote storage here to lock the item.
-                // Save the lock token and other lock info received from the remote storage on the client.
-                // Supply the lock-token as part of each remote storage update in IFile.WriteAsync() method.
-
-                LockInfo lockInfo = await Program.DavClient.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, null, TimeSpan.MaxValue);
-                ServerLockInfo serverLockInfo = new ServerLockInfo
-                {
-                    LockToken = lockInfo.LockToken.LockToken,
-                    Exclusive = lockInfo.LockScope == LockScope.Exclusive,
-                    Owner = lockInfo.Owner,
-                    LockExpirationDateUtc = DateTimeOffset.Now.Add(lockInfo.TimeOut)
-                };
-
-                // Save lock-token and lock-mode.
-                await lockManager.SetLockInfoAsync(serverLockInfo);
-                await lockManager.SetLockModeAsync(lockMode);
-
-                // Set lock icon and lock info in custom columns.
-                await customDataManager.SetLockInfoAsync(serverLockInfo);
-
-                Logger.LogMessage("Locked in remote storage succesefully.", UserFileSystemPath);
-            }
+            Logger.LogMessage("Locked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
         }
         
 
@@ -196,8 +169,17 @@ namespace WebDAVDrive
         ///<inheritdoc>
         public async Task<LockMode> GetLockModeAsync(IOperationContext operationContext = null)
         {
-            LockManager lockManager = Engine.ExternalDataManager(UserFileSystemPath, Logger).LockManager;
-            return await lockManager.GetLockModeAsync();
+            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
+
+            IDataItem property;
+            if (placeholder.Properties.TryGetValue("LockMode", out property))
+            {
+                return await property.GetValueAsync<LockMode>();
+            }
+            else
+            {
+                return LockMode.None;
+            }
         }
         
 
@@ -207,20 +189,17 @@ namespace WebDAVDrive
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(UnlockAsync)}()", UserFileSystemPath, default, operationContext);
 
-            ExternalDataManager customDataManager = Engine.ExternalDataManager(UserFileSystemPath, Logger);
-            LockManager lockManager = customDataManager.LockManager;
+            // Read the lock-token.
+            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
+            string lockToken = (await placeholder.Properties["LockInfo"].GetValueAsync<ServerLockInfo>())?.LockToken;
 
-            // Set pending icon, so the user has a feedback as unlock operation may take some time.
-            await customDataManager.SetLockPendingIconAsync(true);
-
-            // Read lock-token from lock-info file.
-            string lockToken = (await lockManager.GetLockInfoAsync()).LockToken;
             LockUriTokenPair[] lockTokens = new LockUriTokenPair[] { new LockUriTokenPair(new Uri(RemoteStoragePath), lockToken)};
 
             // Unlock the item in the remote storage.
             try
             {
                 await Program.DavClient.UnlockAsync(new Uri(RemoteStoragePath), lockTokens);
+                Logger.LogMessage("Unlocked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
             }
             catch (ITHit.WebDAV.Client.Exceptions.ConflictException)
             {
@@ -228,12 +207,8 @@ namespace WebDAVDrive
             }
 
             // Delete lock-mode and lock-token info.
-            lockManager.DeleteLock();
-
-            // Remove lock icon and lock info in custom columns.
-            await customDataManager.SetLockInfoAsync(null);
-
-            Logger.LogMessage("Unlocked in the remote storage succesefully", UserFileSystemPath);
+            placeholder.Properties.Remove("LockInfo");
+            placeholder.Properties.Remove("LockMode");
         }
         
     }

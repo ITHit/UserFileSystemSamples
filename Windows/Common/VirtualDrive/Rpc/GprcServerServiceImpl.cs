@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows.Rpc.Generated;
 using Grpc.Core;
+using System.Xml.Serialization;
+using System.IO;
 
 namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
 {
@@ -113,13 +115,62 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
             }
             catch (NotImplementedException)
             {
-                logger.LogMessage("Thumbnail is not implemented", path);
+                // Thumbnail is not implemented
                 string msg = $"Thumbnail for {path} is not implemented";
                 throw new RpcException(new Status(StatusCode.Internal, msg));
             }
             catch (Exception ex)
             {
                 logger.LogError("Error getting thumbnail", path, null, ex);
+                throw new RpcException(new Status(StatusCode.Internal, ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Logs Message.
+        /// </summary>
+        public override async Task<EmptyMessage> LogMessage(LogMessageRequest request, ServerCallContext context)
+        {
+            logger.LogMessage(request.Message, request.SourcePath, request.TargetPath);
+            return EmptyMessage;
+        }
+
+        /// <summary>
+        /// Logs Error.
+        /// </summary>
+        public override async Task<EmptyMessage> LogError(LogErrorRequest request, ServerCallContext context)
+        {
+            logger.LogError(request.Message, request.SourcePath, request.TargetPath, new Exception(request.ExSerialized));
+            return EmptyMessage;
+        }
+
+        /// <summary>
+        /// Set lock/unlock status of files.
+        /// </summary>
+        public override async Task<ItemsPropertyList> GetItemProperties(ItemPropertyRequest request, ServerCallContext context)
+        {
+            try
+            {
+                ItemsPropertyList grpcProps = new ItemsPropertyList();
+
+                IEnumerable<FileSystemItemPropertyData> props = await engine.GetItemPropertiesAsync(request.Path);
+
+                foreach (FileSystemItemPropertyData prop in props)
+                {
+                    ItemProperty grpcProp = new ItemProperty()
+                    {
+                        Id = prop.Id,
+                        Value = prop.Value,
+                        IconResource = prop.IconResource ?? Path.Combine(engine.IconsFolderPath, "Empty.ico")
+                    };
+                    grpcProps.Properties.Add(grpcProp);
+                }
+
+                return grpcProps;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex.Message, request.Path, default, ex);
                 throw new RpcException(new Status(StatusCode.Internal, ex.Message));
             }
         }

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using ITHit.FileSystem;
+using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Windows;
 
@@ -20,9 +21,9 @@ namespace VirtualDrive
         protected readonly string UserFileSystemPath;
 
         /// <summary>
-        /// Path of this file or folder in the remote storage.
+        /// File or folder item ID in the remote storage.
         /// </summary>
-        protected readonly string RemoteStoragePath;
+        protected readonly byte[] RemoteStorageItemId;
 
         /// <summary>
         /// Logger.
@@ -38,70 +39,54 @@ namespace VirtualDrive
         /// Creates instance of this class.
         /// </summary>
         /// <param name="userFileSystemPath">File or folder path in the user file system.</param>
+        /// <param name="remoteStorageItemId">Remote storage item ID.</param>
         /// <param name="engine">Engine instance.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFileSystemItem(string userFileSystemPath, VirtualEngine engine, ILogger logger)
+        public VirtualFileSystemItem(string userFileSystemPath, byte[] remoteStorageItemId, VirtualEngine engine, ILogger logger)
         {
-            if (string.IsNullOrEmpty(userFileSystemPath))
-            {
-                throw new ArgumentNullException(nameof(userFileSystemPath));
-            }
+            UserFileSystemPath = string.IsNullOrEmpty(userFileSystemPath) ? throw new ArgumentNullException(nameof(userFileSystemPath)) : userFileSystemPath;
+            RemoteStorageItemId = remoteStorageItemId ?? throw new ArgumentNullException(nameof(remoteStorageItemId));
             Logger = logger ?? throw new ArgumentNullException(nameof(logger));
             Engine = engine ?? throw new ArgumentNullException(nameof(engine));
-
-            UserFileSystemPath = userFileSystemPath;
-            RemoteStoragePath = Mapping.MapPath(userFileSystemPath);
         }
 
         ///<inheritdoc>
-        public async Task MoveToAsync(string userFileSystemNewPath, byte[] targetParentItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null)
+        public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetParentItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null)
         {
+            string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
-
-            if (userFileSystemNewPath.StartsWith(Program.Settings.UserFileSystemRootPath))
-            {
-                // The item is moved within the virtual file system.
-
-                string remoteStorageOldPath = RemoteStoragePath;
-                string remoteStorageNewPath = Mapping.MapPath(userFileSystemNewPath);
-                
-                FileSystemInfo remoteStorageOldItem = FsPath.GetFileSystemItem(remoteStorageOldPath);
-                if (remoteStorageOldItem != null)
-                {
-                    if (remoteStorageOldItem is FileInfo)
-                    {
-                        (remoteStorageOldItem as FileInfo).MoveTo(remoteStorageNewPath, true);
-                    }
-                    else
-                    {
-                        (remoteStorageOldItem as DirectoryInfo).MoveTo(remoteStorageNewPath);
-                    }
-
-                    await Engine.ExternalDataManager(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath);
-
-                    Logger.LogMessage("Moved item in remote storage succesefully", userFileSystemOldPath, userFileSystemNewPath, operationContext);
-                }
-            }
-            else
-            {
-                // The move target path is outside of the virtual file system - delete the item.
-                await DeleteAsync(operationContext, resultContext);
-            }
         }
 
         /// <inheritdoc/>
-        public async Task MoveToCompletionAsync(IMoveCompletionContext moveCompletionContext = null, IResultContext resultContext = null)
+        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IResultContext resultContext = null)
         {
-            string userFileSystemNewPath = this.UserFileSystemPath;
-            string userFileSystemOldPath = moveCompletionContext.SourcePath;
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath, moveCompletionContext);
+            string userFileSystemNewPath = targetUserFileSystemPath;
+            string userFileSystemOldPath = this.UserFileSystemPath;
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
 
-            if (FsPath.IsFolder(userFileSystemNewPath))
+            string remoteStorageOldPath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            FileSystemInfo remoteStorageOldItem = FsPath.GetFileSystemItem(remoteStorageOldPath);
+
+            if (remoteStorageOldItem != null)
             {
-                // In this sample the folder does not have any metadata that can be modified on the client
-                // and should be synched to the remote storage, just marking the folder as in-sync after the move.
-                PlaceholderItem.GetItem(userFileSystemNewPath).SetInSync(true);
+                string remoteStorageNewParentPath = WindowsFileSystemItem.GetPathByItemId(targetFolderRemoteStorageItemId);
+                string remoteStorageNewPath = Path.Combine(remoteStorageNewParentPath, Path.GetFileName(targetUserFileSystemPath));
+
+                if (remoteStorageOldItem is FileInfo)
+                {
+                    (remoteStorageOldItem as FileInfo).MoveTo(remoteStorageNewPath, true);
+                }
+                else
+                {
+                    (remoteStorageOldItem as DirectoryInfo).MoveTo(remoteStorageNewPath);
+                }
+
+                // As soon as in this sample we use USN as a ETag, and USN chandes on move,
+                // we need to update it for hydrated files.
+                //await Engine.Mapping.UpdateETagAsync(remoteStorageNewPath, userFileSystemNewPath);
+
+                Logger.LogMessage("Moved in the remote storage succesefully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
             }
         }
 
@@ -118,20 +103,6 @@ namespace VirtualDrive
             // https://docs.microsoft.com/en-us/answers/questions/75240/bug-report-cfapi-ackdelete-borken-on-win10-2004.html
 
             // Note that some applications, such as Windows Explorer may call delete more than one time on the same file/folder.
-
-            FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(RemoteStoragePath);
-            if (remoteStorageItem != null)
-            {
-                if (remoteStorageItem is FileInfo)
-                {
-                    remoteStorageItem.Delete();
-                }
-                else
-                {
-                    (remoteStorageItem as DirectoryInfo).Delete(true);
-                }
-                Engine.ExternalDataManager(UserFileSystemPath, Logger).Delete();
-            }
         }
 
         /// <inheritdoc/>
@@ -143,7 +114,30 @@ namespace VirtualDrive
 
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", UserFileSystemPath, default, operationContext);
 
+            string remoteStoragePath;
+            try
+            {
+                remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            }
+            catch (FileNotFoundException)
+            {
+                // Windows Explorer may call delete more than one time on the same file/folder.
+                return;
+            }
 
+            FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
+            if (remoteStorageItem != null)
+            {
+                if (remoteStorageItem is FileInfo)
+                {
+                    remoteStorageItem.Delete();
+                }
+                else
+                {
+                    (remoteStorageItem as DirectoryInfo).Delete(true);
+                }
+                Logger.LogMessage("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+            }
         }
 
         ///<inheritdoc>
@@ -176,35 +170,40 @@ namespace VirtualDrive
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(LockAsync)}()", UserFileSystemPath, default, operationContext);
 
-            ExternalDataManager customDataManager = Engine.ExternalDataManager(UserFileSystemPath, Logger);
-            LockManager lockManager = customDataManager.LockManager;
-            if (!Engine.ExternalDataManager(UserFileSystemPath).IsNew)
-            {
-                // Set pending icon, so the user has a feedback as lock operation may take some time.
-                await customDataManager.SetLockPendingIconAsync(true);
+            // Call your remote storage here to lock the item.
+            // Save the lock token and other lock info received from your remote storage on the client.
+            // Supply the lock-token as part of each remote storage update in File.WriteAsync() method.
+            // For demo purposes we just fill some generic data.
+            ServerLockInfo serverLockInfo = new ServerLockInfo() 
+            { 
+                LockToken = "ServerToken", 
+                Owner = "You", 
+                Exclusive = true, 
+                LockExpirationDateUtc = DateTimeOffset.Now.AddMinutes(30) 
+            };
 
-                // Call your remote storage here to lock the item.
-                // Save the lock token and other lock info received from the remote storage on the client.
-                // Supply the lock-token as part of each remote storage update in File.WriteAsync() method.
-                // For demo purposes we just fill some generic data.
-                ServerLockInfo lockInfo = new ServerLockInfo() { LockToken = "ServerToken", Owner = "You", Exclusive = true, LockExpirationDateUtc = DateTimeOffset.Now.AddMinutes(30) };
+            // Save lock-token and lock-mode.
+            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
+            await placeholder.Properties.AddOrUpdateAsync("LockInfo", serverLockInfo);
+            await placeholder.Properties.AddOrUpdateAsync("LockMode", lockMode);
 
-                // Save lock-token and lock-mode.
-                await lockManager.SetLockInfoAsync(lockInfo);
-                await lockManager.SetLockModeAsync(lockMode);
-
-                // Set lock icon and lock info in custom columns.
-                await customDataManager.SetLockInfoAsync(lockInfo);
-
-                Logger.LogMessage("Locked in remote storage succesefully.", UserFileSystemPath, default, operationContext);
-            }
+            Logger.LogMessage("Locked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
         }
 
         ///<inheritdoc>
         public async Task<LockMode> GetLockModeAsync(IOperationContext operationContext = null)
         {
-            LockManager lockManager = Engine.ExternalDataManager(UserFileSystemPath, Logger).LockManager;
-            return await lockManager.GetLockModeAsync();
+            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
+
+            IDataItem property;
+            if(placeholder.Properties.TryGetValue("LockMode", out property))
+            {
+                return await property.GetValueAsync<LockMode>();
+            }
+            else
+            {
+                return LockMode.None;
+            }
         }
 
         ///<inheritdoc>
@@ -212,25 +211,17 @@ namespace VirtualDrive
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(UnlockAsync)}()", UserFileSystemPath, default, operationContext);
 
-            ExternalDataManager customDataManager = Engine.ExternalDataManager(UserFileSystemPath, Logger);
-            LockManager lockManager = customDataManager.LockManager;
-
-            // Set pending icon, so the user has a feedback as unlock operation may take some time.
-            await customDataManager.SetLockPendingIconAsync(true);
-
-            // Read lock-token from lock-info file.
-            string lockToken = (await lockManager.GetLockInfoAsync()).LockToken;
+            // Read the lock-token.
+            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
+            string lockToken = (await placeholder.Properties["LockInfo"].GetValueAsync<ServerLockInfo>())?.LockToken;
 
             // Unlock the item in the remote storage here.
 
             // Delete lock-mode and lock-token info.
-            lockManager.DeleteLock();
-
-            // Remove lock icon and lock info in custom columns.
-            await customDataManager.SetLockInfoAsync(null);
+            placeholder.Properties.Remove("LockInfo");
+            placeholder.Properties.Remove("LockMode");
 
             Logger.LogMessage("Unlocked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
         }
-
     }
 }

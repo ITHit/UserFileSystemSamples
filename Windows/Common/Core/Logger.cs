@@ -11,7 +11,7 @@ using System.Runtime.InteropServices;
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
     /// <summary>
-    /// Implements unified logging.
+    /// Implements logging.
     /// </summary>
     public class Logger : ILogger
     {
@@ -42,7 +42,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             string att = FsPath.Exists(sourcePath) ? FsPath.GetAttString(sourcePath) : null;
             string process = null;
             byte? priorityHint = null;
-            long? clientFileId = null;
+            ulong? clientFileId = null;
 
             if (operationContext != null)
             {
@@ -61,7 +61,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             string att = FsPath.Exists(sourcePath) ? FsPath.GetAttString(sourcePath) : null;
             string process = null;
             byte? priorityHint = null;
-            long? clientFileId = null;
+            ulong? clientFileId = null;
             string size = null;
 
             if (operationContext != null)

@@ -7,6 +7,7 @@
     <Product>IT Hit User File System</Product>
     <Copyright>IT Hit LTD.</Copyright>
     <RootNamespace>ITHit.FileSystem.Samples.Common.Windows.ShellExtension</RootNamespace>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="ThumbnailProviderCommon.cs" />
@@ -19,7 +20,7 @@
     <PackageReference Include="System.Drawing.Common" Version="5.0.2" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="4.0.11399.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="4.1.12172.0-Beta2" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Rpc.Proto\Common.Windows.Rpc.Proto.csproj" />
     <ProjectReference Include="..\Rpc\Common.Windows.Rpc.csproj" />

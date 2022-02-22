@@ -13,7 +13,7 @@ namespace ITHit.FileSystem.Samples.Common
     public class FileSystemItemMetadataExt : IFileSystemItemMetadata
     {
         /// <inheritdoc/>
-        public byte[] ItemId { get; set; }
+        public byte[] RemoteStorageItemId { get; set; }
 
         ///<inheritdoc/>
         public string Name { get; set; }
@@ -37,14 +37,13 @@ namespace ITHit.FileSystem.Samples.Common
         public DateTimeOffset ChangeTime { get; set; }
 
         /// <summary>
-        /// Server ETag.
+        /// Lock info.
         /// </summary>
-        public string ETag { get; set; }
-
-        /// <summary>
-        /// Indicates if the item is locked in the remote storage.
-        /// </summary>
-        public bool IsLocked { get; set; } = false;
+        /// <remarks>
+        /// If the item is locked, this property contains info about the lock. 
+        /// It is set to null otherwise.
+        /// </remarks>
+        public ServerLockInfo Lock { get; set; }
 
         /// <summary>
         /// Custom columns data to be displayed in the file manager.
