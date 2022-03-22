@@ -13,6 +13,7 @@
     <Compile Remove="ETagManager.cs" />
     <Compile Remove="ExternalDataManager.cs" />
     <Compile Remove="FilteredDocsMonitor.cs" />
+    <Compile Remove="FullSync\ClientToServerSync.cs" />
     <Compile Remove="FullSync\ServerToClientSync.cs" />
     <Compile Remove="IMapping.cs" />
     <Compile Remove="LockManager.cs" />
@@ -22,7 +23,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="4.1.12172.0-Beta2" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="4.2.12691.0-Beta2" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Core\Common.Windows.Core.csproj" />
     <ProjectReference Include="..\Rpc.Proto\Common.Windows.Rpc.Proto.csproj" />

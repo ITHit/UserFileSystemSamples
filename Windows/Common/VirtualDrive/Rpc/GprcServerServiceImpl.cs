@@ -40,7 +40,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
                     string filePath = pair.Key;
                     bool fileStatus = pair.Value;
 
-                    IClientNotificationsWindows clientNotifications = engine.ClientNotifications(filePath);
+                    IClientNotifications clientNotifications = engine.ClientNotifications(filePath);
                     if (fileStatus)
                         await clientNotifications.LockAsync();
                     else
@@ -71,7 +71,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
 
                 foreach (string filePath in request.Files)
                 {
-                    IClientNotificationsWindows clientNotifications = engine.ClientNotifications(filePath);
+                    IClientNotifications clientNotifications = engine.ClientNotifications(filePath);
                     LockMode lockMode = await clientNotifications.GetLockModeAsync();
                     bool lockStatus = lockMode != LockMode.None;
 

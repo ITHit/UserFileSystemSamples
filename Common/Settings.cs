@@ -58,5 +58,10 @@ namespace ITHit.FileSystem.Samples.Common
         /// Communication channel name is used by RPC to establish connection over named pipes.
         /// </summary>
         public string RpcCommunicationChannelName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the maximum number of concurrent tasks
+        /// </summary>
+        public int MaxDegreeOfParallelism { get; set; }
     }
 }

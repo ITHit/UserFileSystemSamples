@@ -41,6 +41,7 @@ namespace WebDAVDrive
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
         /// <param name="rpcCommunicationChannelName">Channel name to communicate with Windows Explorer context menu and other components on this machine.</param>
         /// <param name="syncIntervalMs">Full synchronization interval in milliseconds.</param>
+        /// <param name="maxDegreeOfParallelism">A maximum number of concurrent tasks.</param>
         /// <param name="log4net">Log4net logger.</param>
         public VirtualEngine(
             string license, 
@@ -48,10 +49,11 @@ namespace WebDAVDrive
             string remoteStorageRootPath, 
             string webSocketServerUrl, 
             string iconsFolderPath, 
-            string rpcCommunicationChannelName,
+            string rpcCommunicationChannelName,        
             double syncIntervalMs,
+            int maxDegreeOfParallelism,
             ILog log4net)
-            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, rpcCommunicationChannelName, syncIntervalMs, log4net)
+            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, rpcCommunicationChannelName, syncIntervalMs, maxDegreeOfParallelism, log4net)
         {
             RemoteStorageMonitor = new RemoteStorageMonitor(webSocketServerUrl, this, log4net);
         }
@@ -72,9 +74,9 @@ namespace WebDAVDrive
         //public override IMapping Mapping { get { return new Mapping(this); } }
 
         /// <inheritdoc/>
-        public override async Task StartAsync()
+        public override async Task StartAsync(bool processModified = true)
         {
-            await base.StartAsync();
+            await base.StartAsync(processModified);
             await RemoteStorageMonitor.StartAsync();
         }
 

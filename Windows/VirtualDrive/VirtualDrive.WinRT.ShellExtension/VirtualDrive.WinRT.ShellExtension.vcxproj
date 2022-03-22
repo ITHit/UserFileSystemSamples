@@ -104,7 +104,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ClassFactory.h" />
+    <ClInclude Include="..\..\Common\WinRT.ShellExtension\ClassFactory.h" />
+    <ClInclude Include="..\..\Common\WinRT.ShellExtension\ShellExtensionModule.h" />
     <ClInclude Include="CustomStateProvider.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="resource.h" />
@@ -114,28 +115,27 @@
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClInclude Include="ShellExtensionModule.h" />
     <ResourceCompile Include="Common_Windows_WinRT_ShellExtension.rc" />
     <Manifest Include="Common_Windows_WinRT_ShellExtension.exe.manifest" />
-    <None Include="packages.config" />
+    <None Include="..\..\Common\WinRT.ShellExtension\packages.config" />
     <None Include="PropertySheet.props" />
     <Text Include="readme.txt">
       <DeploymentContent>false</DeploymentContent>
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="CustomStateProvider.idl" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Rpc.Proto\Common.Windows.Rpc.Proto.csproj">
+    <ProjectReference Include="..\..\Common\Rpc.Proto\Common.Windows.Rpc.Proto.csproj">
       <Project>{96fb01be-3def-418d-8ab0-69cc0d1813d3}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\Rpc\Common.Windows.Rpc.csproj">
+    <ProjectReference Include="..\..\Common\Rpc\Common.Windows.Rpc.csproj">
       <Project>{1f61a031-cdfe-4b81-bac3-7760fa777a2a}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\WinRT.ShellExtension.Rpc\CommonShellExtensionRpc.csproj">
+    <ProjectReference Include="..\..\Common\WinRT.ShellExtension.Rpc\CommonShellExtensionRpc.csproj">
       <Project>{e64b361d-8934-401e-b4fd-64786e4e1dc7}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="..\..\Common\WinRT.ShellExtension\CustomStateProvider.idl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

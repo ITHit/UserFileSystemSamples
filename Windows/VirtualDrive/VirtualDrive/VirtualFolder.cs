@@ -55,11 +55,11 @@ namespace VirtualDrive
             remoteStorageItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
 
-            // Get ETag from your remote storage here and save it in
+            // Save Etag received from your remote storage in
             // persistent placeholder properties unlil the next update.
-            string eTag = (await WindowsFileSystemItem.GetUsnByPathAsync(remoteStorageItem.FullName)).ToString();
-            PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemNewItemPath);
-            await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
+            //string eTag = ...
+            //PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemNewItemPath);
+            //await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
 
             // Return remote storage item ID. It will be passed later
             // into IEngine.GetFileSystemItemAsync() method on every call.
@@ -83,10 +83,10 @@ namespace VirtualDrive
             remoteStorageItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
 
-            // Get ETag from your remote storage here and save it in persistent placeholder properties.
-            string eTag = (await WindowsFileSystemItem.GetUsnByPathAsync(remoteStorageItem.FullName)).ToString();
-            PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemNewItemPath);
-            await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
+            // Save ETag received from your remote storage in persistent placeholder properties.
+            //string eTag = ...
+            //PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemNewItemPath);
+            //await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
 
             // Return remote storage item ID. It will be passed later
             // into IEngine.GetFileSystemItemAsync() method on every call.

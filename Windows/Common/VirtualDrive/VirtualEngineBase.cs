@@ -53,6 +53,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
         /// <param name="rpcCommunicationChannelName">Channel name to communicate with Windows Explorer context menu and other components on this machine.</param>
         /// <param name="syncIntervalMs">Full synchronization interval in milliseconds.</param>
+        /// <param name="maxDegreeOfParallelism">A maximum number of concurrent tasks.</param>
         /// <param name="log4net">Log4net logger.</param>
         public VirtualEngineBase(
             string license, 
@@ -61,8 +62,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             string iconsFolderPath, 
             string rpcCommunicationChannelName,
             double syncIntervalMs,
+            int maxDegreeOfParallelism,
             ILog log4net) 
-            : base(license, userFileSystemRootPath)
+            : base(license, userFileSystemRootPath, maxDegreeOfParallelism)
         {
             logger = new Logger("File System Engine", log4net) ?? throw new NullReferenceException(nameof(log4net));
             this.iconsFolderPath = iconsFolderPath ?? throw new NullReferenceException(nameof(iconsFolderPath));
@@ -120,9 +122,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <inheritdoc/>
-        public override async Task StartAsync()
+        public override async Task StartAsync(bool processModified = true)
         {
-            await base.StartAsync();
+            await base.StartAsync(processModified);
             //RemoteStorageMonitor.Start();
             //await SyncService.StartAsync();
             grpcServer.Start();

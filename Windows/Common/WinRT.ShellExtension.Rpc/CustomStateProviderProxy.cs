@@ -13,13 +13,14 @@ namespace CommonShellExtensionRpc
 {
     public sealed class CustomStateProviderProxy
     {
-        public ItemProperty[] GetItemProperties(string itemPath)
+        public ItemProperty[] GetItemProperties(string itemPath, bool virtualDrivePlatform)
         {
-            GrpcClient grpcClient = new GrpcClient("VirtualDrive.RPC");
+            string channelName = virtualDrivePlatform ? "VirtualDrive.RPC" : "WebDAVDrive.RPC";
+
+            GrpcClient grpcClient = new GrpcClient(channelName);
 
             try
             {
-                
                 ItemPropertyRequest request = new()
                 {
                     Path = itemPath
@@ -29,7 +30,7 @@ namespace CommonShellExtensionRpc
 
                 return itemPropertyResult
                     .Properties
-                    .Select(i => new ItemProperty(i.Id, i.Value, i.IconResource))
+                    .Select(i => new ItemProperty(i.Id, ValueValidator(i.Value), i.IconResource))
                     .ToArray();
 
             }
@@ -45,6 +46,11 @@ namespace CommonShellExtensionRpc
 
                 return new ItemProperty[] { };
             }
+        }
+
+        private string ValueValidator(string val)
+        {
+            return string.IsNullOrWhiteSpace(val) ? "n/a" : val;
         }
     }
 }

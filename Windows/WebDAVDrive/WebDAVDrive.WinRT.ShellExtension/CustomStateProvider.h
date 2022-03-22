@@ -3,8 +3,7 @@
 #include "CommonWindowsRtShellExtenstion.CustomStateProvider.g.h"
 #include <windows.storage.provider.h>
 
-/* 000562AA-2879-4CF1-89E8-0AEC9596FE19 */
-constexpr CLSID CLSID_CustomStateProvider =  { 0x562aa, 0x2879, 0x4cf1, { 0x89, 0xe8, 0xa, 0xec, 0x95, 0x96, 0xfe, 0x19 } };
+constexpr CLSID CLSID_CustomStateProviderWebDav = { 0x754f334f, 0x95c, 0x46cd, { 0xb0, 0x33, 0xb2, 0xc0, 0x52, 0x3d, 0x28, 0x29 } };
 
 namespace winrt::CommonWindowsRtShellExtenstion::implementation
 {

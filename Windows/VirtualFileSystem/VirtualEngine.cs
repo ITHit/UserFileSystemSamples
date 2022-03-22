@@ -32,8 +32,10 @@ namespace VirtualFileSystem
         /// A root folder of your user file system. 
         /// Your file system tree will be located under this folder.
         /// </param>
+        /// <param name="maxDegreeOfParallelism">A maximum number of concurrent tasks.</param>
         /// <param name="log">Logger.</param>
-        public VirtualEngine(string license, string userFileSystemRootPath, string remoteStorageRootPath, ILog log) : base(license, userFileSystemRootPath)
+        public VirtualEngine(string license, string userFileSystemRootPath, string remoteStorageRootPath, int maxDegreeOfParallelism, ILog log) : 
+            base(license, userFileSystemRootPath, maxDegreeOfParallelism)
         {
             logger = new Logger("File System Engine", log);
 
@@ -62,7 +64,7 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public override async Task StartAsync()
+        public override async Task StartAsync(bool processModified = true)
         {
             await base.StartAsync();
             RemoteStorageMonitor.Start();

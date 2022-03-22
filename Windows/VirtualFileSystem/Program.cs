@@ -70,7 +70,8 @@ namespace VirtualFileSystem
                 Engine = new VirtualEngine(
                     Settings.UserFileSystemLicense, 
                     Settings.UserFileSystemRootPath, 
-                    Settings.RemoteStorageRootPath, 
+                    Settings.RemoteStorageRootPath,
+                    Settings.MaxDegreeOfParallelism,
                     log);
 
                 // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()

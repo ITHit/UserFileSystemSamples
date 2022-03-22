@@ -1,5 +1,5 @@
 ﻿#include "pch.h"
-#include "ShellExtensionModule.h"
+#include "..\..\Common\WinRT.ShellExtension\ShellExtensionModule.h"
 
 using namespace winrt;
 using namespace Windows::Foundation;

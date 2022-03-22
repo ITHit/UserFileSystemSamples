@@ -1,7 +1,6 @@
 ﻿#include "pch.h"
 #include "CustomStateProvider.h"
-#include "ShellExtensionModule.h"
-#include <fstream>
+#include "..\..\Common\WinRT.ShellExtension\ShellExtensionModule.h"
 
 namespace winrt
 {
@@ -10,14 +9,17 @@ namespace winrt
 
 namespace winrt::CommonWindowsRtShellExtenstion::implementation
 {
-    Windows::Foundation::Collections::IIterable<Windows::Storage::Provider::StorageProviderItemProperty> CustomStateProvider::GetItemProperties(hstring const& itemPath)
+    using namespace Windows::Foundation::Collections;
+    using namespace Windows::Storage::Provider;
+
+    IIterable<StorageProviderItemProperty> CustomStateProvider::GetItemProperties(hstring const& itemPath)
     {
         auto propertyVector{ winrt::single_threaded_vector<winrt::StorageProviderItemProperty>() };
 
         try
         {
             CommonShellExtensionRpc::CustomStateProviderProxy stateProviderProxy;
-            auto itemProperties = stateProviderProxy.GetItemProperties(itemPath);
+            auto itemProperties = stateProviderProxy.GetItemProperties(itemPath, true);
 
             for (const auto& itemProp : itemProperties)
             {

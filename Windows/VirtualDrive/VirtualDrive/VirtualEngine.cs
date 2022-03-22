@@ -30,6 +30,7 @@ namespace VirtualDrive
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
         /// <param name="rpcCommunicationChannelName">Channel name to communicate with Windows Explorer context menu and other components on this machine.</param>
         /// <param name="syncIntervalMs">Full synchronization interval in milliseconds.</param>
+        /// <param name="maxDegreeOfParallelism">A maximum number of concurrent tasks.</param>
         /// <param name="log4net">Log4net logger.</param>
         public VirtualEngine(
             string license, 
@@ -38,8 +39,9 @@ namespace VirtualDrive
             string iconsFolderPath, 
             string rpcCommunicationChannelName, 
             double syncIntervalMs,
+            int maxDegreeOfParallelism,
             ILog log4net)
-            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, rpcCommunicationChannelName, syncIntervalMs, log4net)
+            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, rpcCommunicationChannelName, syncIntervalMs, maxDegreeOfParallelism, log4net)
         {
             RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log4net);
         }
@@ -60,9 +62,9 @@ namespace VirtualDrive
         //public override IMapping Mapping { get { return new Mapping(this); } }
 
         /// <inheritdoc/>
-        public override async Task StartAsync()
+        public override async Task StartAsync(bool processModified = true)
         {
-            await base.StartAsync();
+            await base.StartAsync(processModified);
             RemoteStorageMonitor.Start();
         }
 
@@ -75,6 +77,8 @@ namespace VirtualDrive
         /// <inheritdoc/>
         public override async Task<byte[]> GetThumbnailAsync(string userFileSystemPath, uint size)
         {
+            // For this method to be called you need to run the Package project.
+
             byte[] thumbnail = ThumbnailExtractor.GetThumbnail(userFileSystemPath, size);
 
             string thumbnailResult = thumbnail != null ? "Success" : "Not Impl";
@@ -86,6 +90,8 @@ namespace VirtualDrive
         /// <inheritdoc/>
         public override async Task<IEnumerable<FileSystemItemPropertyData>> GetItemPropertiesAsync(string userFileSystemPath)
         {
+            // For this method to be called you need to run the Package project.
+
             //LogMessage($"{nameof(VirtualEngine)}.{nameof(GetItemPropertiesAsync)}()", userFileSystemPath);
 
             IList<FileSystemItemPropertyData> props = new List<FileSystemItemPropertyData>();

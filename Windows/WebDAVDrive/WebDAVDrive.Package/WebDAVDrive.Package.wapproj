@@ -69,6 +69,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WebDAVDrive.ShellExtension\WebDAVDrive.ShellExtension.csproj" />
+    <ProjectReference Include="..\WebDAVDrive.WinRT.ShellExtension\WebDAVDrive.WinRT.ShellExtension.vcxproj" />
     <ProjectReference Include="..\WebDAVDrive\WebDAVDrive.csproj">
       <SkipGetTargetFrameworkProperties>True</SkipGetTargetFrameworkProperties>
     </ProjectReference>

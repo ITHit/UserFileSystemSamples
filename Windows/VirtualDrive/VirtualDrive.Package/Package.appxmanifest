@@ -68,7 +68,7 @@
               <com:Class Id="9C923BF3-3A4B-487B-AB4E-B4CF87FD1C25" />
             </com:ExeServer>
 
-			<com:ExeServer DisplayName="WinRT.ShellExtension" Executable="Common.Windows.WinRT.ShellExtension\Common.Windows.WinRT.ShellExtension.exe">
+			<com:ExeServer DisplayName="WinRT.ShellExtension" Executable="VirtualDrive.WinRT.ShellExtension\VirtualDrive.WinRT.ShellExtension.exe">
 				<com:Class Id="000562AA-2879-4CF1-89E8-0AEC9596FE19" />
 			</com:ExeServer>
 			  

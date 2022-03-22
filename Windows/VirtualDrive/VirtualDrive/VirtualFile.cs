@@ -58,11 +58,10 @@ namespace VirtualDrive
                 await stream.CopyToAsync(output, bufferSize, length);
             }
 
-            // Store ETag here.
-            // In this sample we use file USN (USN changes on every file update) as a ETag for demo purposes.
-            string eTag = (await WindowsFileSystemItem.GetUsnByPathAsync(remoteStoragePath)).ToString();
-            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
-            await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
+            // Save ETag received from your remote storage in persistent placeholder properties.
+            //string eTag = ...
+            //PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
+            //await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
         }
 
         /// <inheritdoc/>
@@ -85,10 +84,11 @@ namespace VirtualDrive
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
+            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
+
             // Send the ETag to the server as part of the update to ensure
             // the file in the remote storge is not modified since last read.
-            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
-            string oldEtag = await placeholder.Properties["ETag"].GetValueAsync<string>();
+            //string oldEtag = await placeholder.Properties["ETag"].GetValueAsync<string>();
 
             // Send the lock-token to the server as part of the update.
             string lockToken;
@@ -130,9 +130,9 @@ namespace VirtualDrive
             remoteStorageItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
 
-            // Get the new ETag from server here as part of the update and save it on the client.
-            string newEtag = (await WindowsFileSystemItem.GetUsnByPathAsync(remoteStoragePath)).ToString();
-            await placeholder.Properties.AddOrUpdateAsync("ETag", newEtag);
+            // Save ETag received from your remote storage in persistent placeholder properties.
+            //string newEtag = ...
+            //await placeholder.Properties.AddOrUpdateAsync("ETag", newEtag);
 
             //await customDataManager.SetCustomDataAsync(
             //    eTagNew,

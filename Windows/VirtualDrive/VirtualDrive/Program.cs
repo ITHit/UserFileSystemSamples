@@ -74,6 +74,7 @@ namespace VirtualDrive
                     Settings.IconsFolderPath,
                     Settings.RpcCommunicationChannelName,
                     Settings.SyncIntervalMs,
+                    Settings.MaxDegreeOfParallelism,
                     log);
                 Engine.AutoLock = Settings.AutoLock;
 

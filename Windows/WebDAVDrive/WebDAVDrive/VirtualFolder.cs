@@ -38,7 +38,7 @@ namespace WebDAVDrive
             long contentLength = content != null ? content.Length : 0;
 
             // Update remote storage file content.
-            // Get the new ETag returned by the server, if any.
+            // Get the ETag returned by the server, if any.
             string eTag = await Program.DavClient.UploadAsync(newFileUri, async (outputStream) => {
                 if (content != null)
                 {
