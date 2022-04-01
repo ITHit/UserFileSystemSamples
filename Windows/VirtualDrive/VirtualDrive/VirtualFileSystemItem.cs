@@ -59,7 +59,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IResultContext resultContext = null)
+        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IInSyncStatusResultContext resultContext = null)
         {
             string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
@@ -106,7 +106,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task DeleteCompletionAsync(IOperationContext operationContext, IResultContext resultContext)
+        public async Task DeleteCompletionAsync(IOperationContext operationContext, IInSyncStatusResultContext resultContext)
         {
             // On Windows, for move with overwrite on folders to function correctly, 
             // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()

@@ -55,7 +55,7 @@ namespace VirtualFileSystem
         /// In your real-life file system you will change the input parameter type of this method and rewrite it
         /// to map your remote storage item data to the user file system data.
         /// </remarks>
-        /// <returns>File or folder metadata that corresponds to the <paramref name="remoteStorageItem"/>.</returns>
+        /// <returns>File or folder metadata that corresponds to the <paramref name="remoteStorageItem"/> parameter.</returns>
         public static IFileSystemItemMetadata GetUserFileSysteItemMetadata(FileSystemInfo remoteStorageItem)
         {
             IFileSystemItemMetadata userFileSystemItem;
@@ -70,8 +70,8 @@ namespace VirtualFileSystem
                 userFileSystemItem = new FolderMetadata();
             }
 
-            // Store you remote storage item ID in this property.
-            // It will be passed to IEngine.GetFileSystemItemAsync() during every operation.
+            // Store your remote storage item ID in this property.
+            // It will be passed to the IEngine.GetFileSystemItemAsync() method during every operation.
             userFileSystemItem.RemoteStorageItemId = WindowsFileSystemItem.GetItemIdByPath(remoteStorageItem.FullName);
 
             userFileSystemItem.Name = remoteStorageItem.Name;

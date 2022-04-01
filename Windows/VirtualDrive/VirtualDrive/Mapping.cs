@@ -76,7 +76,7 @@ namespace VirtualDrive
         /// Gets a user file system item info from the remote storage data.
         /// </summary>
         /// <param name="remoteStorageItem">Remote storage item info.</param>
-        /// <returns>User file system item info.</returns>
+        /// <returns>File or folder metadata that corresponds to the <paramref name="remoteStorageItem"/> parameter.</returns>
         public static FileSystemItemMetadataExt GetUserFileSysteItemMetadata(FileSystemInfo remoteStorageItem)
         {
             FileSystemItemMetadataExt userFileSystemItem;
@@ -91,8 +91,8 @@ namespace VirtualDrive
                 userFileSystemItem = new FolderMetadataExt();
             }
 
-            // Store you remote storage item ID in this property.
-            // It will be passed to IEngine.GetFileSystemItemAsync() during every operation.
+            // Store your remote storage item ID in this property.
+            // It will be passed to the IEngine.GetFileSystemItemAsync() method during every operation.
             userFileSystemItem.RemoteStorageItemId = WindowsFileSystemItem.GetItemIdByPath(remoteStorageItem.FullName);
 
             userFileSystemItem.Name = remoteStorageItem.Name;

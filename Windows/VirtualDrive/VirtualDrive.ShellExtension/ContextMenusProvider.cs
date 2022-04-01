@@ -12,7 +12,7 @@ using ITHit.FileSystem.Samples.Common.Windows.ShellExtension.Interop;
 namespace VirtualDrive.ShellExtension
 {
     /// <summary>
-    /// Implements Windows Explorer context menu logic.
+    /// Implements Windows Explorer context menu.
     /// </summary>
     [ComVisible(true)]
     [ProgId("VirtualDrive.ContextMenusProvider"), Guid(ContextMenusClass)]

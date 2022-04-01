@@ -12,8 +12,12 @@ using System.Xml.Serialization;
 namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
 {
     /// <summary>
-    /// Base class which implements logic to extend Windows Explorer commands.
+    /// Common code to extend Windows Explorer commands.
     /// </summary>
+    /// <remarks>
+    /// You will derive your class from this class to implement your Windows Explorer context menu.
+    /// Typically you do not need to make any changes in this class.
+    /// </remarks>
     public abstract class ContextMenusProviderBase : IExplorerCommand
     {
         /// <summary>

@@ -52,7 +52,7 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IResultContext resultContext = null)
+        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IInSyncStatusResultContext resultContext = null)
         {
             string userFileSystemNewPath = targetUserFileSystemPath; 
             string userFileSystemOldPath = this.UserFileSystemPath;
@@ -97,7 +97,7 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task DeleteCompletionAsync(IOperationContext operationContext = null, IResultContext resultContext = null)
+        public async Task DeleteCompletionAsync(IOperationContext operationContext = null, IInSyncStatusResultContext resultContext = null)
         {
             // On Windows, for rename with overwrite to function properly for folders, 
             // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()

@@ -1,11 +1,11 @@
 using System;
-using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows.Rpc.Generated;
 using GrpcDotNetNamedPipes;
 using log4net;
 using System.IO.Pipes;
 using System.Security.Principal;
 using System.Security.AccessControl;
+using System.IO;
 
 namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
 {
@@ -40,14 +40,16 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
                     Stop();
                 }
 
-                NamedPipeServer server = new NamedPipeServer(rpcCommunicationChannelName, new NamedPipeServerOptions() {
+                var pipeName = Path.Combine(WindowsIdentity.GetCurrent().Owner.Value, rpcCommunicationChannelName);
+
+                NamedPipeServer server = new NamedPipeServer(pipeName, new NamedPipeServerOptions() {
                     CurrentUserOnly = true
                 });
-                ShellExtensionRpc.BindService(server.ServiceBinder, new GprcServerServiceImpl(engine, this));
+                ShellExtensionRpc.BindService(server.ServiceBinder, new GrpcServerServiceImpl(engine, this));
                 server.Start();
                 namedPipeServer = server;
 
-                LogMessage("Started", rpcCommunicationChannelName);
+                LogMessage("Started", pipeName);
             }
             catch (Exception ex)
             {

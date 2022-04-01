@@ -11,7 +11,9 @@ using ITHit.FileSystem.Samples.Common.Windows.Rpc.Generated;
 
 namespace WebDAVDrive.ShellExtension
 {
-    // It is Windows Shell Extension code
+    /// <summary>
+    /// Thumbnails provider Windows Shell Extension.
+    /// </summary>
     [ComVisible(true)]
     [ProgId("WebDAVDrive.ThumbnailProvider"), Guid(ThumbnailClass)]
     public class ThumbnailProvider : ThumbnailProviderBase

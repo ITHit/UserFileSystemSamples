@@ -10,7 +10,7 @@
 
   <Identity
     Name="38f8ee88-19d0-48a3-ad8e-904a6cf3ca17"
-    Publisher="CN=IT Hit LTD., O=IT Hit LTD., STREET=86 Kimbark blvd, L=Toronto, S=Ontario, PostalCode=M5N2Y1, C=CA"
+    Publisher="CN=VirtualDrivePackagePublisher"
     Version="1.0.0.0" />
 
   <Properties>

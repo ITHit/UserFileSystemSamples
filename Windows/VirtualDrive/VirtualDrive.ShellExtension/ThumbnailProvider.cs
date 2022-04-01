@@ -10,7 +10,9 @@ using ITHit.FileSystem.Samples.Common.Windows.ShellExtension;
 
 namespace VirtualDrive.ShellExtension
 {
-    // It is Windows Shell Extension code
+    /// <summary>
+    /// Thumbnails provider Windows Shell Extension.
+    /// </summary>
     [ComVisible(true)]
     [ProgId("VirtualDrive.ThumbnailProvider"), Guid(ThumbnailClass)]
     public class ThumbnailProvider : ThumbnailProviderBase

@@ -218,7 +218,7 @@ namespace VirtualFileSystem
                     {
                         // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                         // In this case the IServerNotifications.MoveToAsync() call is ignored.
-                        LogMessage("Renamed succesefully:", userFileSystemOldPath, userFileSystemNewPath);
+                        LogMessage("Renamed succesefully", userFileSystemOldPath, userFileSystemNewPath);
                     }
                 }
             }

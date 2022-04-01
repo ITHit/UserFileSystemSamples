@@ -8,6 +8,14 @@ using ITHit.FileSystem.Samples.Common.Windows.ShellExtension.Interop;
 
 namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension.Thumbnails
 {
+
+    /// <summary>
+    /// Common code for a thumbnails provider.
+    /// </summary>
+    /// <remarks>
+    /// You will derive your class from this class to implement your Thumbnails provider Windows Shell Extension
+    /// Typically you do not need to make any changes in this class.
+    /// </remarks>
     public abstract class ThumbnailProviderBase : InitializedWithItem, IThumbnailProvider
     {
         public abstract Task<byte[]> GetThumbnailsAsync(string filePath, uint size);

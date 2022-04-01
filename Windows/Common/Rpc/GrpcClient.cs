@@ -1,6 +1,8 @@
 using System;
 using ITHit.FileSystem.Samples.Common.Windows.Rpc.Generated;
 using GrpcDotNetNamedPipes;
+using System.IO;
+using System.Security.Principal;
 
 namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
 {
@@ -13,8 +15,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
 
         public GrpcClient(string channelName)
         {
-            if (string.IsNullOrEmpty(rpcCommunicationChannelName))
-                rpcCommunicationChannelName = channelName;
+            rpcCommunicationChannelName = channelName;
         }
 
         public const int ConnectionTimeoutMs = 1000;
@@ -35,10 +36,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
             {
                 ConnectionTimeout = ConnectionTimeoutMs,
                 CurrentUserOnly = true,
-                ImpersonationLevel = System.Security.Principal.TokenImpersonationLevel.None
+                ImpersonationLevel = TokenImpersonationLevel.None
             };
 
-            NamedPipeChannel channel = new NamedPipeChannel(".", rpcCommunicationChannelName, options);
+            var pipeName = Path.Combine(WindowsIdentity.GetCurrent().Owner.Value, rpcCommunicationChannelName);
+
+            NamedPipeChannel channel = new NamedPipeChannel(".", pipeName, options);
             ShellExtensionRpc.ShellExtensionRpcClient client = new ShellExtensionRpc.ShellExtensionRpcClient(channel);
             return client;
         }

@@ -21,7 +21,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <summary>
-        /// Returns true if file system contains an application lock-file (~$*.docx, *.dwl, *.dwl2) in file 
+        /// Returns true if file system contains an application lock-file (~$*.docx, *.dwl, *.dwl2, etc) in the file 
         /// system that corresponds to the provided path to the file file. False - otherwise.
         /// </summary>
         /// <param name="path">Path to the file to check the lock-file for.</param>

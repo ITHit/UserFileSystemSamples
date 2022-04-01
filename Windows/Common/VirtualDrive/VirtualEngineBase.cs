@@ -36,7 +36,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         private readonly string iconsFolderPath;
 
         /// <summary>
-        /// Gprc server control to communicate with Windows Explorer 
+        /// Grpc server control to communicate with Windows Explorer 
         /// context menu and other components on this machine.
         /// </summary>
         private readonly GrpcServer grpcServer;

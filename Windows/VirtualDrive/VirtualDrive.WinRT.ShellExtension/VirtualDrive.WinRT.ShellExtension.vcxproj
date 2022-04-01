@@ -117,7 +117,7 @@
     </ClCompile>
     <ResourceCompile Include="Common_Windows_WinRT_ShellExtension.rc" />
     <Manifest Include="Common_Windows_WinRT_ShellExtension.exe.manifest" />
-    <None Include="..\..\Common\WinRT.ShellExtension\packages.config" />
+    <None Include="packages.config" />
     <None Include="PropertySheet.props" />
     <Text Include="readme.txt">
       <DeploymentContent>false</DeploymentContent>

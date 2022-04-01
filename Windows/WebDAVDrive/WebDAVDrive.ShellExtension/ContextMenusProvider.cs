@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
 {
     /// <summary>
-    /// Implements Windows Explorer context menu logic.
+    /// Implements Windows Explorer context menu.
     /// </summary>
     [ComVisible(true)]
     [ProgId("WebDAVDrive.ContextMenusProvider"), Guid(ContextMenusClass)]

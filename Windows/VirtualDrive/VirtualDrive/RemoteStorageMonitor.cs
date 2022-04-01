@@ -218,10 +218,6 @@ namespace VirtualDrive
                     // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                     if (await engine.ServerNotifications(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath))
                     {
-                        // As soon as in this sample we use USN as a ETag, and USN chandes on move,
-                        // we need to update it for hydrated files.
-                        //await engine.Mapping.UpdateETagAsync(remoteStorageNewPath, userFileSystemNewPath);
-
                         LogMessage("Renamed succesefully", userFileSystemOldPath, userFileSystemNewPath);
                     }
                 }

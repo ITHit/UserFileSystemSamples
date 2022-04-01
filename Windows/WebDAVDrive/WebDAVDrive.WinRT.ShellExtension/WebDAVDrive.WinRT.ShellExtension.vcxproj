@@ -118,7 +118,7 @@
     <None Include="PropertySheet.props" />
     <ResourceCompile Include="Common_Windows_WinRT_ShellExtension.rc" />
     <Manifest Include="Common_Windows_WinRT_ShellExtension.exe.manifest" />
-    <None Include="..\..\Common\WinRT.ShellExtension\packages.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Rpc.Proto\Common.Windows.Rpc.Proto.csproj">

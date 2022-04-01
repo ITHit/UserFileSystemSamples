@@ -12,14 +12,14 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
     /// <summary>
     /// RPC methods handler.
     /// </summary>
-    public class GprcServerServiceImpl : ShellExtensionRpc.ShellExtensionRpcBase
+    public class GrpcServerServiceImpl : ShellExtensionRpc.ShellExtensionRpcBase
     {
         private static EmptyMessage EmptyMessage = new EmptyMessage();
 
         private VirtualEngineBase engine;
         private ILogger logger;
 
-        public GprcServerServiceImpl(VirtualEngineBase engine, ILogger logger)
+        public GrpcServerServiceImpl(VirtualEngineBase engine, ILogger logger)
         {
             this.engine = engine;
             this.logger = logger;

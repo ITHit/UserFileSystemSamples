@@ -95,7 +95,7 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null)
+        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null)
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
@@ -105,7 +105,7 @@ namespace WebDAVDrive
                 // the file in the remote storge is not modified since last read.
                 PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
 
-                string oldEtag = null; //await placeholder.Properties["ETag"].GetValueAsync<string>();
+                string oldEtag = null; 
 
                 if (placeholder.Properties.TryGetValue("ETag", out IDataItem propETag))
                 {

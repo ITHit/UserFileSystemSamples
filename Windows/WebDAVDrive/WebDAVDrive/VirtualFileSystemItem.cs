@@ -9,6 +9,7 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Windows;
 using ITHit.WebDAV.Client;
+using ITHit.WebDAV.Client.Exceptions;
 
 namespace WebDAVDrive
 {
@@ -63,7 +64,7 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IResultContext resultContext = null)
+        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IInSyncStatusResultContext resultContext = null)
         {
             string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
@@ -92,7 +93,7 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task DeleteCompletionAsync(IOperationContext operationContext, IResultContext resultContext)
+        public async Task DeleteCompletionAsync(IOperationContext operationContext, IInSyncStatusResultContext resultContext)
         {
             // On Windows, for move with overwrite on folders to function correctly, 
             // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
@@ -105,7 +106,7 @@ namespace WebDAVDrive
                 await Program.DavClient.DeleteAsync(new Uri(RemoteStoragePath));
                 Logger.LogMessage("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
             }
-            catch (Exception ex)
+            catch (WebDavHttpException ex)
             {
                 // Windows Explorer may call delete more than one time on the same file/folder.
                 Logger.LogMessage(ex.Message);
@@ -116,7 +117,7 @@ namespace WebDAVDrive
         public Task<IFileSystemItemMetadata> GetMetadataAsync()
         {
             // Return IFileMetadata for a file, IFolderMetadata for a folder.
-            throw new NotImplementedException();
+            throw new System.NotImplementedException();
         }
 
         /// <summary>
