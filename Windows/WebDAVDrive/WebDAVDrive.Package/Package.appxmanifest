@@ -44,35 +44,35 @@
       <Extensions>
         <desktop3:Extension Category="windows.cloudFiles">
           <desktop3:CloudFiles>
-		    <desktop3:CustomStateHandler Clsid="754F334F-095C-46CD-B033-B2C0523D2829"/>
+            <desktop3:CustomStateHandler Clsid="754F334F-095C-46CD-B033-B2C0523D2829"/>
             <desktop3:ThumbnailProviderHandler Clsid="A5B0C82F-50AA-445C-A404-66DEB510E84B"/>
-            
+
             <desktop3:ExtendedPropertyHandler Clsid="20000000-0000-0000-0000-000000000001"/>
             <desktop3:BannersHandler Clsid="20000000-0000-0000-0000-000000000001"/>
-            
+
             <desktop3:CloudFilesContextMenus>
               <desktop3:Verb Id="LockCommand" Clsid="A22EBD03-343E-433C-98DF-372C6B3A1538" />
             </desktop3:CloudFilesContextMenus>
-            
+
           </desktop3:CloudFiles>
         </desktop3:Extension>
         <com:Extension Category="windows.comServer">
           <com:ComServer>
             <!-- When changing ProgId make sure to change it also in the ThumbnailProvider.cs -->
-            
+
             <com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="WebDAVDrive.ShellExtension\WebDAVDrive.ShellExtension.exe">
               <com:Class Id="A5B0C82F-50AA-445C-A404-66DEB510E84B" />
-            </com:ExeServer>            
-            
+            </com:ExeServer>
+
             <com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="WebDAVDrive.ShellExtension\WebDAVDrive.ShellExtension.exe">
               <com:Class Id="A22EBD03-343E-433C-98DF-372C6B3A1538" />
             </com:ExeServer>
 
-			<com:ExeServer DisplayName="WinRT.ShellExtension" Executable="WebDAVDrive.WinRT.ShellExtension\WebDAVDrive.WinRT.ShellExtension.exe">
-				<com:Class Id="754F334F-095C-46CD-B033-B2C0523D2829" />
-			</com:ExeServer>
+            <com:ExeServer DisplayName="WinRT.ShellExtension" Executable="WebDAVDrive.WinRT.ShellExtension\WebDAVDrive.WinRT.ShellExtension.exe">
+                <com:Class Id="754F334F-095C-46CD-B033-B2C0523D2829" />
+            </com:ExeServer>
 
-		  </com:ComServer>
+          </com:ComServer>
         </com:Extension>
       </Extensions>
     </Application>

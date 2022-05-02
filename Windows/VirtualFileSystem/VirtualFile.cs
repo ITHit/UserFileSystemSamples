@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using ITHit.FileSystem;
+using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
 
@@ -13,7 +14,7 @@ using ITHit.FileSystem.Samples.Common.Windows;
 namespace VirtualFileSystem
 {
     /// <inheritdoc cref="IFile"/>
-    public class VirtualFile : VirtualFileSystemItem, IFile
+    public class VirtualFile : VirtualFileSystemItem, IFileWindows
     {
 
         /// <summary>
@@ -28,36 +29,42 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task OpenAsync(IOperationContext operationContext, IResultContext context)
+        public async Task OpenCompletionAsync(IOperationContext operationContext, IResultContext context, CancellationToken cancellationToken)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(OpenAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFileWindows)}.{nameof(OpenCompletionAsync)}()", UserFileSystemPath, default, operationContext);
         }
 
         
         /// <inheritdoc/>
-        public async Task CloseAsync(IOperationContext operationContext, IResultContext context)
+        public async Task CloseCompletionAsync(IOperationContext operationContext, IResultContext context, CancellationToken cancellationToken)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(CloseAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFileWindows)}.{nameof(CloseCompletionAsync)}()", UserFileSystemPath, default, operationContext);
         }
         
 
         
         /// <inheritdoc/>
-        public async Task ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext)
+        public async Task ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {
             // On Windows this method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer call the resultContext.ReportProgress() or resultContext.ReturnData() method.
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
-            SimulateNetworkDelay(length, resultContext);
-
             string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
             await using (FileStream stream = System.IO.File.OpenRead(remoteStoragePath))
             {
                 stream.Seek(offset, SeekOrigin.Begin);
                 const int bufferSize = 0x500000; // 5Mb. Buffer size must be multiple of 4096 bytes for optimal performance.
-                await stream.CopyToAsync(output, bufferSize, length);
+                try
+                {
+                    await stream.CopyToAsync(output, bufferSize, length, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Operation was canceled by the calling Engine.StopAsync() or the operation timeout occured.
+                    Logger.LogMessage($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default);
+                }
             }
         }
         
@@ -70,15 +77,13 @@ namespace VirtualFileSystem
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
-            //SimulateNetworkDelay(length, resultContext);
-
             bool isValid = true;
 
             resultContext.ReturnValidationResult(offset, length, isValid);
         }
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null)
+        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 

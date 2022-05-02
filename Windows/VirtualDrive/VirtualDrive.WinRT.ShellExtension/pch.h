@@ -6,6 +6,9 @@
 #endif
 #include <ShObjIdl_core.h>
 #include <ShlObj_core.h>
+#include <shlwapi.h>
+#include <pathcch.h>
+#include <ShlGuid.h>
 
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
@@ -19,3 +22,4 @@
 #include <winrt/CommonShellExtensionRpc.h>
 
 #include "CustomStateProvider.h"
+#include "UriSource.h"

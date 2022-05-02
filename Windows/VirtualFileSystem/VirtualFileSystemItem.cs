@@ -44,7 +44,7 @@ namespace VirtualFileSystem
 
         
         ///<inheritdoc>
-        public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null)
+        public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
@@ -52,7 +52,7 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IInSyncStatusResultContext resultContext = null)
+        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IInSyncStatusResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewPath = targetUserFileSystemPath; 
             string userFileSystemOldPath = this.UserFileSystemPath;
@@ -82,12 +82,13 @@ namespace VirtualFileSystem
 
         
         ///<inheritdoc>
-        public async Task DeleteAsync(IOperationContext operationContext = null, IConfirmationResultContext resultContext = null)
+        public async Task DeleteAsync(IOperationContext operationContext = null, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", this.UserFileSystemPath, default, operationContext);
 
             // To cancel the operation and prevent the file from being deleted, 
-            // call the resultContext.ReturnErrorResult() method or throw any exception inside this method.
+            // call the resultContext.ReturnErrorResult() method or throw any exception inside this method:
+            // resultContext.ReturnErrorResult(CloudFileStatus.STATUS_CLOUD_FILE_REQUEST_TIMEOUT);
 
             // IMPOTRTANT!
             // Make sure you have all Windows updates installed.
@@ -97,7 +98,7 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task DeleteCompletionAsync(IOperationContext operationContext = null, IInSyncStatusResultContext resultContext = null)
+        public async Task DeleteCompletionAsync(IOperationContext operationContext = null, IInSyncStatusResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
             // On Windows, for rename with overwrite to function properly for folders, 
             // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
@@ -137,24 +138,6 @@ namespace VirtualFileSystem
         {
             // Return IFileMetadata for a file, IFolderMetadata for a folder.
             throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Simulates network delays and reports file transfer progress for demo purposes.
-        /// </summary>
-        /// <param name="fileLength">Length of file.</param>
-        /// <param name="context">Context to report progress to.</param>
-        protected void SimulateNetworkDelay(long fileLength, IResultContext resultContext)
-        {
-            if (Program.Settings.NetworkSimulationDelayMs > 0)
-            {
-                int numProgressResults = 5;
-                for (int i = 0; i < numProgressResults; i++)
-                {
-                    resultContext.ReportProgress(fileLength, i * fileLength / numProgressResults);
-                    Thread.Sleep(Program.Settings.NetworkSimulationDelayMs);
-                }
-            }
-        }
+        }       
     }
 }

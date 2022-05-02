@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows.Rpc.Generated;
+using ITHit.FileSystem.Samples.Common.Windows.VirtualDrive.Rpc;
 using Grpc.Core;
 using System.Xml.Serialization;
 using System.IO;
@@ -42,9 +43,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
 
                     IClientNotifications clientNotifications = engine.ClientNotifications(filePath);
                     if (fileStatus)
-                        await clientNotifications.LockAsync();
+                        await clientNotifications.LockAsync(cancellationToken: context.CancellationToken);
                     else
-                        await clientNotifications.UnlockAsync();
+                        await clientNotifications.UnlockAsync(cancellationToken: context.CancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -72,7 +73,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
                 foreach (string filePath in request.Files)
                 {
                     IClientNotifications clientNotifications = engine.ClientNotifications(filePath);
-                    LockMode lockMode = await clientNotifications.GetLockModeAsync();
+                    LockMode lockMode = await clientNotifications.GetLockModeAsync(cancellationToken: context.CancellationToken);
                     bool lockStatus = lockMode != LockMode.None;
 
                     itemsStatusList.FilesStatus.Add(filePath, lockStatus);
@@ -173,6 +174,33 @@ namespace ITHit.FileSystem.Samples.Common.Windows.Rpc
                 logger.LogError(ex.Message, request.Path, default, ex);
                 throw new RpcException(new Status(StatusCode.Internal, ex.Message));
             }
+        }
+
+        public override async Task<GetPathForContentUriResult> GetPathForContentUri(UriSourceRequest request, ServerCallContext context)
+        {
+            logger.LogMessage($"{nameof(GetPathForContentUri)}()", request.PathOrUri);
+
+            GetPathForContentUriResult result = new GetPathForContentUriResult()
+            {
+                Path = request.PathOrUri + "\\test",
+                Status = (int)StorageProviderUriSourceStatus.Success
+            };
+
+            return result;
+        }
+
+        public override async Task<GetContentInfoForPathResult> GetContentInfoForPath(UriSourceRequest request, ServerCallContext context)
+        {
+            logger.LogMessage($"{nameof(GetContentInfoForPath)}()", request.PathOrUri);
+
+            GetContentInfoForPathResult result = new GetContentInfoForPathResult()
+            {
+                ContentId = "id. " + request.PathOrUri,
+                ContentUri = "uri\\" + request.PathOrUri,
+                Status = (int)StorageProviderUriSourceStatus.Success
+            };
+
+            return result;
         }
     }
 }

@@ -15,20 +15,41 @@ namespace VirtualFileSystem
     /// <remarks>
     /// You will change methods of this class to map to your own remote storage.
     /// </remarks>
-    public static class Mapping
+    public class Mapping
     {
+        /// <summary>
+        /// Remote storage path.
+        /// </summary>
+        private readonly string remoteStorageRootPath;
+
+        /// <summary>
+        /// User file system path. 
+        /// </summary>
+        private readonly string userFileSystemRootPath;
+
+        /// <summary>
+        /// Creates a Mapping.
+        /// </summary>
+        /// <param name="userFileSystemRootPath">Remote storage path.</param>
+        /// <param name="remoteStorageRootPath">User file system path.</param>
+        public Mapping(string userFileSystemRootPath, string remoteStorageRootPath)
+        {
+            this.userFileSystemRootPath = userFileSystemRootPath;
+            this.remoteStorageRootPath = remoteStorageRootPath;
+        }
+
         /// <summary>
         /// Returns a user file system path that corresponds to the remote storage URI.
         /// </summary>
         /// <param name="remoteStorageUri">Remote storage URI.</param>
         /// <returns>Path in the user file system that corresponds to the <paramref name="remoteStorageUri"/>.</returns>
-        public static string ReverseMapPath(string remoteStorageUri)
+        public string ReverseMapPath(string remoteStorageUri)
         {
             // Get path relative to the virtual root.
             string relativePath = Path.TrimEndingDirectorySeparator(remoteStorageUri).Substring(
-                Path.TrimEndingDirectorySeparator(Program.Settings.RemoteStorageRootPath).Length);
+                Path.TrimEndingDirectorySeparator(remoteStorageRootPath).Length);
 
-            string path = $"{Path.TrimEndingDirectorySeparator(Program.Settings.UserFileSystemRootPath)}{relativePath}";
+            string path = $"{Path.TrimEndingDirectorySeparator(userFileSystemRootPath)}{relativePath}";
             return path;
         }
 

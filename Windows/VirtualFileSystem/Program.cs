@@ -19,12 +19,22 @@ using ITHit.FileSystem.Samples.Common.Windows;
 
 namespace VirtualFileSystem
 {
-    class Program
+    public class Program
     {
         /// <summary>
         /// Application settings.
         /// </summary>
-        internal static AppSettings Settings;
+        public static AppSettings Settings;
+
+        /// <summary>
+        /// Process modified files and folders.
+        /// </summary>
+        public static bool ProcessModified = true;
+
+        /// <summary>
+        /// Opens remote and virtual files folders
+        /// </summary>
+        public static bool OpenTestEnvironment = true;
 
         /// <summary>
         /// Log4Net logger.
@@ -42,7 +52,7 @@ namespace VirtualFileSystem
         /// </summary>
         public static VirtualEngine Engine;
 
-        static async Task Main(string[] args)
+        public static async Task Main(string[] args)
         {
             // Load Settings.
             IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
@@ -50,9 +60,6 @@ namespace VirtualFileSystem
 
             // Configure log4net and set log file path.
             LogFilePath = ConfigureLogger();
-
-            // Enable UTF8 for Console Window.
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
 
             PrintHelp();
 
@@ -65,38 +72,36 @@ namespace VirtualFileSystem
 
             Logger.PrintHeader(log);
 
-            try
-            {
-                Engine = new VirtualEngine(
-                    Settings.UserFileSystemLicense, 
-                    Settings.UserFileSystemRootPath, 
+
+            using (Engine = new VirtualEngine(
+                    Settings.UserFileSystemLicense,
+                    Settings.UserFileSystemRootPath,
                     Settings.RemoteStorageRootPath,
                     Settings.MaxDegreeOfParallelism,
-                    log);
+                    log))
+            {
+                try
+                {
+                    // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
+                    // method as a remoteStorageItemId parameter when a root folder is requested. 
+                    byte[] itemId = WindowsFileSystemItem.GetItemIdByPath(Settings.RemoteStorageRootPath);
+                    Engine.Placeholders.GetRootItem().SetRemoteStorageItemId(itemId);
 
-                // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
-                // method as a remoteStorageItemId parameter when a root folder is requested. 
-                byte[] itemId = WindowsFileSystemItem.GetItemIdByPath(Settings.RemoteStorageRootPath);
-                Engine.Placeholders.GetItem(Settings.UserFileSystemRootPath).SetRemoteStorageItemId(itemId);
-
-                // Start processing OS file system calls.
-                await Engine.StartAsync();
+                    // Start processing OS file system calls.
+                    await Engine.StartAsync(ProcessModified);
 
 #if DEBUG
-                // Opens Windows File Manager with user file system folder and remote storage folder.
-                ShowTestEnvironment();
+                    // Opens Windows File Manager with user file system folder and remote storage folder.
+                    ShowTestEnvironment();
 #endif
-                // Keep this application running and reading user input.
-                await ProcessUserInputAsync();
-            }
-            catch (Exception ex)
-            {
-                log.Error(ex);
-                await ProcessUserInputAsync();
-            }
-            finally
-            {
-                Engine.Dispose();
+                    // Keep this application running and reading user input.
+                    await ProcessUserInputAsync();
+                }
+                catch (Exception ex)
+                {
+                    log.Error(ex);
+                    await ProcessUserInputAsync();
+                }
             }
         }
 
@@ -204,7 +209,10 @@ namespace VirtualFileSystem
 
                     case (char)ConsoleKey.Escape:
                     case 'Q':
-                        Engine.Dispose();
+                        if (Engine.State == EngineState.Running)
+                        {
+                            await Engine.StopAsync();
+                        }
 
                         // Call the code below during programm uninstall using classic msi.
                         await UnregisterSyncRootAsync();
@@ -214,6 +222,10 @@ namespace VirtualFileSystem
                         return;
 
                     case (char)ConsoleKey.Spacebar:
+                        if (Engine.State == EngineState.Running)
+                        {
+                            await Engine.StopAsync();
+                        }
                         log.Info("\n\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.\n");
                         return;
 
@@ -260,13 +272,13 @@ namespace VirtualFileSystem
         /// In the case of a regular installer (msi) call this method during uninstall.
         /// </para>
         /// </remarks>
-        private static async Task UnregisterSyncRootAsync()
+        public static async Task UnregisterSyncRootAsync()
         {
             log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
             await Registrar.UnregisterAsync(SyncRootId);
         }
 
-        private static async Task CleanupAppFoldersAsync()
+        public static async Task CleanupAppFoldersAsync()
         {
             log.Info("\nDeleting all file and folder placeholders.\n");
             try
@@ -280,7 +292,7 @@ namespace VirtualFileSystem
 
             try
             {
-                await((EngineWindows)Engine).UninstallCleanupAsync();
+                await ((EngineWindows)Engine).UninstallCleanupAsync();
             }
             catch (Exception ex)
             {
@@ -295,6 +307,10 @@ namespace VirtualFileSystem
         /// <remarks>This method is provided solely for the development and testing convenience.</remarks>
         private static void ShowTestEnvironment()
         {
+            // Enable UTF8 for Console Window and set width.
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight / 3);
+            Console.SetBufferSize(Console.LargestWindowWidth * 2, Console.BufferHeight);
 
             // Open Windows File Manager with remote storage.
             ProcessStartInfo rsInfo = new ProcessStartInfo(Program.Settings.RemoteStorageRootPath);

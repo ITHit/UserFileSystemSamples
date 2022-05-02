@@ -51,7 +51,7 @@ namespace VirtualDrive
         }
 
         ///<inheritdoc>
-        public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetParentItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null)
+        public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetParentItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
@@ -59,7 +59,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IInSyncStatusResultContext resultContext = null)
+        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IInSyncStatusResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
@@ -91,12 +91,13 @@ namespace VirtualDrive
         }
 
         ///<inheritdoc>
-        public async Task DeleteAsync(IOperationContext operationContext, IConfirmationResultContext resultContext)
+        public async Task DeleteAsync(IOperationContext operationContext, IConfirmationResultContext resultContext, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", UserFileSystemPath, default, operationContext);
 
             // To cancel the operation and prevent the file from being deleted, 
-            // call the resultContext.ReturnErrorResult() method or throw any exception inside this method.
+            // call the resultContext.ReturnErrorResult() method or throw any exception inside this method:
+            // resultContext.ReturnErrorResult(CloudFileStatus.STATUS_CLOUD_FILE_REQUEST_TIMEOUT);
 
             // IMPOTRTANT! See Windows Cloud API delete prevention bug description here: 
             // https://stackoverflow.com/questions/68887190/delete-in-cloud-files-api-stopped-working-on-windows-21h1
@@ -106,7 +107,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task DeleteCompletionAsync(IOperationContext operationContext, IInSyncStatusResultContext resultContext)
+        public async Task DeleteCompletionAsync(IOperationContext operationContext, IInSyncStatusResultContext resultContext, CancellationToken cancellationToken = default)
         {
             // On Windows, for move with overwrite on folders to function correctly, 
             // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
@@ -147,26 +148,8 @@ namespace VirtualDrive
             throw new NotImplementedException();
         }
 
-        /// <summary>
-        /// Simulates network delays and reports file transfer progress for demo purposes.
-        /// </summary>
-        /// <param name="fileLength">Length of file.</param>
-        /// <param name="context">Context to report progress to.</param>
-        protected void SimulateNetworkDelay(long fileLength, IResultContext resultContext)
-        {
-            if (Program.Settings.NetworkSimulationDelayMs > 0)
-            {
-                int numProgressResults = 5;
-                for (int i = 0; i < numProgressResults; i++)
-                {
-                    resultContext.ReportProgress(fileLength, i * fileLength / numProgressResults);
-                    Thread.Sleep(Program.Settings.NetworkSimulationDelayMs);
-                }
-            }
-        }
-
         ///<inheritdoc>
-        public async Task LockAsync(LockMode lockMode, IOperationContext operationContext = null)
+        public async Task LockAsync(LockMode lockMode, IOperationContext operationContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(LockAsync)}()", UserFileSystemPath, default, operationContext);
 
@@ -191,37 +174,37 @@ namespace VirtualDrive
         }
 
         ///<inheritdoc>
-        public async Task<LockMode> GetLockModeAsync(IOperationContext operationContext = null)
+        public async Task<LockMode> GetLockModeAsync(IOperationContext operationContext = null, CancellationToken cancellationToken = default)
         {
-            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
+            if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
+            {
+                if (placeholder.Properties.TryGetValue("LockMode", out IDataItem property))
+                {
+                    return await property.GetValueAsync<LockMode>();
+                }
+            }
 
-            IDataItem property;
-            if(placeholder.Properties.TryGetValue("LockMode", out property))
-            {
-                return await property.GetValueAsync<LockMode>();
-            }
-            else
-            {
-                return LockMode.None;
-            }
+            return LockMode.None;
         }
 
         ///<inheritdoc>
-        public async Task UnlockAsync(IOperationContext operationContext = null)
+        public async Task UnlockAsync(IOperationContext operationContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(UnlockAsync)}()", UserFileSystemPath, default, operationContext);
+            
+            if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
+            {
+                // Read the lock-token.
+                string lockToken = (await placeholder.Properties["LockInfo"].GetValueAsync<ServerLockInfo>())?.LockToken;
 
-            // Read the lock-token.
-            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
-            string lockToken = (await placeholder.Properties["LockInfo"].GetValueAsync<ServerLockInfo>())?.LockToken;
+                // Unlock the item in the remote storage here.
 
-            // Unlock the item in the remote storage here.
+                // Delete lock-mode and lock-token info.
+                placeholder.Properties.Remove("LockInfo");
+                placeholder.Properties.Remove("LockMode");
 
-            // Delete lock-mode and lock-token info.
-            placeholder.Properties.Remove("LockInfo");
-            placeholder.Properties.Remove("LockMode");
-
-            Logger.LogMessage("Unlocked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+                Logger.LogMessage("Unlocked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+            }
         }
     }
 }

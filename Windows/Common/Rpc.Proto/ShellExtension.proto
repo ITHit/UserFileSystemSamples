@@ -9,6 +9,9 @@ service ShellExtensionRpc {
     rpc LogMessage (LogMessageRequest) returns (EmptyMessage) {}
     rpc LogError (LogErrorRequest) returns (EmptyMessage) {}
     rpc GetItemProperties (ItemPropertyRequest) returns (ItemsPropertyList) {}
+
+    rpc GetPathForContentUri (UriSourceRequest) returns (GetPathForContentUriResult) {}
+    rpc GetContentInfoForPath (UriSourceRequest) returns (GetContentInfoForPathResult) {}
 }
 
 message ItemsPathList {
@@ -59,3 +62,20 @@ message ItemsPropertyList {
 message ItemPropertyRequest {
     string path = 1;
 }
+
+message UriSourceRequest {
+    string pathOrUri = 1;
+}
+
+message GetPathForContentUriResult {
+    string path = 1;
+    int32 status = 2;
+}
+
+message GetContentInfoForPathResult {
+    string contentId  = 1;
+    string contentUri = 2;
+    int32  status = 3;
+}
+
+

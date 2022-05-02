@@ -6,7 +6,7 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 
 using ITHit.FileSystem.Samples.Common.Windows;
-
+using System.Threading;
 
 namespace VirtualFileSystem
 {
@@ -64,9 +64,9 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public override async Task StartAsync(bool processModified = true)
+        public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
         {
-            await base.StartAsync();
+            await base.StartAsync(processModified, cancellationToken);
             RemoteStorageMonitor.Start();
         }
 

@@ -1,10 +1,7 @@
 using System;
-using System.IO;
-using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using ITHit.FileSystem.Samples.Common.Windows.ShellExtension.Thumbnails;
-using ITHit.FileSystem.Samples.Common.Windows.ShellExtension.Interop;
 using ITHit.FileSystem.Samples.Common.Windows.Rpc;
 using ITHit.FileSystem.Samples.Common.Windows.ShellExtension;
 using ITHit.FileSystem.Samples.Common.Windows.Rpc.Generated;
@@ -15,12 +12,10 @@ namespace WebDAVDrive.ShellExtension
     /// Thumbnails provider Windows Shell Extension.
     /// </summary>
     [ComVisible(true)]
-    [ProgId("WebDAVDrive.ThumbnailProvider"), Guid(ThumbnailClass)]
+    [ProgId("WebDAVDrive.ThumbnailProvider")]
+    [Guid("A5B0C82F-50AA-445C-A404-66DEB510E84B")]
     public class ThumbnailProvider : ThumbnailProviderBase
     {
-        public const string ThumbnailClass = "A5B0C82F-50AA-445C-A404-66DEB510E84B";
-        public static readonly Guid ThumbnailClassGuid = Guid.Parse(ThumbnailClass);
-
         public override async Task<byte[]> GetThumbnailsAsync(string filePath, uint size)
         {
             try

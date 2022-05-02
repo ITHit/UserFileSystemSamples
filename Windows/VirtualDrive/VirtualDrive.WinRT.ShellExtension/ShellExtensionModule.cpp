@@ -20,6 +20,11 @@ void ShellExtensionModule::Start()
 
 	auto customStateProviderVirtualDrive = winrt::make<ClassFactory<CustomStateProvider>>();
 	winrt::check_hresult(CoRegisterClassObject(CLSID_CustomStateProviderVirtualDrive, customStateProviderVirtualDrive.get(), CLSCTX_LOCAL_SERVER, REGCLS_MULTI_SEPARATE, &cookie));
+
+	cookie = 0;
+	auto uriSourceVirtualDrive = winrt::make<ClassFactory<UriSource>>();
+	winrt::check_hresult(CoRegisterClassObject(CLSID_UriSource, uriSourceVirtualDrive.get(), CLSCTX_LOCAL_SERVER, REGCLS_MULTI_SEPARATE, &cookie));
+
 }
 
 void ShellExtensionModule::Stop()

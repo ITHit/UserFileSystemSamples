@@ -30,7 +30,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IInSyncResultContext inSyncResultContext = null)
+        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
@@ -43,7 +43,15 @@ namespace VirtualDrive
             {
                 if (content != null)
                 {
-                    await content.CopyToAsync(remoteStorageStream);
+                    try
+                    { 
+                        await content.CopyToAsync(remoteStorageStream, cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Operation was canceled by the calling Engine.StopAsync() or the operation timeout occured.
+                        Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}() canceled", UserFileSystemPath, default);
+                    }
                     remoteStorageStream.SetLength(content.Length);
                 }
             }
@@ -67,7 +75,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IInSyncResultContext inSyncResultContext = null)
+        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, folderMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
@@ -94,7 +102,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task GetChildrenAsync(string pattern, IOperationContext operationContext, IFolderListingResultContext resultContext)
+        public async Task GetChildrenAsync(string pattern, IOperationContext operationContext, IFolderListingResultContext resultContext, CancellationToken cancellationToken)
         {
             // This method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer call one of the following:
@@ -103,24 +111,17 @@ namespace VirtualDrive
 
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath, default, operationContext);
 
-            IEnumerable<FileSystemItemMetadataExt> remoteStorageChildren = await EnumerateChildrenAsync(pattern);
+            cancellationToken.Register(() => { Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern}) cancelled", UserFileSystemPath, default, operationContext); });
 
-            List<FileSystemItemMetadataExt> userFileSystemChildren = new List<FileSystemItemMetadataExt>();
-            foreach (FileSystemItemMetadataExt itemMetadata in remoteStorageChildren)
-            {
-                string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemMetadata.Name);
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            IEnumerable<FileSystemItemMetadataExt> remoteStorageChildren = await EnumerateChildrenAsync(pattern, cancellationToken);
 
-                // Filtering existing files/folders. This is only required to avoid extra errors in the log.
-                if (!FsPath.Exists(userFileSystemItemPath))
-                {
-                    Logger.LogMessage("Creating", userFileSystemItemPath);
-                    userFileSystemChildren.Add(itemMetadata);
-                }
-            }
+            long totalCount = remoteStorageChildren.Count();
 
             // To signal that the children enumeration is completed 
             // always call ReturnChildren(), even if the folder is empty.
-            await resultContext.ReturnChildrenAsync(userFileSystemChildren.ToArray(), userFileSystemChildren.Count());
+            await resultContext.ReturnChildrenAsync(remoteStorageChildren.ToArray(), totalCount);
+            Engine.LogMessage($"Listed {totalCount} item(s). Took: {watch.ElapsedMilliseconds:N0}ms", UserFileSystemPath);
 
             // Save data that you wish to display in custom columns here.
             //foreach (FileSystemItemMetadataExt itemMetadata in userFileSystemChildren)
@@ -131,22 +132,25 @@ namespace VirtualDrive
             //}
         }
 
-        public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern)
+        public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern, CancellationToken cancellationToken)
         {
             string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
             IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(remoteStoragePath).EnumerateFileSystemInfos(pattern);
 
-            List<FileSystemItemMetadataExt> userFileSystemChildren = new List<FileSystemItemMetadataExt>();
+            var userFileSystemChildren = new System.Collections.Concurrent.ConcurrentBag<FileSystemItemMetadataExt>();
+
+            //Parallel.ForEach(remoteStorageChildren, new ParallelOptions() { CancellationToken = cancellationToken }, async (remoteStorageItem) =>
             foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
             {
                 FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
                 userFileSystemChildren.Add(itemInfo);
             }
+
             return userFileSystemChildren;
         }
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFolderMetadata folderMetadata, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null)
+        public async Task WriteAsync(IFolderMetadata folderMetadata, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 

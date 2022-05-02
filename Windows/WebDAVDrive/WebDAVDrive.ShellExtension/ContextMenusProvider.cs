@@ -1,5 +1,6 @@
 using ITHit.FileSystem.Samples.Common.Windows.Rpc;
 using ITHit.FileSystem.Samples.Common.Windows.Rpc.Generated;
+using ITHit.FileSystem.Samples.Common.Windows.ShellExtension;
 using ITHit.FileSystem.Samples.Common.Windows.ShellExtension.Interop;
 using System;
 using System.Collections.Generic;
@@ -8,18 +9,16 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace ITHit.FileSystem.Samples.Common.Windows.ShellExtension
+namespace WebDAVDrive.ShellExtension
 {
     /// <summary>
     /// Implements Windows Explorer context menu.
     /// </summary>
     [ComVisible(true)]
-    [ProgId("WebDAVDrive.ContextMenusProvider"), Guid(ContextMenusClass)]
+    [ProgId("WebDAVDrive.ContextMenusProvider")]
+    [Guid("A22EBD03-343E-433C-98DF-372C6B3A1538")]
     public class ContextMenusProvider : ContextMenusProviderBase
     {
-        public const string ContextMenusClass = "A22EBD03-343E-433C-98DF-372C6B3A1538";
-        public static readonly Guid ContextMenusClassGuid = Guid.Parse(ContextMenusClass);
-
         public const string LockCommandIcon = "Locked.ico";
         public const string UnlockCommandIcon = "Unlocked.ico";
 

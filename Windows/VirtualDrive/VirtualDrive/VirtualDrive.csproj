@@ -42,6 +42,8 @@ This is an advanced project with ETags support, Microsoft Office documents editi
   <ItemGroup>
     <ProjectReference Include="..\..\Common\ShellExtension\Common.Windows.ShellExtension.csproj" />
     <ProjectReference Include="..\..\Common\VirtualDrive\Common.Windows.VirtualDrive.csproj" />
+    <ProjectReference Include="..\VirtualDrive.Common\VirtualDrive.Common.csproj" />
+    <ProjectReference Include="..\VirtualDrive.ShellExtension\VirtualDrive.ShellExtension.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json">

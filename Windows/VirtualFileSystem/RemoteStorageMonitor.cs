@@ -47,6 +47,8 @@ namespace VirtualFileSystem
         /// </summary>
         private readonly FileSystemWatcherQueued watcher = new FileSystemWatcherQueued();
 
+        private readonly Mapping mapping;
+
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
@@ -56,6 +58,7 @@ namespace VirtualFileSystem
         internal RemoteStorageMonitor(string remoteStorageRootPath, Engine engine, ILog log) : base("Remote Storage Monitor", log)
         {
             this.engine = engine;
+            mapping = new Mapping(engine.Path, remoteStorageRootPath);
 
             watcher.IncludeSubdirectories = true;
             watcher.Path = remoteStorageRootPath;
@@ -97,7 +100,7 @@ namespace VirtualFileSystem
             string remoteStoragePath = e.FullPath;
             try
             {
-                string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
+                string userFileSystemPath = mapping.ReverseMapPath(remoteStoragePath);
 
                 // This check is only required because we can not prevent circular calls because of the simplicity of this example.
                 // In your real-life application you will not send updates from server back to client that issued the update.
@@ -138,7 +141,7 @@ namespace VirtualFileSystem
             string userFileSystemPath = null;
             try
             {
-                userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
+                userFileSystemPath = mapping.ReverseMapPath(remoteStoragePath);
 
                 // This check is only required because we can not prevent circular calls because of the simplicity of this example.
                 // In your real-life application you will not send updates from server back to client that issued the update.
@@ -176,7 +179,7 @@ namespace VirtualFileSystem
             string remoteStoragePath = e.FullPath;
             try
             {
-                string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
+                string userFileSystemPath = mapping.ReverseMapPath(remoteStoragePath);
 
                 // This check is only required because we can not prevent circular calls because of the simplicity of this example.
                 // In your real-life application you will not send updates from server back to client that issued the update.
@@ -207,8 +210,8 @@ namespace VirtualFileSystem
             string remoteStorageNewPath = e.FullPath;
             try 
             {
-                string userFileSystemOldPath = Mapping.ReverseMapPath(remoteStorageOldPath);
-                string userFileSystemNewPath = Mapping.ReverseMapPath(remoteStorageNewPath);
+                string userFileSystemOldPath = mapping.ReverseMapPath(remoteStorageOldPath);
+                string userFileSystemNewPath = mapping.ReverseMapPath(remoteStorageNewPath);
 
                 // This check is only required because we can not prevent circular calls because of the simplicity of this example.
                 // In your real-life application you will not send updates from server back to client that issued the update.

@@ -7,6 +7,7 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
+using System.Threading;
 
 namespace VirtualDrive
 {
@@ -62,9 +63,9 @@ namespace VirtualDrive
         //public override IMapping Mapping { get { return new Mapping(this); } }
 
         /// <inheritdoc/>
-        public override async Task StartAsync(bool processModified = true)
+        public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
         {
-            await base.StartAsync(processModified);
+            await base.StartAsync(processModified, cancellationToken);
             RemoteStorageMonitor.Start();
         }
 
@@ -78,6 +79,15 @@ namespace VirtualDrive
         public override async Task<byte[]> GetThumbnailAsync(string userFileSystemPath, uint size)
         {
             // For this method to be called you need to run the Package project.
+
+            /*
+            // Get remote storage ID to read thumbnail from the remote storage. 
+            if (PlaceholderItem.IsPlaceholder(userFileSystemPath))
+            {
+                PlaceholderItem placeholder = this.Placeholders.GetItem(userFileSystemPath);
+                byte[] remoteStorageItemId = placeholder.GetRemoteStorageItemId();
+            }
+            */
 
             byte[] thumbnail = ThumbnailExtractor.GetThumbnail(userFileSystemPath, size);
 
@@ -96,60 +106,62 @@ namespace VirtualDrive
 
             IList<FileSystemItemPropertyData> props = new List<FileSystemItemPropertyData>();
 
-            PlaceholderItem placeholder = this.Placeholders.GetItem(userFileSystemPath);
-
-            // Read LockInfo.
-            if (placeholder.Properties.TryGetValue("LockInfo", out IDataItem propLockInfo))
+            if (this.Placeholders.TryGetItem(userFileSystemPath, out PlaceholderItem placeholder))
             {
-                if (propLockInfo.TryGetValue<ServerLockInfo>(out ServerLockInfo lockInfo))
-                {
-                    // Get Lock Owner.
-                    FileSystemItemPropertyData propertyLockOwner = new FileSystemItemPropertyData()
-                    {
-                        Id = (int)CustomColumnIds.LockOwnerIcon,
-                        Value = lockInfo.Owner,
-                        IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Locked.ico")
-                    };
-                    props.Add(propertyLockOwner);
 
-                    // Get Lock Expires.
-                    FileSystemItemPropertyData propertyLockExpires = new FileSystemItemPropertyData()
+                // Read LockInfo.
+                if (placeholder.Properties.TryGetValue("LockInfo", out IDataItem propLockInfo))
+                {
+                    if (propLockInfo.TryGetValue<ServerLockInfo>(out ServerLockInfo lockInfo))
                     {
-                        Id = (int)CustomColumnIds.LockExpirationDate,
-                        Value = lockInfo.LockExpirationDateUtc.ToString(),
-                        IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Empty.ico")
-                    };
-                    props.Add(propertyLockExpires);
+                        // Get Lock Owner.
+                        FileSystemItemPropertyData propertyLockOwner = new FileSystemItemPropertyData()
+                        {
+                            Id = (int)CustomColumnIds.LockOwnerIcon,
+                            Value = lockInfo.Owner,
+                            IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Locked.ico")
+                        };
+                        props.Add(propertyLockOwner);
+
+                        // Get Lock Expires.
+                        FileSystemItemPropertyData propertyLockExpires = new FileSystemItemPropertyData()
+                        {
+                            Id = (int)CustomColumnIds.LockExpirationDate,
+                            Value = lockInfo.LockExpirationDateUtc.ToString(),
+                            IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Empty.ico")
+                        };
+                        props.Add(propertyLockExpires);
+                    }
                 }
-            }
 
-            // Read LockMode.
-            if (placeholder.Properties.TryGetValue("LockMode", out IDataItem propLockMode))
-            {
-                if (propLockMode.TryGetValue<LockMode>(out LockMode lockMode) && lockMode != LockMode.None)
+                // Read LockMode.
+                if (placeholder.Properties.TryGetValue("LockMode", out IDataItem propLockMode))
                 {
-                    FileSystemItemPropertyData propertyLockMode = new FileSystemItemPropertyData()
+                    if (propLockMode.TryGetValue<LockMode>(out LockMode lockMode) && lockMode != LockMode.None)
                     {
-                        Id = (int)CustomColumnIds.LockScope,
-                        Value = "Locked",
-                        IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Empty.ico")
-                    };
-                    props.Add(propertyLockMode);
+                        FileSystemItemPropertyData propertyLockMode = new FileSystemItemPropertyData()
+                        {
+                            Id = (int)CustomColumnIds.LockScope,
+                            Value = "Locked",
+                            IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Empty.ico")
+                        };
+                        props.Add(propertyLockMode);
+                    }
                 }
-            }
 
-            // Read ETag.
-            if (placeholder.Properties.TryGetValue("ETag", out IDataItem propETag))
-            {
-                if (propETag.TryGetValue<string>(out string eTag))
+                // Read ETag.
+                if (placeholder.Properties.TryGetValue("ETag", out IDataItem propETag))
                 {
-                    FileSystemItemPropertyData propertyETag = new FileSystemItemPropertyData()
+                    if (propETag.TryGetValue<string>(out string eTag))
                     {
-                        Id = (int)CustomColumnIds.ETag,
-                        Value = eTag,
-                        IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Empty.ico")
-                    };
-                    props.Add(propertyETag);
+                        FileSystemItemPropertyData propertyETag = new FileSystemItemPropertyData()
+                        {
+                            Id = (int)CustomColumnIds.ETag,
+                            Value = eTag,
+                            IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Empty.ico")
+                        };
+                        props.Add(propertyETag);
+                    }
                 }
             }
 

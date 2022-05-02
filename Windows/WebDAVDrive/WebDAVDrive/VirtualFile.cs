@@ -6,15 +6,15 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using ITHit.FileSystem;
+using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
-using ITHit.FileSystem.Windows;
 using Client = ITHit.WebDAV.Client;
 
 namespace WebDAVDrive
 {
     /// <inheritdoc cref="IFile"/>
-    public class VirtualFile : VirtualFileSystemItem, IFile
+    public class VirtualFile : VirtualFileSystemItem, IFileWindows
     {
 
         /// <summary>
@@ -29,28 +29,26 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task OpenAsync(IOperationContext operationContext, IResultContext context)
+        public async Task OpenCompletionAsync(IOperationContext operationContext, IResultContext context, CancellationToken cancellationToken)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(OpenAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFileWindows)}.{nameof(OpenCompletionAsync)}()", UserFileSystemPath, default, operationContext);
         }
 
         /// <inheritdoc/>
-        public async Task CloseAsync(IOperationContext operationContext, IResultContext context)
+        public async Task CloseCompletionAsync(IOperationContext operationContext, IResultContext context, CancellationToken cancellationToken)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(CloseAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFileWindows)}.{nameof(CloseCompletionAsync)}()", UserFileSystemPath, default, operationContext);
         }
-        
+
         /// <inheritdoc/>
-        public async Task ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext)
+        public async Task ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {
             // On Windows this method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer call the resultContext.ReportProgress() or resultContext.ReturnData() method.
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
-            SimulateNetworkDelay(length, resultContext);
-
-            if (offset == 0 && length == operationContext.FileSize) 
+            if (offset == 0 && length == operationContext.FileSize)
             {
                 // If we read entire file, do not add Range header. Pass -1 to not add it.
                 offset = -1;
@@ -64,7 +62,15 @@ namespace WebDAVDrive
             {
                 using (Stream stream = await response.GetResponseStreamAsync())
                 {
-                    await stream.CopyToAsync(output, bufferSize, length);
+                    try
+                    {
+                        await stream.CopyToAsync(output, bufferSize, length, cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Operation was canceled by the calling Engine.StopAsync() or the operation timeout occured.
+                        Logger.LogMessage($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default);
+                    }
                 }
                 eTag = response.GetHeaderValue("ETag");
             }
@@ -87,15 +93,13 @@ namespace WebDAVDrive
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
-            //SimulateNetworkDelay(length, resultContext);
-
             bool isValid = true;
 
             resultContext.ReturnValidationResult(offset, length, isValid);
         }
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null)
+        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
@@ -105,7 +109,7 @@ namespace WebDAVDrive
                 // the file in the remote storge is not modified since last read.
                 PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
 
-                string oldEtag = null; 
+                string oldEtag = null;
 
                 if (placeholder.Properties.TryGetValue("ETag", out IDataItem propETag))
                 {
@@ -127,7 +131,8 @@ namespace WebDAVDrive
 
                 // Update remote storage file content,
                 // also get and save a new ETag returned by the server, if any.
-                string newEtag = await Program.DavClient.UploadAsync(new Uri(RemoteStoragePath), async (outputStream) => {                    
+                string newEtag = await Program.DavClient.UploadAsync(new Uri(RemoteStoragePath), async (outputStream) =>
+                {
                     // Setting position to 0 is required in case of retry.
                     content.Position = 0;
                     await content.CopyToAsync(outputStream);

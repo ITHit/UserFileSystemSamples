@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.Security.Cryptography;
@@ -134,7 +135,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 try
                 {
                     StorageProviderSyncRootManager.GetSyncRootInformationForFolder(storageFolder);
-                    return true;
+                    return FileSystem.Windows.PlaceholderItem.IsPlaceholder(path);
                 }
                 catch
                 {
@@ -164,5 +165,26 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             StorageProviderSyncRootManager.Unregister(syncRootId);
         }
+
+        /// <summary>
+        /// Helper method to determine if the process is running in a packaged context.
+        /// </summary>
+        /// <returns>True if the application is running in a packaged context, false otherwise.</returns>
+        public static bool IsRunningAsUwp()
+        {
+            const long APPMODEL_ERROR_NO_PACKAGE = 15700L;
+
+            int length = 0;
+            return GetCurrentPackageFullName(ref length, null) != APPMODEL_ERROR_NO_PACKAGE;
+        }
+
+        /// <summary>
+        /// Gets the package full name for the calling process.
+        /// </summary>
+        /// <param name="packageFullNameLength">On input, the size of the packageFullName buffer, in characters. On output, the size of the package full name returned, in characters, including the null terminator.</param>
+        /// <param name="packageFullName">The package full name.</param>
+        /// <returns>If the function succeeds it returns ERROR_SUCCESS. Otherwise, the function returns an error code.</returns>
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        static extern int GetCurrentPackageFullName(ref int packageFullNameLength, StringBuilder packageFullName);
     }
 }

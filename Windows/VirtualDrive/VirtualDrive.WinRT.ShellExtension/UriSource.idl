@@ -1,0 +1,7 @@
+namespace CommonWindowsRtShellExtenstion
+{
+    runtimeclass UriSource : [default] Windows.Storage.Provider.IStorageProviderUriSource
+    {
+        UriSource();
+    }
+}

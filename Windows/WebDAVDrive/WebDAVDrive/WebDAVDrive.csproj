@@ -33,7 +33,9 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Common\ShellExtension\Common.Windows.ShellExtension.csproj" />
     <ProjectReference Include="..\..\Common\VirtualDrive\Common.Windows.VirtualDrive.csproj" />
+    <ProjectReference Include="..\WebDAVDrive.ShellExtension\WebDAVDrive.ShellExtension.csproj" />
     <ProjectReference Include="..\WebDAVDrive.UI\WebDAVDrive.UI.csproj" />
   </ItemGroup>
   <ItemGroup>

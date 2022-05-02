@@ -13,7 +13,7 @@ using ITHit.FileSystem.Windows;
 namespace VirtualDrive
 {
     /// <inheritdoc cref="IFile"/>
-    public class VirtualFile : VirtualFileSystemItem, IFile
+    public class VirtualFile : VirtualFileSystemItem, IFileWindows
     {
 
         /// <summary>
@@ -29,33 +29,41 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task OpenAsync(IOperationContext operationContext, IResultContext context)
+        public async Task OpenCompletionAsync(IOperationContext operationContext, IResultContext context, CancellationToken cancellationToken)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(OpenAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFileWindows)}.{nameof(OpenCompletionAsync)}()", UserFileSystemPath, default, operationContext);
         }
 
         /// <inheritdoc/>
-        public async Task CloseAsync(IOperationContext operationContext, IResultContext context)
+        public async Task CloseCompletionAsync(IOperationContext operationContext, IResultContext context, CancellationToken cancellationToken)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(CloseAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFileWindows)}.{nameof(CloseCompletionAsync)}()", UserFileSystemPath, default, operationContext);
         }
         
         /// <inheritdoc/>
-        public async Task ReadAsync(Stream output,  long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext)
+        public async Task ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {
             // On Windows this method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer call the resultContext.ReportProgress() or resultContext.ReturnData() method.
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
-            SimulateNetworkDelay(length, resultContext);
+            cancellationToken.Register(() => { Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length}) cancelled", UserFileSystemPath, default, operationContext); });
 
             string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
             await using (FileStream stream = System.IO.File.OpenRead(remoteStoragePath))
             {
                 stream.Seek(offset, SeekOrigin.Begin);
                 const int bufferSize = 0x500000; // 5Mb. Buffer size must be multiple of 4096 bytes for optimal performance.
-                await stream.CopyToAsync(output, bufferSize, length);
+                try
+                {
+                    await stream.CopyToAsync(output, bufferSize, length, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Operation was canceled by the calling Engine.StopAsync() or the operation timeout occured.
+                    //Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default);
+                }
             }
 
             // Save ETag received from your remote storage in persistent placeholder properties.
@@ -72,19 +80,15 @@ namespace VirtualDrive
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
-            //SimulateNetworkDelay(length, resultContext);
-
             bool isValid = true;
 
             resultContext.ReturnValidationResult(offset, length, isValid);
         }
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null)
+        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
-
-            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
 
             // Send the ETag to the server as part of the update to ensure
             // the file in the remote storge is not modified since last read.
@@ -92,13 +96,15 @@ namespace VirtualDrive
 
             // Send the lock-token to the server as part of the update.
             string lockToken;
-            IDataItem propLockInfo;
-            if (placeholder.Properties.TryGetValue("LockInfo", out propLockInfo))
+            if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
             {
-                ServerLockInfo lockInfo;
-                if (propLockInfo.TryGetValue<ServerLockInfo>(out lockInfo))
+                if (placeholder.Properties.TryGetValue("LockInfo", out IDataItem propLockInfo))
                 {
-                    lockToken = lockInfo.LockToken;
+                    ServerLockInfo lockInfo;
+                    if (propLockInfo.TryGetValue<ServerLockInfo>(out lockInfo))
+                    {
+                        lockToken = lockInfo.LockToken;
+                    }
                 }
             }
 

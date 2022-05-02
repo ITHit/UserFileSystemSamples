@@ -81,9 +81,6 @@ namespace WebDAVDrive
             // Configure log4net and set log file path.
             LogFilePath = ConfigureLogger();
 
-            // Enable UTF8 for Console Window.
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
-
             PrintHelp();
 
             // Register sync root and create app folders.
@@ -158,6 +155,11 @@ namespace WebDAVDrive
         /// <remarks>This method is provided solely for the development and testing convenience.</remarks>
         private static void ShowTestEnvironment()
         {
+            // Enable UTF8 for Console Window and set width.
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight / 3);
+            Console.SetBufferSize(Console.LargestWindowWidth * 2, Console.BufferHeight);
+
             // Open Windows File Manager with user file system.
             ProcessStartInfo ufsInfo = new ProcessStartInfo(Program.Settings.UserFileSystemRootPath);
             ufsInfo.UseShellExecute = true; // Open window only if not opened already.
@@ -173,14 +175,6 @@ namespace WebDAVDrive
             {
 
             }
-
-            //// Open Windows File Manager with custom data storage. Uncomment this to debug custom data storage management.
-            //ProcessStartInfo serverDataInfo = new ProcessStartInfo(Program.Settings.ServerDataFolderPath);
-            //serverDataInfo.UseShellExecute = true; // Open window only if not opened already.
-            //using (Process serverDataWinFileManager = Process.Start(serverDataInfo))
-            //{
-
-            //}
         }
 #endif
 
@@ -482,6 +476,9 @@ namespace WebDAVDrive
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
                     Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
+
+                log.Info("\nRegistering shell extensions...\n");
+                ShellExtensionRegistrar.Register(SyncRootId);
             }
             else
             {
@@ -505,6 +502,9 @@ namespace WebDAVDrive
         {
             log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
             await Registrar.UnregisterAsync(SyncRootId);
+
+            log.Info("\nUnregistering shell extensions...\n");
+            ShellExtensionRegistrar.Unregister();
         }
 
         private static async Task CleanupAppFoldersAsync()

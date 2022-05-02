@@ -56,7 +56,7 @@ namespace WebDAVDrive
         }
 
         ///<inheritdoc>
-        public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetParentItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null)
+        public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetParentItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
@@ -64,7 +64,7 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IInSyncStatusResultContext resultContext = null)
+        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IInSyncStatusResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
@@ -78,7 +78,7 @@ namespace WebDAVDrive
         }
 
         ///<inheritdoc>
-        public async Task DeleteAsync(IOperationContext operationContext, IConfirmationResultContext resultContext)
+        public async Task DeleteAsync(IOperationContext operationContext, IConfirmationResultContext resultContext, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", UserFileSystemPath, default, operationContext);
 
@@ -93,7 +93,7 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task DeleteCompletionAsync(IOperationContext operationContext, IInSyncStatusResultContext resultContext)
+        public async Task DeleteCompletionAsync(IOperationContext operationContext, IInSyncStatusResultContext resultContext, CancellationToken cancellationToken = default)
         {
             // On Windows, for move with overwrite on folders to function correctly, 
             // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
@@ -118,29 +118,11 @@ namespace WebDAVDrive
         {
             // Return IFileMetadata for a file, IFolderMetadata for a folder.
             throw new System.NotImplementedException();
-        }
-
-        /// <summary>
-        /// Simulates network delays and reports file transfer progress for demo purposes.
-        /// </summary>
-        /// <param name="fileLength">Length of file.</param>
-        /// <param name="context">Context to report progress to.</param>
-        protected void SimulateNetworkDelay(long fileLength, IResultContext resultContext)
-        {
-            if (Program.Settings.NetworkSimulationDelayMs > 0)
-            {
-                int numProgressResults = 5;
-                for (int i = 0; i < numProgressResults; i++)
-                {
-                    resultContext.ReportProgress(fileLength, i * fileLength / numProgressResults);
-                    Thread.Sleep(Program.Settings.NetworkSimulationDelayMs);
-                }
-            }
-        }
+        }       
 
         
         ///<inheritdoc>
-        public async Task LockAsync(LockMode lockMode, IOperationContext operationContext = null)
+        public async Task LockAsync(LockMode lockMode, IOperationContext operationContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(LockAsync)}()", UserFileSystemPath, default, operationContext);
 
@@ -168,7 +150,7 @@ namespace WebDAVDrive
 
         
         ///<inheritdoc>
-        public async Task<LockMode> GetLockModeAsync(IOperationContext operationContext = null)
+        public async Task<LockMode> GetLockModeAsync(IOperationContext operationContext = null, CancellationToken cancellationToken = default)
         {
             PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
 
@@ -186,7 +168,7 @@ namespace WebDAVDrive
 
         
         ///<inheritdoc>
-        public async Task UnlockAsync(IOperationContext operationContext = null)
+        public async Task UnlockAsync(IOperationContext operationContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(UnlockAsync)}()", UserFileSystemPath, default, operationContext);
 

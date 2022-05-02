@@ -15,7 +15,8 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
-
+using VirtualDrive.Common;
+using System.Threading;
 
 namespace VirtualDrive
 {
@@ -42,6 +43,10 @@ namespace VirtualDrive
         /// </summary>
         public static VirtualEngine Engine;
 
+        private static CancellationTokenSource ctsProcessAsync = new CancellationTokenSource();
+        private static CancellationToken ctProcessAsync = default;
+
+
         static async Task Main(string[] args)
         {
             // Load Settings.
@@ -50,9 +55,6 @@ namespace VirtualDrive
 
             // Configure log4net and set log file path.
             LogFilePath = ConfigureLogger();
-
-            // Enable UTF8 for Console Window.
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
 
             PrintHelp();
 
@@ -65,42 +67,41 @@ namespace VirtualDrive
             
             Logger.PrintHeader(log);
 
-            try
+
+            using (Engine = new VirtualEngine(
+                   Settings.UserFileSystemLicense,
+                   Settings.UserFileSystemRootPath,
+                   Settings.RemoteStorageRootPath,
+                   Settings.IconsFolderPath,
+                   Settings.RpcCommunicationChannelName,
+                   Settings.SyncIntervalMs,
+                   Settings.MaxDegreeOfParallelism,
+                   log))
             {
-                Engine = new VirtualEngine(
-                    Settings.UserFileSystemLicense,
-                    Settings.UserFileSystemRootPath,
-                    Settings.RemoteStorageRootPath,
-                    Settings.IconsFolderPath,
-                    Settings.RpcCommunicationChannelName,
-                    Settings.SyncIntervalMs,
-                    Settings.MaxDegreeOfParallelism,
-                    log);
-                Engine.AutoLock = Settings.AutoLock;
+                try
+                {
+                    Engine.AutoLock = Settings.AutoLock;
 
-                // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
-                // method as a remoteStorageItemId parameter when a root folder is requested. 
-                byte[] itemId = WindowsFileSystemItem.GetItemIdByPath(Settings.RemoteStorageRootPath);
-                Engine.Placeholders.GetItem(Settings.UserFileSystemRootPath).SetRemoteStorageItemId(itemId);
+                    // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
+                    // method as a remoteStorageItemId parameter when a root folder is requested. 
+                    byte[] itemId = WindowsFileSystemItem.GetItemIdByPath(Settings.RemoteStorageRootPath);
+                    Engine.Placeholders.GetRootItem().SetRemoteStorageItemId(itemId);
 
-                // Start processing OS file system calls.
-                await Engine.StartAsync();
+                    // Start processing OS file system calls.
+                    await Engine.StartAsync();
 
 #if DEBUG
-                // Opens Windows File Manager with user file system folder and remote storage folder.
-                ShowTestEnvironment();
+                    // Opens Windows File Manager with user file system folder and remote storage folder.
+                    ShowTestEnvironment();
 #endif
-                // Keep this application running and reading user input.
-                await ProcessUserInputAsync();
-            }
-            catch (Exception ex)
-            {
-                log.Error(ex);
-                await ProcessUserInputAsync();
-            }
-            finally
-            {
-                Engine.Dispose();
+                    // Keep this application running and reading user input.
+                    await ProcessUserInputAsync();
+                }
+                catch (Exception ex)
+                {
+                    log.Error(ex);
+                    await ProcessUserInputAsync();
+                }
             }
         }
 
@@ -133,7 +134,8 @@ namespace VirtualDrive
             log.Info("\n\nPress Esc to unregister file system, delete all files/folders and exit (simulate uninstall).");
             log.Info("\nPress Spacebar to exit without unregistering (simulate reboot).");
             log.Info("\nPress 'e' to start/stop the Engine and all sync services.");
-            log.Info("\nPress 's' to start/stop full synchronization service.");
+            //log.Info("\nPress 's' to start/stop full synchronization service.");
+            //log.Info("\nPress 'u' to start/stop user file system to remote storage sync (EngineWindows.ProcessAsync()).");
             log.Info("\nPress 'm' to start/stop remote storage monitor.");
             log.Info($"\nPress 'l' to open log file. ({LogFilePath})");
             log.Info($"\nPress 'b' to submit support tickets, report bugs, suggest features. (https://userfilesystem.com/support/)");
@@ -163,24 +165,45 @@ namespace VirtualDrive
                             await Engine.StartAsync();
                         }
                         break;
-
-                    case 's':
-                        // Start/stop full synchronization.
-                        if (Engine.SyncService.SyncState == SynchronizationState.Disabled)
+                    /*
+                case 's':
+                    // Start/stop full synchronization.
+                    if (Engine.SyncService.SyncState == SynchronizationState.Disabled)
+                    {
+                        if(Engine.State != EngineState.Running)
                         {
-                            if(Engine.State != EngineState.Running)
+                            Engine.SyncService.LogError("Failed to start. The Engine must be running.");
+                            break;
+                        }
+                        await Engine.SyncService.StartAsync();
+                    }
+                    else
+                    {
+                        await Engine.SyncService.StopAsync();
+                    }
+                    break;
+                    */
+                    /*
+                    case 'u':
+                        // Start/stop full synchronization.
+                        if (!ctProcessAsync.CanBeCanceled)
+                        {
+                            if (Engine.State != EngineState.Running)
                             {
-                                Engine.SyncService.LogError("Failed to start. The Engine must be running.");
+                                Engine.LogError("Failed to start. The Engine must be running.");
                                 break;
                             }
-                            await Engine.SyncService.StartAsync();
+                            ctProcessAsync = ctsProcessAsync.Token;
+                            await Engine.ProcessAsync(ctProcessAsync);
+                            ctProcessAsync = default;
                         }
                         else
                         {
-                            await Engine.SyncService.StopAsync();
+                            ctsProcessAsync.Cancel();
+                            ctProcessAsync = default;
                         }
                         break;
-
+                    */
                     case 'm':
                         // Start/stop remote storage monitor.
                         if (Engine.RemoteStorageMonitor.SyncState == SynchronizationState.Disabled)
@@ -225,7 +248,10 @@ namespace VirtualDrive
 
                     case (char)ConsoleKey.Escape:
                     case 'Q':
-                        Engine.Dispose();
+                        if (Engine.State == EngineState.Running)
+                        {
+                            await Engine.StopAsync();
+                        }
 
                         // Call the code below during programm uninstall using classic msi.
                         await UnregisterSyncRootAsync();
@@ -235,6 +261,10 @@ namespace VirtualDrive
                         return;
 
                     case (char)ConsoleKey.Spacebar :
+                        if (Engine.State == EngineState.Running)
+                        {
+                            await Engine.StopAsync();
+                        }
                         log.Info("\n\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.\n");
                         return;
 
@@ -262,6 +292,9 @@ namespace VirtualDrive
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
                     Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
+
+                log.Info("\nRegistering shell extensions...\n");
+                ShellExtensionRegistrar.Register(SyncRootId);
             }
             else
             {
@@ -285,6 +318,9 @@ namespace VirtualDrive
         {
             log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
             await Registrar.UnregisterAsync(SyncRootId);
+
+            log.Info("\nUnregistering shell extensions...\n");
+            ShellExtensionRegistrar.Unregister();
         }
 
         private static async Task CleanupAppFoldersAsync()
@@ -316,6 +352,11 @@ namespace VirtualDrive
         /// <remarks>This method is provided solely for the development and testing convenience.</remarks>
         private static void ShowTestEnvironment()
         {
+            // Enable UTF8 for Console Window and set width.
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight / 3);
+            Console.SetBufferSize(Console.LargestWindowWidth * 2, Console.BufferHeight);
+
             // Open Windows File Manager with remote storage.
             ProcessStartInfo rsInfo = new ProcessStartInfo(Program.Settings.RemoteStorageRootPath);
             rsInfo.UseShellExecute = true; // Open window only if not opened already.

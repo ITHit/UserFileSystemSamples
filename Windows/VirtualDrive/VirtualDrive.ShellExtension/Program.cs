@@ -5,13 +5,7 @@ using Microsoft.Extensions.Configuration;
 using ITHit.FileSystem.Samples.Common.Windows.ShellExtension;
 using ITHit.FileSystem.Samples.Common.Windows.ShellExtension.ComInfrastructure;
 using ITHit.FileSystem.Samples.Common;
-using System.Reflection;
-using System.IO;
-using System.Linq;
-using log4net;
-using log4net.Appender;
-using log4net.Config;
-
+using VirtualDrive.Common;
 
 namespace VirtualDrive.ShellExtension
 {
@@ -19,14 +13,6 @@ namespace VirtualDrive.ShellExtension
     {
         static async Task Main(string[] args)
         {
-            // Typically you will register COM exe server in packaged installer, inside Package.appxmanifest.
-            // This code is used for testing purposes only, it will register COM exe if you run this program directly.  
-            if (args.Length == 1 &&
-                ShellExtensionInstaller.HandleRegCommand(args[0], ThumbnailProvider.ThumbnailClassGuid, ContextMenusProvider.ContextMenusClassGuid))
-            {
-                return;
-            }
-
             // Load and initialize settings.
             IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
             Settings settings = configuration.ReadSettings();
@@ -37,8 +23,8 @@ namespace VirtualDrive.ShellExtension
             {
                 using (var server = new LocalServer())
                 {
-                    server.RegisterClass<ThumbnailProvider>(ThumbnailProvider.ThumbnailClassGuid);
-                    server.RegisterClass<ContextMenusProvider>(ContextMenusProvider.ContextMenusClassGuid);
+                    server.RegisterClass<ThumbnailProvider>(typeof(ThumbnailProvider).GUID);
+                    server.RegisterClass<ContextMenusProvider>(typeof(ContextMenusProvider).GUID);
 
                     await server.Run();
                 }

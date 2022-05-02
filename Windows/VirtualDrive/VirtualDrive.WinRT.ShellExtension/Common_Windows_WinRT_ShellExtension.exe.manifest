@@ -11,6 +11,21 @@
 		  name="CommonShellExtensionRpc.ItemProperty"
 		  threadingModel="both"
 		  xmlns="urn:schemas-microsoft-com:winrt.v1" />
-	  
+
+	  <activatableClass
+		  name="CommonShellExtensionRpc.StorageProviderGetContentInfoForPathResult"
+		  threadingModel="both"
+		  xmlns="urn:schemas-microsoft-com:winrt.v1" />
+
+	  <activatableClass
+		  name="CommonShellExtensionRpc.StorageProviderGetPathForContentUriResult"
+		  threadingModel="both"
+		  xmlns="urn:schemas-microsoft-com:winrt.v1" />
+
+	  <activatableClass
+		  name="CommonShellExtensionRpc.UriSourceProxy"
+		  threadingModel="both"
+		  xmlns="urn:schemas-microsoft-com:winrt.v1" />
+
   </file>
 </assembly>

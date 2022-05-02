@@ -8,6 +8,7 @@ using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Samples.Common.Windows.Rpc;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
@@ -122,9 +123,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <inheritdoc/>
-        public override async Task StartAsync(bool processModified = true)
+        public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
         {
-            await base.StartAsync(processModified);
+            await base.StartAsync(processModified, cancellationToken);
             //RemoteStorageMonitor.Start();
             //await SyncService.StartAsync();
             grpcServer.Start();

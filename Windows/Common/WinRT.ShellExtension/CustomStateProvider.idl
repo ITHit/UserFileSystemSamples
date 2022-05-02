@@ -1,9 +1,7 @@
 namespace CommonWindowsRtShellExtenstion
 {
-    
     runtimeclass CustomStateProvider : [default] Windows.Storage.Provider.IStorageProviderItemPropertySource
     {
-        
         CustomStateProvider();
     }
 }

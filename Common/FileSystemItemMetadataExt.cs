@@ -22,9 +22,6 @@ namespace ITHit.FileSystem.Samples.Common
         public FileAttributes Attributes { get; set; }
 
         ///<inheritdoc/>
-        public byte[] CustomData { get; set; } = new byte[] { };
-
-        ///<inheritdoc/>
         public DateTimeOffset CreationTime { get; set; }
 
         ///<inheritdoc/>

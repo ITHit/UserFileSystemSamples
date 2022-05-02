@@ -12,6 +12,7 @@ using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
 
 using ITHit.WebDAV.Client;
+using System.Threading;
 
 namespace WebDAVDrive
 {
@@ -74,9 +75,9 @@ namespace WebDAVDrive
         //public override IMapping Mapping { get { return new Mapping(this); } }
 
         /// <inheritdoc/>
-        public override async Task StartAsync(bool processModified = true)
+        public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
         {
-            await base.StartAsync(processModified);
+            await base.StartAsync(processModified, cancellationToken);
             await RemoteStorageMonitor.StartAsync();
         }
 

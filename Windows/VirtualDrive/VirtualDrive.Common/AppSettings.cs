@@ -1,13 +1,12 @@
 using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Reflection;
 
 using ITHit.FileSystem.Samples.Common;
+using System;
+using System.IO;
 
-namespace VirtualDrive
+namespace VirtualDrive.Common
 {
     /// <summary>
     /// Strongly binded project settings.
