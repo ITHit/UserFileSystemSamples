@@ -1,2 +1,0 @@
-﻿D:\Program Files\MSBuild\Current\Bin\Microsoft.Common.CurrentVersion.targets(1717,5): error : Project '..\..\Common\Rpc.Proto\Common.Windows.Rpc.Proto.csproj' targets 'net5.0-windows10.0.18362.0'. It cannot be referenced by a project that targets '.NETFramework,Version=v4.0'.
-D:\Program Files\MSBuild\Current\Bin\Microsoft.Common.CurrentVersion.targets(1717,5): error : Project '..\..\Common\Rpc\Common.Windows.Rpc.csproj' targets 'net5.0-windows10.0.18362.0'. It cannot be referenced by a project that targets '.NETFramework,Version=v4.0'.

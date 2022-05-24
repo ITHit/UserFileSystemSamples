@@ -40,8 +40,18 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommonShellExtensionRpc", "Common\WinRT.ShellExtension.Rpc\CommonShellExtensionRpc.csproj", "{8EA7BABA-FC44-4074-86CB-88B8F42CA055}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VirtualDrive.WinRT.ShellExtension", "VirtualDrive\VirtualDrive.WinRT.ShellExtension\VirtualDrive.WinRT.ShellExtension.vcxproj", "{98E623B9-BCAB-48D2-80A2-1D7AADE897D6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{CEFD557A-7366-4F4B-AF2B-17C6EDDD7A27} = {CEFD557A-7366-4F4B-AF2B-17C6EDDD7A27}
+		{8EA7BABA-FC44-4074-86CB-88B8F42CA055} = {8EA7BABA-FC44-4074-86CB-88B8F42CA055}
+		{D0DA8CE2-2AC3-42AE-BAF4-103E663EB70F} = {D0DA8CE2-2AC3-42AE-BAF4-103E663EB70F}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WebDAVDrive.WinRT.ShellExtension", "WebDAVDrive\WebDAVDrive.WinRT.ShellExtension\WebDAVDrive.WinRT.ShellExtension.vcxproj", "{5730488F-9F58-4951-9502-49A5A9A42B07}"
+	ProjectSection(ProjectDependencies) = postProject
+		{CEFD557A-7366-4F4B-AF2B-17C6EDDD7A27} = {CEFD557A-7366-4F4B-AF2B-17C6EDDD7A27}
+		{8EA7BABA-FC44-4074-86CB-88B8F42CA055} = {8EA7BABA-FC44-4074-86CB-88B8F42CA055}
+		{D0DA8CE2-2AC3-42AE-BAF4-103E663EB70F} = {D0DA8CE2-2AC3-42AE-BAF4-103E663EB70F}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtualDrive.Common", "VirtualDrive\VirtualDrive.Common\VirtualDrive.Common.csproj", "{C6806A0E-50E7-401D-B474-CA2C7CEAD78A}"
 EndProject

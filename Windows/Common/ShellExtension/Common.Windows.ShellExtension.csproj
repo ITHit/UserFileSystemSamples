@@ -20,7 +20,7 @@
     <PackageReference Include="System.Drawing.Common" Version="5.0.2" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="4.4.14419.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="4.4.14432.0" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Rpc.Proto\Common.Windows.Rpc.Proto.csproj" />
     <ProjectReference Include="..\Rpc\Common.Windows.Rpc.csproj" />
