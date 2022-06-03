@@ -1,16 +1,12 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Windows.Storage;
 using Microsoft.Extensions.Configuration;
 
 using log4net;
-using log4net.Appender;
-using log4net.Config;
+
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
@@ -24,17 +20,7 @@ namespace VirtualFileSystem
         /// <summary>
         /// Application settings.
         /// </summary>
-        public static AppSettings Settings;
-
-        /// <summary>
-        /// Process modified files and folders.
-        /// </summary>
-        public static bool ProcessModified = true;
-
-        /// <summary>
-        /// Opens remote and virtual files folders
-        /// </summary>
-        public static bool OpenTestEnvironment = true;
+        private static AppSettings Settings;
 
         /// <summary>
         /// Log4Net logger.
@@ -42,45 +28,45 @@ namespace VirtualFileSystem
         private static readonly ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         /// <summary>
-        /// Log file path.
-        /// </summary>
-        private static string LogFilePath;
-
-        /// <summary>
         /// Processes OS file system calls, 
         /// synchronizes user file system to remote storage. 
         /// </summary>
         public static VirtualEngine Engine;
 
+        /// <summary>
+        /// Outputs logging information.
+        /// </summary>
+        private static LogFormatter logFormatter;
+
         public static async Task Main(string[] args)
         {
             // Load Settings.
-            IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
-            Settings = configuration.ReadSettings();
+            Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
 
-            // Configure log4net and set log file path.
-            LogFilePath = ConfigureLogger();
+            logFormatter = new LogFormatter(log, Settings.AppID);
 
-            PrintHelp();
+            try
+            {
+                // Log environment description.
+                logFormatter.PrintEnvironmentDescription();
 
-            // Register sync root and create app folders.
-            await RegisterSyncRootAsync();
+                // Register sync root and create app folders.
+                await RegisterSyncRootAsync();
 
-            // Log indexed state.
-            StorageFolder userFileSystemRootFolder = await StorageFolder.GetFolderFromPathAsync(Settings.UserFileSystemRootPath);
-            log.Info($"\nIndexed state: {(await userFileSystemRootFolder.GetIndexedStateAsync())}\n");
+                // Log indexing state. Sync root must be indexed.
+                await logFormatter.PrintIndexingStateAsync(Settings.UserFileSystemRootPath);
 
-            Logger.PrintHeader(log);
+                // Log console commands.
+                logFormatter.PrintHelp();
 
+                // Log logging columns headers.
+                logFormatter.PrintHeader();
 
-            using (Engine = new VirtualEngine(
+                using (Engine = new VirtualEngine(
                     Settings.UserFileSystemLicense,
                     Settings.UserFileSystemRootPath,
                     Settings.RemoteStorageRootPath,
-                    Settings.MaxDegreeOfParallelism,
-                    log))
-            {
-                try
+                    logFormatter))
                 {
                     // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
                     // method as a remoteStorageItemId parameter when a root folder is requested. 
@@ -88,7 +74,7 @@ namespace VirtualFileSystem
                     Engine.Placeholders.GetRootItem().SetRemoteStorageItemId(itemId);
 
                     // Start processing OS file system calls.
-                    await Engine.StartAsync(ProcessModified);
+                    await Engine.StartAsync();
 
 #if DEBUG
                     // Opens Windows File Manager with user file system folder and remote storage folder.
@@ -97,63 +83,29 @@ namespace VirtualFileSystem
                     // Keep this application running and reading user input.
                     await ProcessUserInputAsync();
                 }
-                catch (Exception ex)
-                {
-                    log.Error(ex);
-                    await ProcessUserInputAsync();
-                }
             }
-        }
-
-        /// <summary>
-        /// Configures log4net logger.
-        /// </summary>
-        /// <returns>Log file path.</returns>
-        private static string ConfigureLogger()
-        {
-            // Load Log4Net for net configuration.
-            var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
-            XmlConfigurator.Configure(logRepository, new FileInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "log4net.config")));
-
-            // Update log file path for msix package. 
-            RollingFileAppender rollingFileAppender = logRepository.GetAppenders().Where(p => p.GetType() == typeof(RollingFileAppender)).FirstOrDefault() as RollingFileAppender;
-            if (rollingFileAppender != null && rollingFileAppender.File.Contains("WindowsApps"))
+            catch (Exception ex)
             {
-                rollingFileAppender.File = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), Settings.AppID,
-                                                        Path.GetFileName(rollingFileAppender.File));
+                log.Error(ex);
+                await ProcessUserInputAsync();
             }
-            return rollingFileAppender?.File;
-        }
-
-        private static void PrintHelp()
-        {
-            log.Info($"\n{"AppID:",-15} {Settings.AppID}");
-            log.Info($"\n{"Engine version:",-15} {typeof(IEngine).Assembly.GetName().Version}");
-            log.Info($"\n{"OS version:",-15} {RuntimeInformation.OSDescription}");
-            log.Info($"\n{"Env version:",-15} {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
-            log.Info("\n\nPress Esc to unregister file system, delete all files/folders and exit (simulate uninstall).");
-            log.Info("\nPress Spacebar to exit without unregistering (simulate reboot).");
-            log.Info("\nPress 'e' to start/stop the Engine and all sync services.");
-            //log.Info("\nPress 's' to start/stop full synchronization service.");
-            log.Info("\nPress 'm' to start/stop remote storage monitor.");
-            log.Info($"\nPress 'l' to open log file. ({LogFilePath})");
-            log.Info($"\nPress 'b' to submit support tickets, report bugs, suggest features. (https://userfilesystem.com/support/)");
-            log.Info("\n----------------------\n");
         }
 
         private static async Task ProcessUserInputAsync()
         {
             do
             {
-                switch (Console.ReadKey(true).KeyChar)
+                ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+
+                switch (keyInfo.Key)
                 {
-                    case (char)ConsoleKey.F1:
-                    case 'h':
+                    case ConsoleKey.F1:
+                    case ConsoleKey.H:
                         // Print help info.
-                        PrintHelp();
+                        logFormatter.PrintHelp();
                         break;
 
-                    case 'e':
+                    case ConsoleKey.E:
                         // Start/stop the Engine and all sync services.
                         if (Engine.State == EngineState.Running)
                         {
@@ -165,13 +117,18 @@ namespace VirtualFileSystem
                         }
                         break;
 
-                    case 'm':
+                    case ConsoleKey.D:
+                        // Enables/disables debug logging.
+                        logFormatter.DebugLoggingEnabled = !logFormatter.DebugLoggingEnabled;
+                        break;
+
+                    case ConsoleKey.M:
                         // Start/stop remote storage monitor.
                         if (Engine.RemoteStorageMonitor.SyncState == SynchronizationState.Disabled)
                         {
                             if (Engine.State != EngineState.Running)
                             {
-                                Engine.RemoteStorageMonitor.LogError("Failed to start. The Engine must be running.");
+                                Engine.RemoteStorageMonitor.Logger.LogError("Failed to start. The Engine must be running.");
                                 break;
                             }
                             Engine.RemoteStorageMonitor.Start();
@@ -182,16 +139,16 @@ namespace VirtualFileSystem
                         }
                         break;
 
-                    case 'l':
+                    case ConsoleKey.L:
                         // Open log file.
-                        ProcessStartInfo psiLog = new ProcessStartInfo(LogFilePath);
+                        ProcessStartInfo psiLog = new ProcessStartInfo(logFormatter.LogFilePath);
                         psiLog.UseShellExecute = true;
                         using (Process.Start(psiLog))
                         {
                         }
                         break;
 
-                    case 'b':
+                    case ConsoleKey.B:
                         // Submit support tickets, report bugs, suggest features.
                         ProcessStartInfo psiSupport = new ProcessStartInfo("https://www.userfilesystem.com/support/");
                         psiSupport.UseShellExecute = true;
@@ -200,15 +157,7 @@ namespace VirtualFileSystem
                         }
                         break;
 
-                    case 'q':
-                        // Unregister during programm uninstall.
-                        Engine.Dispose();
-                        await UnregisterSyncRootAsync();
-                        log.Info("\nAll empty file and folder placeholders are deleted. Hydrated placeholders are converted to regular files / folders.\n");
-                        return;
-
-                    case (char)ConsoleKey.Escape:
-                    case 'Q':
+                    case ConsoleKey.Escape:
                         if (Engine.State == EngineState.Running)
                         {
                             await Engine.StopAsync();
@@ -221,7 +170,7 @@ namespace VirtualFileSystem
                         await CleanupAppFoldersAsync();
                         return;
 
-                    case (char)ConsoleKey.Spacebar:
+                    case ConsoleKey.Spacebar:
                         if (Engine.State == EngineState.Running)
                         {
                             await Engine.StopAsync();
@@ -232,7 +181,6 @@ namespace VirtualFileSystem
                     default:
                         break;
                 }
-
 
             } while (true);
         }
@@ -248,7 +196,7 @@ namespace VirtualFileSystem
         {
             if (!await Registrar.IsRegisteredAsync(Settings.UserFileSystemRootPath))
             {
-                log.Info($"\nRegistering {Settings.UserFileSystemRootPath} sync root.");
+                log.Info($"\n\nRegistering {Settings.UserFileSystemRootPath} sync root.");
                 Directory.CreateDirectory(Settings.UserFileSystemRootPath);
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
@@ -272,13 +220,13 @@ namespace VirtualFileSystem
         /// In the case of a regular installer (msi) call this method during uninstall.
         /// </para>
         /// </remarks>
-        public static async Task UnregisterSyncRootAsync()
+        private static async Task UnregisterSyncRootAsync()
         {
             log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
             await Registrar.UnregisterAsync(SyncRootId);
         }
 
-        public static async Task CleanupAppFoldersAsync()
+        private static async Task CleanupAppFoldersAsync()
         {
             log.Info("\nDeleting all file and folder placeholders.\n");
             try

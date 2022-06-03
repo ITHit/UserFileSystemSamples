@@ -1,11 +1,10 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
-using ITHit.FileSystem.Samples.Common.Windows.ShellExtension;
-using ITHit.FileSystem.Samples.Common.Windows.ShellExtension.ComInfrastructure;
-using ITHit.FileSystem.Samples.Common;
-using VirtualDrive.Common;
+using Windows.Storage.Provider;
+
+using ITHit.FileSystem.Windows.ShellExtension.ComInfrastructure;
+
 
 namespace VirtualDrive.ShellExtension
 {
@@ -13,18 +12,14 @@ namespace VirtualDrive.ShellExtension
     {
         static async Task Main(string[] args)
         {
-            // Load and initialize settings.
-            IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
-            Settings settings = configuration.ReadSettings();
-
-            ShellExtensionConfiguration.Initialize(settings);
-
             try
             {
                 using (var server = new LocalServer())
                 {
-                    server.RegisterClass<ThumbnailProvider>(typeof(ThumbnailProvider).GUID);
-                    server.RegisterClass<ContextMenusProvider>(typeof(ContextMenusProvider).GUID);
+                    server.RegisterClass<ThumbnailProvider>();
+                    server.RegisterClass<ContextMenusProvider>();
+                    server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProvider>();
+                    server.RegisterWinRTClass<IStorageProviderUriSource, UriSource>();
 
                     await server.Run();
                 }

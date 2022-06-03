@@ -7,6 +7,7 @@ using ITHit.FileSystem.Windows;
 
 using ITHit.FileSystem.Samples.Common.Windows;
 using System.Threading;
+using System;
 
 namespace VirtualFileSystem
 {
@@ -14,11 +15,6 @@ namespace VirtualFileSystem
     /// <inheritdoc />
     public class VirtualEngine : EngineWindows
     {
-        /// <summary>
-        /// Logger.
-        /// </summary>
-        private ILogger logger;
-
         /// <summary>
         /// Monitors changes in the remote storage, notifies the client and updates the user file system.
         /// </summary>
@@ -33,23 +29,23 @@ namespace VirtualFileSystem
         /// Your file system tree will be located under this folder.
         /// </param>
         /// <param name="maxDegreeOfParallelism">A maximum number of concurrent tasks.</param>
-        /// <param name="log">Logger.</param>
-        public VirtualEngine(string license, string userFileSystemRootPath, string remoteStorageRootPath, int maxDegreeOfParallelism, ILog log) : 
-            base(license, userFileSystemRootPath, maxDegreeOfParallelism)
+        /// <param name="log4net">Log4net Logger.</param>
+        public VirtualEngine(string license, string userFileSystemRootPath, string remoteStorageRootPath, LogFormatter logFormatter) : 
+            base(license, userFileSystemRootPath)
         {
-            logger = new Logger("File System Engine", log);
 
             // We want our file system to run regardless of any errors.
             // If any request to file system fails in user code or in Engine itself we continue processing.
             ThrowExceptions = false;
 
             StateChanged += Engine_StateChanged;
-            Error += Engine_Error;
-            Message += Engine_Message;
+            Error += logFormatter.LogError;
+            Message += logFormatter.LogMessage;
+            Debug += logFormatter.LogDebug;
 
-            RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log);
+            RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, this.Logger);
         }
-        
+
         /// <inheritdoc/>
         public override async Task<IFileSystemItem> GetFileSystemItemAsync(string userFileSystemPath, FileSystemItemType itemType, byte[] remoteStorageItemId = null)
         {
@@ -64,6 +60,15 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
+        public override async Task<IMenuCommand> GetMenuCommandAsync(Guid menuGuid)
+        {
+            // For this method to be called you need to register a menu command handler.
+            // See method description for more details.
+
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc/>
         public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
         {
             await base.StartAsync(processModified, cancellationToken);
@@ -74,16 +79,6 @@ namespace VirtualFileSystem
         {
             await base.StopAsync();
             RemoteStorageMonitor.Stop();
-        }
-
-        private void Engine_Message(IEngine sender, EngineMessageEventArgs e)
-        {
-            logger.LogMessage(e.Message, e.SourcePath, e.TargetPath, e.OperationContext);
-        }
-
-        private void Engine_Error(IEngine sender, EngineErrorEventArgs e)
-        {
-            logger.LogError(e.Message, e.SourcePath, e.TargetPath, e.Exception, e.OperationContext);
         }
 
         /// <summary>

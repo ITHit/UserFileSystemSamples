@@ -1,22 +1,17 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Windows.Storage;
 using Microsoft.Extensions.Configuration;
 
 using log4net;
-using log4net.Appender;
-using log4net.Config;
+
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
-using VirtualDrive.Common;
-using System.Threading;
+using ITHit.FileSystem.Windows.ShellExtension;
 
 namespace VirtualDrive
 {
@@ -25,7 +20,7 @@ namespace VirtualDrive
         /// <summary>
         /// Application settings.
         /// </summary>
-        internal static AppSettings Settings;
+        private static AppSettings Settings;
 
         /// <summary>
         /// Log4Net logger.
@@ -33,52 +28,55 @@ namespace VirtualDrive
         private static readonly ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         /// <summary>
-        /// Log file path.
-        /// </summary>
-        private static string LogFilePath;
-
-        /// <summary>
         /// Processes OS file system calls, 
         /// synchronizes user file system to remote storage. 
         /// </summary>
-        public static VirtualEngine Engine;
+        private static VirtualEngine Engine;
 
-        private static CancellationTokenSource ctsProcessAsync = new CancellationTokenSource();
-        private static CancellationToken ctProcessAsync = default;
-
+        /// <summary>
+        /// Outputs logging information.
+        /// </summary>
+        private static LogFormatter logFormatter;
 
         static async Task Main(string[] args)
         {
+            // In a real world application the user system should have trusted certificate installed or an installer (msi) should install it.
+            // This method should be omitted for packaged application.
+            CertificateRegistrar.InstallDeveloperCertificate();
+
+            // In the case of a regular installer (msi) call this method during installation.
+            // This method should be omitted for packaged application.
+            await PackageRegistrar.RegisterSparsePackageAsync();
+
             // Load Settings.
-            IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
-            Settings = configuration.ReadSettings();
+            Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
 
-            // Configure log4net and set log file path.
-            LogFilePath = ConfigureLogger();
+            logFormatter = new LogFormatter(log, Settings.AppID);
 
-            PrintHelp();
-
-            // Register sync root and create app folders.
-            await RegisterSyncRootAsync();
-
-            // Log indexed state.
-            StorageFolder userFileSystemRootFolder = await StorageFolder.GetFolderFromPathAsync(Settings.UserFileSystemRootPath);
-            log.Info($"\nIndexed state: {(await userFileSystemRootFolder.GetIndexedStateAsync())}\n");
-            
-            Logger.PrintHeader(log);
-
-
-            using (Engine = new VirtualEngine(
-                   Settings.UserFileSystemLicense,
-                   Settings.UserFileSystemRootPath,
-                   Settings.RemoteStorageRootPath,
-                   Settings.IconsFolderPath,
-                   Settings.RpcCommunicationChannelName,
-                   Settings.SyncIntervalMs,
-                   Settings.MaxDegreeOfParallelism,
-                   log))
+            try
             {
-                try
+                // Log environment description.
+                logFormatter.PrintEnvironmentDescription();
+                
+                // Register sync root and create app folders.
+                await RegisterSyncRootAsync();
+
+                // Log indexing state. Sync root must be indexed.
+                await logFormatter.PrintIndexingStateAsync(Settings.UserFileSystemRootPath);
+
+                // Log console commands.
+                logFormatter.PrintHelp();
+
+                // Log logging columns headers.
+                logFormatter.PrintHeader();
+
+                using (Engine = new VirtualEngine(
+                       Settings.UserFileSystemLicense,
+                       Settings.UserFileSystemRootPath,
+                       Settings.RemoteStorageRootPath,
+                       Settings.IconsFolderPath,
+                       Settings.SyncIntervalMs,
+                       logFormatter))
                 {
                     Engine.AutoLock = Settings.AutoLock;
 
@@ -97,64 +95,29 @@ namespace VirtualDrive
                     // Keep this application running and reading user input.
                     await ProcessUserInputAsync();
                 }
-                catch (Exception ex)
-                {
-                    log.Error(ex);
-                    await ProcessUserInputAsync();
-                }
             }
-        }
-
-        /// <summary>
-        /// Configures log4net logger.
-        /// </summary>
-        /// <returns>Log file path.</returns>
-        private static string ConfigureLogger()
-        {
-            // Load Log4Net for net configuration.
-            var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
-            XmlConfigurator.Configure(logRepository, new FileInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "log4net.config")));
-
-            // Update log file path for msix package. 
-            RollingFileAppender rollingFileAppender = logRepository.GetAppenders().Where(p => p.GetType() == typeof(RollingFileAppender)).FirstOrDefault() as RollingFileAppender;
-            if (rollingFileAppender != null && rollingFileAppender.File.Contains("WindowsApps"))
+            catch (Exception ex)
             {
-                rollingFileAppender.File = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), Settings.AppID,
-                                                        Path.GetFileName(rollingFileAppender.File));
+                log.Error(ex);
+                await ProcessUserInputAsync();
             }
-            return rollingFileAppender?.File;
-        }
-
-        private static void PrintHelp()
-        {
-            log.Info($"\n{"AppID:", -15} {Settings.AppID}");
-            log.Info($"\n{"Engine version:",-15} {typeof(IEngine).Assembly.GetName().Version}");
-            log.Info($"\n{"OS version:", -15} {RuntimeInformation.OSDescription}");
-            log.Info($"\n{"Env version:", -15} {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
-            log.Info("\n\nPress Esc to unregister file system, delete all files/folders and exit (simulate uninstall).");
-            log.Info("\nPress Spacebar to exit without unregistering (simulate reboot).");
-            log.Info("\nPress 'e' to start/stop the Engine and all sync services.");
-            //log.Info("\nPress 's' to start/stop full synchronization service.");
-            //log.Info("\nPress 'u' to start/stop user file system to remote storage sync (EngineWindows.ProcessAsync()).");
-            log.Info("\nPress 'm' to start/stop remote storage monitor.");
-            log.Info($"\nPress 'l' to open log file. ({LogFilePath})");
-            log.Info($"\nPress 'b' to submit support tickets, report bugs, suggest features. (https://userfilesystem.com/support/)");
-            log.Info("\n----------------------\n");
         }
 
         private static async Task ProcessUserInputAsync()
         {
             do
             {
-                switch (Console.ReadKey(true).KeyChar)
+                ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+
+                switch (keyInfo.Key)
                 {
-                    case (char)ConsoleKey.F1:
-                    case 'h':
+                    case ConsoleKey.F1:
+                    case ConsoleKey.H:
                         // Print help info.
-                        PrintHelp();
+                        logFormatter.PrintHelp();
                         break;
 
-                    case 'e':
+                    case ConsoleKey.E:
                         // Start/stop the Engine and all sync services.
                         if (Engine.State == EngineState.Running)
                         {
@@ -165,52 +128,36 @@ namespace VirtualDrive
                             await Engine.StartAsync();
                         }
                         break;
-                    /*
-                case 's':
-                    // Start/stop full synchronization.
-                    if (Engine.SyncService.SyncState == SynchronizationState.Disabled)
-                    {
-                        if(Engine.State != EngineState.Running)
-                        {
-                            Engine.SyncService.LogError("Failed to start. The Engine must be running.");
-                            break;
-                        }
-                        await Engine.SyncService.StartAsync();
-                    }
-                    else
-                    {
-                        await Engine.SyncService.StopAsync();
-                    }
-                    break;
-                    */
-                    /*
-                    case 'u':
+                    
+                    case ConsoleKey.S:
                         // Start/stop full synchronization.
-                        if (!ctProcessAsync.CanBeCanceled)
+                        if (Engine.SyncService.SyncState == SynchronizationState.Disabled)
                         {
-                            if (Engine.State != EngineState.Running)
+                            if(Engine.State != EngineState.Running)
                             {
-                                Engine.LogError("Failed to start. The Engine must be running.");
+                                Engine.SyncService.Logger.LogError("Failed to start. The Engine must be running.");
                                 break;
                             }
-                            ctProcessAsync = ctsProcessAsync.Token;
-                            await Engine.ProcessAsync(ctProcessAsync);
-                            ctProcessAsync = default;
+                            await Engine.SyncService.StartAsync();
                         }
                         else
                         {
-                            ctsProcessAsync.Cancel();
-                            ctProcessAsync = default;
+                            await Engine.SyncService.StopAsync();
                         }
                         break;
-                    */
-                    case 'm':
+
+                    case ConsoleKey.D:
+                        // Enables/disables debug logging.
+                        logFormatter.DebugLoggingEnabled = !logFormatter.DebugLoggingEnabled;
+                        break;
+
+                    case ConsoleKey.M:
                         // Start/stop remote storage monitor.
                         if (Engine.RemoteStorageMonitor.SyncState == SynchronizationState.Disabled)
                         {
                             if (Engine.State != EngineState.Running)
                             {
-                                Engine.RemoteStorageMonitor.LogError("Failed to start. The Engine must be running.");
+                                Engine.RemoteStorageMonitor.Logger.LogError("Failed to start. The Engine must be running.");
                                 break;
                             }
                             Engine.RemoteStorageMonitor.Start();
@@ -221,16 +168,16 @@ namespace VirtualDrive
                         }
                         break;
 
-                    case 'l':
+                    case ConsoleKey.L:
                         // Open log file.
-                        ProcessStartInfo psiLog = new ProcessStartInfo(LogFilePath);
+                        ProcessStartInfo psiLog = new ProcessStartInfo(logFormatter.LogFilePath);
                         psiLog.UseShellExecute = true;
                         using (Process.Start(psiLog))
                         {
                         }
                         break;
 
-                    case 'b':
+                    case ConsoleKey.B:
                         // Submit support tickets, report bugs, suggest features.
                         ProcessStartInfo psiSupport = new ProcessStartInfo("https://www.userfilesystem.com/support/");
                         psiSupport.UseShellExecute = true;
@@ -239,15 +186,7 @@ namespace VirtualDrive
                         }
                         break;
 
-                    case 'q':
-                        // Unregister during programm uninstall.
-                        Engine.Dispose();
-                        await UnregisterSyncRootAsync();
-                        log.Info("\nAll empty file and folder placeholders are deleted. Hydrated placeholders are converted to regular files / folders.\n");
-                        return;
-
-                    case (char)ConsoleKey.Escape:
-                    case 'Q':
+                    case ConsoleKey.Escape:
                         if (Engine.State == EngineState.Running)
                         {
                             await Engine.StopAsync();
@@ -258,9 +197,12 @@ namespace VirtualDrive
 
                         // Delete all files/folders.
                         await CleanupAppFoldersAsync();
+                        
+                        // Unregister sparse package.
+                        await UnregisterSparsePackageAsync();
                         return;
 
-                    case (char)ConsoleKey.Spacebar :
+                    case ConsoleKey.Spacebar:
                         if (Engine.State == EngineState.Running)
                         {
                             await Engine.StopAsync();
@@ -268,10 +210,14 @@ namespace VirtualDrive
                         log.Info("\n\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.\n");
                         return;
 
+                    case ConsoleKey.P:
+                        // Unregister sparse package.
+                        await UnregisterSparsePackageAsync();
+                        break;
+
                     default:
                         break;
                 }
-
 
             } while (true);
         }
@@ -287,14 +233,13 @@ namespace VirtualDrive
         {
             if (!await Registrar.IsRegisteredAsync(Settings.UserFileSystemRootPath))
             {
-                log.Info($"\nRegistering {Settings.UserFileSystemRootPath} sync root.");
+                log.Info($"\n\nRegistering {Settings.UserFileSystemRootPath} sync root.");
                 Directory.CreateDirectory(Settings.UserFileSystemRootPath);
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
                     Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
 
-                log.Info("\nRegistering shell extensions...\n");
-                ShellExtensionRegistrar.Register(SyncRootId);
+                ShellExtensionRegistrar.Register(SyncRootId, log);
             }
             else
             {
@@ -319,8 +264,7 @@ namespace VirtualDrive
             log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
             await Registrar.UnregisterAsync(SyncRootId);
 
-            log.Info("\nUnregistering shell extensions...\n");
-            ShellExtensionRegistrar.Unregister();
+            ShellExtensionRegistrar.Unregister(log);
         }
 
         private static async Task CleanupAppFoldersAsync()
@@ -343,6 +287,16 @@ namespace VirtualDrive
             {
                 log.Error($"\n{ex}");
             }
+        }
+
+        /// <summary>
+        /// Unregisters sparse package.
+        /// </summary>
+        private static async Task UnregisterSparsePackageAsync()
+        {
+            log.Info("\nUnregistering sparse package...");
+            await PackageRegistrar.UnregisterSparsePackageAsync(SyncRootId);
+            log.Info("\nSparse package unregistered sucessfully.");
         }
 
 #if DEBUG

@@ -1,10 +1,10 @@
 using System;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
-using ITHit.FileSystem.Samples.Common.Windows.ShellExtension;
-using ITHit.FileSystem.Samples.Common.Windows.ShellExtension.ComInfrastructure;
-using ITHit.FileSystem.Samples.Common;
 using System.Diagnostics;
+using Windows.Storage.Provider;
+
+using ITHit.FileSystem.Windows.ShellExtension.ComInfrastructure;
+
 
 namespace WebDAVDrive.ShellExtension
 {
@@ -12,19 +12,13 @@ namespace WebDAVDrive.ShellExtension
     {
         static async Task Main(string[] args)
         {
-            // Load and initialize settings.
-            var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
-            Settings settings = new Settings();
-            configuration.Bind(settings);
-
-            ShellExtensionConfiguration.Initialize(settings);
-
             try
             {
                 using (var server = new LocalServer())
                 {
-                    server.RegisterClass<ThumbnailProvider>(typeof(ThumbnailProvider).GUID);
-                    server.RegisterClass<ContextMenusProvider>(typeof(ContextMenusProvider).GUID);
+                    server.RegisterClass<ThumbnailProvider>();
+                    server.RegisterClass<ContextMenusProvider>();
+                    server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProvider>();
 
                     await server.Run();
                 }

@@ -18,17 +18,17 @@ namespace VirtualFileSystem
     public class Mapping
     {
         /// <summary>
-        /// Remote storage path.
+        /// Remote storage root path.
         /// </summary>
         private readonly string remoteStorageRootPath;
 
         /// <summary>
-        /// User file system path. 
+        /// User file system root path. 
         /// </summary>
         private readonly string userFileSystemRootPath;
 
         /// <summary>
-        /// Creates a Mapping.
+        /// Creates an instance of this class.
         /// </summary>
         /// <param name="userFileSystemRootPath">Remote storage path.</param>
         /// <param name="remoteStorageRootPath">User file system path.</param>
@@ -46,10 +46,10 @@ namespace VirtualFileSystem
         public string ReverseMapPath(string remoteStorageUri)
         {
             // Get path relative to the virtual root.
-            string relativePath = Path.TrimEndingDirectorySeparator(remoteStorageUri).Substring(
-                Path.TrimEndingDirectorySeparator(remoteStorageRootPath).Length);
+            string relativePath = remoteStorageUri.TrimEnd(Path.DirectorySeparatorChar).Substring(
+                remoteStorageRootPath.TrimEnd(Path.DirectorySeparatorChar).Length);
 
-            string path = $"{Path.TrimEndingDirectorySeparator(userFileSystemRootPath)}{relativePath}";
+            string path = $"{userFileSystemRootPath.TrimEnd(Path.DirectorySeparatorChar)}{relativePath}";
             return path;
         }
 

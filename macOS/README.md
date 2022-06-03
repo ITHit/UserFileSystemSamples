@@ -63,6 +63,12 @@
 <p><span>To run the sample open the project in Visual Studio and run the project. The application adds an application to the macOS Status Bar. To mount the file system select the 'Install Extension' command in the Status Bar.</span></p>
 <p><span><img id="__mcenew" alt="Virtual File System Mac in .NET/C#" src="https://www.userfilesystem.com/media/2117/virtulfilesystemmac.png" rel="122138"></span></p>
 <p><span class="warn">Note, that every File Provider Extension runs in a sandbox, so access to the local filesystem restricted by OS except Downloads, Pictures, Music, Movies public directories.</span></p>
+<h2>Troubleshooting</h2>
+<p>If you experience issues on application start it may be caused by an incorrect app configuration. You can find what may be wrong using a macOS Console:</p>
+<p><img id="__mcenew" alt="Virtual Drive .NET macOS Console" src="https://www.userfilesystem.com/media/2177/virtualdrivemacosconsole.png" rel="123887"></p>
+<p>If your application started successfully but you experience issues with the file system you may need to filter logs to find information sent by the file system provider by using the 'ITHit' search:</p>
+<p><img id="__mcenew" alt="Virtual File System macOS Console" src="https://www.userfilesystem.com/media/2176/virtualfilesystemmacosconsole.png" rel="123886"></p>
+<p>You can select and copy the console output and submit it to the <a href="https://ithitcorp.atlassian.net/servicedesk/customer/portal/12">Help &amp; Support system</a>.</p>
 <h3 class="para d-inline next-article-heading">Next Article:</h3>
 <a title="Virtual Drive Sample in .NET, C# with thumbnail support Microsoft Office documents editing support, automatic locking and custom columns support" href="https://www.userfilesystem.com/examples/virtual_drive/">Virtual Drive Sample in .NET, C#</a>
 

@@ -1,13 +1,10 @@
 using System;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-
-using log4net;
-using ITHit.FileSystem;
-using ITHit.FileSystem.Windows;
-using ITHit.FileSystem.Samples.Common;
-using ITHit.FileSystem.Samples.Common.Windows;
 using System.Threading;
+
+using ITHit.FileSystem;
+using ITHit.FileSystem.Samples.Common.Windows;
+
 
 namespace VirtualDrive
 {
@@ -19,6 +16,8 @@ namespace VirtualDrive
         /// </summary>
         public readonly RemoteStorageMonitor RemoteStorageMonitor;
 
+        //public override IMapping Mapping { get { return new Mapping(this); } }
+
         /// <summary>
         /// Creates a vitual file system Engine.
         /// </summary>
@@ -29,22 +28,18 @@ namespace VirtualDrive
         /// </param>
         /// <param name="remoteStorageRootPath">Path to the remote storage root.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
-        /// <param name="rpcCommunicationChannelName">Channel name to communicate with Windows Explorer context menu and other components on this machine.</param>
         /// <param name="syncIntervalMs">Full synchronization interval in milliseconds.</param>
-        /// <param name="maxDegreeOfParallelism">A maximum number of concurrent tasks.</param>
-        /// <param name="log4net">Log4net logger.</param>
+        /// <param name="logFormatter">Logger.</param>
         public VirtualEngine(
             string license, 
             string userFileSystemRootPath, 
             string remoteStorageRootPath, 
             string iconsFolderPath, 
-            string rpcCommunicationChannelName, 
             double syncIntervalMs,
-            int maxDegreeOfParallelism,
-            ILog log4net)
-            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, rpcCommunicationChannelName, syncIntervalMs, maxDegreeOfParallelism, log4net)
+            LogFormatter logFormatter)
+            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, syncIntervalMs, logFormatter)
         {
-            RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log4net);
+            RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, this.Logger);
         }
 
         /// <inheritdoc/>
@@ -60,7 +55,26 @@ namespace VirtualDrive
             }
         }
 
-        //public override IMapping Mapping { get { return new Mapping(this); } }
+        
+        /// <inheritdoc/>
+        public override async Task<IMenuCommand> GetMenuCommandAsync(Guid menuGuid)
+        {
+            // For this method to be called you need to register a menu command handler.
+            // See method description for more details.
+
+            Logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString());
+
+            Guid menuCommandLockGuid = typeof(VirtualDrive.ShellExtension.ContextMenusProvider).GUID;
+
+            if (menuGuid == menuCommandLockGuid)
+            {
+                return new MenuCommandLock(this, this.Logger);
+            }
+
+            Logger.LogError($"Menu not found", menuGuid.ToString());
+            throw new NotImplementedException();
+        }
+        
 
         /// <inheritdoc/>
         public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
@@ -69,105 +83,12 @@ namespace VirtualDrive
             RemoteStorageMonitor.Start();
         }
 
+        /// <inheritdoc/>
         public override async Task StopAsync()
         {
             await base.StopAsync();
             RemoteStorageMonitor.Stop();
         }
-
-        /// <inheritdoc/>
-        public override async Task<byte[]> GetThumbnailAsync(string userFileSystemPath, uint size)
-        {
-            // For this method to be called you need to run the Package project.
-
-            /*
-            // Get remote storage ID to read thumbnail from the remote storage. 
-            if (PlaceholderItem.IsPlaceholder(userFileSystemPath))
-            {
-                PlaceholderItem placeholder = this.Placeholders.GetItem(userFileSystemPath);
-                byte[] remoteStorageItemId = placeholder.GetRemoteStorageItemId();
-            }
-            */
-
-            byte[] thumbnail = ThumbnailExtractor.GetThumbnail(userFileSystemPath, size);
-
-            string thumbnailResult = thumbnail != null ? "Success" : "Not Impl";
-            LogMessage($"{nameof(VirtualEngine)}.{nameof(GetThumbnailAsync)}() - {thumbnailResult}", userFileSystemPath);
-
-            return thumbnail;
-        }
-
-        /// <inheritdoc/>
-        public override async Task<IEnumerable<FileSystemItemPropertyData>> GetItemPropertiesAsync(string userFileSystemPath)
-        {
-            // For this method to be called you need to run the Package project.
-
-            //LogMessage($"{nameof(VirtualEngine)}.{nameof(GetItemPropertiesAsync)}()", userFileSystemPath);
-
-            IList<FileSystemItemPropertyData> props = new List<FileSystemItemPropertyData>();
-
-            if (this.Placeholders.TryGetItem(userFileSystemPath, out PlaceholderItem placeholder))
-            {
-
-                // Read LockInfo.
-                if (placeholder.Properties.TryGetValue("LockInfo", out IDataItem propLockInfo))
-                {
-                    if (propLockInfo.TryGetValue<ServerLockInfo>(out ServerLockInfo lockInfo))
-                    {
-                        // Get Lock Owner.
-                        FileSystemItemPropertyData propertyLockOwner = new FileSystemItemPropertyData()
-                        {
-                            Id = (int)CustomColumnIds.LockOwnerIcon,
-                            Value = lockInfo.Owner,
-                            IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Locked.ico")
-                        };
-                        props.Add(propertyLockOwner);
-
-                        // Get Lock Expires.
-                        FileSystemItemPropertyData propertyLockExpires = new FileSystemItemPropertyData()
-                        {
-                            Id = (int)CustomColumnIds.LockExpirationDate,
-                            Value = lockInfo.LockExpirationDateUtc.ToString(),
-                            IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Empty.ico")
-                        };
-                        props.Add(propertyLockExpires);
-                    }
-                }
-
-                // Read LockMode.
-                if (placeholder.Properties.TryGetValue("LockMode", out IDataItem propLockMode))
-                {
-                    if (propLockMode.TryGetValue<LockMode>(out LockMode lockMode) && lockMode != LockMode.None)
-                    {
-                        FileSystemItemPropertyData propertyLockMode = new FileSystemItemPropertyData()
-                        {
-                            Id = (int)CustomColumnIds.LockScope,
-                            Value = "Locked",
-                            IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Empty.ico")
-                        };
-                        props.Add(propertyLockMode);
-                    }
-                }
-
-                // Read ETag.
-                if (placeholder.Properties.TryGetValue("ETag", out IDataItem propETag))
-                {
-                    if (propETag.TryGetValue<string>(out string eTag))
-                    {
-                        FileSystemItemPropertyData propertyETag = new FileSystemItemPropertyData()
-                        {
-                            Id = (int)CustomColumnIds.ETag,
-                            Value = eTag,
-                            IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Empty.ico")
-                        };
-                        props.Add(propertyETag);
-                    }
-                }
-            }
-
-            return props;
-        }
-
 
         private bool disposedValue;
 

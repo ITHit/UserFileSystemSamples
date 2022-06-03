@@ -1,18 +1,11 @@
 using System;
 using System.Net;
-using System.Linq;
-using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
+using System.Threading;
 
-using log4net;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common.Windows;
-using ITHit.FileSystem.Windows;
-using ITHit.FileSystem.Samples.Common;
 
-using ITHit.WebDAV.Client;
-using System.Threading;
 
 namespace WebDAVDrive
 {
@@ -40,9 +33,7 @@ namespace WebDAVDrive
         /// <param name="remoteStorageRootPath">Path to the remote storage root.</param>
         /// <param name="webSocketServerUrl">Web sockets server that sends notifications about changes on the server.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
-        /// <param name="rpcCommunicationChannelName">Channel name to communicate with Windows Explorer context menu and other components on this machine.</param>
         /// <param name="syncIntervalMs">Full synchronization interval in milliseconds.</param>
-        /// <param name="maxDegreeOfParallelism">A maximum number of concurrent tasks.</param>
         /// <param name="log4net">Log4net logger.</param>
         public VirtualEngine(
             string license, 
@@ -50,13 +41,11 @@ namespace WebDAVDrive
             string remoteStorageRootPath, 
             string webSocketServerUrl, 
             string iconsFolderPath, 
-            string rpcCommunicationChannelName,        
             double syncIntervalMs,
-            int maxDegreeOfParallelism,
-            ILog log4net)
-            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, rpcCommunicationChannelName, syncIntervalMs, maxDegreeOfParallelism, log4net)
+            LogFormatter logFormatter)
+            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, syncIntervalMs, logFormatter)
         {
-            RemoteStorageMonitor = new RemoteStorageMonitor(webSocketServerUrl, this, log4net);
+            RemoteStorageMonitor = new RemoteStorageMonitor(webSocketServerUrl, this, this.Logger);
         }
 
         /// <inheritdoc/>
@@ -70,6 +59,25 @@ namespace WebDAVDrive
             {
                 return new VirtualFolder(userFileSystemPath, this, this);
             }
+        }
+
+        /// <inheritdoc/>
+        public override async Task<IMenuCommand> GetMenuCommandAsync(Guid menuGuid)
+        {
+            // For this method to be called you need to register a menu command handler.
+            // See method description for more details.
+
+            Logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString());
+
+            Guid menuCommandLockGuid = typeof(WebDAVDrive.ShellExtension.ContextMenusProvider).GUID;
+
+            if (menuGuid == menuCommandLockGuid)
+            {
+                return new MenuCommandLock(this, this.Logger);
+            }
+
+            Logger.LogError($"Menu not found", menuGuid.ToString());
+            throw new NotImplementedException();
         }
 
         //public override IMapping Mapping { get { return new Mapping(this); } }
@@ -103,132 +111,6 @@ namespace WebDAVDrive
                 disposedValue = true;
             }
             base.Dispose(disposing);
-        }
-
-        /// <inheritdoc/>
-        public override async Task<byte[]> GetThumbnailAsync(string userFileSystemPath, uint size)
-        {
-            byte[] thumbnail = null;
-
-            string[] exts = Program.Settings.RequestThumbnailsFor.Trim().Split("|");
-            string ext = System.IO.Path.GetExtension(userFileSystemPath).TrimStart('.');
-
-            if (exts.Any(ext.Equals) || exts.Any("*".Equals))
-            {
-                string ThumbnailGeneratorUrl = Program.Settings.ThumbnailGeneratorUrl.Replace("{thumbnail width}", ""+size).Replace("{thumbnail height}", "" + size);
-                string filePathRemote = ThumbnailGeneratorUrl.Replace("{path to file}", WebDAVDrive.Mapping.MapPath(userFileSystemPath));
-
-                try
-                {
-                    using (IWebResponse response = await Program.DavClient.DownloadAsync(new Uri(filePathRemote)))
-                    {
-                        using (Stream stream = await response.GetResponseStreamAsync())
-                        {
-                            thumbnail = await StreamToByteArrayAsync(stream);
-                        }
-                    }
-                }
-                catch (WebException we)
-                {
-                    LogMessage(we.Message, userFileSystemPath);
-                }
-                catch (Exception e)
-                {
-                    LogError($"Failed to load thumbnail {size}px", userFileSystemPath, null, e);
-                }
-            }
-
-            string thumbnailResult = thumbnail != null ? "Success" : "Not Impl";
-            LogMessage($"{nameof(VirtualEngine)}.{nameof(GetThumbnailAsync)}() - {thumbnailResult}", userFileSystemPath);
-
-            return thumbnail;
-        }
-
-        private static async Task<byte[]> StreamToByteArrayAsync(Stream stream)
-        {
-            using (MemoryStream memoryStream = new())
-            {
-                await stream.CopyToAsync(memoryStream);
-                return memoryStream.ToArray();
-            }
-        }
-
-        /// <inheritdoc/>
-        public override async Task<IEnumerable<FileSystemItemPropertyData>> GetItemPropertiesAsync(string userFileSystemPath)
-        {
-            //LogMessage($"{nameof(VirtualEngine)}.{nameof(GetItemPropertiesAsync)}()", userFileSystemPath);
-
-            IList<FileSystemItemPropertyData> props = new List<FileSystemItemPropertyData>();
-
-            PlaceholderItem placeholder = this.Placeholders.GetItem(userFileSystemPath);
-
-            // Read LockInfo and choose the lock icon.
-            string lockIconName = null;
-            if (placeholder.Properties.TryGetValue("LockInfo", out IDataItem propLockInfo))
-            {
-                // The file is locked by this user.
-                lockIconName = "Locked.ico";
-            }
-            else if (placeholder.Properties.TryGetValue("ThirdPartyLockInfo", out propLockInfo))
-            {
-                // The file is locked by somebody else on the server.
-                lockIconName = "LockedByAnotherUser.ico";
-            }
-
-            if (propLockInfo != null && propLockInfo.TryGetValue<ServerLockInfo>(out ServerLockInfo lockInfo))
-            {
-
-                // Get Lock Owner.
-                FileSystemItemPropertyData propertyLockOwner = new FileSystemItemPropertyData()
-                {
-                    Id = (int)CustomColumnIds.LockOwnerIcon,
-                    Value = lockInfo.Owner,
-                    IconResource = System.IO.Path.Combine(this.IconsFolderPath, lockIconName)
-                };
-                props.Add(propertyLockOwner);
-
-                // Get Lock Expires.
-                FileSystemItemPropertyData propertyLockExpires = new FileSystemItemPropertyData()
-                {
-                    Id = (int)CustomColumnIds.LockExpirationDate,
-                    Value = lockInfo.LockExpirationDateUtc.ToString(),
-                    IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Empty.ico")
-                };
-                props.Add(propertyLockExpires);
-            }
-
-
-            // Read LockMode.
-            if (placeholder.Properties.TryGetValue("LockMode", out IDataItem propLockMode))
-            {
-                if (propLockMode.TryGetValue<LockMode>(out LockMode lockMode) && lockMode != LockMode.None)
-                {
-                    FileSystemItemPropertyData propertyLockMode = new FileSystemItemPropertyData()
-                    {
-                        Id = (int)CustomColumnIds.LockScope,
-                        Value = "Locked",
-                        IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Empty.ico")
-                    };
-                    props.Add(propertyLockMode);
-                }
-            }
-
-            // Read ETag.
-            if (placeholder.Properties.TryGetValue("ETag", out IDataItem propETag))
-            {
-                if (propETag.TryGetValue<string>(out string eTag))
-                {
-                    FileSystemItemPropertyData propertyETag = new FileSystemItemPropertyData()
-                    {
-                        Id = (int)CustomColumnIds.ETag,
-                        Value = eTag,
-                        IconResource = System.IO.Path.Combine(this.IconsFolderPath, "Empty.ico")
-                    };
-                    props.Add(propertyETag);
-                }
-            }
-
-            return props;
         }
     }
 }

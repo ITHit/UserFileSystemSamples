@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -73,7 +74,7 @@ namespace WebDAVDrive
             string remoteStorageOldPath = RemoteStoragePath;
             string remoteStorageNewPath = Mapping.MapPath(userFileSystemNewPath);
 
-            await Program.DavClient.MoveToAsync(new Uri(remoteStorageOldPath), new Uri(remoteStorageNewPath), true);
+            await Program.DavClient.MoveToAsync(new Uri(remoteStorageOldPath), new Uri(remoteStorageNewPath), true, null, cancellationToken);
             Logger.LogMessage("Moved in the remote storage succesefully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
         }
 
@@ -103,7 +104,7 @@ namespace WebDAVDrive
 
             try
             {
-                await Program.DavClient.DeleteAsync(new Uri(RemoteStoragePath));
+                await Program.DavClient.DeleteAsync(new Uri(RemoteStoragePath), null, cancellationToken);
                 Logger.LogMessage("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
             }
             catch (WebDavHttpException ex)
@@ -112,6 +113,138 @@ namespace WebDAVDrive
                 Logger.LogMessage(ex.Message);
             }
         }
+
+        
+        public async Task<byte[]> GetThumbnailAsync(uint size)
+        {
+            byte[] thumbnail = null;
+
+            string[] exts = Program.Settings.RequestThumbnailsFor.Trim().Split("|");
+            string ext = System.IO.Path.GetExtension(UserFileSystemPath).TrimStart('.');
+
+            if (exts.Any(ext.Equals) || exts.Any("*".Equals))
+            {
+                string ThumbnailGeneratorUrl = Program.Settings.ThumbnailGeneratorUrl.Replace("{thumbnail width}", "" + size).Replace("{thumbnail height}", "" + size);
+                string filePathRemote = ThumbnailGeneratorUrl.Replace("{path to file}", WebDAVDrive.Mapping.MapPath(UserFileSystemPath));
+
+                try
+                {
+                    using (IWebResponse response = await Program.DavClient.DownloadAsync(new Uri(filePathRemote)))
+                    {
+                        using (Stream stream = await response.GetResponseStreamAsync())
+                        {
+                            thumbnail = await StreamToByteArrayAsync(stream);
+                        }
+                    }
+                }
+                catch (System.Net.WebException we)
+                {
+                    Logger.LogMessage(we.Message, UserFileSystemPath);
+                }
+                catch (Exception e)
+                {
+                    Logger.LogError($"Failed to load thumbnail {size}px", UserFileSystemPath, null, e);
+                }
+            }
+
+            string thumbnailResult = thumbnail != null ? "Success" : "Not Impl";
+            Logger.LogMessage($"{nameof(VirtualEngine)}.{nameof(GetThumbnailAsync)}() - {thumbnailResult}", UserFileSystemPath);
+
+            return thumbnail;
+        }
+
+        /// <inheritdoc/>
+        public async Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync()
+        {
+            // For this method to be called you need to register a properties handler.
+            // See method description for more details.
+
+            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(GetPropertiesAsync)}()", UserFileSystemPath);
+
+            IList<FileSystemItemPropertyData> props = new List<FileSystemItemPropertyData>();
+
+            if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
+            {
+
+                // Read LockInfo and choose the lock icon.
+                string lockIconName = null;
+                if (placeholder.Properties.TryGetValue("LockInfo", out IDataItem propLockInfo))
+                {
+                    // The file is locked by this user.
+                    lockIconName = "Locked.ico";
+                }
+                else if (placeholder.Properties.TryGetValue("ThirdPartyLockInfo", out propLockInfo))
+                {
+                    // The file is locked by somebody else on the server.
+                    lockIconName = "LockedByAnotherUser.ico";
+                }
+
+                if (propLockInfo != null && propLockInfo.TryGetValue<ServerLockInfo>(out ServerLockInfo lockInfo))
+                {
+
+                    // Get Lock Owner.
+                    FileSystemItemPropertyData propertyLockOwner = new FileSystemItemPropertyData()
+                    {
+                        Id = (int)CustomColumnIds.LockOwnerIcon,
+                        Value = lockInfo.Owner,
+                        IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, lockIconName)
+                    };
+                    props.Add(propertyLockOwner);
+
+                    // Get Lock Expires.
+                    FileSystemItemPropertyData propertyLockExpires = new FileSystemItemPropertyData()
+                    {
+                        Id = (int)CustomColumnIds.LockExpirationDate,
+                        Value = lockInfo.LockExpirationDateUtc.ToString(),
+                        IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, "Empty.ico")
+                    };
+                    props.Add(propertyLockExpires);
+                }
+
+
+                // Read LockMode.
+                if (placeholder.Properties.TryGetValue("LockMode", out IDataItem propLockMode))
+                {
+                    if (propLockMode.TryGetValue<LockMode>(out LockMode lockMode) && lockMode != LockMode.None)
+                    {
+                        FileSystemItemPropertyData propertyLockMode = new FileSystemItemPropertyData()
+                        {
+                            Id = (int)CustomColumnIds.LockScope,
+                            Value = "Locked",
+                            IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, "Empty.ico")
+                        };
+                        props.Add(propertyLockMode);
+                    }
+                }
+
+                // Read ETag.
+                if (placeholder.Properties.TryGetValue("ETag", out IDataItem propETag))
+                {
+                    if (propETag.TryGetValue<string>(out string eTag))
+                    {
+                        FileSystemItemPropertyData propertyETag = new FileSystemItemPropertyData()
+                        {
+                            Id = (int)CustomColumnIds.ETag,
+                            Value = eTag,
+                            IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, "Empty.ico")
+                        };
+                        props.Add(propertyETag);
+                    }
+                }
+            }
+
+            return props;
+        }
+
+        private static async Task<byte[]> StreamToByteArrayAsync(Stream stream)
+        {
+            using (MemoryStream memoryStream = new())
+            {
+                await stream.CopyToAsync(memoryStream);
+                return memoryStream.ToArray();
+            }
+        }
+        
 
         ///<inheritdoc>
         public Task<IFileSystemItemMetadata> GetMetadataAsync()
@@ -130,7 +263,7 @@ namespace WebDAVDrive
             // Save the lock token and other lock info received from the remote storage on the client.
             // Supply the lock-token as part of each remote storage update in IFile.WriteAsync() method.
 
-            LockInfo lockInfo = await Program.DavClient.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, null, TimeSpan.MaxValue);
+            LockInfo lockInfo = await Program.DavClient.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, null, TimeSpan.MaxValue, cancellationToken);
             ServerLockInfo serverLockInfo = new ServerLockInfo
             {
                 LockToken = lockInfo.LockToken.LockToken,
@@ -181,7 +314,7 @@ namespace WebDAVDrive
             // Unlock the item in the remote storage.
             try
             {
-                await Program.DavClient.UnlockAsync(new Uri(RemoteStoragePath), lockTokens);
+                await Program.DavClient.UnlockAsync(new Uri(RemoteStoragePath), lockTokens, cancellationToken);
                 Logger.LogMessage("Unlocked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
             }
             catch (ITHit.WebDAV.Client.Exceptions.ConflictException)

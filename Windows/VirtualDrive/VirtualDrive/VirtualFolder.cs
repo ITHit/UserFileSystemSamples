@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Enumeration;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -39,13 +38,13 @@ namespace VirtualDrive
             FileInfo remoteStorageItem = new FileInfo(Path.Combine(remoteStoragePath, fileMetadata.Name));
 
             // Upload file content to the remote storage.
-            await using (FileStream remoteStorageStream = remoteStorageItem.Open(FileMode.CreateNew, FileAccess.Write, FileShare.Delete))
+            using (FileStream remoteStorageStream = remoteStorageItem.Open(FileMode.CreateNew, FileAccess.Write, FileShare.Delete))
             {
                 if (content != null)
                 {
                     try
                     { 
-                        await content.CopyToAsync(remoteStorageStream, cancellationToken);
+                        await content.CopyToAsync(remoteStorageStream);
                     }
                     catch (OperationCanceledException)
                     {
@@ -116,12 +115,17 @@ namespace VirtualDrive
             var watch = System.Diagnostics.Stopwatch.StartNew();
             IEnumerable<FileSystemItemMetadataExt> remoteStorageChildren = await EnumerateChildrenAsync(pattern, cancellationToken);
 
+            foreach(FileSystemItemMetadataExt child in remoteStorageChildren)
+            {
+                Logger.LogDebug("Creating", child.Name);
+            }
+
             long totalCount = remoteStorageChildren.Count();
 
             // To signal that the children enumeration is completed 
             // always call ReturnChildren(), even if the folder is empty.
             await resultContext.ReturnChildrenAsync(remoteStorageChildren.ToArray(), totalCount);
-            Engine.LogMessage($"Listed {totalCount} item(s). Took: {watch.ElapsedMilliseconds:N0}ms", UserFileSystemPath);
+            Engine.LogDebug($"Listed {totalCount} item(s). Took: {watch.ElapsedMilliseconds:N0}ms", UserFileSystemPath);
 
             // Save data that you wish to display in custom columns here.
             //foreach (FileSystemItemMetadataExt itemMetadata in userFileSystemChildren)

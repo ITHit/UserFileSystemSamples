@@ -75,7 +75,11 @@ namespace VirtualDrive
 
                 if (remoteStorageOldItem is FileInfo)
                 {
-                    (remoteStorageOldItem as FileInfo).MoveTo(remoteStorageNewPath, true);
+                    if (File.Exists(remoteStorageNewPath))
+                    {
+                        File.Delete(remoteStorageNewPath);
+                    }
+                    (remoteStorageOldItem as FileInfo).MoveTo(remoteStorageNewPath);
                 }
                 else
                 {
@@ -140,6 +144,95 @@ namespace VirtualDrive
                 Logger.LogMessage("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
             }
         }
+
+        /// <inheritdoc/>
+        public async Task<byte[]> GetThumbnailAsync(uint size)
+        {
+            // For this method to be called you need to register a thumbnail handler.
+            // See method description for more details.
+
+            string remoteStorageItemPath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            byte[] thumbnail = ThumbnailExtractor.GetRemoteThumbnail(remoteStorageItemPath, size);
+
+            string thumbnailResult = thumbnail != null ? "Success" : "Not Impl";
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(GetThumbnailAsync)}() - {thumbnailResult}", UserFileSystemPath);
+
+            return thumbnail;
+        }
+
+        
+        /// <inheritdoc/>
+        public async Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync()
+        {
+            // For this method to be called you need to register a properties handler.
+            // See method description for more details.
+
+            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(GetPropertiesAsync)}()", UserFileSystemPath);
+
+            IList<FileSystemItemPropertyData> props = new List<FileSystemItemPropertyData>();
+
+            if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
+            {
+
+                // Read LockInfo.
+                if (placeholder.Properties.TryGetValue("LockInfo", out IDataItem propLockInfo))
+                {
+                    if (propLockInfo.TryGetValue<ServerLockInfo>(out ServerLockInfo lockInfo))
+                    {
+                        // Get Lock Owner.
+                        FileSystemItemPropertyData propertyLockOwner = new FileSystemItemPropertyData()
+                        {
+                            Id = (int)CustomColumnIds.LockOwnerIcon,
+                            Value = lockInfo.Owner,
+                            IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, "Locked.ico")
+                        };
+                        props.Add(propertyLockOwner);
+
+                        // Get Lock Expires.
+                        FileSystemItemPropertyData propertyLockExpires = new FileSystemItemPropertyData()
+                        {
+                            Id = (int)CustomColumnIds.LockExpirationDate,
+                            Value = lockInfo.LockExpirationDateUtc.ToString(),
+                            IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, "Empty.ico")
+                        };
+                        props.Add(propertyLockExpires);
+                    }
+                }
+
+                // Read LockMode.
+                if (placeholder.Properties.TryGetValue("LockMode", out IDataItem propLockMode))
+                {
+                    if (propLockMode.TryGetValue<LockMode>(out LockMode lockMode) && lockMode != LockMode.None)
+                    {
+                        FileSystemItemPropertyData propertyLockMode = new FileSystemItemPropertyData()
+                        {
+                            Id = (int)CustomColumnIds.LockScope,
+                            Value = "Locked",
+                            IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, "Empty.ico")
+                        };
+                        props.Add(propertyLockMode);
+                    }
+                }
+
+                // Read ETag.
+                if (placeholder.Properties.TryGetValue("ETag", out IDataItem propETag))
+                {
+                    if (propETag.TryGetValue<string>(out string eTag))
+                    {
+                        FileSystemItemPropertyData propertyETag = new FileSystemItemPropertyData()
+                        {
+                            Id = (int)CustomColumnIds.ETag,
+                            Value = eTag,
+                            IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, "Empty.ico")
+                        };
+                        props.Add(propertyETag);
+                    }
+                }
+            }
+
+            return props;
+        }
+        
 
         ///<inheritdoc>
         public Task<IFileSystemItemMetadata> GetMetadataAsync()

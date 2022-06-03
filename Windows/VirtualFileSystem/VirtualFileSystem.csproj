@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0-windows10.0.18362</TargetFramework>
-    <CsWinRTWindowsMetadata>10.0.18362.0</CsWinRTWindowsMetadata>
+    <TargetFrameworks>net48;net5.0-windows10.0.19041.0</TargetFrameworks>
     <Authors>IT Hit LTD.</Authors>
     <Company>IT Hit LTD.</Company>
     <Product>Virtual File System</Product>

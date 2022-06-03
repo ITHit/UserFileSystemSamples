@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Enumeration;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -37,7 +36,7 @@ namespace VirtualFileSystem
             FileInfo remoteStorageNewItem = new FileInfo(Path.Combine(remoteStoragePath, fileMetadata.Name));
 
             // Create remote storage file.
-            await using (FileStream remoteStorageStream = remoteStorageNewItem.Open(FileMode.CreateNew, FileAccess.Write, FileShare.Delete))
+            using (FileStream remoteStorageStream = remoteStorageNewItem.Open(FileMode.CreateNew, FileAccess.Write, FileShare.Delete))
             {
                 // Upload content. Note that if the file is blocked - content parameter is null.
                 if (content != null)

@@ -4,7 +4,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 
-using ITHit.FileSystem.Samples.Common.Windows.ShellExtension.Interop;
+using ITHit.FileSystem.Windows.ShellExtension.Interop;
 
 namespace VirtualDrive
 {
@@ -13,14 +13,12 @@ namespace VirtualDrive
         /// <summary>
         /// Generates thumbnail for a file using existing local registered thumbnail handler if any.
         /// </summary>
-        /// <param name="userFileSystemPath">File path in user file system to generate thumbnail for.</param>
+        /// <param name="path">Path to get thumbnail for.</param>
         /// <param name="size">The maximum thumbnail size, in pixels.</param>
         /// <returns>Returns a thumbnail bitmap or null if the thumbnail handler is not found.</returns>
-        public static byte[] GetThumbnail(string userFileSystemPath, uint size)
+        public static byte[] GetRemoteThumbnail(string path, uint size)
         {
-            string remoteStorageItemPath = Mapping.MapPath(userFileSystemPath);
-
-            using (Bitmap bitmap = GetThumbnailBitmap(remoteStorageItemPath, size))
+            using (Bitmap bitmap = GetThumbnailBitmap(path, size))
             {
                 if (bitmap == null)
                 {
@@ -43,6 +41,11 @@ namespace VirtualDrive
 
             try
             {
+                if (filePath.StartsWith(@"\\"))
+                {
+                    filePath = filePath.Remove(0, 4);
+                }
+
                 uint itemResult = Shell32.SHCreateItemFromParsingName(filePath, null, typeof(IShellItem).GUID,
                     out destinationItem);
 

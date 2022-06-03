@@ -31,13 +31,13 @@ namespace WebDAVDrive
         /// <inheritdoc/>
         public async Task OpenCompletionAsync(IOperationContext operationContext, IResultContext context, CancellationToken cancellationToken)
         {
-            Logger.LogMessage($"{nameof(IFileWindows)}.{nameof(OpenCompletionAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogDebug($"{nameof(IFileWindows)}.{nameof(OpenCompletionAsync)}()", UserFileSystemPath, default, operationContext);
         }
 
         /// <inheritdoc/>
         public async Task CloseCompletionAsync(IOperationContext operationContext, IResultContext context, CancellationToken cancellationToken)
         {
-            Logger.LogMessage($"{nameof(IFileWindows)}.{nameof(CloseCompletionAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogDebug($"{nameof(IFileWindows)}.{nameof(CloseCompletionAsync)}()", UserFileSystemPath, default, operationContext);
         }
 
         /// <inheritdoc/>
@@ -58,7 +58,7 @@ namespace WebDAVDrive
 
             // Buffer size must be multiple of 4096 bytes for optimal performance.
             const int bufferSize = 0x500000; // 5Mb.
-            using (Client.IWebResponse response = await Program.DavClient.DownloadAsync(new Uri(RemoteStoragePath), offset, length))
+            using (Client.IWebResponse response = await Program.DavClient.DownloadAsync(new Uri(RemoteStoragePath), offset, length, cancellationToken))
             {
                 using (Stream stream = await response.GetResponseStreamAsync())
                 {
@@ -136,7 +136,7 @@ namespace WebDAVDrive
                     // Setting position to 0 is required in case of retry.
                     content.Position = 0;
                     await content.CopyToAsync(outputStream);
-                }, null, content.Length, 0, -1, lockTokens, oldEtag);
+                }, null, content.Length, 0, -1, lockTokens, oldEtag, cancellationToken);
 
                 await placeholder.Properties.AddOrUpdateAsync("ETag", newEtag);
             }

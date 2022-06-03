@@ -40,7 +40,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             string fileName = Path.GetFileNameWithoutExtension(path);
             string extension = Path.GetExtension(path);
-            return (fileName.StartsWith('~') && extension.Equals(".tmp", StringComparison.InvariantCultureIgnoreCase))    // Word temp files
+            return (fileName.StartsWith("~") && extension.Equals(".tmp", StringComparison.InvariantCultureIgnoreCase))    // Word temp files
                 || (fileName.StartsWith("ppt") && extension.Equals(".tmp", StringComparison.InvariantCultureIgnoreCase))  // PowerPoint temp files
                 || (string.IsNullOrEmpty(extension) && (fileName.Length == 8) && System.IO.File.Exists(path))             // Excel temp files type 1
                 || (((fileName.Length == 8) || (fileName.Length == 7)) && extension.Equals(".tmp", StringComparison.InvariantCultureIgnoreCase));   // Excel temp files type 2

@@ -1,0 +1,77 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:desktop3="http://schemas.microsoft.com/appx/manifest/desktop/windows10/3"
+  xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
+  xmlns:desktop6="http://schemas.microsoft.com/appx/manifest/desktop/windows10/6"
+  xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  IgnorableNamespaces="uap rescap uap10">
+
+  <Identity
+    Name="WebDAVDrive.SparsePackage"
+    Publisher="CN=IT Hit LTD"
+    Version="1.0.0.0" />
+
+  <Properties>
+    <DisplayName>WebDAV Drive sparse package</DisplayName>
+    <PublisherDisplayName>IT Hit LTD</PublisherDisplayName>
+    <Logo>stub.png</Logo>
+    <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
+    <desktop6:RegistryWriteVirtualization>disabled</desktop6:RegistryWriteVirtualization>
+    <desktop6:FileSystemWriteVirtualization>disabled</desktop6:FileSystemWriteVirtualization>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.19041.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us"/>
+  </Resources>
+
+  <!-- The AppListEntry="none" prevents sparse package from appearing in the Windows Start menu. -->
+  <Applications>
+    <Application Id="WebDAVDrive" Executable="stub.exe" uap10:TrustLevel="mediumIL" uap10:RuntimeBehavior="win32App">
+      <uap:VisualElements
+        AppListEntry="none"
+        DisplayName="WebDAV Drive sparse package"
+        Description="WebDAV Drive sparse package"
+        BackgroundColor="transparent"
+        Square150x150Logo="stub.png"
+        Square44x44Logo="stub.png">
+      </uap:VisualElements>
+      <Extensions>
+        <desktop3:Extension Category="windows.cloudFiles">
+          <desktop3:CloudFiles>
+            <desktop3:CustomStateHandler Clsid="754F334F-095C-46CD-B033-B2C0523D2829"/>
+            <desktop3:ThumbnailProviderHandler Clsid="A5B0C82F-50AA-445C-A404-66DEB510E84B"/>
+
+            <desktop3:ExtendedPropertyHandler Clsid="20000000-0000-0000-0000-000000000001"/>
+            <desktop3:BannersHandler Clsid="20000000-0000-0000-0000-000000000001"/>
+
+            <desktop3:CloudFilesContextMenus>
+              <desktop3:Verb Id="LockCommand" Clsid="A22EBD03-343E-433C-98DF-372C6B3A1538" />
+            </desktop3:CloudFilesContextMenus>
+          </desktop3:CloudFiles>
+        </desktop3:Extension>
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="WebDAVDrive.ShellExtension.exe">
+              <com:Class Id="A22EBD03-343E-433C-98DF-372C6B3A1538" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <Capability Name="internetClient" />
+    <rescap:Capability Name="runFullTrust" />
+    <rescap:Capability Name="unvirtualizedResources" />
+  </Capabilities>
+</Package>

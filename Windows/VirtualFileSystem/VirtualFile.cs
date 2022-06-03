@@ -31,14 +31,14 @@ namespace VirtualFileSystem
         /// <inheritdoc/>
         public async Task OpenCompletionAsync(IOperationContext operationContext, IResultContext context, CancellationToken cancellationToken)
         {
-            Logger.LogMessage($"{nameof(IFileWindows)}.{nameof(OpenCompletionAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogDebug($"{nameof(IFileWindows)}.{nameof(OpenCompletionAsync)}()", UserFileSystemPath, default, operationContext);
         }
 
         
         /// <inheritdoc/>
         public async Task CloseCompletionAsync(IOperationContext operationContext, IResultContext context, CancellationToken cancellationToken)
         {
-            Logger.LogMessage($"{nameof(IFileWindows)}.{nameof(CloseCompletionAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogDebug($"{nameof(IFileWindows)}.{nameof(CloseCompletionAsync)}()", UserFileSystemPath, default, operationContext);
         }
         
 
@@ -52,7 +52,7 @@ namespace VirtualFileSystem
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
             string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
-            await using (FileStream stream = System.IO.File.OpenRead(remoteStoragePath))
+            using (FileStream stream = System.IO.File.OpenRead(remoteStoragePath))
             {
                 stream.Seek(offset, SeekOrigin.Begin);
                 const int bufferSize = 0x500000; // 5Mb. Buffer size must be multiple of 4096 bytes for optimal performance.
@@ -93,7 +93,7 @@ namespace VirtualFileSystem
             if (content != null)
             {
                 // Upload remote storage file content.
-                await using (FileStream remoteStorageStream = remoteStorageItem.Open(FileMode.Open, FileAccess.Write, FileShare.Delete))
+                using (FileStream remoteStorageStream = remoteStorageItem.Open(FileMode.Open, FileAccess.Write, FileShare.Delete))
                 {
                     await content.CopyToAsync(remoteStorageStream);
                     remoteStorageStream.SetLength(content.Length);

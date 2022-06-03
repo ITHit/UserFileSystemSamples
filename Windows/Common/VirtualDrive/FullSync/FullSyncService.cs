@@ -23,7 +23,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
     /// You can use this class in your project out of the box or replace it with a more advanced algorithm.
     /// This sample does not do UFS->RS sync for moved and deleted items. All items moved and deleted in user file system while the app is not running are lost.
     /// </remarks>
-    public class FullSyncService : Logger, IDisposable
+    public class FullSyncService : IDisposable
     {
         /// <summary>
         /// Current synchronization state.
@@ -38,30 +38,36 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <summary>
         /// Virtual drive instance to which this synchronization service belongs.
         /// </summary>
-        private VirtualEngineBase engine;
+        private readonly VirtualEngineBase engine;
+
+        /// <summary>
+        /// Logger.
+        /// </summary>
+        public readonly ILogger Logger;
 
         /// <summary>
         /// Timer to start synchronization.
         /// </summary>
-        private System.Timers.Timer timer = null;
+        private readonly System.Timers.Timer timer = null;
 
         /// <summary>
-        /// User file system path.
+        /// User file system root path.
         /// </summary>
-        private string userFileSystemRootPath;
+        private readonly string userFileSystemRootPath;
 
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="syncIntervalMs">Synchronization interval in milliseconds.</param>
         /// <param name="userFileSystemRootPath">User file system root path.</param>
-        /// <param name="log">Logger.</param>
-        internal FullSyncService(double syncIntervalMs, string userFileSystemRootPath, VirtualEngineBase engine, ILog log) : base("Sync Service", log)
+        /// <param name="logger">Logger.</param>
+        internal FullSyncService(double syncIntervalMs, string userFileSystemRootPath, VirtualEngineBase engine, ILogger logger)
         {
             timer = new System.Timers.Timer(syncIntervalMs);
             timer.Elapsed += Timer_ElapsedAsync;
             this.userFileSystemRootPath = userFileSystemRootPath;
             this.engine = engine;
+            this.Logger = logger.CreateLogger("Sync Service");
         }
 
         /// <summary>
@@ -74,11 +80,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 return;
             }
 
-            // Do not start next synchronyzation automatically, wait until previous synchronyzation completed.
+            // Do not start next synchronyzation automatically, wait until a previous synchronyzation is completed.
             timer.AutoReset = false; 
             timer.Start();
             InvokeSyncEvent(SynchronizationState.Enabled);
-            LogMessage("Started", userFileSystemRootPath);
+            Logger.LogMessage("Started", userFileSystemRootPath);
         }
 
         /// <summary>
@@ -93,7 +99,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
             timer.Stop();
             InvokeSyncEvent(SynchronizationState.Disabled);
-            LogMessage("Stopped", userFileSystemRootPath);
+            Logger.LogMessage("Stopped", userFileSystemRootPath);
         }
 
         private void InvokeSyncEvent(SynchronizationState newState) 
@@ -116,8 +122,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             {
                 InvokeSyncEvent(SynchronizationState.Synchronizing);
 
-                // UFS -> RS. Recursivery synchronize all updated/created file and folders present in the user file system.
-                //await new ClientToServerSync(engine, Log).SyncronizeFolderAsync(userFileSystemRootPath);
+                // UFS -> RS. Synchronize all created/updated/moved/deleted from the user file system to the remote storage.
+                await engine.ProcessAsync();
 
                 // UFS <- RS. Recursivery synchronize all updated/created/deleted file and folders present in the user file system.
                 //await new ServerToClientSync(engine, Log).SyncronizeFolderAsync(userFileSystemRootPath);
@@ -126,7 +132,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
             catch(Exception ex)
             {
-                LogError(null, null, null, ex);
+                Logger.LogError(null, null, null, ex);
             }
             finally
             {
@@ -137,7 +143,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
         private void Error(object sender, ErrorEventArgs e)
         {
-            LogError(null, null, null, e.GetException());
+            Logger.LogError(null, null, null, e.GetException());
         }
 
         private bool disposedValue = false; // To detect redundant calls
@@ -150,7 +156,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 {
                     timer.Stop();
                     timer.Dispose();
-                    LogMessage($"Disposed");
+                    Logger.LogMessage($"Disposed");
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.

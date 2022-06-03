@@ -4,20 +4,18 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
-using Windows.Storage;
 using Microsoft.Extensions.Configuration;
 
 using log4net;
-using log4net.Appender;
-using log4net.Config;
+
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
+using ITHit.FileSystem.Windows.ShellExtension;
 
 using ITHit.WebDAV.Client;
 using ITHit.WebDAV.Client.Exceptions;
@@ -37,25 +35,25 @@ namespace WebDAVDrive
         internal static AppSettings Settings;
 
         /// <summary>
-        /// Processes OS file system calls, 
-        /// synchronizes user file system to remote storage. 
-        /// </summary>
-        internal static VirtualEngine Engine;
-
-        /// <summary>
-        /// WebDAV client for accessing the WebDAV server.
-        /// </summary>
-        internal static WebDavSession DavClient;
-
-        /// <summary>
         /// Log4Net logger.
         /// </summary>
         private static readonly ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         /// <summary>
-        /// Log file path.
+        /// Processes OS file system calls, 
+        /// synchronizes user file system to remote storage. 
         /// </summary>
-        private static string LogFilePath;
+        private static VirtualEngine Engine;
+
+        /// <summary>
+        /// Outputs logging information.
+        /// </summary>
+        private static LogFormatter logFormatter;
+
+        /// <summary>
+        /// WebDAV client for accessing the WebDAV server.
+        /// </summary>
+        internal static WebDavSession DavClient;
 
         /// <summary>
         /// Event to be fired when the tray app exits or an exit key in the console is selected.
@@ -72,68 +70,75 @@ namespace WebDAVDrive
         /// </summary>
         private static uint loginRetriesCurrent = 0;
 
+
         static async Task Main(string[] args)
         {
+            // In a real world application the user system should have trusted certificate installed or an installer (msi) should install it.
+            // This method should be omitted for packaged application.
+            CertificateRegistrar.InstallDeveloperCertificate();
+
+            // In the case of a regular installer (msi) call this method during installation.
+            // This method should be omitted for packaged application.
+            await PackageRegistrar.RegisterSparsePackageAsync();
+
             // Load Settings.
-            IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
-            Settings = configuration.ReadSettings();
+            Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
 
-            // Configure log4net and set log file path.
-            LogFilePath = ConfigureLogger();
+            logFormatter = new LogFormatter(log, Settings.AppID);
 
-            PrintHelp();
-
-            // Register sync root and create app folders.
-            await RegisterSyncRootAsync();
-
-            // Log indexed state.
-            StorageFolder userFileSystemRootFolder = await StorageFolder.GetFolderFromPathAsync(Settings.UserFileSystemRootPath);
-            log.Info($"\nIndexed state: {(await userFileSystemRootFolder.GetIndexedStateAsync())}\n");
-
-            Logger.PrintHeader(log);
-
-            using (DavClient = ConfigureWebDavSession())
+            try
             {
-                try
+                // Log environment description.
+                logFormatter.PrintEnvironmentDescription();
+
+                // Register sync root and create app folders.
+                await RegisterSyncRootAsync();
+
+                // Log indexing state. Sync root must be indexed.
+                await logFormatter.PrintIndexingStateAsync(Settings.UserFileSystemRootPath);
+
+                // Log console commands.
+                logFormatter.PrintHelp();
+
+                // Log logging columns headers.
+                logFormatter.PrintHeader();
+
+                using (DavClient = ConfigureWebDavSession())
                 {
-                    Engine = new VirtualEngine(
+                    using (Engine = new VirtualEngine(
                         Settings.UserFileSystemLicense,
                         Settings.UserFileSystemRootPath,
                         Settings.WebDAVServerUrl,
                         Settings.WebSocketServerUrl,
                         Settings.IconsFolderPath,
-                        Settings.RpcCommunicationChannelName,
                         Settings.SyncIntervalMs,
-                        Settings.MaxDegreeOfParallelism,
-                        log);
-                    Engine.AutoLock = Settings.AutoLock;
+                        logFormatter))
+                    {
+                        Engine.AutoLock = Settings.AutoLock;
 
-                    // Start tray application in a separate thread.
-                    WindowsTrayInterface.CreateTrayInterface(Settings.ProductName, Engine, exitEvent);
+                        // Start tray application in a separate thread.
+                        WindowsTrayInterface.CreateTrayInterface(Settings.ProductName, Engine, exitEvent);
 
-                    // Start processing OS file system calls.
-                    await Engine.StartAsync();
+                        // Start processing OS file system calls.
+                        await Engine.StartAsync();
 
 #if DEBUG
-                    // Opens Windows File Manager with user file system folder and remote storage folder.
-                    ShowTestEnvironment();
+                        // Opens Windows File Manager with user file system folder and remote storage folder.
+                        ShowTestEnvironment();
 #endif
-                    // Read console input in a separate thread.
-                    await ConsoleReadKeyAsync();
+                        // Read console input in a separate thread.
+                        await ConsoleReadKeyAsync();
 
-                    // Keep this application running and reading user input
-                    // untill the tray app exits or an exit key in the console is selected. 
-                    exitEvent.WaitOne();
+                        // Keep this application running and reading user input
+                        // untill the tray app exits or an exit key in the console is selected. 
+                        exitEvent.WaitOne();
+                    }
                 }
-                catch (Exception ex)
-                {
-                    log.Error(ex);
-                    await ProcessUserInputAsync();
-                }
-                finally
-                {
-                    Engine.Dispose();
-                }
+            }
+            catch (Exception ex)
+            {
+                log.Error(ex);
+                await ProcessUserInputAsync();
             }
         }
 
@@ -146,48 +151,6 @@ namespace WebDAVDrive
             });
             readKeyThread.IsBackground = true;
             readKeyThread.Start();
-        }
-
-#if DEBUG
-        /// <summary>
-        /// Opens Windows File Manager with both remote storage and user file system for testing.
-        /// </summary>
-        /// <remarks>This method is provided solely for the development and testing convenience.</remarks>
-        private static void ShowTestEnvironment()
-        {
-            // Enable UTF8 for Console Window and set width.
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
-            Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight / 3);
-            Console.SetBufferSize(Console.LargestWindowWidth * 2, Console.BufferHeight);
-
-            // Open Windows File Manager with user file system.
-            ProcessStartInfo ufsInfo = new ProcessStartInfo(Program.Settings.UserFileSystemRootPath);
-            ufsInfo.UseShellExecute = true; // Open window only if not opened already.
-            using (Process ufsWinFileManager = Process.Start(ufsInfo))
-            {
-
-            }
-
-            // Open web browser with WebDAV content.
-            ProcessStartInfo rsInfo = new ProcessStartInfo(Program.Settings.WebDAVServerUrl);
-            rsInfo.UseShellExecute = true; // Open window only if not opened already.
-            using (Process rsWinFileManager = Process.Start(rsInfo))
-            {
-
-            }
-        }
-#endif
-
-        /// <summary>
-        /// Gets automatically generated Sync Root ID.
-        /// </summary>
-        /// <remarks>An identifier in the form: [Storage Provider ID]![Windows SID]![Account ID]</remarks>
-        private static string SyncRootId
-        {
-            get
-            {
-                return $"{Settings.AppID}!{System.Security.Principal.WindowsIdentity.GetCurrent().User}!User";
-            }
         }
 
         /// <summary>
@@ -217,10 +180,18 @@ namespace WebDAVDrive
         private static void DavClient_WebDAVMessage(ISession client, WebDavMessageEventArgs e)
         {
             string msg = $"\n{e.Message}";
-            //if (e.LogLevel == LogLevel.Debug)
-            //    log.Debug($"{msg}\n");
-            //else
+
+            if(logFormatter.DebugLoggingEnabled)
+            {
+                log.Debug($"{msg}\n");
+            }
+
+            /*
+            if (e.LogLevel == ITHit.WebDAV.Client.Logger.LogLevel.Debug)
+                log.Debug($"{msg}\n");
+            else
                 log.Info($"{msg}\n");
+            */
         }
 
         /// <summary>
@@ -318,55 +289,21 @@ namespace WebDAVDrive
             }
         }
 
-        /// <summary>
-        /// Configures log4net logger.
-        /// </summary>
-        /// <returns>Log file path.</returns>
-        private static string ConfigureLogger()
-        {
-            // Load Log4Net for net configuration.
-            var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
-            XmlConfigurator.Configure(logRepository, new FileInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "log4net.config")));
-
-            // Update log file path for msix package. 
-            RollingFileAppender rollingFileAppender = logRepository.GetAppenders().Where(p => p.GetType() == typeof(RollingFileAppender)).FirstOrDefault() as RollingFileAppender;
-            if (rollingFileAppender != null && rollingFileAppender.File.Contains("WindowsApps"))
-            {
-                rollingFileAppender.File = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), Settings.AppID,
-                                                        Path.GetFileName(rollingFileAppender.File));
-            }
-            return rollingFileAppender?.File;
-        }
-
-        private static void PrintHelp()
-        {
-            log.Info($"\n{"AppID:",-15} {Settings.AppID}");
-            log.Info($"\n{"Engine version:",-15} {typeof(IEngine).Assembly.GetName().Version}");
-            log.Info($"\n{"OS version:",-15} {RuntimeInformation.OSDescription}");
-            log.Info($"\n{"Env version:",-15} {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
-            log.Info("\n\nPress Esc to unregister file system, delete all files/folders and exit (simulate uninstall).");
-            log.Info("\nPress Spacebar to exit without unregistering (simulate reboot).");
-            log.Info("\nPress 'e' to start/stop the Engine and all sync services.");
-            log.Info("\nPress 's' to start/stop full synchronization service.");
-            log.Info("\nPress 'm' to start/stop remote storage monitor.");
-            log.Info($"\nPress 'l' to open log file. ({LogFilePath})");
-            log.Info($"\nPress 'b' to submit support tickets, report bugs, suggest features. (https://userfilesystem.com/support/)");
-            log.Info("\n----------------------\n");
-        }
-
         private static async Task ProcessUserInputAsync()
         {
             do
             {
-                switch (Console.ReadKey(true).KeyChar)
+                ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+
+                switch (keyInfo.Key)
                 {
-                    case (char)ConsoleKey.F1:
-                    case 'h':
+                    case ConsoleKey.F1:
+                    case ConsoleKey.H:
                         // Print help info.
-                        PrintHelp();
+                        logFormatter.PrintHelp();
                         break;
 
-                    case 'e':
+                    case ConsoleKey.E:
                         // Start/stop the Engine and all sync services.
                         if (Engine.State == EngineState.Running)
                         {
@@ -378,13 +315,13 @@ namespace WebDAVDrive
                         }
                         break;
 
-                    case 's':
+                    case ConsoleKey.S:
                         // Start/stop full synchronization.
                         if (Engine.SyncService.SyncState == SynchronizationState.Disabled)
                         {
                             if (Engine.State != EngineState.Running)
                             {
-                                Engine.SyncService.LogError("Failed to start. The Engine must be running.");
+                                Engine.SyncService.Logger.LogError("Failed to start. The Engine must be running.");
                                 break;
                             }
                             await Engine.SyncService.StartAsync();
@@ -395,13 +332,18 @@ namespace WebDAVDrive
                         }
                         break;
 
-                    case 'm':
+                    case ConsoleKey.D:
+                        // Enables/disables debug logging.
+                        logFormatter.DebugLoggingEnabled = !logFormatter.DebugLoggingEnabled;
+                        break;
+
+                    case ConsoleKey.M:
                         // Start/stop remote storage monitor.
                         if (Engine.RemoteStorageMonitor.SyncState == SynchronizationState.Disabled)
                         {
                             if (Engine.State != EngineState.Running)
                             {
-                                Engine.RemoteStorageMonitor.LogError("Failed to start. The Engine must be running.");
+                                Engine.RemoteStorageMonitor.Logger.LogError("Failed to start. The Engine must be running.");
                                 break;
                             }
                             await Engine.RemoteStorageMonitor.StartAsync();
@@ -412,16 +354,16 @@ namespace WebDAVDrive
                         }
                         break;
 
-                    case 'l':
+                    case ConsoleKey.L:
                         // Open log file.
-                        ProcessStartInfo psiLog = new ProcessStartInfo(LogFilePath);
+                        ProcessStartInfo psiLog = new ProcessStartInfo(logFormatter.LogFilePath);
                         psiLog.UseShellExecute = true;
                         using (Process.Start(psiLog))
                         {
                         }
                         break;
 
-                    case 'b':
+                    case ConsoleKey.B:
                         // Submit support tickets, report bugs, suggest features.
                         ProcessStartInfo psiSupport = new ProcessStartInfo("https://www.userfilesystem.com/support/");
                         psiSupport.UseShellExecute = true;
@@ -430,32 +372,38 @@ namespace WebDAVDrive
                         }
                         break;
 
-                    case 'q':
-                        // Unregister during programm uninstall.
-                        Engine.Dispose();
-                        await UnregisterSyncRootAsync();
-                        log.Info("\nAll empty file and folder placeholders are deleted. Hydrated placeholders are converted to regular files / folders.\n");
-                        return;
-
-                    case (char)ConsoleKey.Escape:
-                    case 'Q':
-                        Engine.Dispose();
+                    case ConsoleKey.Escape:
+                        if (Engine.State == EngineState.Running)
+                        {
+                            await Engine.StopAsync();
+                        }
 
                         // Call the code below during programm uninstall using classic msi.
                         await UnregisterSyncRootAsync();
 
                         // Delete all files/folders.
                         await CleanupAppFoldersAsync();
+
+                        // Unregister sparse package.
+                        await UnregisterSparsePackageAsync();
                         return;
 
-                    case (char)ConsoleKey.Spacebar:
+                    case ConsoleKey.Spacebar:
+                        if (Engine.State == EngineState.Running)
+                        {
+                            await Engine.StopAsync();
+                        }
                         log.Info("\n\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.\n");
                         return;
+
+                    case ConsoleKey.P:
+                        // Unregister sparse package.
+                        await UnregisterSparsePackageAsync();
+                        break;
 
                     default:
                         break;
                 }
-
 
             } while (true);
         }
@@ -471,14 +419,13 @@ namespace WebDAVDrive
         {
             if (!await Registrar.IsRegisteredAsync(Settings.UserFileSystemRootPath))
             {
-                log.Info($"\nRegistering {Settings.UserFileSystemRootPath} sync root.");
+                log.Info($"\n\nRegistering {Settings.UserFileSystemRootPath} sync root.");
                 Directory.CreateDirectory(Settings.UserFileSystemRootPath);
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
                     Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
 
-                log.Info("\nRegistering shell extensions...\n");
-                ShellExtensionRegistrar.Register(SyncRootId);
+                ShellExtensionRegistrar.Register(SyncRootId, log);
             }
             else
             {
@@ -503,8 +450,7 @@ namespace WebDAVDrive
             log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
             await Registrar.UnregisterAsync(SyncRootId);
 
-            log.Info("\nUnregistering shell extensions...\n");
-            ShellExtensionRegistrar.Unregister();
+            ShellExtensionRegistrar.Unregister(log);
         }
 
         private static async Task CleanupAppFoldersAsync()
@@ -526,6 +472,55 @@ namespace WebDAVDrive
             catch (Exception ex)
             {
                 log.Error($"\n{ex}");
+            }
+        }
+        private static async Task UnregisterSparsePackageAsync()
+        {
+            // Unregister sparse package.
+            log.Info("\nUnregistering sparse package...");
+            await PackageRegistrar.UnregisterSparsePackageAsync(SyncRootId);
+            log.Info("\nSparse package unregistered sucessfully.");
+        }
+
+#if DEBUG
+        /// <summary>
+        /// Opens Windows File Manager with both remote storage and user file system for testing.
+        /// </summary>
+        /// <remarks>This method is provided solely for the development and testing convenience.</remarks>
+        private static void ShowTestEnvironment()
+        {
+            // Enable UTF8 for Console Window and set width.
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight / 3);
+            Console.SetBufferSize(Console.LargestWindowWidth * 2, Console.BufferHeight);
+
+            // Open Windows File Manager with user file system.
+            ProcessStartInfo ufsInfo = new ProcessStartInfo(Program.Settings.UserFileSystemRootPath);
+            ufsInfo.UseShellExecute = true; // Open window only if not opened already.
+            using (Process ufsWinFileManager = Process.Start(ufsInfo))
+            {
+
+            }
+
+            // Open web browser with WebDAV content.
+            ProcessStartInfo rsInfo = new ProcessStartInfo(Program.Settings.WebDAVServerUrl);
+            rsInfo.UseShellExecute = true; // Open window only if not opened already.
+            using (Process rsWinFileManager = Process.Start(rsInfo))
+            {
+
+            }
+        }
+#endif
+
+        /// <summary>
+        /// Gets automatically generated Sync Root ID.
+        /// </summary>
+        /// <remarks>An identifier in the form: [Storage Provider ID]![Windows SID]![Account ID]</remarks>
+        private static string SyncRootId
+        {
+            get
+            {
+                return $"{Settings.AppID}!{System.Security.Principal.WindowsIdentity.GetCurrent().User}!User";
             }
         }
     }

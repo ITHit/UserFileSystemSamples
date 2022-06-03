@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Windows.Storage;
 using FileAttributes = System.IO.FileAttributes;
-using ITHit.FileSystem.Windows;
 
 namespace ITHit.FileSystem.Samples.Common.Windows
 {

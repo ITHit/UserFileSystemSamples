@@ -6,9 +6,9 @@ using log4net;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
-using ITHit.FileSystem.Samples.Common.Windows.Rpc;
 using System.Collections.Generic;
 using System.Threading;
+
 
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
@@ -22,14 +22,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
         /// <summary>
         /// Full synchronization service.
-        /// In case any changes are lost (app restart, lost connection, etc.) this service will sync all changes.
+        /// In case any changes are lost (the file is blocked, app restart, lost connection, etc.) this service will sync all changes.
         /// </summary>
         public readonly FullSyncService SyncService;
-
-        /// <summary>
-        /// Logger.
-        /// </summary>
-        private readonly ILogger logger;
 
         /// <summary>
         /// Path to the icons folder.
@@ -37,10 +32,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         private readonly string iconsFolderPath;
 
         /// <summary>
-        /// Grpc server control to communicate with Windows Explorer 
-        /// context menu and other components on this machine.
+        /// Folder that contains images displayed in Status column, context menu, etc. 
         /// </summary>
-        private readonly GrpcServer grpcServer;
+        public string IconsFolderPath => iconsFolderPath;
+
+        //public abstract IMapping Mapping { get; }
 
         /// <summary>
         /// Creates a vitual file system Engine.
@@ -52,40 +48,31 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </param>
         /// <param name="remoteStorageRootPath">Path to the remote storage root.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
-        /// <param name="rpcCommunicationChannelName">Channel name to communicate with Windows Explorer context menu and other components on this machine.</param>
         /// <param name="syncIntervalMs">Full synchronization interval in milliseconds.</param>
-        /// <param name="maxDegreeOfParallelism">A maximum number of concurrent tasks.</param>
-        /// <param name="log4net">Log4net logger.</param>
+        /// <param name="logFormatter">Logger.</param>
         public VirtualEngineBase(
             string license, 
             string userFileSystemRootPath, 
             string remoteStorageRootPath, 
             string iconsFolderPath, 
-            string rpcCommunicationChannelName,
             double syncIntervalMs,
-            int maxDegreeOfParallelism,
-            ILog log4net) 
-            : base(license, userFileSystemRootPath, maxDegreeOfParallelism)
+            LogFormatter logFormatter) 
+            : base(license, userFileSystemRootPath)
         {
-            logger = new Logger("File System Engine", log4net) ?? throw new NullReferenceException(nameof(log4net));
             this.iconsFolderPath = iconsFolderPath ?? throw new NullReferenceException(nameof(iconsFolderPath));
-            this.grpcServer = new GrpcServer(rpcCommunicationChannelName, this, log4net);
 
             // We want our file system to run regardless of any errors.
             // If any request to file system fails in user code or in Engine itself we continue processing.
             ThrowExceptions = false;
 
             StateChanged += Engine_StateChanged;
-            Error += Engine_Error;
-            Message += Engine_Message;
+            Error += logFormatter.LogError;
+            Message += logFormatter.LogMessage;
+            Debug += logFormatter.LogDebug;
 
             //RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log4net);
-            SyncService = new FullSyncService(syncIntervalMs, userFileSystemRootPath, this, log4net);
+            SyncService = new FullSyncService(syncIntervalMs, userFileSystemRootPath, this, this.Logger);
         }
-
-        //public abstract IMapping Mapping { get; }
-
-        public string IconsFolderPath => iconsFolderPath;
 
         /// <inheritdoc/>
         public override async Task<bool> FilterAsync(OperationType operationType, string userFileSystemPath, string userFileSystemNewPath = null, IOperationContext operationContext = null)
@@ -127,8 +114,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             await base.StartAsync(processModified, cancellationToken);
             //RemoteStorageMonitor.Start();
-            //await SyncService.StartAsync();
-            grpcServer.Start();
+            await SyncService.StartAsync();
         }
 
         public override async Task StopAsync()
@@ -136,17 +122,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             await base.StopAsync();
             //RemoteStorageMonitor.Stop();
             await SyncService.StopAsync();
-            grpcServer.Stop();
-        }
-
-        private void Engine_Message(IEngine sender, EngineMessageEventArgs e)
-        {
-            logger.LogMessage(e.Message, e.SourcePath, e.TargetPath, e.OperationContext);
-        }
-
-        private void Engine_Error(IEngine sender, EngineErrorEventArgs e)
-        {
-            logger.LogError(e.Message, e.SourcePath, e.TargetPath, e.Exception, e.OperationContext);
         }
 
         /// <summary>
@@ -159,28 +134,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             engine.LogMessage($"{e.NewState}");
         }
 
-        /// <summary>
-        /// Gets thumbnail.
-        /// </summary>
-        /// <param name="userFileSystemPath">Path in the user file system.</param>
-        /// <param name="size">Thumbnail size in pixels.</param>
-        /// <remarks>
-        /// Throws <see cref="NotImplementedException"/> if thumbnail is not available.
-        /// </remarks>
-        /// <returns>
-        /// Thumbnail bitmap or null if no thumbnail should be displayed in the file manager for this item.
-        /// </returns>
-        public abstract Task<byte[]> GetThumbnailAsync(string userFileSystemPath, uint size);
-
-        /// <summary>
-        /// Gets list of item properties.
-        /// </summary>
-        /// <param name="userFileSystemPath">Path in the user file system.</param>
-        /// <returns>
-        /// List of properties to be displayed in the file manager that correspond to the path 
-        /// provided in the <paramref name="userFileSystemPath"/> parameter.
-        /// </returns>
-        public abstract Task<IEnumerable<FileSystemItemPropertyData>> GetItemPropertiesAsync(string userFileSystemPath);
 
         private bool disposedValue;
 
@@ -192,7 +145,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 {
                     //RemoteStorageMonitor.Dispose();
                     SyncService.Dispose();
-                    grpcServer.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer

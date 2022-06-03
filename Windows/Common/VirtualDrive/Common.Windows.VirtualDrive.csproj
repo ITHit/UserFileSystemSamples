@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net5.0-windows10.0.18362.0</TargetFramework>
-    <CsWinRTWindowsMetadata>10.0.18362.0</CsWinRTWindowsMetadata>
+    <TargetFrameworks>net48;net5.0-windows10.0.19041.0</TargetFrameworks>
     <Description>Contains functionality common for all Windows Virtual Drive samples.</Description>
     <Authors>IT Hit LTD.</Authors>
     <Product>IT Hit User File System</Product>
@@ -19,13 +18,8 @@
     <Compile Remove="LockManager.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="log4net" Version="2.0.13" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="4.4.14432.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="5.0.14726.0-Beta" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Core\Common.Windows.Core.csproj" />
-    <ProjectReference Include="..\Rpc.Proto\Common.Windows.Rpc.Proto.csproj" />
   </ItemGroup>
 </Project>

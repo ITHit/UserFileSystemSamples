@@ -47,15 +47,5 @@ namespace ITHit.FileSystem.Samples.Common
         /// Automatically lock the file in the remote storage when a file handle is being opened for writing, unlock on close.
         /// </summary>
         public bool AutoLock { get; set; }
-
-        /// <summary>
-        /// Communication channel name is used by RPC to establish connection over named pipes.
-        /// </summary>
-        public string RpcCommunicationChannelName { get; set; }
-
-        /// <summary>
-        /// Gets or sets the maximum number of concurrent tasks
-        /// </summary>
-        public int MaxDegreeOfParallelism { get; set; }
     }
 }

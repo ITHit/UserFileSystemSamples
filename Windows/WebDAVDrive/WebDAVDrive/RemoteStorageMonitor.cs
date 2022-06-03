@@ -21,7 +21,7 @@ namespace WebDAVDrive
     /// If any file or folder is modified, created, delated, renamed or attributes changed in the remote storage, 
     /// triggers an event with information about changes being made.
     /// </summary>
-    internal class RemoteStorageMonitor : Logger, IDisposable
+    internal class RemoteStorageMonitor : IDisposable
     {
         /// <summary>
         /// Current synchronization state.
@@ -38,8 +38,9 @@ namespace WebDAVDrive
         }
 
         /// <summary>
-        /// Gets or sets a value that indicates whether to send an authenticate header with the websocket.
+        /// Logger.
         /// </summary>
+        public readonly ILogger Logger;
 
         /// <summary>
         /// WebSocket client.
@@ -67,11 +68,12 @@ namespace WebDAVDrive
         /// </summary>
         /// <param name="webSocketServerUrl">WebSocket server url.</param>
         /// <param name="engine">Engine to send notifications about changes in the remote storage.</param>
-        /// <param name="log">Logger.</param>
-        internal RemoteStorageMonitor(string webSocketServerUrl, VirtualEngine engine, ILog log) : base("Remote Storage Monitor", log)
+        /// <param name="logger">Logger.</param>
+        internal RemoteStorageMonitor(string webSocketServerUrl, VirtualEngine engine, ILogger logger)
         {
             this.webSocketServerUrl = webSocketServerUrl;
             this.engine = engine;
+            this.Logger = logger.CreateLogger("Remote Storage Monitor");
         }
 
         /// <summary>
@@ -86,7 +88,7 @@ namespace WebDAVDrive
 
             await clientWebSocket.ConnectAsync(new Uri(webSocketServerUrl), CancellationToken.None);
 
-            LogMessage("Started", webSocketServerUrl);
+            Logger.LogMessage("Started", webSocketServerUrl);
 
             var rcvBuffer = new ArraySegment<byte>(new byte[2048]);
             while (true)
@@ -119,7 +121,7 @@ namespace WebDAVDrive
                           // Start socket after first success webdav propfind. Restart socket when it disconnects.
                           if (clientWebSocket != null && clientWebSocket?.State != WebSocketState.Closed)
                           {
-                              LogError(e.Message, webSocketServerUrl);
+                              Logger.LogError(e.Message, webSocketServerUrl);
                           }
 
                           // Delay websocket connect to not overload it on network disappear.
@@ -145,10 +147,10 @@ namespace WebDAVDrive
                 }
             }
             catch (WebSocketException ex) {
-                LogError("Failed to close websocket.", webSocketServerUrl, null, ex);
+                Logger.LogError("Failed to close websocket.", webSocketServerUrl, null, ex);
             };
 
-            LogMessage("Stoped", webSocketServerUrl);
+            Logger.LogMessage("Stoped", webSocketServerUrl);
         }
 
         /// <summary>
@@ -162,7 +164,7 @@ namespace WebDAVDrive
             // Check if remote URL starts with WebDAVServerUrl.
             if (remoteStoragePath.StartsWith(Program.Settings.WebDAVServerUrl, StringComparison.InvariantCultureIgnoreCase))
             {
-                LogMessage($"EventType: {jsonMessage.EventType}", jsonMessage.ItemPath, jsonMessage.TargetPath);
+                Logger.LogMessage($"EventType: {jsonMessage.EventType}", jsonMessage.ItemPath, jsonMessage.TargetPath);
                 switch (jsonMessage.EventType)
                 {
                     case "created":
@@ -218,14 +220,14 @@ namespace WebDAVDrive
 
                             // Because of the on-demand population, the parent folder placeholder may not exist in the user file system
                             // or the folder may be offline. In this case the IServerNotifications.CreateAsync() call is ignored.
-                            LogMessage($"Created succesefully", userFileSystemPath);
+                            Logger.LogMessage($"Created succesefully", userFileSystemPath);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                LogError(nameof(CreatedAsync), remoteStoragePath, null, ex);
+                Logger.LogError(nameof(CreatedAsync), remoteStoragePath, null, ex);
             }
         }
 
@@ -264,7 +266,7 @@ namespace WebDAVDrive
 
                         if (await engine.ServerNotifications(userFileSystemPath).UpdateAsync(itemMetadata))
                         {
-                            LogMessage("Updated succesefully", userFileSystemPath);
+                            Logger.LogMessage("Updated succesefully", userFileSystemPath);
                         }
 
                         // Restore the read-only attribute.
@@ -275,11 +277,11 @@ namespace WebDAVDrive
             catch (IOException ex)
             {
                 // The file is blocked in the user file system. This is a normal behaviour.
-                LogMessage(ex.Message);
+                Logger.LogMessage(ex.Message);
             }
             catch (Exception ex)
             {
-                LogError(nameof(ChangedAsync), remoteStoragePath, null, ex);
+                Logger.LogError(nameof(ChangedAsync), remoteStoragePath, null, ex);
             }
         }
 
@@ -305,7 +307,7 @@ namespace WebDAVDrive
                     // Source item is loaded, move it to a new location or delete.
                     if (await engine.ServerNotifications(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath))
                     {
-                        LogMessage("Moved succesefully", userFileSystemOldPath, userFileSystemNewPath);
+                        Logger.LogMessage("Moved succesefully", userFileSystemOldPath, userFileSystemNewPath);
                     }
                     else
                     {
@@ -321,7 +323,7 @@ namespace WebDAVDrive
             }
             catch (Exception ex)
             {
-                LogError(nameof(MovedAsync), remoteStorageOldPath, remoteStorageNewPath, ex);
+                Logger.LogError(nameof(MovedAsync), remoteStorageOldPath, remoteStorageNewPath, ex);
             }
         }
 
@@ -342,13 +344,13 @@ namespace WebDAVDrive
                     {
                         // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                         // In this case the IServerNotifications.DeleteAsync() call is ignored.
-                        LogMessage("Deleted succesefully", userFileSystemPath);
+                        Logger.LogMessage("Deleted succesefully", userFileSystemPath);
                     }
                 }
             }
             catch (Exception ex)
             {
-                LogError(nameof(DeletedAsync), remoteStoragePath, null, ex);
+                Logger.LogError(nameof(DeletedAsync), remoteStoragePath, null, ex);
             }
         }
 
@@ -374,13 +376,13 @@ namespace WebDAVDrive
                         // Save info about the third-party lock.
                         await engine.Placeholders.GetItem(userFileSystemPath).SavePropertiesAsync(itemMetadata);
 
-                        LogMessage("Third-party lock info added", userFileSystemPath);
+                        Logger.LogMessage("Third-party lock info added", userFileSystemPath);
                     }
                 }
             }
             catch (Exception ex)
             {
-                LogError(nameof(LockedAsync), remoteStoragePath, null, ex);
+                Logger.LogError(nameof(LockedAsync), remoteStoragePath, null, ex);
             }
         }
 
@@ -399,7 +401,7 @@ namespace WebDAVDrive
                 {
                     if(engine.Placeholders.GetItem(userFileSystemPath).Properties.Remove("ThirdPartyLockInfo"))
                     {
-                        LogMessage("Third-party lock info deleted", userFileSystemPath);
+                        Logger.LogMessage("Third-party lock info deleted", userFileSystemPath);
                     }
 
                     //ExternalDataManager customDataManager = engine.ExternalDataManager(userFileSystemPath);
@@ -412,20 +414,20 @@ namespace WebDAVDrive
                     //    // Remove lock icon and lock info in custom columns.
                     //    await customDataManager.SetLockInfoAsync(null);
 
-                    //    LogMessage("Unlocked succesefully", userFileSystemPath);
+                    //    Logger.LogMessage("Unlocked succesefully", userFileSystemPath);
                     //}
                 }
             }
             catch (Exception ex)
             {
-                LogError(nameof(UnlockedAsync), remoteStoragePath, null, ex);
+                Logger.LogError(nameof(UnlockedAsync), remoteStoragePath, null, ex);
             }
         }
 
 
         private void Error(object sender, ErrorEventArgs e)
         {
-            LogError(null, null, null, e.GetException());
+            Logger.LogError(null, null, null, e.GetException());
         }
 
 
@@ -438,7 +440,7 @@ namespace WebDAVDrive
                 if (disposing)
                 {        
                     clientWebSocket.Dispose();
-                    LogMessage($"Disposed");
+                    Logger.LogMessage($"Disposed");
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.

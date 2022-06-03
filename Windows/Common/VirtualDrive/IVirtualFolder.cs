@@ -9,6 +9,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 {
     public interface IVirtualFolder
     {
-        public Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern, CancellationToken cancellationToken);
+        Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern, CancellationToken cancellationToken);
     }
 }

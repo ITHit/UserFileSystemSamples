@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0-windows10.0.18362.0</TargetFramework>
-    <CsWinRTWindowsMetadata>10.0.19041.0</CsWinRTWindowsMetadata>
+    <TargetFramework>net5.0-windows10.0.19041.0</TargetFramework>
     <Authors>IT Hit LTD.</Authors>
     <Company>IT Hit LTD.</Company>
     <Product>WebDAV Drive</Product>
     <Copyright>IT Hit LTD.</Copyright>
-    <Platforms>AnyCPU</Platforms>
+    <Platforms>x64</Platforms>
     <Description>A virtual file system in .NET/C# that displays documents from a WebDAV server. You can edit documents, upload and download files as well as manage folders structure using Windows File Manager. This application provides automatic documents locking for Microsoft Office and AutoCAD documents. It supports synchronization, on-demand loading, selective offline files support, upload and download progress, and error reporting. It synchronizes files and folders both from a WebDAV server to the local user file system and from the local user file system to WebDAV server.</Description>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -33,7 +32,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Common\ShellExtension\Common.Windows.ShellExtension.csproj" />
+    <PackageReference Include="ITHit.FileSystem.Windows.ShellExtension" Version="5.0.14726.0-Beta" />
     <ProjectReference Include="..\..\Common\VirtualDrive\Common.Windows.VirtualDrive.csproj" />
     <ProjectReference Include="..\WebDAVDrive.ShellExtension\WebDAVDrive.ShellExtension.csproj" />
     <ProjectReference Include="..\WebDAVDrive.UI\WebDAVDrive.UI.csproj" />
@@ -70,4 +69,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Exec Command="&quot;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\makeappx&quot; pack /d &quot;$(ProjectDir)SparsePackage&quot; /p &quot;$(OutDir)$(ProjectName).msix&quot; /nv /o&#xD;&#xA;&quot;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool&quot; sign /fd SHA256 /a /f &quot;$(ProjectDir)$(ProjectName)_TemporaryKey.pfx&quot; /p &quot;ccaZD9HZ5ueFAYfaTtoN&quot; &quot;$(OutDir)$(ProjectName).msix&quot;&#xD;&#xA;taskkill /f /fi &quot;imagename eq WebDAVDrive.ShellExtension.exe&quot;" />
+  </Target>
 </Project>

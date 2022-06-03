@@ -43,7 +43,7 @@ namespace VirtualFileSystem
         }
 
         
-        ///<inheritdoc>
+        ///<inheritdoc/>
         public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewPath = targetUserFileSystemPath;
@@ -68,7 +68,11 @@ namespace VirtualFileSystem
 
                 if (remoteStorageOldItem is FileInfo)
                 {
-                    (remoteStorageOldItem as FileInfo).MoveTo(remoteStorageNewPath, true);
+                    if(File.Exists(remoteStorageNewPath))
+                    {
+                        File.Delete(remoteStorageNewPath);
+                    }
+                    (remoteStorageOldItem as FileInfo).MoveTo(remoteStorageNewPath);
                 }
                 else
                 {
@@ -81,7 +85,7 @@ namespace VirtualFileSystem
         
 
         
-        ///<inheritdoc>
+        ///<inheritdoc/>
         public async Task DeleteAsync(IOperationContext operationContext = null, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", this.UserFileSystemPath, default, operationContext);
@@ -133,11 +137,29 @@ namespace VirtualFileSystem
         }
         
 
-        ///<inheritdoc>
+        ///<inheritdoc/>
+        public Task<byte[]> GetThumbnailAsync(uint size)
+        {
+            // For this method to be called you need to register a thumbnail handler.
+            // See method description for more details.
+
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc/>
+        public async Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync()
+        {
+            // For this method to be called you need to register a properties handler.
+            // See method description for more details.
+
+            throw new NotImplementedException();
+        }
+
+        ///<inheritdoc/>
         public Task<IFileSystemItemMetadata> GetMetadataAsync()
         {
             // Return IFileMetadata for a file, IFolderMetadata for a folder.
             throw new NotImplementedException();
-        }       
+        }
     }
 }
