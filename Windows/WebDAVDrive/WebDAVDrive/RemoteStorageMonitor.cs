@@ -1,9 +1,3 @@
-using ITHit.FileSystem;
-using ITHit.FileSystem.Samples.Common;
-using ITHit.FileSystem.Samples.Common.Windows;
-using ITHit.FileSystem.Windows;
-using ITHit.WebDAV.Client;
-using log4net;
 using System;
 using System.IO;
 using System.Linq;
@@ -13,6 +7,13 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+
+using ITHit.FileSystem;
+using ITHit.FileSystem.Samples.Common;
+using ITHit.FileSystem.Samples.Common.Windows;
+using ITHit.FileSystem.Windows;
+using ITHit.WebDAV.Client;
+
 
 namespace WebDAVDrive
 {
@@ -277,7 +278,7 @@ namespace WebDAVDrive
             catch (IOException ex)
             {
                 // The file is blocked in the user file system. This is a normal behaviour.
-                Logger.LogMessage(ex.Message);
+                Logger.LogDebug(ex.Message);
             }
             catch (Exception ex)
             {

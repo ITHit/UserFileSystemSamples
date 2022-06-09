@@ -1,15 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Linq;
 
-using log4net;
 using ITHit.FileSystem;
+using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
-using ITHit.FileSystem.Samples.Common;
+
 
 namespace VirtualFileSystem
 {
@@ -168,7 +164,7 @@ namespace VirtualFileSystem
             catch (IOException ex)
             {
                 // The file is blocked in the user file system. This is a normal behaviour.
-                Logger.LogMessage(ex.Message);
+                Logger.LogDebug(ex.Message);
             }
             catch (Exception ex)
             {

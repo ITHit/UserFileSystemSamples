@@ -9,6 +9,8 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common;
 using System.Reflection;
 
+using ITHit.FileSystem.Windows;
+
 namespace WebDAVDrive.UI
 {
     /// <summary>

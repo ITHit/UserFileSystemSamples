@@ -75,9 +75,9 @@ namespace VirtualDrive
                        Settings.UserFileSystemRootPath,
                        Settings.RemoteStorageRootPath,
                        Settings.IconsFolderPath,
-                       Settings.SyncIntervalMs,
                        logFormatter))
                 {
+                    Engine.OutgoingSyncService.SyncIntervalMs = Settings.SyncIntervalMs;
                     Engine.AutoLock = Settings.AutoLock;
 
                     // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
@@ -131,18 +131,18 @@ namespace VirtualDrive
                     
                     case ConsoleKey.S:
                         // Start/stop full synchronization.
-                        if (Engine.SyncService.SyncState == SynchronizationState.Disabled)
+                        if (Engine.OutgoingSyncService.SyncState == SynchronizationState.Disabled)
                         {
                             if(Engine.State != EngineState.Running)
                             {
-                                Engine.SyncService.Logger.LogError("Failed to start. The Engine must be running.");
+                                Engine.OutgoingSyncService.Logger.LogError("Failed to start. The Engine must be running.");
                                 break;
                             }
-                            await Engine.SyncService.StartAsync();
+                            await Engine.OutgoingSyncService.StartAsync();
                         }
                         else
                         {
-                            await Engine.SyncService.StopAsync();
+                            await Engine.OutgoingSyncService.StopAsync();
                         }
                         break;
 

@@ -123,25 +123,36 @@ namespace VirtualDrive
             try
             {
                 remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+
+                FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
+                if (remoteStorageItem != null)
+                {
+                    if (remoteStorageItem is FileInfo)
+                    {
+                        remoteStorageItem.Delete();
+                    }
+                    else
+                    {
+                        (remoteStorageItem as DirectoryInfo).Delete(true);
+                    }
+                    Logger.LogMessage("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // We want the Engine to try deleting this file again at a later time.
+                resultContext.SetInSync = false;
+                Logger.LogError("Failed to delete item", UserFileSystemPath, default, null, operationContext);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                // Windows Explorer may call delete more than one time on the same file/folder.
+                Logger.LogMessage("Folder already deleted", UserFileSystemPath, default, operationContext);
             }
             catch (FileNotFoundException)
             {
                 // Windows Explorer may call delete more than one time on the same file/folder.
-                return;
-            }
-
-            FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
-            if (remoteStorageItem != null)
-            {
-                if (remoteStorageItem is FileInfo)
-                {
-                    remoteStorageItem.Delete();
-                }
-                else
-                {
-                    (remoteStorageItem as DirectoryInfo).Delete(true);
-                }
-                Logger.LogMessage("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+                Logger.LogMessage("File already deleted", UserFileSystemPath, default, operationContext);
             }
         }
 

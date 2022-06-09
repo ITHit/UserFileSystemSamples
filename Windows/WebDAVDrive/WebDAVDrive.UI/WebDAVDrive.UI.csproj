@@ -1,5 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
-
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
     <TargetFramework>net5.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
@@ -10,25 +9,21 @@
     <Product>WebDAV Drive</Product>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
-
   <ItemGroup>
     <None Remove="Drive.ico" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="log4net" Version="2.0.13" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.774.44" />
     <PackageReference Include="ITHitWebDAVClient" Version="5.3.3490" />
   </ItemGroup>
-
   <ItemGroup>
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="5.0.14943.0-Beta" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <Resource Include="Drive.ico" />
   </ItemGroup>
-
   <ItemGroup>
     <Compile Update="Localization\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
@@ -36,7 +31,6 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
   </ItemGroup>
-
   <ItemGroup>
     <EmbeddedResource Update="Localization\Resources.es-ES.resx">
       <SubType>Designer</SubType>
@@ -52,11 +46,9 @@
       <Generator>PublicResXFileCodeGenerator</Generator>
     </EmbeddedResource>
   </ItemGroup>
-
   <ItemGroup>
     <Page Update="ConnectFrom.xaml">
       <XamlRuntime>$(DefaultXamlRuntime)</XamlRuntime>
     </Page>
   </ItemGroup>
-
 </Project>

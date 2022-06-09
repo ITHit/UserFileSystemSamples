@@ -109,8 +109,9 @@ namespace WebDAVDrive
             }
             catch (WebDavHttpException ex)
             {
-                // Windows Explorer may call delete more than one time on the same file/folder.
-                Logger.LogMessage(ex.Message);
+                // We want the Engine to try deleting this file again at a later time.
+                resultContext.SetInSync = false;
+                Logger.LogMessage(ex.Message, UserFileSystemPath, default, operationContext);
             }
         }
 
@@ -152,6 +153,16 @@ namespace WebDAVDrive
 
             return thumbnail;
         }
+
+        private static async Task<byte[]> StreamToByteArrayAsync(Stream stream)
+        {
+            using (MemoryStream memoryStream = new())
+            {
+                await stream.CopyToAsync(memoryStream);
+                return memoryStream.ToArray();
+            }
+        }
+        
 
         /// <inheritdoc/>
         public async Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync()
@@ -235,16 +246,6 @@ namespace WebDAVDrive
 
             return props;
         }
-
-        private static async Task<byte[]> StreamToByteArrayAsync(Stream stream)
-        {
-            using (MemoryStream memoryStream = new())
-            {
-                await stream.CopyToAsync(memoryStream);
-                return memoryStream.ToArray();
-            }
-        }
-        
 
         ///<inheritdoc>
         public Task<IFileSystemItemMetadata> GetMetadataAsync()

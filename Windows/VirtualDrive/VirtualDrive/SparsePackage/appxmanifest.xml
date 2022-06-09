@@ -11,6 +11,7 @@
   xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
   IgnorableNamespaces="uap rescap uap10">
 
+  <!-- Publisher name must be identical to the name in <projectname>_TemporaryKey.pfx file. -->
   <Identity
     Name="VirtualDrive.SparsePackage"
     Publisher="CN=IT Hit LTD"

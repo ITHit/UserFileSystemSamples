@@ -28,16 +28,14 @@ namespace VirtualDrive
         /// </param>
         /// <param name="remoteStorageRootPath">Path to the remote storage root.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
-        /// <param name="syncIntervalMs">Full synchronization interval in milliseconds.</param>
         /// <param name="logFormatter">Logger.</param>
         public VirtualEngine(
             string license, 
             string userFileSystemRootPath, 
             string remoteStorageRootPath, 
             string iconsFolderPath, 
-            double syncIntervalMs,
             LogFormatter logFormatter)
-            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, syncIntervalMs, logFormatter)
+            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, logFormatter)
         {
             RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, this.Logger);
         }

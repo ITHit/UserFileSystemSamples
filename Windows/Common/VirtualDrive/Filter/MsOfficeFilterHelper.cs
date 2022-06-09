@@ -10,6 +10,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
     /// Provides methods to detect Microsoft Office files that should not be synced to the remote storage, 
     /// such as temporary files, Microsoft Office lock files and MS Office files opened (locked) for editing.
     /// </summary>
+    /// <remarks>
+    /// https://support.microsoft.com/en-us/topic/description-of-how-word-creates-temporary-files-66b112fb-d2c0-8f40-a0be-70a367cc4c85
+    /// </remarks>
     internal class MsOfficeFilterHelper
     {
         /// <summary>

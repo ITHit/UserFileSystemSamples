@@ -41,9 +41,8 @@ namespace WebDAVDrive
             string remoteStorageRootPath, 
             string webSocketServerUrl, 
             string iconsFolderPath, 
-            double syncIntervalMs,
             LogFormatter logFormatter)
-            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, syncIntervalMs, logFormatter)
+            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, logFormatter)
         {
             RemoteStorageMonitor = new RemoteStorageMonitor(webSocketServerUrl, this, this.Logger);
         }

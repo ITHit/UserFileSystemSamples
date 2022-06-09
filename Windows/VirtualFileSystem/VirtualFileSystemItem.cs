@@ -114,25 +114,36 @@ namespace VirtualFileSystem
             try
             {
                 remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+
+                FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
+                if (remoteStorageItem != null)
+                {
+                    if (remoteStorageItem is FileInfo)
+                    {
+                        remoteStorageItem.Delete();
+                    }
+                    else
+                    {
+                        (remoteStorageItem as DirectoryInfo).Delete(true);
+                    }
+                    Logger.LogMessage("Deleted item in remote storage succesefully", UserFileSystemPath, default, operationContext);
+                }
             }
-            catch(FileNotFoundException)
+            catch (UnauthorizedAccessException)
+            {
+                // We want the Engine to try deleting this file again at a later time.
+                resultContext.SetInSync = false;
+                Logger.LogError("Failed to delete item", UserFileSystemPath, default, null, operationContext);
+            }
+            catch (DirectoryNotFoundException)
             {
                 // Windows Explorer may call delete more than one time on the same file/folder.
-                return;
+                Logger.LogMessage("Folder already deleted", UserFileSystemPath, default, operationContext);
             }
-
-            FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
-            if (remoteStorageItem != null)
+            catch (FileNotFoundException)
             {
-                if (remoteStorageItem is FileInfo)
-                {
-                    remoteStorageItem.Delete();
-                }
-                else
-                {
-                    (remoteStorageItem as DirectoryInfo).Delete(true);
-                }
-                Logger.LogMessage("Deleted item in remote storage succesefully", UserFileSystemPath, default, operationContext);
+                // Windows Explorer may call delete more than one time on the same file/folder.
+                Logger.LogMessage("File already deleted", UserFileSystemPath, default, operationContext);
             }
         }
         

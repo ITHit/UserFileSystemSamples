@@ -21,12 +21,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         //  public readonly RemoteStorageMonitor RemoteStorageMonitor;
 
         /// <summary>
-        /// Full synchronization service.
-        /// In case any changes are lost (the file is blocked, app restart, lost connection, etc.) this service will sync all changes.
-        /// </summary>
-        public readonly FullSyncService SyncService;
-
-        /// <summary>
         /// Path to the icons folder.
         /// </summary>
         private readonly string iconsFolderPath;
@@ -48,14 +42,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </param>
         /// <param name="remoteStorageRootPath">Path to the remote storage root.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
-        /// <param name="syncIntervalMs">Full synchronization interval in milliseconds.</param>
         /// <param name="logFormatter">Logger.</param>
         public VirtualEngineBase(
             string license, 
             string userFileSystemRootPath, 
             string remoteStorageRootPath, 
             string iconsFolderPath, 
-            double syncIntervalMs,
             LogFormatter logFormatter) 
             : base(license, userFileSystemRootPath)
         {
@@ -71,7 +63,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             Debug += logFormatter.LogDebug;
 
             //RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log4net);
-            SyncService = new FullSyncService(syncIntervalMs, userFileSystemRootPath, this, this.Logger);
         }
 
         /// <inheritdoc/>
@@ -113,15 +104,13 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
         {
             await base.StartAsync(processModified, cancellationToken);
-            //RemoteStorageMonitor.Start();
-            await SyncService.StartAsync();
+            //RemoteStorageMonitor.Start();            
         }
 
         public override async Task StopAsync()
         {
             await base.StopAsync();
-            //RemoteStorageMonitor.Stop();
-            await SyncService.StopAsync();
+            //RemoteStorageMonitor.Stop();            
         }
 
         /// <summary>
@@ -144,7 +133,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 if (disposing)
                 {
                     //RemoteStorageMonitor.Dispose();
-                    SyncService.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer

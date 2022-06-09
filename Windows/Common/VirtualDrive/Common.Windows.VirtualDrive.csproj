@@ -12,13 +12,12 @@
     <Compile Remove="ETagManager.cs" />
     <Compile Remove="ExternalDataManager.cs" />
     <Compile Remove="FilteredDocsMonitor.cs" />
-    <Compile Remove="FullSync\ClientToServerSync.cs" />
-    <Compile Remove="FullSync\ServerToClientSync.cs" />
     <Compile Remove="IMapping.cs" />
     <Compile Remove="LockManager.cs" />
+    <Compile Remove="ServerToClientSync.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="5.0.14726.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="5.0.14943.0-Beta" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Core\Common.Windows.Core.csproj" />
   </ItemGroup>
