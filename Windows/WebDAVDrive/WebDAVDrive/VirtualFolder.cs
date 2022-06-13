@@ -95,7 +95,7 @@ namespace WebDAVDrive
                 // Filtering existing files/folders. This is only required to avoid extra errors in the log.
                 if (!FsPath.Exists(userFileSystemItemPath))
                 {
-                    Logger.LogMessage("Creating", userFileSystemItemPath);
+                    Logger.LogDebug("Creating", userFileSystemItemPath, null, operationContext);
                     userFileSystemChildren.Add(itemMetadata);
                 }
             }

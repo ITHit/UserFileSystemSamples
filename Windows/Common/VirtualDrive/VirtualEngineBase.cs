@@ -1,13 +1,9 @@
 using System;
 using System.IO;
-using System.Threading.Tasks;
-using log4net;
-
-using ITHit.FileSystem;
-using ITHit.FileSystem.Windows;
-using ITHit.FileSystem.Samples.Common.Windows;
-using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
+
+using ITHit.FileSystem.Windows;
 
 
 namespace ITHit.FileSystem.Samples.Common.Windows
@@ -61,6 +57,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             Error += logFormatter.LogError;
             Message += logFormatter.LogMessage;
             Debug += logFormatter.LogDebug;
+            SyncService.StateChanged += SyncService_StateChanged;
 
             //RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log4net);
         }
@@ -91,11 +88,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                         return FilterHelper.AvoidSync(userFileSystemPath);
                 }
             }
-            catch(FileNotFoundException ex)
+            catch(FileNotFoundException)
             {
                 // Typically the file is not found in case of some temporary file that is being deleted.
                 // We do not want to continue processing this file, and we do not want any exceptions in the log as this is a normal behaviour.
-                LogMessage(ex.Message, userFileSystemPath, userFileSystemNewPath, operationContext);
+                LogDebug($"{nameof(IEngine)}.{nameof(FilterAsync)}(): Item not found", userFileSystemPath, userFileSystemNewPath, operationContext);
                 return true;
             }
         }
@@ -114,13 +111,26 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <summary>
-        /// Show status change.
+        /// Fired on Engine status change.
         /// </summary>
         /// <param name="engine">Engine</param>
         /// <param name="e">Contains new and old Engine state.</param>
         private void Engine_StateChanged(Engine engine, EngineWindows.StateChangeEventArgs e)
         {
             engine.LogMessage($"{e.NewState}");
+        }
+
+        /// <summary>
+        /// Fired on sync service status change.
+        /// </summary>
+        /// <param name="sender">Sync service.</param>
+        /// <param name="e">Contains new and old sync service state.</param>
+        private void SyncService_StateChanged(SyncService sender, SynchEventArgs e)
+        {
+            if (e.NewState == SynchronizationState.Enabled || e.NewState == SynchronizationState.Disabled)
+            {
+                SyncService.Logger.LogMessage($"{e.NewState}");
+            }
         }
 
 

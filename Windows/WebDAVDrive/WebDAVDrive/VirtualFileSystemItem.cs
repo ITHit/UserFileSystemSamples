@@ -61,7 +61,7 @@ namespace WebDAVDrive
         {
             string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
+            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
         }
 
         /// <inheritdoc/>
@@ -75,13 +75,13 @@ namespace WebDAVDrive
             string remoteStorageNewPath = Mapping.MapPath(userFileSystemNewPath);
 
             await Program.DavClient.MoveToAsync(new Uri(remoteStorageOldPath), new Uri(remoteStorageNewPath), true, null, cancellationToken);
-            Logger.LogMessage("Moved in the remote storage succesefully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
+            Logger.LogDebug("Moved in the remote storage succesefully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
         }
 
         ///<inheritdoc>
         public async Task DeleteAsync(IOperationContext operationContext, IConfirmationResultContext resultContext, CancellationToken cancellationToken = default)
         {
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", UserFileSystemPath, default, operationContext);
 
             // To cancel the operation and prevent the file from being deleted, 
             // call the resultContext.ReturnErrorResult() method or throw any exception inside this method.
@@ -105,7 +105,7 @@ namespace WebDAVDrive
             try
             {
                 await Program.DavClient.DeleteAsync(new Uri(RemoteStoragePath), null, cancellationToken);
-                Logger.LogMessage("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+                Logger.LogDebug("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
             }
             catch (WebDavHttpException ex)
             {
@@ -278,7 +278,7 @@ namespace WebDAVDrive
             await placeholder.Properties.AddOrUpdateAsync("LockInfo", serverLockInfo);
             await placeholder.Properties.AddOrUpdateAsync("LockMode", lockMode);
 
-            Logger.LogMessage("Locked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+            Logger.LogDebug("Locked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
         }
         
 
@@ -316,11 +316,11 @@ namespace WebDAVDrive
             try
             {
                 await Program.DavClient.UnlockAsync(new Uri(RemoteStoragePath), lockTokens, cancellationToken);
-                Logger.LogMessage("Unlocked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+                Logger.LogDebug("Unlocked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
             }
             catch (ITHit.WebDAV.Client.Exceptions.ConflictException)
             {
-                // The item is already unlocked.
+                Logger.LogDebug("The item is already unlocked.", UserFileSystemPath, default, operationContext);
             }
 
             // Delete lock-mode and lock-token info.

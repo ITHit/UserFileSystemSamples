@@ -5,7 +5,7 @@ using System.Linq;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
-
+using System.Threading.Tasks;
 
 namespace VirtualFileSystem
 {
@@ -99,7 +99,7 @@ namespace VirtualFileSystem
         /// <remarks>In this method we create a new file/folder in the user file system.</remarks>
         private async void CreatedAsync(object sender, FileSystemEventArgs e)
         {
-            Logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
+            Logger.LogDebug($"Operation: {e.ChangeType}", e.FullPath);
             string remoteStoragePath = e.FullPath;
             try
             {
@@ -139,7 +139,7 @@ namespace VirtualFileSystem
         /// </remarks>
         private async void ChangedAsync(object sender, FileSystemEventArgs e)
         {
-            Logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
+            Logger.LogDebug($"Operation: {e.ChangeType}", e.FullPath);
             string remoteStoragePath = e.FullPath;
             string userFileSystemPath = null;
             try
@@ -164,7 +164,7 @@ namespace VirtualFileSystem
             catch (IOException ex)
             {
                 // The file is blocked in the user file system. This is a normal behaviour.
-                Logger.LogDebug(ex.Message);
+                Logger.LogDebug(ex.Message, remoteStoragePath);
             }
             catch (Exception ex)
             {
@@ -175,26 +175,38 @@ namespace VirtualFileSystem
         /// <summary>
         /// Called when a file or folder is deleted in the remote storage.
         /// </summary>
-        /// <remarks>In this method we delete corresponding file/folder in user file system.</remarks>
+        /// <remarks>In this method we delete corresponding file/folder in the user file system.</remarks>
         private async void DeletedAsync(object sender, FileSystemEventArgs e)
         {
-            Logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
+            Logger.LogDebug($"Operation: {e.ChangeType}", e.FullPath);
+
+            // Run sync operation asynchronously, because we need some delay to avoid
+            // circular calls wich leads to slow operation execution.
+            _ = Task.Run(() => ProcessDeletedAsync(e));
+        }
+
+        private async Task ProcessDeletedAsync(FileSystemEventArgs e)
+        {
             string remoteStoragePath = e.FullPath;
             try
             {
                 string userFileSystemPath = mapping.ReverseMapPath(remoteStoragePath);
 
-                // This check is only required because we can not prevent circular calls because of the simplicity of this example.
+                // This check and delay is only required because we can not prevent circular calls because of the simplicity of this example.
                 // In your real-life application you will not send updates from server back to client that issued the update.
+                System.Threading.Thread.Sleep(1000);
                 if (FsPath.Exists(userFileSystemPath))
                 {
+                    // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                     if (await engine.ServerNotifications(userFileSystemPath).DeleteAsync())
                     {
-                        // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                        // In this case the IServerNotifications.DeleteAsync() call is ignored.
                         Logger.LogMessage("Deleted succesefully", userFileSystemPath);
                     }
                 }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Logger.LogError($"{e.ChangeType} failed. The item is blocked", remoteStoragePath, null);
             }
             catch (Exception ex)
             {
@@ -208,7 +220,7 @@ namespace VirtualFileSystem
         /// <remarks>In this method we rename corresponding file/folder in user file system.</remarks>
         private async void RenamedAsync(object sender, RenamedEventArgs e)
         {
-            Logger.LogMessage("Renamed", e.OldFullPath, e.FullPath);
+            Logger.LogDebug($"Operation: {e.ChangeType}", e.OldFullPath, e.FullPath);
             string remoteStorageOldPath = e.OldFullPath;
             string remoteStorageNewPath = e.FullPath;
             try 

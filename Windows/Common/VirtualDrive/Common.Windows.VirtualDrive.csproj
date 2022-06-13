@@ -17,7 +17,7 @@
     <Compile Remove="ServerToClientSync.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="5.0.14943.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="5.0.15216.0-Beta" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Core\Common.Windows.Core.csproj" />
   </ItemGroup>

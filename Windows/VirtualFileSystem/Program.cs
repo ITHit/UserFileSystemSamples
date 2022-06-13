@@ -43,7 +43,7 @@ namespace VirtualFileSystem
             // Load Settings.
             Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
 
-            logFormatter = new LogFormatter(log, Settings.AppID);
+            logFormatter = new LogFormatter(log, Settings.AppID, Settings.RemoteStorageRootPath);
 
             try
             {
@@ -52,15 +52,6 @@ namespace VirtualFileSystem
 
                 // Register sync root and create app folders.
                 await RegisterSyncRootAsync();
-
-                // Log indexing state. Sync root must be indexed.
-                await logFormatter.PrintIndexingStateAsync(Settings.UserFileSystemRootPath);
-
-                // Log console commands.
-                logFormatter.PrintHelp();
-
-                // Log logging columns headers.
-                logFormatter.PrintHeader();
 
                 using (Engine = new VirtualEngine(
                     Settings.UserFileSystemLicense,
@@ -72,6 +63,9 @@ namespace VirtualFileSystem
                     // method as a remoteStorageItemId parameter when a root folder is requested. 
                     byte[] itemId = WindowsFileSystemItem.GetItemIdByPath(Settings.RemoteStorageRootPath);
                     Engine.Placeholders.GetRootItem().SetRemoteStorageItemId(itemId);
+
+                    // Print Engine config, settings, console commands, logging headers.
+                    await logFormatter.PrintEngineStartInfoAsync(Engine);
 
                     // Start processing OS file system calls.
                     await Engine.StartAsync();

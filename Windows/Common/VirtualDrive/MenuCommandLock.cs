@@ -31,7 +31,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         public MenuCommandLock(EngineWindows engine, ILogger logger)
         {
             this.engine = engine;
-            this.logger = logger.CreateLogger("Lock Command");
+            this.logger = logger.CreateLogger("Lock Menu Command");
         }
 
         /// <inheritdoc/>
@@ -73,7 +73,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             {
                 try
                 {
-                    IClientNotifications clientNotifications = engine.ClientNotifications(userFileSystemPath);
+                    IClientNotifications clientNotifications = engine.ClientNotifications(userFileSystemPath, logger);
                     if (isLocked)
                         await clientNotifications.UnlockAsync();
                     else
@@ -81,7 +81,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError("Failed to lock item", userFileSystemPath, null, ex);
+                    string actionName = isLocked ? "Unlock" : "Lock";
+                    logger.LogError($"Failed to {actionName} item", userFileSystemPath, null, ex);
                 }
             }
         }
@@ -106,7 +107,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             {
                 try
                 {
-                    IClientNotifications clientNotifications = engine.ClientNotifications(userFileSystemPath);
+                    IClientNotifications clientNotifications = engine.ClientNotifications(userFileSystemPath, logger);
                     LockMode lockMode = await clientNotifications.GetLockModeAsync(cancellationToken);
 
                     bool isLocked = lockMode != LockMode.None;

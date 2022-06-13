@@ -6,7 +6,7 @@
 <p>You can download this sample and a trial license in the&nbsp;<a title="IT Hit User File System for .NET Download" href="https://www.userfilesystem.com/download/">product download area</a>. You can also clone it and browse the code on&nbsp;<a title="Virtual File System Sample in .NET, C#" href="https://github.com/ITHit/UserFileSystemSamples/tree/master/Windows/VirtualFileSystem">GitHub</a>.&nbsp;</p>
 <h2>Requirements</h2>
 <ul>
-<li>.NET 6.0 or later.</li>
+<li>.NET Core 5.0 or later or .NET Framework 4.8.</li>
 <li>Microsoft Windows 10 Creators Update or later version.</li>
 <li>NTFS file system.</li>
 </ul>
@@ -35,13 +35,15 @@
 <li>'Esc' - simulates app uninstall. The sync root will be unregistered and all files will be deleted.</li>
 <li>'Space' - simulates machine reboot or application failure. The application exits without unregistering the sync root. All files and folders placeholders, their attributes, and states remain in the user file system.&nbsp;</li>
 <li>'e' - starts/stops the Engine and all sync services.&nbsp;When the Engine is stopped, the user can still edit hydrated documents but can not hydrate files, access offline folders, or sync with remote storage.</li>
+<li>'s' - to start/stop synchronization service.</li>
 <li>'m' - starts/stops remote storage monitor. When the remote storage monitor is stopped the sample does not receive notifications from the remote storage.</li>
+<li>'d' - enable/disable debug and performance logging.</li>
 <li>'l' - opens a log file.</li>
 <li>'b' - opens Help &amp; Support portal to submit support tickets, report bugs, suggest features.</li>
 </ul>
 <h2>How the Sample Works</h2>
 <h3>On-Demand Loading</h3>
-<p>Initially, when you start the application, the user file system does not contain any file of folder placeholders, except the sync root folder. The content of the folders is populated only when any application is listing folder content. The content of files is loaded only when an application is opening a file for reading or writing.</p>
+<p>Initially, when you start the application, the user file system does not contain any file or folder placeholders, except the sync root folder. The content of the folders is populated only when any application is listing folder content. The content of files is loaded only when an application is opening a file for reading or writing.</p>
 <h3>Platform File System Operations Handling</h3>
 <p>Folder content listing, file reads, move/rename and delete are performed by the <span class="code">VirtualEngine</span>&nbsp;,&nbsp;<span class="code">VirtualFile</span> and <span class="code">VirtuaFolder</span> classes.&nbsp;&nbsp;</p>
 <p>The initial folder content listing is done inside <span class="code">VirtualFolder</span>.<span class="code">GetChildrenAsync()</span> method call. When any application is listing folder content, the <span class="code">VirtualEngine</span> class creates the <span class="code">VirtualFolder</span> class instance that corresponds to the requested folder inside the <span class="code">VirtualEngine</span>.<span class="code">GetFileSystemItemAsync()</span> factory method. Then the <span class="code">VirtualEngine</span>&nbsp;class calls&nbsp;<span class="code">GetChildrenAsync()</span> method on the returned folder item.</p>
@@ -49,9 +51,12 @@
 <h3>Hydration/Dehydration via Windows File Manager Commands</h3>
 <p>When the user selects "Always keep on this device" or the "Free up space" in the Windows file manager, the file is marked with a Pinned or Unpinned attribute respectively. The Engine detects these flags triggering hydration or dehydration if needed. To hydrate the file the <span class="code">VirtualFile</span>.<span class="code">ReadAsync()</span> method is called.</p>
 <h3>Remote Storage to User File System Synchronization</h3>
-<p>The remote storage is simulated by the dedicated folder in the file system (<span class="code">\RemoteStorage\</span> by default). The sample monitors changes in it using&nbsp;<span class="code">RemoteStorageMonitor</span> class that generates events and applies corresponding changes in the user file system. The&nbsp;<span class="code">RemoteStorageMonitor</span> class is using a&nbsp;<span class="code">FileSystemWatcherQueued</span> class which is similar to&nbsp;<span class="code">FileSystemWatcher</span> which can monitor the creation, update of file content and attributes, deletion, and rename. But unlike the&nbsp;<span>FileSystemWatcher, the&nbsp;<span>FileSystemWatcherQueued class can process a large number of events</span></span>&nbsp;and is tested on the highly loaded file system. Note that the&nbsp;<span class="code">FileSystemWatcherQueued</span>&nbsp;class (as well as <span class="code">FileSystemWatcher</span>&nbsp;class) can NOT monitor the move event. In your real-life application, you will replace the&nbsp;<span class="code">FileSystemWatcherQueued</span>&nbsp;class with web sockets or any other technology that will send events from your server to all connected clients.</p>
+<p>The remote storage is simulated by the dedicated folder in the file system (<span class="code">\RemoteStorage\</span> by default). The sample monitors changes in it using&nbsp;<span class="code">RemoteStorageMonitor</span> class that generates events and applies corresponding changes in the user file system. The&nbsp;<span class="code">RemoteStorageMonitor</span> class is using a&nbsp;<span class="code">FileSystemWatcherQueued</span> class which is similar to&nbsp;<span class="code">FileSystemWatcher</span> which can monitor the creation, update of file content and attributes, deletion, and rename. But unlike the&nbsp;<span><span class="code">FileSystemWatcher</span>, the&nbsp;<span><span class="code">FileSystemWatcherQueued</span> class can process a large number of events</span></span>&nbsp;and is tested on the highly loaded file system.</p>
+<p>Note that the&nbsp;<span class="code">FileSystemWatcherQueued</span>&nbsp;class (as well as <span class="code">FileSystemWatcher</span>&nbsp;class) can NOT monitor the move event. In your real-life application, you will replace the&nbsp;<span class="code">FileSystemWatcherQueued</span>&nbsp;class with web sockets or any other technology that will send events from your server to all connected clients.</p>
 <h3>User File System to Remote Storage Synchronization</h3>
 <p>The user file system to remote storage synchronization is performed by <span class="code">VirtualFile</span>&nbsp;and <span class="code">VirtualFolder</span> classes. When a file or folder is created in the file system, the <span class="code">VirtualFolder</span>.<span class="code">CreateFileAsync()</span> and <span class="code">VirtualFolder</span>.<span class="code">CreateFolderAsync()</span>&nbsp;methods are called. When the file content is modified on the client the <span class="code">VirtualFile</span>.<span class="code">WriteAsync()</span> method is called. When a file or folder is moved or deleted the&nbsp;<span class="code">VfsFileSystemItem</span>.<span class="code">MoveToAsync()</span>&nbsp;and&nbsp;<span class="code">VfsFileSystemItem</span>.<span class="code">DeleteAsync()</span> methods are called.</p>
+<h3>Changes Synchronization after Application Restart&nbsp;</h3>
+<p>When your application is not running and a user modifies any documents or creates, deletes or moves any files or folders on the drive, this sample will automatically find all changes and will sync them to the server. See <a title="User File System to Remote Storage Synchronization" href="https://www.userfilesystem.com/programming/creating_virtual_file_system/#nav_userfilesystemtoremotestoragesynchronization">this paragraph</a> for more details.</p>
 <h3 class="para d-inline next-article-heading">Next Article:</h3>
 <a title="Virtual File System Sample for Mac in .NET, C#" href="https://www.userfilesystem.com/examples/virtual_file_system_mac/">Virtual File System Sample for Mac in .NET, C#</a>
 

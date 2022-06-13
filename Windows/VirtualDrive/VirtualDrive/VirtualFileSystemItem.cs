@@ -55,7 +55,7 @@ namespace VirtualDrive
         {
             string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
+            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
         }
 
         /// <inheritdoc/>
@@ -97,7 +97,7 @@ namespace VirtualDrive
         ///<inheritdoc>
         public async Task DeleteAsync(IOperationContext operationContext, IConfirmationResultContext resultContext, CancellationToken cancellationToken = default)
         {
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", UserFileSystemPath, default, operationContext);
 
             // To cancel the operation and prevent the file from being deleted, 
             // call the resultContext.ReturnErrorResult() method or throw any exception inside this method:
@@ -135,24 +135,23 @@ namespace VirtualDrive
                     {
                         (remoteStorageItem as DirectoryInfo).Delete(true);
                     }
-                    Logger.LogMessage("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+                    Logger.LogDebug("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
                 }
             }
             catch (UnauthorizedAccessException)
             {
-                // We want the Engine to try deleting this file again at a later time.
-                resultContext.SetInSync = false;
+                resultContext.SetInSync = false; // We want the Engine to try deleting this file again at a later time.
                 Logger.LogError("Failed to delete item", UserFileSystemPath, default, null, operationContext);
             }
             catch (DirectoryNotFoundException)
             {
                 // Windows Explorer may call delete more than one time on the same file/folder.
-                Logger.LogMessage("Folder already deleted", UserFileSystemPath, default, operationContext);
+                Logger.LogDebug("Folder already deleted", UserFileSystemPath, default, operationContext);
             }
             catch (FileNotFoundException)
             {
                 // Windows Explorer may call delete more than one time on the same file/folder.
-                Logger.LogMessage("File already deleted", UserFileSystemPath, default, operationContext);
+                Logger.LogDebug("File already deleted", UserFileSystemPath, default, operationContext);
             }
         }
 
@@ -274,7 +273,7 @@ namespace VirtualDrive
             await placeholder.Properties.AddOrUpdateAsync("LockInfo", serverLockInfo);
             await placeholder.Properties.AddOrUpdateAsync("LockMode", lockMode);
 
-            Logger.LogMessage("Locked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+            Logger.LogDebug("Locked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
         }
 
         ///<inheritdoc>
@@ -307,7 +306,7 @@ namespace VirtualDrive
                 placeholder.Properties.Remove("LockInfo");
                 placeholder.Properties.Remove("LockMode");
 
-                Logger.LogMessage("Unlocked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+                Logger.LogDebug("Unlocked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
             }
         }
     }

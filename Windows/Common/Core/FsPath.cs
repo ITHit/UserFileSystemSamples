@@ -103,7 +103,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             try
             {
-                return File.GetAttributes(path).ToString();
+                return Convert.ToString((int)File.GetAttributes(path), 2);
             }
             catch 
             {

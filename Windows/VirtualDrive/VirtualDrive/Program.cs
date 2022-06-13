@@ -51,7 +51,7 @@ namespace VirtualDrive
             // Load Settings.
             Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
 
-            logFormatter = new LogFormatter(log, Settings.AppID);
+            logFormatter = new LogFormatter(log, Settings.AppID, Settings.RemoteStorageRootPath);
 
             try
             {
@@ -61,15 +61,6 @@ namespace VirtualDrive
                 // Register sync root and create app folders.
                 await RegisterSyncRootAsync();
 
-                // Log indexing state. Sync root must be indexed.
-                await logFormatter.PrintIndexingStateAsync(Settings.UserFileSystemRootPath);
-
-                // Log console commands.
-                logFormatter.PrintHelp();
-
-                // Log logging columns headers.
-                logFormatter.PrintHeader();
-
                 using (Engine = new VirtualEngine(
                        Settings.UserFileSystemLicense,
                        Settings.UserFileSystemRootPath,
@@ -77,13 +68,16 @@ namespace VirtualDrive
                        Settings.IconsFolderPath,
                        logFormatter))
                 {
-                    Engine.OutgoingSyncService.SyncIntervalMs = Settings.SyncIntervalMs;
+                    Engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
                     Engine.AutoLock = Settings.AutoLock;
 
                     // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
                     // method as a remoteStorageItemId parameter when a root folder is requested. 
                     byte[] itemId = WindowsFileSystemItem.GetItemIdByPath(Settings.RemoteStorageRootPath);
                     Engine.Placeholders.GetRootItem().SetRemoteStorageItemId(itemId);
+
+                    // Print Engine config, settings, console commands, logging headers.
+                    await logFormatter.PrintEngineStartInfoAsync(Engine);
 
                     // Start processing OS file system calls.
                     await Engine.StartAsync();
@@ -131,18 +125,18 @@ namespace VirtualDrive
                     
                     case ConsoleKey.S:
                         // Start/stop full synchronization.
-                        if (Engine.OutgoingSyncService.SyncState == SynchronizationState.Disabled)
+                        if (Engine.SyncService.SyncState == SynchronizationState.Disabled)
                         {
                             if(Engine.State != EngineState.Running)
                             {
-                                Engine.OutgoingSyncService.Logger.LogError("Failed to start. The Engine must be running.");
+                                Engine.SyncService.Logger.LogError("Failed to start. The Engine must be running.");
                                 break;
                             }
-                            await Engine.OutgoingSyncService.StartAsync();
+                            await Engine.SyncService.StartAsync();
                         }
                         else
                         {
-                            await Engine.OutgoingSyncService.StopAsync();
+                            await Engine.SyncService.StopAsync();
                         }
                         break;
 

@@ -48,7 +48,7 @@ namespace VirtualFileSystem
         {
             string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
+            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
         }
 
         /// <inheritdoc/>
@@ -88,7 +88,7 @@ namespace VirtualFileSystem
         ///<inheritdoc/>
         public async Task DeleteAsync(IOperationContext operationContext = null, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", this.UserFileSystemPath, default, operationContext);
+            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", this.UserFileSystemPath, default, operationContext);
 
             // To cancel the operation and prevent the file from being deleted, 
             // call the resultContext.ReturnErrorResult() method or throw any exception inside this method:
@@ -126,24 +126,23 @@ namespace VirtualFileSystem
                     {
                         (remoteStorageItem as DirectoryInfo).Delete(true);
                     }
-                    Logger.LogMessage("Deleted item in remote storage succesefully", UserFileSystemPath, default, operationContext);
+                    Logger.LogDebug("Deleted item in remote storage succesefully", UserFileSystemPath, default, operationContext);
                 }
             }
             catch (UnauthorizedAccessException)
             {
-                // We want the Engine to try deleting this file again at a later time.
-                resultContext.SetInSync = false;
+                resultContext.SetInSync = false; // We want the Engine to try deleting this file again at a later time.
                 Logger.LogError("Failed to delete item", UserFileSystemPath, default, null, operationContext);
             }
             catch (DirectoryNotFoundException)
             {
                 // Windows Explorer may call delete more than one time on the same file/folder.
-                Logger.LogMessage("Folder already deleted", UserFileSystemPath, default, operationContext);
+                Logger.LogDebug("Folder already deleted", UserFileSystemPath, default, operationContext);
             }
             catch (FileNotFoundException)
             {
                 // Windows Explorer may call delete more than one time on the same file/folder.
-                Logger.LogMessage("File already deleted", UserFileSystemPath, default, operationContext);
+                Logger.LogDebug("File already deleted", UserFileSystemPath, default, operationContext);
             }
         }
         
