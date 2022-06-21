@@ -198,13 +198,16 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 //targetPath = targetPath?.Replace(remoteStorageRootPath, "<RS root>");
             //}
 
-            string message = Format(DateTimeOffset.Now.ToString("hh:mm:ss.fff"), process, priorityHint?.ToString(), fileId, "", e.ComponentName, e.Message,  sourcePath, att, targetPath);
+            string message = Format(DateTimeOffset.Now.ToString("hh:mm:ss.fff"), process, priorityHint?.ToString(), fileId, "", e.ComponentName, e.CallerLineNumber.ToString(), e.CallerMemberName, e.CallerFilePath, e.Message,  sourcePath, att, targetPath);
 
             if (level == log4net.Core.Level.Error)
             {
                 Exception ex = ((EngineErrorEventArgs)e).Exception;
-                message += Environment.NewLine;
-                log.Error(message, ex);
+                if (ex != null)
+                {
+                    message += Environment.NewLine;
+                    log.Error(message, ex);
+                }
             }
             else if (level == log4net.Core.Level.Info)
             {
@@ -217,10 +220,10 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             
         }
 
-        private static string Format(string date, string process, string priorityHint, string fileId, string remoteStorageId, string componentName, string message, string sourcePath, string attributes, string targetPath)
+        private static string Format(string date, string process, string priorityHint, string fileId, string remoteStorageId, string componentName, string callerLineNumber, string callerMemberName, string callerFilePath, string message, string sourcePath, string attributes, string targetPath)
         {
             // {fileId,-18} | {remoteStorageId,-remoteStorageIdWidth}
-            return $"{Environment.NewLine}|{date, -12}| {process,-25}| {priorityHint,-5}| {componentName,-26}| {message,-45}| {sourcePath,-sourcePathWidth} | {attributes, 23 } | {targetPath}";
+            return $"{Environment.NewLine}|{date, -12}| {process,-25}| {priorityHint,-5}| {componentName,-26}| {callerLineNumber, 4} | {message,-45}| {sourcePath,-sourcePathWidth} | {attributes, 23 } | {targetPath}";
         }
 
         /// <summary>
@@ -228,8 +231,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         private void PrintHeader()
         {
-            log.Info(Format("Time", "Process Name", "Prty", "FS ID", "RS ID", "Component", "Message", "Source Path", "Attributes", "Target Path"));
-            log.Info(Format("----", "------------", "----", "_____", "_____", "---------", "-------", "-----------", "----------", "-----------"));
+            log.Info(Format("Time", "Process Name", "Prty", "FS ID", "RS ID", "Component", "Line", "Caller Member Name", "Caller File Path", "Message", "Source Path", "Attributes", "Target Path"));
+            log.Info(Format("----", "------------", "----", "_____", "_____", "---------", "____", "------------------", "----------------", "-------", "-----------", "----------", "-----------"));
         }
     }
 

@@ -115,7 +115,7 @@ namespace VirtualFileSystem
                     if (remoteStorageItem != null)
                     {
                         IFileSystemItemMetadata newItemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
-                        if (await engine.ServerNotifications(userFileSystemParentPath).CreateAsync(new[] { newItemInfo }) > 0)
+                        if (await engine.ServerNotifications(userFileSystemParentPath, Logger).CreateAsync(new[] { newItemInfo }) > 0)
                         {
                             // Because of the on-demand population, the parent folder placeholder may not exist in the user file system
                             // or the folder may be offline. In this case the IServerNotifications.CreateAsync() call is ignored.
@@ -151,24 +151,24 @@ namespace VirtualFileSystem
                 if (IsModified(userFileSystemPath, remoteStoragePath))
                 {
                     FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
-                    IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
-
-                    if (await engine.ServerNotifications(userFileSystemPath).UpdateAsync(itemInfo))
+                    if (remoteStorageItem != null)
                     {
-                        // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                        // In this case the IServerNotifications.UpdateAsync() call is ignored.
-                        Logger.LogMessage("Updated succesefully", userFileSystemPath);
+                        IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+
+                        if (await engine.ServerNotifications(userFileSystemPath, Logger).UpdateAsync(itemInfo))
+                        {
+                            // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
+                            // In this case the IServerNotifications.UpdateAsync() call is ignored.
+                            Logger.LogMessage("Updated succesefully", userFileSystemPath);
+                        }
                     }
                 }
             }
-            catch (IOException ex)
-            {
-                // The file is blocked in the user file system. This is a normal behaviour.
-                Logger.LogDebug(ex.Message, remoteStoragePath);
-            }
             catch (Exception ex)
             {
-                Logger.LogError($"{e.ChangeType} failed", remoteStoragePath, null, ex);
+                // The file is blocked in the user file system, the item is not a pleceholder, etc.
+                // Typically this is a normal behaviour.
+                Logger.LogDebug($"{e.ChangeType}. {ex.Message}", remoteStoragePath);
             }
         }
 
@@ -198,7 +198,7 @@ namespace VirtualFileSystem
                 if (FsPath.Exists(userFileSystemPath))
                 {
                     // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                    if (await engine.ServerNotifications(userFileSystemPath).DeleteAsync())
+                    if (await engine.ServerNotifications(userFileSystemPath, Logger).DeleteAsync())
                     {
                         Logger.LogMessage("Deleted succesefully", userFileSystemPath);
                     }
@@ -232,7 +232,7 @@ namespace VirtualFileSystem
                 // In your real-life application you will not send updates from server back to client that issued the update.
                 if (FsPath.Exists(userFileSystemOldPath))
                 {
-                    if (await engine.ServerNotifications(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath))
+                    if (await engine.ServerNotifications(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath))
                     {
                         // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                         // In this case the IServerNotifications.MoveToAsync() call is ignored.

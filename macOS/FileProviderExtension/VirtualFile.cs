@@ -1,10 +1,9 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using FileProviderExtension.Extensions;
 using ITHit.FileSystem;
-using ITHit.FileSystem.Mac;
-using VirtualFilesystemCommon;
 
 namespace FileProviderExtension
 {
@@ -33,11 +32,9 @@ namespace FileProviderExtension
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(CloseAsync)}()", UserFileSystemPath);
         }
-        
-
-        
+     
         /// <inheritdoc/>
-        public async Task ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext)
+        public async Task ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath);
@@ -61,7 +58,7 @@ namespace FileProviderExtension
         }
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null)
+        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath);
 

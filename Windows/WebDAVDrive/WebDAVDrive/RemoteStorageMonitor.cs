@@ -215,7 +215,7 @@ namespace WebDAVDrive
                         && !FsPath.Exists(userFileSystemPath))
                     {
                         FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
-                        if (await engine.ServerNotifications(userFileSystemParentPath).CreateAsync(new[] { itemMetadata }) > 0)
+                        if (await engine.ServerNotifications(userFileSystemParentPath, Logger).CreateAsync(new[] { itemMetadata }) > 0)
                         {
                             await engine.Placeholders.GetItem(userFileSystemPath).SavePropertiesAsync(itemMetadata);
 
@@ -265,7 +265,7 @@ namespace WebDAVDrive
                             userFileSystemFile.IsReadOnly = false;
                         }
 
-                        if (await engine.ServerNotifications(userFileSystemPath).UpdateAsync(itemMetadata))
+                        if (await engine.ServerNotifications(userFileSystemPath, Logger).UpdateAsync(itemMetadata))
                         {
                             Logger.LogMessage("Updated succesefully", userFileSystemPath);
                         }
@@ -306,7 +306,7 @@ namespace WebDAVDrive
                 if (FsPath.Exists(userFileSystemOldPath))
                 {
                     // Source item is loaded, move it to a new location or delete.
-                    if (await engine.ServerNotifications(userFileSystemOldPath).MoveToAsync(userFileSystemNewPath))
+                    if (await engine.ServerNotifications(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath))
                     {
                         Logger.LogMessage("Moved succesefully", userFileSystemOldPath, userFileSystemNewPath);
                     }
@@ -341,7 +341,7 @@ namespace WebDAVDrive
 
                 if (FsPath.Exists(userFileSystemPath))
                 {
-                    if (await engine.ServerNotifications(userFileSystemPath).DeleteAsync())
+                    if (await engine.ServerNotifications(userFileSystemPath, Logger).DeleteAsync())
                     {
                         // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                         // In this case the IServerNotifications.DeleteAsync() call is ignored.

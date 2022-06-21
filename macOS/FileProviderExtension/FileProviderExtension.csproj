@@ -10,7 +10,7 @@
     <AssemblyName>FileProviderExtension</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
-    <ReleaseVersion>3.0.6973.0</ReleaseVersion>
+    <ReleaseVersion>5.5.15752</ReleaseVersion>
     <UseXamMacFullFramework>true</UseXamMacFullFramework>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -63,11 +63,12 @@
     <Reference Include="System.Core" />
     <Reference Include="Xamarin.Mac" />
     <Reference Include="ITHit.FileSystem">
-      <HintPath>..\packages\ITHit.FileSystem.3.0.6973-Beta\lib\netstandard2.0\ITHit.FileSystem.dll</HintPath>
+      <HintPath>..\packages\ITHit.FileSystem.5.5.15752-Beta2\lib\netstandard2.0\ITHit.FileSystem.dll</HintPath>
     </Reference>
-	<Reference Include="ITHit.FileSystem.Mac">
-      <HintPath>..\packages\ITHit.FileSystem.Mac.3.0.6973-Beta\lib\xamarinmac20\ITHit.FileSystem.Mac.dll</HintPath>
+    <Reference Include="ITHit.FileSystem.Mac">
+      <HintPath>..\packages\ITHit.FileSystem.Mac.5.5.15752-Beta2\lib\net48\ITHit.FileSystem.Mac.dll</HintPath>
     </Reference>
+    <Reference Include="System.Drawing.Common.dll" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Resources\" />
@@ -89,10 +90,6 @@
     <Compile Include="Extensions\StreamExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ITHit.FileSystem.Mac\ITHit.FileSystem.Mac.csproj">
-      <Project>{32B330A5-C736-4962-93B7-E2261770497C}</Project>
-      <Name>ITHit.FileSystem.Mac</Name>
-    </ProjectReference>
     <ProjectReference Include="..\VirtualFilesystemCommon\VirtualFilesystemCommon.csproj">
       <Project>{8A146BCC-DE6F-436F-9C25-67AD964E473F}</Project>
       <Name>VirtualFilesystemCommon</Name>

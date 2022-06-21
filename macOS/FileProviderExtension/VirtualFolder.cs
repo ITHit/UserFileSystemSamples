@@ -5,25 +5,14 @@ using System.Collections.Generic;
 using ITHit.FileSystem;
 using VirtualFilesystemCommon;
 using ITHit.FileSystem.Mac;
+using System.Threading;
 
 namespace FileProviderExtension
 {
 
-
-    
     /// <inheritdoc cref="IFolder"/>
     public class VirtualFolder : VirtualFileSystemItem, IFolder
     {
-
-
-
-
-
-
-
-
-
-
 
         /// <summary>
         /// Creates instance of this class.
@@ -35,10 +24,8 @@ namespace FileProviderExtension
 
         }
 
-
-
         /// <inheritdoc/>
-        public async Task CreateFileAsync(IFileMetadata fileMetadata, Stream content = null)
+        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", Path.Combine(UserFileSystemPath, fileMetadata.Name));
 
@@ -60,12 +47,12 @@ namespace FileProviderExtension
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
             remoteStorageItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
+
+            return null;
         }
 
-
-
         /// <inheritdoc/>
-        public async Task CreateFolderAsync(IFolderMetadata folderMetadata)
+        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", Path.Combine(UserFileSystemPath, folderMetadata.Name));
 
@@ -78,12 +65,12 @@ namespace FileProviderExtension
             remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
             remoteStorageItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
+
+            return null;
         }
 
-
-
         /// <inheritdoc/>
-        public async Task GetChildrenAsync(string pattern, IOperationContext operationContext, IFolderListingResultContext resultContext)
+        public async Task GetChildrenAsync(string pattern, IOperationContext operationContext, IFolderListingResultContext resultContext, CancellationToken cancellationToken)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath);
 
@@ -98,13 +85,12 @@ namespace FileProviderExtension
 
             // To signal that the children enumeration is completed 
             // always call ReturnChildren(), even if the folder is empty.
-            resultContext.ReturnChildren(userFileSystemChildren.ToArray(), userFileSystemChildren.Count);
+            await resultContext.ReturnChildrenAsync(userFileSystemChildren.ToArray(), userFileSystemChildren.Count);
         }
 
 
-
         /// <inheritdoc/>
-        public async Task WriteAsync(IFolderMetadata folderMetadata)
+        public async Task WriteAsync(IFolderMetadata folderMetadata, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath);
 

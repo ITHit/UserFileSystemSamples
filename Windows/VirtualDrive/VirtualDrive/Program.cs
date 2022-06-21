@@ -132,10 +132,12 @@ namespace VirtualDrive
                                 Engine.SyncService.Logger.LogError("Failed to start. The Engine must be running.");
                                 break;
                             }
+                            await Engine.SyncServiceRecent.StartAsync();
                             await Engine.SyncService.StartAsync();
                         }
                         else
                         {
+                            await Engine.SyncServiceRecent.StopAsync();
                             await Engine.SyncService.StopAsync();
                         }
                         break;

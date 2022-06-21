@@ -30,7 +30,8 @@ namespace VirtualFileSystem
         /// <inheritdoc/>
         public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", Path.Combine(UserFileSystemPath, fileMetadata.Name));
+            string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
 
             string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
             FileInfo remoteStorageNewItem = new FileInfo(Path.Combine(remoteStoragePath, fileMetadata.Name));
@@ -41,7 +42,15 @@ namespace VirtualFileSystem
                 // Upload content. Note that if the file is blocked - content parameter is null.
                 if (content != null)
                 {
-                    await content.CopyToAsync(remoteStorageStream);
+                    try
+                    {
+                        await content.CopyToAsync(remoteStorageStream);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Operation was canceled by the calling Engine.StopAsync() or the operation timeout occurred.
+                        Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}() canceled", userFileSystemNewItemPath, default);
+                    }
                     remoteStorageStream.SetLength(content.Length);
                 }
             }
@@ -60,7 +69,8 @@ namespace VirtualFileSystem
         /// <inheritdoc/>
         public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", Path.Combine(UserFileSystemPath, folderMetadata.Name));
+            string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, folderMetadata.Name);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
 
             string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
             DirectoryInfo remoteStorageNewItem = new DirectoryInfo(Path.Combine(remoteStoragePath, folderMetadata.Name));
@@ -88,6 +98,7 @@ namespace VirtualFileSystem
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath, default, operationContext);
 
             string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+
             IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(remoteStoragePath).EnumerateFileSystemInfos(pattern);
 
             List<IFileSystemItemMetadata> userFileSystemChildren = new List<IFileSystemItemMetadata>();
@@ -115,7 +126,7 @@ namespace VirtualFileSystem
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
-            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return;
             DirectoryInfo remoteStorageItem = new DirectoryInfo(remoteStoragePath);
 
             // Update remote storage folder metadata.

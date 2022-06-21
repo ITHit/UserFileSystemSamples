@@ -111,6 +111,25 @@ namespace VirtualFileSystem
                         }
                         break;
 
+                    case ConsoleKey.S:
+                        // Start/stop full synchronization.
+                        if (Engine.SyncService.SyncState == SynchronizationState.Disabled)
+                        {
+                            if (Engine.State != EngineState.Running)
+                            {
+                                Engine.SyncService.Logger.LogError("Failed to start. The Engine must be running.");
+                                break;
+                            }
+                            await Engine.SyncServiceRecent.StartAsync();
+                            await Engine.SyncService.StartAsync();
+                        }
+                        else
+                        {
+                            await Engine.SyncServiceRecent.StopAsync();
+                            await Engine.SyncService.StopAsync();
+                        }
+                        break;
+
                     case ConsoleKey.D:
                         // Enables/disables debug logging.
                         logFormatter.DebugLoggingEnabled = !logFormatter.DebugLoggingEnabled;

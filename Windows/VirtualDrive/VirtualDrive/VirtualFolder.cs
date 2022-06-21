@@ -8,13 +8,12 @@ using System.Threading.Tasks;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
-using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Samples.Common;
 
 namespace VirtualDrive
 {
     /// <inheritdoc cref="IFolder"/>
-    public class VirtualFolder : VirtualFileSystemItem, IFolder, IVirtualFolder
+    public class VirtualFolder : VirtualFileSystemItem, IFolder
     {
         /// <summary>
         /// Creates instance of this class.
@@ -35,11 +34,12 @@ namespace VirtualDrive
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
 
             string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
-            FileInfo remoteStorageItem = new FileInfo(Path.Combine(remoteStoragePath, fileMetadata.Name));
+            FileInfo remoteStorageNewItem = new FileInfo(Path.Combine(remoteStoragePath, fileMetadata.Name));
 
-            // Upload file content to the remote storage.
-            using (FileStream remoteStorageStream = remoteStorageItem.Open(FileMode.CreateNew, FileAccess.Write, FileShare.Delete))
+            // Create remote storage file.
+            using (FileStream remoteStorageStream = remoteStorageNewItem.Open(FileMode.CreateNew, FileAccess.Write, FileShare.Delete))
             {
+                // Upload content. Note that if the file is blocked - content parameter is null.
                 if (content != null)
                 {
                     try
@@ -48,19 +48,19 @@ namespace VirtualDrive
                     }
                     catch (OperationCanceledException)
                     {
-                        // Operation was canceled by the calling Engine.StopAsync() or the operation timeout occured.
-                        Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}() canceled", UserFileSystemPath, default);
+                        // Operation was canceled by the calling Engine.StopAsync() or the operation timeout occurred.
+                        Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}() canceled", userFileSystemNewItemPath, default);
                     }
                     remoteStorageStream.SetLength(content.Length);
                 }
             }
 
             // Update remote storage file metadata.
-            remoteStorageItem.Attributes = fileMetadata.Attributes;
-            remoteStorageItem.CreationTimeUtc = fileMetadata.CreationTime.UtcDateTime;
-            remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
-            remoteStorageItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
-            remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
+            remoteStorageNewItem.Attributes = fileMetadata.Attributes;
+            remoteStorageNewItem.CreationTimeUtc = fileMetadata.CreationTime.UtcDateTime;
+            remoteStorageNewItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
+            remoteStorageNewItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
+            remoteStorageNewItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
 
             // Save Etag received from your remote storage in
             // persistent placeholder properties unlil the next update.
@@ -70,7 +70,7 @@ namespace VirtualDrive
 
             // Return remote storage item ID. It will be passed later
             // into IEngine.GetFileSystemItemAsync() method on every call.
-            return WindowsFileSystemItem.GetItemIdByPath(remoteStorageItem.FullName);
+            return WindowsFileSystemItem.GetItemIdByPath(remoteStorageNewItem.FullName);
         }
 
         /// <inheritdoc/>
@@ -80,15 +80,15 @@ namespace VirtualDrive
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
 
             string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
-            DirectoryInfo remoteStorageItem = new DirectoryInfo(Path.Combine(remoteStoragePath, folderMetadata.Name));
-            remoteStorageItem.Create();
+            DirectoryInfo remoteStorageNewItem = new DirectoryInfo(Path.Combine(remoteStoragePath, folderMetadata.Name));
+            remoteStorageNewItem.Create();
 
             // Update remote storage folder metadata.
-            remoteStorageItem.Attributes = folderMetadata.Attributes;
-            remoteStorageItem.CreationTimeUtc = folderMetadata.CreationTime.UtcDateTime;
-            remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
-            remoteStorageItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
-            remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
+            remoteStorageNewItem.Attributes = folderMetadata.Attributes;
+            remoteStorageNewItem.CreationTimeUtc = folderMetadata.CreationTime.UtcDateTime;
+            remoteStorageNewItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
+            remoteStorageNewItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
+            remoteStorageNewItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
 
             // Save ETag received from your remote storage in persistent placeholder properties.
             //string eTag = ...
@@ -97,7 +97,7 @@ namespace VirtualDrive
 
             // Return remote storage item ID. It will be passed later
             // into IEngine.GetFileSystemItemAsync() method on every call.
-            return WindowsFileSystemItem.GetItemIdByPath(remoteStorageItem.FullName);
+            return WindowsFileSystemItem.GetItemIdByPath(remoteStorageNewItem.FullName);
         }
 
         /// <inheritdoc/>
@@ -113,7 +113,7 @@ namespace VirtualDrive
             cancellationToken.Register(() => { Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern}) cancelled", UserFileSystemPath, default, operationContext); });
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            IEnumerable<FileSystemItemMetadataExt> remoteStorageChildren = await EnumerateChildrenAsync(pattern, cancellationToken);
+            IEnumerable<FileSystemItemMetadataExt> remoteStorageChildren = await EnumerateChildrenAsync(pattern, operationContext, cancellationToken);
 
             foreach(FileSystemItemMetadataExt child in remoteStorageChildren)
             {
@@ -136,12 +136,11 @@ namespace VirtualDrive
             //}
         }
 
-        public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern, CancellationToken cancellationToken)
+        public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern, IOperationContext operationContext, CancellationToken cancellationToken)
         {
             string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
-            IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(remoteStoragePath).EnumerateFileSystemInfos(pattern);
-
             var userFileSystemChildren = new System.Collections.Concurrent.ConcurrentBag<FileSystemItemMetadataExt>();
+            IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(remoteStoragePath).EnumerateFileSystemInfos(pattern);
 
             //Parallel.ForEach(remoteStorageChildren, new ParallelOptions() { CancellationToken = cancellationToken }, async (remoteStorageItem) =>
             foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
@@ -158,7 +157,7 @@ namespace VirtualDrive
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
-            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return;
             DirectoryInfo remoteStorageItem = new DirectoryInfo(remoteStoragePath);
 
             // Update remote storage folder metadata.

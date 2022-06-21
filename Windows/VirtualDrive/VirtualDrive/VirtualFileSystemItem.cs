@@ -65,12 +65,13 @@ namespace VirtualDrive
             string userFileSystemOldPath = this.UserFileSystemPath;
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
 
-            string remoteStorageOldPath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStorageOldPath)) return;
+            if (!Mapping.TryGetRemoteStoragePathById(targetFolderRemoteStorageItemId, out string remoteStorageNewParentPath)) return;
+
             FileSystemInfo remoteStorageOldItem = FsPath.GetFileSystemItem(remoteStorageOldPath);
 
             if (remoteStorageOldItem != null)
             {
-                string remoteStorageNewParentPath = WindowsFileSystemItem.GetPathByItemId(targetFolderRemoteStorageItemId);
                 string remoteStorageNewPath = Path.Combine(remoteStorageNewParentPath, Path.GetFileName(targetUserFileSystemPath));
 
                 if (remoteStorageOldItem is FileInfo)
@@ -86,11 +87,7 @@ namespace VirtualDrive
                     (remoteStorageOldItem as DirectoryInfo).MoveTo(remoteStorageNewPath);
                 }
 
-                // As soon as in this sample we use USN as a ETag, and USN chandes on move,
-                // we need to update it for hydrated files.
-                //await Engine.Mapping.UpdateETagAsync(remoteStorageNewPath, userFileSystemNewPath);
-
-                Logger.LogMessage("Moved in the remote storage succesefully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
+                Logger.LogDebug("Moved in the remote storage succesefully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
             }
         }
 
@@ -113,17 +110,16 @@ namespace VirtualDrive
         /// <inheritdoc/>
         public async Task DeleteCompletionAsync(IOperationContext operationContext, IInSyncStatusResultContext resultContext, CancellationToken cancellationToken = default)
         {
-            // On Windows, for move with overwrite on folders to function correctly, 
+            // On Windows, for rename with overwrite to function properly for folders, 
             // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
-            // Otherwise the folder will be deleted before files in it can be moved.
+            // Otherwise the source folder will be deleted before files in it can be moved.
 
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", UserFileSystemPath, default, operationContext);
 
-            string remoteStoragePath;
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return;
+
             try
             {
-                remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
-
                 FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
                 if (remoteStorageItem != null)
                 {
@@ -161,11 +157,12 @@ namespace VirtualDrive
             // For this method to be called you need to register a thumbnail handler.
             // See method description for more details.
 
-            string remoteStorageItemPath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
-            byte[] thumbnail = ThumbnailExtractor.GetRemoteThumbnail(remoteStorageItemPath, size);
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return null;
+
+            byte[] thumbnail = ThumbnailExtractor.GetRemoteThumbnail(remoteStoragePath, size);
 
             string thumbnailResult = thumbnail != null ? "Success" : "Not Impl";
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(GetThumbnailAsync)}() - {thumbnailResult}", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(GetThumbnailAsync)}(): {thumbnailResult}", UserFileSystemPath);
 
             return thumbnail;
         }
@@ -269,11 +266,12 @@ namespace VirtualDrive
             };
 
             // Save lock-token and lock-mode.
-            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
-            await placeholder.Properties.AddOrUpdateAsync("LockInfo", serverLockInfo);
-            await placeholder.Properties.AddOrUpdateAsync("LockMode", lockMode);
-
-            Logger.LogDebug("Locked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+            if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
+            {
+                await placeholder.Properties.AddOrUpdateAsync("LockInfo", serverLockInfo);
+                await placeholder.Properties.AddOrUpdateAsync("LockMode", lockMode);
+                Logger.LogDebug("Locked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+            }
         }
 
         ///<inheritdoc>

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Windows.Storage;
 using FileAttributes = System.IO.FileAttributes;
+using ITHit.FileSystem.Windows;
 
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
@@ -103,7 +104,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             try
             {
-                return Convert.ToString((int)File.GetAttributes(path), 2);
+                return PlaceholderItem.GetFileAttributeLetters(File.GetAttributes(path));
             }
             catch 
             {

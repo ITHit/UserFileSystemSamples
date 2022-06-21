@@ -62,14 +62,28 @@ namespace VirtualDrive
         /// <remarks>
         /// As soon as System.IO .NET classes require path as an input parameter, 
         /// this function maps remote storage ID to the remote storge path.
-        /// 
-        /// In your real-life file system you will typically request your 
-        /// remote storage items directly by ID instead of using this method.
+        /// In your real-life file system you will typically request your remote storage 
+        /// items by ID instead of using this method.
         /// </remarks>
         /// <returns>Path in the remote storage.</returns>
         public static string GetRemoteStoragePathById(byte[] remoteStorageId)
         {
             return WindowsFileSystemItem.GetPathByItemId(remoteStorageId);
+        }
+
+        /// <summary>
+        /// Tries to get remote storage path by remote storage item ID.
+        /// </summary>
+        /// <remarks>
+        /// The item may be already deleted or moved at the time of request, 
+        /// so we use the try-method to reduce number of exceptions in the log and improve performance.
+        /// </remarks>
+        /// <param name="remoteStorageId">Remote storage ID.</param>
+        /// <param name="remoteStoragePath">Remote storage path.</param>
+        /// <returns>True if the method completed succesefully, false - otherwise.</returns>
+        public static bool TryGetRemoteStoragePathById(byte[] remoteStorageId, out string remoteStoragePath)
+        {
+            return WindowsFileSystemItem.TryGetPathByItemId(remoteStorageId, out remoteStoragePath);
         }
 
         /// <summary>

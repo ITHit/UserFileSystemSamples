@@ -20,7 +20,7 @@
     <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.19041.1" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="5.0.15216.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="5.5.15752.0-Beta2" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
   </ItemGroup>
 </Project>

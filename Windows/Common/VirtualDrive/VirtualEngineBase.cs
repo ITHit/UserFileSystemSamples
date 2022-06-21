@@ -125,7 +125,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         /// <param name="sender">Sync service.</param>
         /// <param name="e">Contains new and old sync service state.</param>
-        private void SyncService_StateChanged(SyncService sender, SynchEventArgs e)
+        private void SyncService_StateChanged(object sender, SynchEventArgs e)
         {
             if (e.NewState == SynchronizationState.Enabled || e.NewState == SynchronizationState.Disabled)
             {

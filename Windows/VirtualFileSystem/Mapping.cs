@@ -69,6 +69,21 @@ namespace VirtualFileSystem
         }
 
         /// <summary>
+        /// Tries to get remote storage path by remote storage item ID.
+        /// </summary>
+        /// <remarks>
+        /// The item may be already deleted or moved at the time of request, 
+        /// so we use the try-method to reduce number of exceptions in the log and improve performance.
+        /// </remarks>
+        /// <param name="remoteStorageId">Remote storage ID.</param>
+        /// <param name="remoteStoragePath">Remote storage path.</param>
+        /// <returns>True if the method completed succesefully, false - otherwise.</returns>
+        public static bool TryGetRemoteStoragePathById(byte[] remoteStorageId, out string remoteStoragePath)
+        {
+            return WindowsFileSystemItem.TryGetPathByItemId(remoteStorageId, out remoteStoragePath);
+        }
+
+        /// <summary>
         /// Gets a user file system file/folder metadata from the remote storage file/folder data.
         /// </summary>
         /// <param name="remoteStorageItem">Remote storage item info.</param>

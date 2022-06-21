@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common.Windows;
-using ITHit.FileSystem.Windows;
+
 
 namespace VirtualFileSystem
 {
@@ -58,17 +58,18 @@ namespace VirtualFileSystem
             string userFileSystemOldPath = this.UserFileSystemPath;
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
 
-            string remoteStorageOldPath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStorageOldPath)) return;
+            if (!Mapping.TryGetRemoteStoragePathById(targetFolderRemoteStorageItemId, out string remoteStorageNewParentPath)) return;
+
             FileSystemInfo remoteStorageOldItem = FsPath.GetFileSystemItem(remoteStorageOldPath);
 
             if (remoteStorageOldItem != null)
             {
-                string remoteStorageNewParentPath = WindowsFileSystemItem.GetPathByItemId(targetFolderRemoteStorageItemId);
                 string remoteStorageNewPath = Path.Combine(remoteStorageNewParentPath, Path.GetFileName(targetUserFileSystemPath));
 
                 if (remoteStorageOldItem is FileInfo)
                 {
-                    if(File.Exists(remoteStorageNewPath))
+                    if (File.Exists(remoteStorageNewPath))
                     {
                         File.Delete(remoteStorageNewPath);
                     }
@@ -79,7 +80,7 @@ namespace VirtualFileSystem
                     (remoteStorageOldItem as DirectoryInfo).MoveTo(remoteStorageNewPath);
                 }
 
-                Logger.LogMessage("Moved item in remote storage succesefully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
+                Logger.LogDebug("Moved in the remote storage succesefully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
             }
         }
         
@@ -108,13 +109,12 @@ namespace VirtualFileSystem
             // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
             // Otherwise the source folder will be deleted before files in it can be moved.
 
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", this.UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", UserFileSystemPath, default, operationContext);
 
-            string remoteStoragePath;
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return;
+
             try
             {
-                remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
-
                 FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
                 if (remoteStorageItem != null)
                 {
@@ -126,7 +126,7 @@ namespace VirtualFileSystem
                     {
                         (remoteStorageItem as DirectoryInfo).Delete(true);
                     }
-                    Logger.LogDebug("Deleted item in remote storage succesefully", UserFileSystemPath, default, operationContext);
+                    Logger.LogDebug("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
                 }
             }
             catch (UnauthorizedAccessException)

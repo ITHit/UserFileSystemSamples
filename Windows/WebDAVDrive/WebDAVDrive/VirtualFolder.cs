@@ -14,7 +14,7 @@ using System.Threading;
 namespace WebDAVDrive
 {
     /// <inheritdoc cref="IFolder"/>
-    public class VirtualFolder : VirtualFileSystemItem, IFolder, IVirtualFolder
+    public class VirtualFolder : VirtualFileSystemItem, IFolder
     {
         /// <summary>
         /// Creates instance of this class.

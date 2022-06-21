@@ -6,9 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using ITHit.FileSystem;
-using ITHit.FileSystem.Samples.Common;
-using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Windows;
+using ITHit.FileSystem.Samples.Common;
+
 
 namespace VirtualDrive
 {
@@ -47,10 +47,11 @@ namespace VirtualDrive
             // To process longer requests and reset the timout timer call the resultContext.ReportProgress() or resultContext.ReturnData() method.
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
+            
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return;
 
             cancellationToken.Register(() => { Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length}) cancelled", UserFileSystemPath, default, operationContext); });
-
-            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            
             using (FileStream stream = System.IO.File.OpenRead(remoteStoragePath))
             {
                 stream.Seek(offset, SeekOrigin.Begin);
@@ -62,7 +63,7 @@ namespace VirtualDrive
                 catch (OperationCanceledException)
                 {
                     // Operation was canceled by the calling Engine.StopAsync() or the operation timeout occured.
-                    //Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default);
+                    Logger.LogDebug($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default);
                 }
             }
 
@@ -90,6 +91,8 @@ namespace VirtualDrive
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return;
+
             // Send the ETag to the server as part of the update to ensure
             // the file in the remote storge is not modified since last read.
             //string oldEtag = await placeholder.Properties["ETag"].GetValueAsync<string>();
@@ -108,7 +111,6 @@ namespace VirtualDrive
                 }
             }
 
-            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
             FileInfo remoteStorageItem = new FileInfo(remoteStoragePath);
 
             if (content != null)
@@ -139,11 +141,6 @@ namespace VirtualDrive
             // Save ETag received from your remote storage in persistent placeholder properties.
             //string newEtag = ...
             //await placeholder.Properties.AddOrUpdateAsync("ETag", newEtag);
-
-            //await customDataManager.SetCustomDataAsync(
-            //    eTagNew,
-            //    null,
-            //    new[] { new FileSystemItemPropertyData((int)CustomColumnIds.ETag, eTagNew) });
         }
     }
 }

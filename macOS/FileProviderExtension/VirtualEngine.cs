@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FileProvider;
 using Foundation;
@@ -29,34 +30,42 @@ namespace FileProviderExtension
             remoteStorageMonitor.Start();
         }
 
-        public override async Task<IFileSystemItem> GetFileSystemItemAsync(string path, FileSystemItemType itemType)
+        /// <inheritdoc/>
+        public override async Task<IFileSystemItem> GetFileSystemItemAsync(string userFileSystemPath, FileSystemItemType itemType, byte[] remoteStorageItemId = null, ILogger logger = null)
         {
-            string remotePath = Mapping.MapPath(path);
-            logger.LogMessage($"{nameof(IEngine)}.{nameof(GetFileSystemItemAsync)}()", path, remotePath);
+            string remotePath = Mapping.MapPath(userFileSystemPath);
+            logger.LogMessage($"{nameof(IEngine)}.{nameof(GetFileSystemItemAsync)}()", userFileSystemPath, remotePath);
 
             if (File.Exists(remotePath))
             {
-                return new VirtualFile(path, this);
+                return new VirtualFile(userFileSystemPath, this);
             }
             else if (Directory.Exists(remotePath))
             {
-                return new VirtualFolder(path, this);
+                return new VirtualFolder(userFileSystemPath, this);
             }
 
             return null;
         }
 
-        public override void LogError(string message, string sourcePath = null, string targetPath = null, Exception ex = null)
+        public override void LogDebug(string message, string sourcePath = null, string targetPath = null, IOperationContext operationContext = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
+        {
+            logger.LogDebug(message, sourcePath, targetPath);
+        }
+
+        /// <inheritdoc/>
+        public override void LogError(string message, string sourcePath = null, string targetPath = null, Exception ex = null, IOperationContext operationContext = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
         {
             logger.LogError(message, sourcePath, targetPath, ex);
         }
 
-        public override void LogMessage(string message, string sourcePath = null, string targetPath = null)
+        /// <inheritdoc/>
+        public override void LogMessage(string message, string sourcePath = null, string targetPath = null, IOperationContext operationContext = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
         {
             logger.LogMessage(message, sourcePath, targetPath);
         }
 
-        public override void RiseError(string message, string sourcePath = null, string targetPath = null, Exception ex = null)
+        public override void RiseError(string message, string sourcePath = null, string targetPath = null, Exception ex = null, IOperationContext operationContext = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
         {
             logger.LogError(message, sourcePath, targetPath, ex);
         }

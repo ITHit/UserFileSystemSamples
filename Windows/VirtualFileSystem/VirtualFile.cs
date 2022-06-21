@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
-using ITHit.FileSystem.Samples.Common.Windows;
 
 
 namespace VirtualFileSystem
@@ -51,7 +50,8 @@ namespace VirtualFileSystem
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
-            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return;
+
             using (FileStream stream = System.IO.File.OpenRead(remoteStoragePath))
             {
                 stream.Seek(offset, SeekOrigin.Begin);
@@ -63,7 +63,7 @@ namespace VirtualFileSystem
                 catch (OperationCanceledException)
                 {
                     // Operation was canceled by the calling Engine.StopAsync() or the operation timeout occured.
-                    Logger.LogMessage($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default);
+                    Logger.LogDebug($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default);
                 }
             }
         }
@@ -87,7 +87,8 @@ namespace VirtualFileSystem
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
-            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return;
+
             FileInfo remoteStorageItem = new FileInfo(remoteStoragePath);
 
             if (content != null)

@@ -2,6 +2,7 @@ using ITHit.FileSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,11 +45,11 @@ namespace FileProviderExtension
 
         
         ///<inheritdoc>
-        public async Task MoveToAsync(string userFileSystemNewPath, IOperationContext operationContext, IConfirmationResultContext resultContext)
+        public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemOldPath = this.UserFileSystemPath;
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", UserFileSystemPath, userFileSystemNewPath);
-            string remoteStorageNewPath = Mapping.MapPath(userFileSystemNewPath);
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", UserFileSystemPath, targetUserFileSystemPath);
+            string remoteStorageNewPath = Mapping.MapPath(targetUserFileSystemPath);
             string remoteStorageOldPath = RemoteStoragePath;
 
             if (File.Exists(RemoteStoragePath))
@@ -59,19 +60,19 @@ namespace FileProviderExtension
             {
                 new DirectoryInfo(RemoteStoragePath).MoveTo(remoteStorageNewPath);
             }
-            Logger.LogMessage("Moved item in remote storage succesefully", userFileSystemOldPath, userFileSystemNewPath);
+            Logger.LogMessage("Moved item in remote storage succesefully", userFileSystemOldPath, targetUserFileSystemPath);
         }
         
 
         /// <inheritdoc/>
-        public async Task MoveToCompletionAsync(IMoveCompletionContext moveCompletionContext, IResultContext resultContext)
+        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext moveCompletionContext = null, IInSyncStatusResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
 
         
         ///<inheritdoc>
-        public async Task DeleteAsync(IOperationContext operationContext, IConfirmationResultContext resultContext)
+        public async Task DeleteAsync(IOperationContext operationContext = null, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", UserFileSystemPath);
 
@@ -86,7 +87,7 @@ namespace FileProviderExtension
         }
 
         /// <inheritdoc/>
-        public async Task DeleteCompletionAsync(IOperationContext operationContext, IResultContext resultContext)
+        public async Task DeleteCompletionAsync(IOperationContext operationContext = null, IInSyncStatusResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
@@ -117,6 +118,28 @@ namespace FileProviderExtension
         protected void SimulateNetworkDelay(long fileLength, IResultContext resultContext)
         {
             //Thread.Sleep(10000);
+        }
+
+        ///<inheritdoc>
+        public async Task<byte[]> GetThumbnailAsync(uint size)
+        {
+            byte[] content = null;
+
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(GetThumbnailAsync)}({size})", UserFileSystemPath);
+
+            string[] validExtensions = { ".jpg", ".bmp", ".gif", ".png", ".jpeg" };
+            if (validExtensions.Contains(Path.GetExtension(RemoteStoragePath)))
+            {
+                content = File.ReadAllBytes(RemoteStoragePath);
+            }
+
+            return content;
+        }
+
+        ///<inheritdoc>
+        public Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync()
+        {
+            throw new NotImplementedException();
         }
     }
 }

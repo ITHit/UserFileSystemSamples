@@ -9,15 +9,7 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="ETagManager.cs" />
-    <Compile Remove="ExternalDataManager.cs" />
-    <Compile Remove="FilteredDocsMonitor.cs" />
-    <Compile Remove="IMapping.cs" />
-    <Compile Remove="LockManager.cs" />
-    <Compile Remove="ServerToClientSync.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="5.0.15216.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="5.5.15752.0-Beta2" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Core\Common.Windows.Core.csproj" />
   </ItemGroup>

@@ -30,7 +30,7 @@ namespace VirtualFileSystem
         /// </param>
         /// <param name="maxDegreeOfParallelism">A maximum number of concurrent tasks.</param>
         /// <param name="log4net">Log4net Logger.</param>
-        public VirtualEngine(string license, string userFileSystemRootPath, string remoteStorageRootPath, LogFormatter logFormatter) : 
+        public VirtualEngine(string license, string userFileSystemRootPath, string remoteStorageRootPath, LogFormatter logFormatter) :
             base(license, userFileSystemRootPath)
         {
 
@@ -47,15 +47,15 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public override async Task<IFileSystemItem> GetFileSystemItemAsync(string userFileSystemPath, FileSystemItemType itemType, byte[] remoteStorageItemId = null)
+        public override async Task<IFileSystemItem> GetFileSystemItemAsync(string userFileSystemPath, FileSystemItemType itemType, byte[] remoteStorageItemId = null, ILogger logger = null)
         {
             if (itemType == FileSystemItemType.File)
             {
-                return new VirtualFile(userFileSystemPath, remoteStorageItemId, this);
+                return new VirtualFile(userFileSystemPath, remoteStorageItemId, logger);
             }
             else
             {
-                return new VirtualFolder(userFileSystemPath, remoteStorageItemId, this);
+                return new VirtualFolder(userFileSystemPath, remoteStorageItemId, logger);
             }
         }
 

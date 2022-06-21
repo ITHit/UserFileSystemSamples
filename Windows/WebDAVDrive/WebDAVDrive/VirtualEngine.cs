@@ -48,15 +48,15 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public override async Task<IFileSystemItem> GetFileSystemItemAsync(string userFileSystemPath, FileSystemItemType itemType, byte[] itemId)
+        public override async Task<IFileSystemItem> GetFileSystemItemAsync(string userFileSystemPath, FileSystemItemType itemType, byte[] itemId, ILogger logger = null)
         {
             if (itemType == FileSystemItemType.File)
             {
-                return new VirtualFile(userFileSystemPath, this, this);
+                return new VirtualFile(userFileSystemPath, this, logger);
             }
             else
             {
-                return new VirtualFolder(userFileSystemPath, this, this);
+                return new VirtualFolder(userFileSystemPath, this, logger);
             }
         }
 
