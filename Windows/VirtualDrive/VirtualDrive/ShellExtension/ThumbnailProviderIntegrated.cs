@@ -1,5 +1,6 @@
+using ITHit.FileSystem.Windows.ShellExtension;
+using System;
 using System.Runtime.InteropServices;
-using ITHit.FileSystem.Windows.ShellExtension.Thumbnails;
 
 
 namespace VirtualDrive.ShellExtension
@@ -10,8 +11,10 @@ namespace VirtualDrive.ShellExtension
     [ComVisible(true)]
     [ProgId("VirtualDrive.ThumbnailProvider")]
     [Guid("05CF065E-E135-4B2B-9D4D-CFB3FBAC73A4")]
-    public class ThumbnailProvider : ThumbnailProviderHandlerRpcBase
+    public class ThumbnailProviderIntegrated : ThumbnailProviderIntegratedBase
     {
-
+        public ThumbnailProviderIntegrated() : base(Program.Engine)
+        {
+        }
     }
 }

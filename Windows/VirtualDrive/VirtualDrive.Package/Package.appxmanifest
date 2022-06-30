@@ -42,7 +42,7 @@
         <uap:DefaultTile Wide310x150Logo="Images\Wide310x150Logo.png" />
         <uap:SplashScreen Image="Images\SplashScreen.png" />
       </uap:VisualElements>
-	  <!--//$<VirtualDrive.ManifestExtensions-->
+      <!--//$<VirtualDrive.ManifestExtensions-->
       <Extensions>
         <desktop3:Extension Category="windows.cloudFiles">
           <desktop3:CloudFiles>
@@ -59,7 +59,7 @@
             <desktop4:ContentUriSource Clsid="6D45BC7A-D0B7-4913-8984-FD7261550C08"/>
 
           </desktop3:CloudFiles>
-        </desktop3:Extension>	
+        </desktop3:Extension>
         <com:Extension Category="windows.comServer">
           <com:ComServer>
             <com:ExeServer DisplayName="VirtualDrive.ShellExtension" Executable="VirtualDrive.ShellExtension\VirtualDrive.ShellExtension.exe">
@@ -81,7 +81,7 @@
           </com:ComServer>
         </com:Extension>
       </Extensions>
-	  <!--//$>-->
+      <!--//$>-->
     </Application>
   </Applications>
 

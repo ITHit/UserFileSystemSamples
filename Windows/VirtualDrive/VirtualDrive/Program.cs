@@ -9,9 +9,9 @@ using log4net;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
-using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
-using ITHit.FileSystem.Windows.ShellExtension;
+using ITHit.FileSystem.Windows.ShellExtension.ComInfrastructure;
+using ITHit.FileSystem.Windows.Package;
 
 namespace VirtualDrive
 {
@@ -28,10 +28,10 @@ namespace VirtualDrive
         private static readonly ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         /// <summary>
-        /// Processes OS file system calls, 
-        /// synchronizes user file system to remote storage. 
+        /// Processes OS file system calls,
+        /// synchronizes user file system to remote storage.
         /// </summary>
-        private static VirtualEngine Engine;
+        internal static VirtualEngine Engine;
 
         /// <summary>
         /// Outputs logging information.
@@ -40,59 +40,115 @@ namespace VirtualDrive
 
         static async Task Main(string[] args)
         {
-            // In a real world application the user system should have trusted certificate installed or an installer (msi) should install it.
-            // This method should be omitted for packaged application.
-            CertificateRegistrar.InstallDeveloperCertificate();
-
-            // In the case of a regular installer (msi) call this method during installation.
-            // This method should be omitted for packaged application.
-            await PackageRegistrar.RegisterSparsePackageAsync();
-
-            // Load Settings.
-            Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
-
-            logFormatter = new LogFormatter(log, Settings.AppID, Settings.RemoteStorageRootPath);
-
             try
             {
+                // Load Settings.
+                Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
+                logFormatter = new LogFormatter(log, Settings.AppID, Settings.RemoteStorageRootPath);
+                
                 // Log environment description.
                 logFormatter.PrintEnvironmentDescription();
-                
-                // Register sync root and create app folders.
-                await RegisterSyncRootAsync();
 
-                using (Engine = new VirtualEngine(
-                       Settings.UserFileSystemLicense,
-                       Settings.UserFileSystemRootPath,
-                       Settings.RemoteStorageRootPath,
-                       Settings.IconsFolderPath,
-                       logFormatter))
+                string param = args.Length > 0 ? args[0] : null;
+
+                switch (param)
                 {
-                    Engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
-                    Engine.AutoLock = Settings.AutoLock;
+                    case "-Install":
+                        // Called by a post-build event.
+                        CertificateRegistrar.InstallDeveloperCertificate(args);
+                        break;
 
-                    // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
-                    // method as a remoteStorageItemId parameter when a root folder is requested. 
-                    byte[] itemId = WindowsFileSystemItem.GetItemIdByPath(Settings.RemoteStorageRootPath);
-                    Engine.Placeholders.GetRootItem().SetRemoteStorageItemId(itemId);
+                    case "-Uninstall":
+                        CertificateRegistrar.UninstallDeveloperCertificate();
+                        break;
 
-                    // Print Engine config, settings, console commands, logging headers.
-                    await logFormatter.PrintEngineStartInfoAsync(Engine);
+                    case "-Embedding":
+                        // COM is launching the process. https://docs.microsoft.com/en-us/windows/win32/com/localserver32#remarks
+                        break;
 
-                    // Start processing OS file system calls.
-                    await Engine.StartAsync();
-
-#if DEBUG
-                    // Opens Windows File Manager with user file system folder and remote storage folder.
-                    ShowTestEnvironment();
-#endif
-                    // Keep this application running and reading user input.
-                    await ProcessUserInputAsync();
+                    default:
+                        await RegisterSparsePackageAsync(args);
+                        await StartEngine();
+                        break;
                 }
             }
             catch (Exception ex)
             {
                 log.Error(ex);
+                await ProcessUserInputAsync();
+            }
+        }
+
+        private static async Task RegisterSparsePackageAsync(string[] args)
+        {
+            if (PackageRegistrar.IsRunningWithIdentity())
+            {
+                PackageRegistrar.EnsureIdentityContextIsCorrect();
+                PackageRegistrar.EnsureNoConflictingClassesRegistered();
+            }
+            else if (!PackageRegistrar.SparsePackageRegistered())
+            {
+                // In case this method was not called by a post-build event.
+                // In a real world application the user system should have trusted certificate installed or an installer (msi) should install it.
+                // This method call should be omitted for packaged application.
+                CertificateRegistrar.InstallDeveloperCertificate(args);
+
+                // In the case of a regular installer (msi) call this method during installation.
+                // This method call should be omitted for packaged application.
+                await PackageRegistrar.RegisterSparsePackageAsync();
+
+                Console.WriteLine($"\n\nSparse package was installed. Restart the application.");
+                Environment.Exit(0);
+            }
+        }
+
+        private static async Task StartEngine()
+        {
+            if (PackageRegistrar.IsRunningWithSparsePackageIdentity())
+            {
+                using (var server = new LocalServer())
+                {
+                    ShellExtensionRegistrar.RegisterHandlerClasses(server);
+                    await StartSyncRootEngine();
+                }
+            }
+            else
+            {
+                await StartSyncRootEngine();
+            }
+        }
+
+        private static async Task StartSyncRootEngine()
+        {
+            // Register sync root and create app folders.
+            await RegisterSyncRootAsync();
+
+            using (Engine = new VirtualEngine(
+                    Settings.UserFileSystemLicense,
+                    Settings.UserFileSystemRootPath,
+                    Settings.RemoteStorageRootPath,
+                    Settings.IconsFolderPath,
+                    logFormatter))
+            {
+                Engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
+                Engine.AutoLock = Settings.AutoLock;
+
+                // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
+                // method as a remoteStorageItemId parameter when a root folder is requested. 
+                byte[] itemId = WindowsFileSystemItem.GetItemIdByPath(Settings.RemoteStorageRootPath);
+                Engine.Placeholders.GetRootItem().SetRemoteStorageItemId(itemId);
+
+                // Print Engine config, settings, console commands, logging headers.
+                await logFormatter.PrintEngineStartInfoAsync(Engine);
+
+                // Start processing OS file system calls.
+                await Engine.StartAsync();
+
+#if DEBUG
+                // Opens Windows File Manager with user file system folder and remote storage folder.
+                ShowTestEnvironment();
+#endif
+                // Keep this application running and reading user input.
                 await ProcessUserInputAsync();
             }
         }
@@ -207,6 +263,20 @@ namespace VirtualDrive
                         return;
 
                     case ConsoleKey.P:
+                        if (Engine.State == EngineState.Running)
+                        {
+                            await Engine.StopAsync();
+                        }
+
+                        // Call the code below during programm uninstall using classic msi.
+                        await UnregisterSyncRootAsync();
+
+                        // Delete all files/folders.
+                        await CleanupAppFoldersAsync();
+
+                        // Uninstall developer certificate.
+                        CertificateRegistrar.UninstallDeveloperCertificate();
+
                         // Unregister sparse package.
                         await UnregisterSparsePackageAsync();
                         break;
@@ -229,13 +299,16 @@ namespace VirtualDrive
         {
             if (!await Registrar.IsRegisteredAsync(Settings.UserFileSystemRootPath))
             {
-                log.Info($"\n\nRegistering {Settings.UserFileSystemRootPath} sync root.");
+                log.Info($"\n\nRegistering sync root.");
                 Directory.CreateDirectory(Settings.UserFileSystemRootPath);
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
                     Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
 
-                ShellExtensionRegistrar.Register(SyncRootId, log);
+                if (!PackageRegistrar.IsRunningWithIdentity())
+                {
+                    ShellExtensionRegistrar.Register(SyncRootId, log);
+                }
             }
             else
             {
@@ -257,7 +330,7 @@ namespace VirtualDrive
         /// </remarks>
         private static async Task UnregisterSyncRootAsync()
         {
-            log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
+            log.Info($"\n\nUnregistering sync root.");
             await Registrar.UnregisterAsync(SyncRootId);
 
             ShellExtensionRegistrar.Unregister(log);
@@ -291,7 +364,7 @@ namespace VirtualDrive
         private static async Task UnregisterSparsePackageAsync()
         {
             log.Info("\nUnregistering sparse package...");
-            await PackageRegistrar.UnregisterSparsePackageAsync(SyncRootId);
+            await PackageRegistrar.UnregisterSparsePackageAsync();
             log.Info("\nSparse package unregistered sucessfully.");
         }
 

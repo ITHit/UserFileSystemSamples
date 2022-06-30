@@ -48,6 +48,28 @@ namespace FileProviderExtension
             return null;
         }
 
+
+        
+        /// <inheritdoc/>
+        public override async Task<IMenuCommand> GetMenuCommandAsync(Guid menuGuid)
+        {
+            // For this method to be called you need to register a menu command handler.
+            // See method description for more details.
+
+            logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString());
+
+            Guid actionCommandGuid = typeof(ActionMenuCommand).GUID;
+
+            if (menuGuid == actionCommandGuid)
+            {
+                return new ActionMenuCommand(this, this.logger);
+            }
+
+            logger.LogError($"Menu not found", menuGuid.ToString());
+            throw new NotImplementedException();
+        }
+        
+
         public override void LogDebug(string message, string sourcePath = null, string targetPath = null, IOperationContext operationContext = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
         {
             logger.LogDebug(message, sourcePath, targetPath);

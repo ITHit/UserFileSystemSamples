@@ -58,13 +58,23 @@
             <desktop4:ContentUriSource Clsid="6D45BC7A-D0B7-4913-8984-FD7261550C08"/>
           </desktop3:CloudFiles>
         </desktop3:Extension>
-        <com:Extension Category="windows.comServer">
+
+        <!--
+        To use out-of-proc handlers with gRPC:
+        1. Comment <ApplicationManifest>app.manifest</ApplicationManifest> element in VirtualDrive.csproj
+        2. Uncomment <com:Extension> section here:
+        -->
+
+        <!--<com:Extension Category="windows.comServer">
           <com:ComServer>
             <com:ExeServer DisplayName="VirtualDrive.ShellExtension" Executable="VirtualDrive.ShellExtension.exe">
+              <com:Class Id="000562AA-2879-4CF1-89E8-0AEC9596FE19" />
+              <com:Class Id="05CF065E-E135-4B2B-9D4D-CFB3FBAC73A4" />
               <com:Class Id="9C923BF3-3A4B-487B-AB4E-B4CF87FD1C25" />
+              <com:Class Id="6D45BC7A-D0B7-4913-8984-FD7261550C08" />
             </com:ExeServer>
           </com:ComServer>
-        </com:Extension>
+        </com:Extension>-->
       </Extensions>
     </Application>
   </Applications>

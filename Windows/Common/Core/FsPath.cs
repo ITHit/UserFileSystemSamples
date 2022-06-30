@@ -102,11 +102,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <returns>String that represents file or folder attributes or null if the file/folder is not found.</returns>
         public static string GetAttString(string path)
         {
-            try
+            if (WindowsFileSystemItem.TryGetAttributes(path, out FileAttributes? attributes))
             {
-                return PlaceholderItem.GetFileAttributeLetters(File.GetAttributes(path));
+                return WindowsFileSystemItem.GetFileAttributesString(attributes.Value);
             }
-            catch 
+            else
             {
                 return null;
             }

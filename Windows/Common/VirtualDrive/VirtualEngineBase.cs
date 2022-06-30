@@ -54,47 +54,43 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             ThrowExceptions = false;
 
             StateChanged += Engine_StateChanged;
+            SyncService.StateChanged += SyncService_StateChanged;
             Error += logFormatter.LogError;
             Message += logFormatter.LogMessage;
             Debug += logFormatter.LogDebug;
-            SyncService.StateChanged += SyncService_StateChanged;
 
             //RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log4net);
         }
 
         /// <inheritdoc/>
-        public override async Task<bool> FilterAsync(OperationType operationType, string userFileSystemPath, string userFileSystemNewPath = null, IOperationContext operationContext = null)
+        public override async Task<bool> FilterAsync(SyncDirection direction, OperationType operationType, string path, string newPath = null, FileAttributes? attributes = null, IOperationContext operationContext = null)
         {
-            try 
-            { 
-                switch(operationType)
-                {
-                    // To send file content to the remote storage only when the MS Office or
-                    // AutoCAD document is closed, uncommnt the Create and Update cases below.
-                    //case OperationType.Create:
-                    //case OperationType.Update:
+            // Use the code below to filter based on files and folders attributes.
+            //if (await new AttributesFilter(FileAttributes.Hidden | FileAttributes.Temporary).FilterAsync(direction, operationType, path, newPath, attributes))
+            //{
+            //    LogDebug($"{nameof(AttributesFilter)} filtered {operationType}", path, newPath, operationContext);
+            //    return true;
+            //}
 
-                    case OperationType.Unlock:
-                        return FilterHelper.AvoidSync(userFileSystemPath) 
-                            || FilterHelper.IsAppLocked(userFileSystemPath);
-
-                    case OperationType.Move:
-                    case OperationType.MoveCompletion:
-                        // When a hydrated file is deleted, it is moved to a Recycle Bin.
-                        return FilterHelper.IsRecycleBin(userFileSystemNewPath) 
-                            || FilterHelper.AvoidSync(userFileSystemNewPath);
-
-                    default:
-                        return FilterHelper.AvoidSync(userFileSystemPath);
-                }
-            }
-            catch(FileNotFoundException)
+            if (await new ZipFilter().FilterAsync(direction, operationType, path, newPath, attributes))
             {
-                // Typically the file is not found in case of some temporary file that is being deleted.
-                // We do not want to continue processing this file, and we do not want any exceptions in the log as this is a normal behaviour.
-                LogDebug($"{nameof(IEngine)}.{nameof(FilterAsync)}(): Item not found", userFileSystemPath, userFileSystemNewPath, operationContext);
+                LogDebug($"{nameof(ZipFilter)} filtered {operationType}", path, newPath, operationContext);
                 return true;
             }
+
+            if (await new MsOfficeFilter().FilterAsync(direction, operationType, path, newPath, attributes))
+            {
+                LogDebug($"{nameof(MsOfficeFilter)} filtered {operationType}", path, newPath, operationContext);
+                return true;
+            }
+
+            if (await new AutoCadFilter().FilterAsync(direction, operationType, path, newPath, attributes))
+            {
+                LogDebug($"{nameof(AutoCadFilter)} filtered {operationType}", path, newPath, operationContext);
+                return true;
+            }
+
+            return false;
         }
 
         /// <inheritdoc/>

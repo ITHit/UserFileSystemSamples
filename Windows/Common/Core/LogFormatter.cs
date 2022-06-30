@@ -11,6 +11,7 @@ using log4net.Config;
 using log4net.Appender;
 
 using ITHit.FileSystem.Windows;
+using ITHit.FileSystem.Windows.Package;
 
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
@@ -87,12 +88,13 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         public void PrintEnvironmentDescription()
         {
             // Log environment description.
-            log.Info($"\n{"AppID:",-15} {appId}");
-            log.Info($"\n{"Engine version:",-15} {typeof(IEngine).Assembly.GetName().Version}");
-            log.Info($"\n{"OS version:",-15} {RuntimeInformation.OSDescription}");
-            log.Info($"\n{".NET version:",-15} {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
-            //log.Info($"\n{"Is UWP:",-15} {PackageRegistrar.IsRunningAsUwp()}");
-            log.Info($"\n{"Admin mode:",-15} {new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent()).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator)}");
+            log.Info($"\n{"AppID:",-25} {appId}");
+            log.Info($"\n{"Engine version:",-25} {typeof(IEngine).Assembly.GetName().Version}");
+            log.Info($"\n{"OS version:",-25} {RuntimeInformation.OSDescription}");
+            log.Info($"\n{".NET version:",-25} {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
+            log.Info($"\n{"Package or app identity:",-25} {PackageRegistrar.IsRunningWithIdentity()}");
+            log.Info($"\n{"Sparse package identity:",-25} {PackageRegistrar.IsRunningWithSparsePackageIdentity()}");
+            log.Info($"\n{"Elevated mode:",-25} {new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent()).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator)}");            
         }
 
         /// <summary>
@@ -113,9 +115,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
         public async Task PrintEngineEnvironmentDescriptionAsync(EngineWindows engine)
         {
-            log.Info($"\n{"FS root:",-15} {engine.Path}");
-            log.Info($"\n{"RS root:",-15} {remoteStorageRootPath}");
-            log.Info($"\n{"AutoLock:",-15} {engine.AutoLock}");
+            log.Info($"\n{"File system root:",-25} {engine.Path}");
+            log.Info($"\n{"Remote storage root:",-25} {remoteStorageRootPath}");
+            log.Info($"\n{"AutoLock:",-25} {engine.AutoLock}");
 
             // Log indexing state. Sync root must be indexed.
             await PrintIndexingStateAsync(engine.Path);
@@ -128,7 +130,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         private async Task PrintIndexingStateAsync(string path)
         {
             StorageFolder userFileSystemRootFolder = await StorageFolder.GetFolderFromPathAsync(path);
-            log.Info($"\n{"Indexed state:",-15} {await userFileSystemRootFolder.GetIndexedStateAsync()}");
+            log.Info($"\n{"Indexed state:",-25} {await userFileSystemRootFolder.GetIndexedStateAsync()}");
         }
 
         /// <summary>
@@ -136,9 +138,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         public void PrintHelp()
         {
-            log.Info("\n\nPress Esc to unregister file system, delete all files/folders and exit (simulate uninstall).");
+            log.Info("\n\nPress Esc to unregister file system, delete all files/folders, unregister sparse package, unregister handlers and exit (simulate uninstall).");
             log.Info("\nPress Spacebar to exit without unregistering (simulate reboot).");
-            log.Info("\nPress 'p' to unregister sparse package.");
+            log.Info("\nPress 'p' to unregister file system, delete all files/folders, developer certificate, unregister sparse package, unregister handlers and exit (simulate full uninstall).");
             log.Info("\nPress 'e' to start/stop the Engine and all sync services.");
             log.Info("\nPress 's' to start/stop synchronization service.");
             log.Info("\nPress 'm' to start/stop remote storage monitor.");
@@ -171,7 +173,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="level">Log level.</param>
         private void WriteLog(IEngine sender, EngineMessageEventArgs e, log4net.Core.Level level)
         {
-            string att = FsPath.Exists(e.SourcePath) ? FsPath.GetAttString(e.SourcePath) : null;
+            string att = FsPath.GetAttString(e.TargetPath ?? e.SourcePath);
             string process = null;
             byte? priorityHint = null;
             string fileId = null;
@@ -223,7 +225,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         private static string Format(string date, string process, string priorityHint, string fileId, string remoteStorageId, string componentName, string callerLineNumber, string callerMemberName, string callerFilePath, string message, string sourcePath, string attributes, string targetPath)
         {
             // {fileId,-18} | {remoteStorageId,-remoteStorageIdWidth}
-            return $"{Environment.NewLine}|{date, -12}| {process,-25}| {priorityHint,-5}| {componentName,-26}| {callerLineNumber, 4} | {message,-45}| {sourcePath,-sourcePathWidth} | {attributes, 23 } | {targetPath}";
+            return $"{Environment.NewLine}|{date, -12}| {process,-25}| {priorityHint,-5}| {componentName,-26}| {callerLineNumber, 4} | {message,-45}| {sourcePath,-sourcePathWidth} | {attributes, 10 } | {targetPath}";
         }
 
         /// <summary>

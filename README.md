@@ -20,7 +20,7 @@ This sample implements a virtual file system with synchronization support, on-de
 
 <a href="https://github.com/ITHit/UserFileSystemSamples/tree/master/macOS">
 <p>
-This sample implements a virtual file system for Mac with synchronization support and folders on-demand listing.&nbsp;It synchronizes files and folders both from remote storage to the user file system and from the user file system to remote storage. This                                             <span>...</span>
+This sample implements a virtual file system for Mac with synchronization support, folders on-demand listing, thumbnails and context menu support.&nbsp;It synchronizes files and folders both from remote storage to the user file system and from the user fi                                            <span>...</span>
 </p>
 </a>
 </li>
@@ -31,7 +31,8 @@ This sample implements a virtual file system for Mac with synchronization suppor
 
 <a href="https://github.com/ITHit/UserFileSystemSamples/tree/master/Windows/VirtualDrive/">
 <p>
-This is a virtual drive implementation with thumbnail support, Microsoft Office and AutoCAD documents editing support, and automatic Microsoft Office/AutoCAD documents locking. It also demonstrates custom column support in Windows File Manager.&nbsp;To si                                            <span>...</span>
+This is a virtual drive implementation with thumbnail support, custom context menu and custom states &amp;amp; columns support. It also demonstrates automatic Microsoft Office/AutoCAD documents locking.&nbsp;
+To simulate the remote storage, this sample is usi                                            <span>...</span>
 </p>
 </a>
 </li>

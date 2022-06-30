@@ -34,6 +34,17 @@
 		<string>VirtualEngine</string>
 		<key>NSExtensionFileProviderSupportsEnumeration</key>
 		<true/>
+		<key>NSExtensionFileProviderActions</key>
+		<array>
+			<dict>
+				<key>NSExtensionFileProviderActionIdentifier</key>
+				<string>28d0e0cb-5df7-432c-a06f-297c06b5ec5d</string>
+				<key>NSExtensionFileProviderActionName</key>
+				<string>Action 1</string>
+				<key>NSExtensionFileProviderActionActivationRule</key>
+				<string>TRUEPREDICATE</string>
+			</dict>
+		</array>
 	</dict>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>

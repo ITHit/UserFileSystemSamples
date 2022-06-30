@@ -38,6 +38,7 @@ namespace VirtualFileSystem
         /// </summary>
         private static LogFormatter logFormatter;
 
+        
         public static async Task Main(string[] args)
         {
             // Load Settings.
@@ -84,6 +85,7 @@ namespace VirtualFileSystem
                 await ProcessUserInputAsync();
             }
         }
+        
 
         private static async Task ProcessUserInputAsync()
         {
@@ -209,7 +211,7 @@ namespace VirtualFileSystem
         {
             if (!await Registrar.IsRegisteredAsync(Settings.UserFileSystemRootPath))
             {
-                log.Info($"\n\nRegistering {Settings.UserFileSystemRootPath} sync root.");
+                log.Info($"\n\nRegistering sync root.");
                 Directory.CreateDirectory(Settings.UserFileSystemRootPath);
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
@@ -235,7 +237,7 @@ namespace VirtualFileSystem
         /// </remarks>
         private static async Task UnregisterSyncRootAsync()
         {
-            log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
+            log.Info($"\n\nUnregistering sync root.");
             await Registrar.UnregisterAsync(SyncRootId);
         }
 

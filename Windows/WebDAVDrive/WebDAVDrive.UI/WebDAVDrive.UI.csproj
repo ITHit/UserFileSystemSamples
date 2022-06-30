@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
-    <TargetFramework>net5.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework>net6.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>True</UseWindowsForms>
     <Copyright>IT Hit LTD.</Copyright>
@@ -18,7 +18,7 @@
     <PackageReference Include="ITHitWebDAVClient" Version="5.3.3490" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="5.5.15752.0-Beta2" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="5.6.15918.0-Beta2" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
   </ItemGroup>
   <ItemGroup>

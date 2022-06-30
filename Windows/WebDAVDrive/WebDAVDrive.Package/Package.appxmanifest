@@ -10,12 +10,12 @@
 
   <Identity
     Name="002B4E63-F09E-41B2-B183-4CA36C13DCAA"
-    Publisher="CN=WebDAVDrivePackagePublisher"
+    Publisher="CN=IT Hit LTD"
     Version="1.0.24.0" />
 
   <Properties>
     <DisplayName>WebDAVDrive.Package</DisplayName>
-    <PublisherDisplayName>WebDAVDrive.PackagePublisher</PublisherDisplayName>
+    <PublisherDisplayName>IT Hit LTD</PublisherDisplayName>
     <Logo>Images\StoreLogo.png</Logo>
   </Properties>
 
@@ -41,7 +41,7 @@
         <uap:DefaultTile Wide310x150Logo="Images\Wide310x150Logo.png" />
         <uap:SplashScreen Image="Images\SplashScreen.png" />
       </uap:VisualElements>
-	  <!--//$<WebDAVDrive.ManifestExtensions-->
+      <!--//$<WebDAVDrive.ManifestExtensions-->
       <Extensions>
         <desktop3:Extension Category="windows.cloudFiles">
           <desktop3:CloudFiles>
@@ -56,7 +56,7 @@
             </desktop3:CloudFilesContextMenus>
 
           </desktop3:CloudFiles>
-        </desktop3:Extension>		
+        </desktop3:Extension>
         <com:Extension Category="windows.comServer">
           <com:ComServer>
             <!-- When changing ProgId make sure to change it also in the ThumbnailProvider.cs -->
@@ -76,7 +76,7 @@
           </com:ComServer>
         </com:Extension>
       </Extensions>
-	<!--//$>-->
+      <!--//$>-->
     </Application>
   </Applications>
 

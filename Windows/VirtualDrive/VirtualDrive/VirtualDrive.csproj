@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework>net6.0-windows10.0.19041.0</TargetFramework>
     <Authors>IT Hit LTD.</Authors>
     <Company>IT Hit LTD.</Company>
     <Product>Virtual Drive</Product>
@@ -12,6 +12,7 @@
 To simulate the remote storage, this sample is using a folder in the local file system on the same machine. You can use this project as a strting point for creating a Virtual Drive with advanced features.
 
 This is an advanced project with ETags support, Microsoft Office documents editing, automatic Microsoft Office documents locking, and custom columns in Windows File Manager.</Description>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Framework\**" />
@@ -39,7 +40,8 @@ This is an advanced project with ETags support, Microsoft Office documents editi
     <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.ShellExtension" Version="5.5.15752.0-Beta2" />
+    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="5.6.15918.0-Beta2" />
+    <PackageReference Include="ITHit.FileSystem.Windows.ShellExtension" Version="5.6.15918.0-Beta2" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\..\Common\VirtualDrive\Common.Windows.VirtualDrive.csproj" />
     <ProjectReference Include="..\VirtualDrive.ShellExtension\VirtualDrive.ShellExtension.csproj" />
@@ -81,5 +83,8 @@ This is an advanced project with ETags support, Microsoft Office documents editi
   </ItemGroup>
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="&quot;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\makeappx&quot; pack /d &quot;$(ProjectDir)SparsePackage&quot; /p &quot;$(OutDir)$(ProjectName).msix&quot; /nv /o&#xD;&#xA;&quot;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool&quot; sign /fd SHA256 /a /f &quot;$(ProjectDir)$(ProjectName)_TemporaryKey.pfx&quot; /p &quot;ccaZD9HZ5ueFAYfaTtoN&quot; &quot;$(OutDir)$(ProjectName).msix&quot;&#xD;&#xA;taskkill /f /fi &quot;imagename eq VirtualDrive.ShellExtension.exe&quot;" />
+  </Target>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="$(TargetDir)$(TargetName).exe -Install" />
   </Target>
 </Project>

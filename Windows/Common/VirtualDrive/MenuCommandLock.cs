@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-
+using ITHit.FileSystem.Samples.Common.Windows.VirtualDrive.Interop;
 using ITHit.FileSystem.Windows;
 
 
@@ -15,7 +15,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
     /// The menu is shown only if all selected items are locked by this client or all items are unlocked. 
     /// Otherwise the menu is hidden.
     /// </summary>
-    public class MenuCommandLock : IMenuCommand
+    public class MenuCommandLock : IMenuCommandWindows
     {
         private readonly EngineWindows engine;
         private readonly ILogger logger;
@@ -78,6 +78,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                         await clientNotifications.UnlockAsync();
                     else
                         await clientNotifications.LockAsync();
+
+                    Shell32.SHChangeNotify(SHCNE.SHCNE_UPDATEITEM, SHCNF.SHCNF_PATHW, userFileSystemPath, null);
                 }
                 catch (Exception ex)
                 {

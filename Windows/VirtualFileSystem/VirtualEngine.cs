@@ -39,11 +39,43 @@ namespace VirtualFileSystem
             ThrowExceptions = false;
 
             StateChanged += Engine_StateChanged;
+            SyncService.StateChanged += SyncService_StateChanged;
             Error += logFormatter.LogError;
             Message += logFormatter.LogMessage;
             Debug += logFormatter.LogDebug;
 
             RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, this.Logger);
+        }
+
+        /// <inheritdoc/>
+        public override async Task<bool> FilterAsync(SyncDirection direction, OperationType operationType, string path, string newPath = null, FileAttributes? attributes = null, IOperationContext operationContext = null)
+        {
+            // Use the code below to filter based on files and folders attributes.
+            //if (await new AttributesFilter(FileAttributes.Hidden | FileAttributes.Temporary).FilterAsync(direction, operationType, path, newPath, attributes))
+            //{
+            //    LogDebug($"{nameof(AttributesFilter)} filtered {operationType}", path, newPath, operationContext);
+            //    return true;
+            //}
+
+            if (await new ZipFilter().FilterAsync(direction, operationType, path, newPath, attributes))
+            {
+                LogDebug($"{nameof(ZipFilter)} filtered {operationType}", path, newPath, operationContext);
+                return true;
+            }
+
+            if (await new MsOfficeFilter().FilterAsync(direction, operationType, path, newPath, attributes))
+            {
+                LogDebug($"{nameof(MsOfficeFilter)} filtered {operationType}", path, newPath, operationContext);
+                return true;
+            }
+
+            if (await new AutoCadFilter().FilterAsync(direction, operationType, path, newPath, attributes))
+            {
+                LogDebug($"{nameof(AutoCadFilter)} filtered {operationType}", path, newPath, operationContext);
+                return true;
+            }
+
+            return false;
         }
 
         /// <inheritdoc/>
@@ -91,6 +123,18 @@ namespace VirtualFileSystem
             engine.LogMessage($"{e.NewState}");
         }
 
+        /// <summary>
+        /// Fired on sync service status change.
+        /// </summary>
+        /// <param name="sender">Sync service.</param>
+        /// <param name="e">Contains new and old sync service state.</param>
+        private void SyncService_StateChanged(object sender, SynchEventArgs e)
+        {
+            if (e.NewState == SynchronizationState.Enabled || e.NewState == SynchronizationState.Disabled)
+            {
+                SyncService.Logger.LogMessage($"{e.NewState}");
+            }
+        }
 
         private bool disposedValue;
 

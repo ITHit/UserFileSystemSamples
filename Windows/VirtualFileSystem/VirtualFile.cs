@@ -52,7 +52,7 @@ namespace VirtualFileSystem
 
             if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return;
 
-            using (FileStream stream = System.IO.File.OpenRead(remoteStoragePath))
+            using (FileStream stream = new FileInfo(remoteStoragePath).Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
             {
                 stream.Seek(offset, SeekOrigin.Begin);
                 const int bufferSize = 0x500000; // 5Mb. Buffer size must be multiple of 4096 bytes for optimal performance.

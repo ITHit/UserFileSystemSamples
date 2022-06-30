@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Security;
@@ -13,9 +12,8 @@ using log4net;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
-using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
-using ITHit.FileSystem.Windows.ShellExtension;
+using ITHit.FileSystem.Windows.Package;
 
 using ITHit.WebDAV.Client;
 using ITHit.WebDAV.Client.Exceptions;
@@ -23,7 +21,7 @@ using System.Net.Http;
 
 using WebDAVDrive.UI;
 using WebDAVDrive.UI.ViewModels;
-
+using ITHit.FileSystem.Windows.ShellExtension.ComInfrastructure;
 
 namespace WebDAVDrive
 {
@@ -40,10 +38,10 @@ namespace WebDAVDrive
         private static readonly ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         /// <summary>
-        /// Processes OS file system calls, 
-        /// synchronizes user file system to remote storage. 
+        /// Processes OS file system calls,
+        /// synchronizes user file system to remote storage.
         /// </summary>
-        private static VirtualEngine Engine;
+        internal static VirtualEngine Engine;
 
         /// <summary>
         /// Outputs logging information.
@@ -73,19 +71,73 @@ namespace WebDAVDrive
 
         static async Task Main(string[] args)
         {
-            // In a real world application the user system should have trusted certificate installed or an installer (msi) should install it.
-            // This method should be omitted for packaged application.
-            CertificateRegistrar.InstallDeveloperCertificate();
+            if (ShellExtensionRegistrar.IsInstall(args))
+            {
+                // Called by a post-build event.
+                CertificateRegistrar.InstallDeveloperCertificate(args);
+            }
+            else if (ShellExtensionRegistrar.IsUninstall(args))
+            {
+                CertificateRegistrar.UninstallDeveloperCertificate();
+            }
+            else if (!ShellExtensionRegistrar.IsEmbedding(args))
+            {
+                // Load Settings.
+                Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
 
-            // In the case of a regular installer (msi) call this method during installation.
-            // This method should be omitted for packaged application.
-            await PackageRegistrar.RegisterSparsePackageAsync();
+                logFormatter = new LogFormatter(log, Settings.AppID, Settings.WebDAVServerUrl);
 
-            // Load Settings.
-            Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
+                await RegisterSparsePackageAsync(args);
+                await StartServer();
+            }
+        }
 
-            logFormatter = new LogFormatter(log, Settings.AppID, Settings.WebDAVServerUrl);
+        private static async Task RegisterSparsePackageAsync(string[] args)
+        {
+            try
+            {
+                if (PackageRegistrar.IsRunningWithIdentity())
+                {
+                    PackageRegistrar.EnsureIdentityContextIsCorrect();
+                    PackageRegistrar.EnsureNoConflictingClassesRegistered();
+                }
+                else if (!PackageRegistrar.SparsePackageRegistered())
+                {
+                    // In case this method was not called by a post-build event.
+                    // In a real world application the user system should have trusted certificate installed or an installer (msi) should install it.
+                    // This method call should be omitted for packaged application.
+                    CertificateRegistrar.InstallDeveloperCertificate(args);
 
+                    // In the case of a regular installer (msi) call this method during installation.
+                    // This method call should be omitted for packaged application.
+                    await PackageRegistrar.RegisterSparsePackageAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                log.Error(ex);
+            }
+        }
+
+        private static async Task StartServer()
+        {
+            if (PackageRegistrar.IsRunningWithSparsePackageIdentity())
+            {
+
+                using (var server = new LocalServer())
+                {
+                    ShellExtensionRegistrar.RegisterHandlerClasses(server);
+                    await StartSyncRootEngine();
+                }
+            }
+            else
+            {
+                await StartSyncRootEngine();
+            }
+        }
+
+        private static async Task StartSyncRootEngine()
+        {
             try
             {
                 // Log environment description.
@@ -391,6 +443,20 @@ namespace WebDAVDrive
                         return;
 
                     case ConsoleKey.P:
+                        if (Engine.State == EngineState.Running)
+                        {
+                            await Engine.StopAsync();
+                        }
+
+                        // Call the code below during programm uninstall using classic msi.
+                        await UnregisterSyncRootAsync();
+
+                        // Delete all files/folders.
+                        await CleanupAppFoldersAsync();
+
+                        // Uninstall developer certificate.
+                        CertificateRegistrar.UninstallDeveloperCertificate();
+
                         // Unregister sparse package.
                         await UnregisterSparsePackageAsync();
                         break;
@@ -413,13 +479,16 @@ namespace WebDAVDrive
         {
             if (!await Registrar.IsRegisteredAsync(Settings.UserFileSystemRootPath))
             {
-                log.Info($"\n\nRegistering {Settings.UserFileSystemRootPath} sync root.");
+                log.Info($"\n\nRegistering sync root.");
                 Directory.CreateDirectory(Settings.UserFileSystemRootPath);
 
                 await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
                     Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
 
-                ShellExtensionRegistrar.Register(SyncRootId, log);
+                if (!PackageRegistrar.IsRunningWithIdentity())
+                {
+                    ShellExtensionRegistrar.Register(SyncRootId, log);
+                }
             }
             else
             {
@@ -441,7 +510,7 @@ namespace WebDAVDrive
         /// </remarks>
         private static async Task UnregisterSyncRootAsync()
         {
-            log.Info($"\n\nUnregistering {Settings.UserFileSystemRootPath} sync root.");
+            log.Info($"\n\nUnregistering sync root.");
             await Registrar.UnregisterAsync(SyncRootId);
 
             ShellExtensionRegistrar.Unregister(log);
@@ -472,7 +541,7 @@ namespace WebDAVDrive
         {
             // Unregister sparse package.
             log.Info("\nUnregistering sparse package...");
-            await PackageRegistrar.UnregisterSparsePackageAsync(SyncRootId);
+            await PackageRegistrar.UnregisterSparsePackageAsync();
             log.Info("\nSparse package unregistered sucessfully.");
         }
 

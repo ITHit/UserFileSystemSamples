@@ -101,6 +101,7 @@ namespace VirtualFileSystem
         {
             Logger.LogDebug($"Operation: {e.ChangeType}", e.FullPath);
             string remoteStoragePath = e.FullPath;
+
             try
             {
                 string userFileSystemPath = mapping.ReverseMapPath(remoteStoragePath);
@@ -122,6 +123,10 @@ namespace VirtualFileSystem
                             Logger.LogMessage($"Created succesefully", userFileSystemPath);
                         }
                     }
+                }
+                else
+                {
+                    ChangedAsync(sender, e);
                 }
             }
             catch (Exception ex)
@@ -148,7 +153,8 @@ namespace VirtualFileSystem
 
                 // This check is only required because we can not prevent circular calls because of the simplicity of this example.
                 // In your real-life application you will not send updates from server back to client that issued the update.
-                if (IsModified(userFileSystemPath, remoteStoragePath))
+                if (FsPath.Exists(userFileSystemPath)
+                    && IsModified(userFileSystemPath, remoteStoragePath))
                 {
                     FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
                     if (remoteStorageItem != null)
@@ -223,7 +229,7 @@ namespace VirtualFileSystem
             Logger.LogDebug($"Operation: {e.ChangeType}", e.OldFullPath, e.FullPath);
             string remoteStorageOldPath = e.OldFullPath;
             string remoteStorageNewPath = e.FullPath;
-            try 
+            try
             {
                 string userFileSystemOldPath = mapping.ReverseMapPath(remoteStorageOldPath);
                 string userFileSystemNewPath = mapping.ReverseMapPath(remoteStorageNewPath);
@@ -239,6 +245,11 @@ namespace VirtualFileSystem
                         Logger.LogMessage("Renamed succesefully", userFileSystemOldPath, userFileSystemNewPath);
                     }
                 }
+
+                // Possibly the item was filtered by MS Office filter because of the transactional save.
+                // The target item should be updated in this case.
+                // This call, is onlly required to support MS Office editing in the folder simulating remote storage.
+                ChangedAsync(sender, e);
             }
             catch (Exception ex)
             {
@@ -290,24 +301,33 @@ namespace VirtualFileSystem
         /// <summary>
         /// Compares two files contents.
         /// </summary>
-        /// <param name="filePath1">File or folder 1 to compare.</param>
-        /// <param name="filePath2">File or folder 2 to compare.</param>
+        /// <param name="userFileSystemPath">File or folder 1 to compare.</param>
+        /// <param name="remoteStoragePath">File or folder 2 to compare.</param>
         /// <returns>True if file is modified. False - otherwise.</returns>
-        internal static bool IsModified(string filePath1, string filePath2)
+        internal static bool IsModified(string userFileSystemPath, string remoteStoragePath)
         {
-            if (FsPath.IsFolder(filePath1) && FsPath.IsFolder(filePath2))
+            if (FsPath.IsFolder(userFileSystemPath) && FsPath.IsFolder(remoteStoragePath))
+            {
+                return false;
+            }
+
+            FileInfo fiUserFileSystem = new FileInfo(userFileSystemPath);
+            FileInfo fiRemoteStorage = new FileInfo(remoteStoragePath);
+
+            // This check is to prevent circular calls. In you real app you wouuld not send notifications to the client that generated the event.
+            if (fiUserFileSystem.LastWriteTimeUtc >= fiRemoteStorage.LastWriteTimeUtc)
             {
                 return false;
             }
 
             try
             {
-                if (new FileInfo(filePath1).Length == new FileInfo(filePath2).Length)
+                if (fiUserFileSystem.Length == fiRemoteStorage.Length)
                 {
                     // Verify that the file is not offline,
                     // therwise the file will be hydrated when the file stream is opened.
-                    if (new FileInfo(filePath1).Attributes.HasFlag(System.IO.FileAttributes.Offline)
-                        || new FileInfo(filePath1).Attributes.HasFlag(System.IO.FileAttributes.Offline))
+                    if (fiUserFileSystem.Attributes.HasFlag(System.IO.FileAttributes.Offline)
+                        || fiUserFileSystem.Attributes.HasFlag(System.IO.FileAttributes.Offline))
                     {
                         return false;
                     }
@@ -317,11 +337,11 @@ namespace VirtualFileSystem
                     using (var alg = System.Security.Cryptography.MD5.Create())
                     {
                         // This code for demo purposes only. We do not block files for writing, which is required by some apps, for example by AutoCAD.
-                        using (FileStream stream = new FileStream(filePath1, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                        using (FileStream stream = new FileStream(userFileSystemPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
                         {
                             hash1 = alg.ComputeHash(stream);
                         }
-                        using (FileStream stream = new FileStream(filePath2, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                        using (FileStream stream = new FileStream(remoteStoragePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
                         {
                             hash2 = alg.ComputeHash(stream);
                         }

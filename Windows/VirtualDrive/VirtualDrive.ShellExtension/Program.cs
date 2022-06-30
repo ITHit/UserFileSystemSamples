@@ -16,10 +16,10 @@ namespace VirtualDrive.ShellExtension
             {
                 using (var server = new LocalServer())
                 {
-                    server.RegisterClass<ThumbnailProvider>();
-                    server.RegisterClass<ContextMenusProvider>();
-                    server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProvider>();
-                    server.RegisterWinRTClass<IStorageProviderUriSource, UriSource>();
+                    server.RegisterClass<ThumbnailProviderRpc>();
+                    server.RegisterClass<ContextMenuVerbRpc>();
+                    server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProviderRpc>();
+                    server.RegisterWinRTClass<IStorageProviderUriSource, UriSourceRpc>();
 
                     await server.Run();
                 }

@@ -10,7 +10,7 @@
     <AssemblyName>FileProviderExtension</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
-    <ReleaseVersion>5.5.15752</ReleaseVersion>
+    <ReleaseVersion>5.6.15918.0</ReleaseVersion>
     <UseXamMacFullFramework>true</UseXamMacFullFramework>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -62,13 +62,13 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="Xamarin.Mac" />
+    <Reference Include="System.Drawing.Common.dll" />
     <Reference Include="ITHit.FileSystem">
-      <HintPath>..\packages\ITHit.FileSystem.5.5.15752-Beta2\lib\netstandard2.0\ITHit.FileSystem.dll</HintPath>
+      <HintPath>..\packages\ITHit.FileSystem.5.6.15918-Beta2\lib\netstandard2.0\ITHit.FileSystem.dll</HintPath>
     </Reference>
     <Reference Include="ITHit.FileSystem.Mac">
-      <HintPath>..\packages\ITHit.FileSystem.Mac.5.5.15752-Beta2\lib\net48\ITHit.FileSystem.Mac.dll</HintPath>
+      <HintPath>..\packages\ITHit.FileSystem.Mac.5.6.15918-Beta2\lib\net48\ITHit.FileSystem.Mac.dll</HintPath>
     </Reference>
-    <Reference Include="System.Drawing.Common.dll" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Resources\" />
@@ -88,6 +88,7 @@
     <Compile Include="Mapping.cs" />
     <Compile Include="RemoteStorageMonitor.cs" />
     <Compile Include="Extensions\StreamExtensions.cs" />
+    <Compile Include="ActionMenuCommand.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\VirtualFilesystemCommon\VirtualFilesystemCommon.csproj">

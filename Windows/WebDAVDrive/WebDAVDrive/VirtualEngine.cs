@@ -68,7 +68,7 @@ namespace WebDAVDrive
 
             Logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString());
 
-            Guid menuCommandLockGuid = typeof(WebDAVDrive.ShellExtension.ContextMenusProvider).GUID;
+            Guid menuCommandLockGuid = typeof(WebDAVDrive.ShellExtension.ContextMenuVerbIntegrated).GUID;
 
             if (menuGuid == menuCommandLockGuid)
             {

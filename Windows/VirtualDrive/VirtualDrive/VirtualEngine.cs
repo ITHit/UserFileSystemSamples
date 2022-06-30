@@ -62,7 +62,7 @@ namespace VirtualDrive
 
             Logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString());
 
-            Guid menuCommandLockGuid = typeof(VirtualDrive.ShellExtension.ContextMenusProvider).GUID;
+            Guid menuCommandLockGuid = typeof(VirtualDrive.ShellExtension.ContextMenuVerbRpc).GUID;
 
             if (menuGuid == menuCommandLockGuid)
             {

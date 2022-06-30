@@ -16,9 +16,9 @@ namespace WebDAVDrive.ShellExtension
             {
                 using (var server = new LocalServer())
                 {
-                    server.RegisterClass<ThumbnailProvider>();
-                    server.RegisterClass<ContextMenusProvider>();
-                    server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProvider>();
+                    server.RegisterClass<ThumbnailProviderRpc>();
+                    server.RegisterClass<ContextMenuVerbRpc>();
+                    server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProviderRpc>();
 
                     await server.Run();
                 }

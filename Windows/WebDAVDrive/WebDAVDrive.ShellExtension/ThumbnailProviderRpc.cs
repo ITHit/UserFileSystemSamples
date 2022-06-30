@@ -1,6 +1,5 @@
+using ITHit.FileSystem.Windows.ShellExtension;
 using System.Runtime.InteropServices;
-using ITHit.FileSystem.Windows.ShellExtension.Thumbnails;
-
 
 namespace WebDAVDrive.ShellExtension
 {
@@ -11,7 +10,7 @@ namespace WebDAVDrive.ShellExtension
     [ComVisible(true)]
     [ProgId("WebDAVDrive.ThumbnailProvider")]
     [Guid("A5B0C82F-50AA-445C-A404-66DEB510E84B")]
-    public class ThumbnailProvider : ThumbnailProviderHandlerRpcBase
+    public class ThumbnailProviderRpc : ThumbnailProviderRpcBase
     {
 
     }
