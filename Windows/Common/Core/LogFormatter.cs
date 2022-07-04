@@ -83,7 +83,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <summary>
-        /// Prints environment description.
+        /// Prints environment description and console commands.
         /// </summary>
         public void PrintEnvironmentDescription()
         {
@@ -94,20 +94,33 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             log.Info($"\n{".NET version:",-25} {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
             log.Info($"\n{"Package or app identity:",-25} {PackageRegistrar.IsRunningWithIdentity()}");
             log.Info($"\n{"Sparse package identity:",-25} {PackageRegistrar.IsRunningWithSparsePackageIdentity()}");
-            log.Info($"\n{"Elevated mode:",-25} {new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent()).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator)}");            
+            log.Info($"\n{"Elevated mode:",-25} {new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent()).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator)}");
+
+            string sparsePackagePath = PackageRegistrar.GetSparsePackagePath();
+            if (File.Exists(sparsePackagePath))
+            {
+                log.Info($"\n{"Sparse package location:",-25} {sparsePackagePath}");
+                var cert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(sparsePackagePath);
+                log.Info($"\n{"Sparse package cert:",-25} Subject: {cert.Subject}, Issued by: {cert.Issuer}");
+            }
+            else
+            {
+                log.Info($"\n{"Sparse package:",-25} Not found");
+            }
+
+            // Log console commands.
+            PrintHelp();
         }
 
         /// <summary>
-        /// Print Engine config, settings, console commands, logging headers. 
+        /// Print Engine config, settings, logging headers. 
         /// </summary>
         /// <param name="engine">Engine instance.</param>
         /// <param name="remoteStorageRootPath">Remote storage root path.</param>
         public async Task PrintEngineStartInfoAsync(EngineWindows engine)
         {
             await PrintEngineEnvironmentDescriptionAsync(engine);
-
-            // Log console commands.
-            PrintHelp();
+            log.Info("\n");
 
             // Log logging columns headers.
             PrintHeader();
@@ -115,9 +128,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
         public async Task PrintEngineEnvironmentDescriptionAsync(EngineWindows engine)
         {
+            log.Info($"\n");
             log.Info($"\n{"File system root:",-25} {engine.Path}");
             log.Info($"\n{"Remote storage root:",-25} {remoteStorageRootPath}");
             log.Info($"\n{"AutoLock:",-25} {engine.AutoLock}");
+            log.Info($"\n{"Outgoing sync, ms:",-25} {engine.SyncService.SyncIntervalMs}");
+
 
             // Log indexing state. Sync root must be indexed.
             await PrintIndexingStateAsync(engine.Path);
@@ -138,16 +154,23 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         public void PrintHelp()
         {
-            log.Info("\n\nPress Esc to unregister file system, delete all files/folders, unregister sparse package, unregister handlers and exit (simulate uninstall).");
-            log.Info("\nPress Spacebar to exit without unregistering (simulate reboot).");
-            log.Info("\nPress 'p' to unregister file system, delete all files/folders, developer certificate, unregister sparse package, unregister handlers and exit (simulate full uninstall).");
-            log.Info("\nPress 'e' to start/stop the Engine and all sync services.");
-            log.Info("\nPress 's' to start/stop synchronization service.");
-            log.Info("\nPress 'm' to start/stop remote storage monitor.");
-            log.Info("\nPress 'd' to enable/disable debug and performance logging.");
-            log.Info($"\nPress 'l' to open log file. ({LogFilePath})");
-            log.Info($"\nPress 'b' to submit support tickets, report bugs, suggest features. (https://userfilesystem.com/support/)");
-            log.Info("\n----------------------\n");
+            log.Info("\n\n ----------------------------------------------------------------------------------------");
+            log.Info("\n Commands:");
+            PrintCommandDescription("Spacebar", "Exit without unregistering (simulate reboot)");
+            PrintCommandDescription("Esc", "Unregister file system, delete all files/folders, unregister handlers and exit.");
+            PrintCommandDescription("Shift-Esc", "Unregister file system, delete all files/folders, unregister handlers, uninstall developer certificate, unregister sparse package and exit (simulate full uninstall).");
+            PrintCommandDescription("e", "Start/stop the Engine and all sync services.");
+            PrintCommandDescription("s", "Start/stop synchronization service.");
+            PrintCommandDescription("m", "Start/stop remote storage monitor.");
+            PrintCommandDescription("d", "Enable/disable debug and performance logging.");
+            PrintCommandDescription("l", $"Open log file. ({LogFilePath})");
+            PrintCommandDescription("b", "Submit support tickets, report bugs, suggest features. (https://userfilesystem.com/support/)");
+            log.Info("\n ----------------------------------------------------------------------------------------");
+        }
+
+        private void PrintCommandDescription(string key, string description)
+        {
+            log.Info($"{Environment.NewLine} {key, 12} - {description,-25}");
         }
 
         public void LogError(IEngine sender, EngineErrorEventArgs e)
@@ -190,16 +213,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             string sourcePath = e.SourcePath?.FitString(sourcePathWidth, 6);
             string targetPath = e.TargetPath?.FitString(sourcePathWidth, 6);
 
-            // Trim sync root and remote storage root to reduce ammount of logging and improve logs readability
-            //if (sender != null)
-            //{
-                //sourcePath = sourcePath?.Replace((sender as EngineWindows).Path, "<FS root>");
-                //sourcePath = sourcePath?.Replace(remoteStorageRootPath, "<RS root>");
-
-                //targetPath = targetPath?.Replace((sender as EngineWindows).Path, "<FS root>");
-                //targetPath = targetPath?.Replace(remoteStorageRootPath, "<RS root>");
-            //}
-
             string message = Format(DateTimeOffset.Now.ToString("hh:mm:ss.fff"), process, priorityHint?.ToString(), fileId, "", e.ComponentName, e.CallerLineNumber.ToString(), e.CallerMemberName, e.CallerFilePath, e.Message,  sourcePath, att, targetPath);
 
             if (level == log4net.Core.Level.Error)
@@ -233,6 +246,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         private void PrintHeader()
         {
+            log.Info("\n");
             log.Info(Format("Time", "Process Name", "Prty", "FS ID", "RS ID", "Component", "Line", "Caller Member Name", "Caller File Path", "Message", "Source Path", "Attributes", "Target Path"));
             log.Info(Format("----", "------------", "----", "_____", "_____", "---------", "____", "------------------", "----------------", "-------", "-----------", "----------", "-----------"));
         }

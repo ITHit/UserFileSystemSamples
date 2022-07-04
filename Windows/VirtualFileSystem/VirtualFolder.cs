@@ -31,8 +31,7 @@ namespace VirtualFileSystem
         public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
-            string contentNull = content == null ? "==null" : "!=null";
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}({nameof(content)}{contentNull})", userFileSystemNewItemPath);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
 
             string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
             FileInfo remoteStorageNewItem = new FileInfo(Path.Combine(remoteStoragePath, fileMetadata.Name));

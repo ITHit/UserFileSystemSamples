@@ -4,11 +4,22 @@ using CommonShellExtension = ITHit.FileSystem.Windows.ShellExtension;
 using VirtualDrive.ShellExtension;
 using Windows.Storage.Provider;
 using ITHit.FileSystem.Windows.ShellExtension.ComInfrastructure;
+using ITHit.FileSystem.Windows.Package;
+using System;
+using System.Collections.Generic;
 
 namespace VirtualDrive
 {
     internal class ShellExtensionRegistrar
     {
+        private static List<(string Name, Guid Guid)> handlers = new List<(string, Guid)>
+        {
+            ("ThumbnailProvider", typeof(ThumbnailProviderIntegrated).GUID),
+            ("MenuVerbHandler_0", typeof(ContextMenuVerbIntegrated).GUID),
+            ("CustomStateHandler", typeof(CustomStateProviderIntegrated).GUID),
+            ("UriHandler", typeof(UriSourceIntegrated).GUID)
+        };
+
         /// <summary>
         /// Registers shell service providers COM classes as well as registers them for sync root. Needed only when process is not running with application or package identity.
         /// </summary>
@@ -16,14 +27,14 @@ namespace VirtualDrive
         /// <param name="log">Logger.</param>
         internal static void Register(string syncRootId, ILog log)
         {
-            log.Info("\nRegistering shell extensions...\n");
-
             string comServerPath = Assembly.GetEntryAssembly().Location;
 
-            CommonShellExtension.ShellExtensionRegistrar.RegisterHandler(syncRootId, "ThumbnailProvider", typeof(ThumbnailProviderIntegrated).GUID, comServerPath);
-            CommonShellExtension.ShellExtensionRegistrar.RegisterHandler(syncRootId, "MenuVerbHandler_0", typeof(ContextMenuVerbIntegrated).GUID, comServerPath);
-            CommonShellExtension.ShellExtensionRegistrar.RegisterHandler(syncRootId, "CustomStateHandler", typeof(CustomStateProviderIntegrated).GUID, comServerPath);
-            CommonShellExtension.ShellExtensionRegistrar.RegisterHandler(syncRootId, "UriHandler", typeof(UriSourceIntegrated).GUID, comServerPath);
+            foreach (var handler in handlers)
+            {
+                log.Info($"\nRegistering shell extension {handler.Name} with CLSID {handler.Guid:B}...\n");
+
+                CommonShellExtension.ShellExtensionRegistrar.RegisterHandler(syncRootId, handler.Name, handler.Guid, comServerPath);
+            }
         }
 
         /// <summary>
@@ -32,12 +43,15 @@ namespace VirtualDrive
         /// <param name="log">Logger.</param>
         internal static void Unregister(ILog log)
         {
-            log.Info("\nUnregistering shell extensions...\n");
+            foreach (var handler in handlers)
+            {
+                if (CommonShellExtension.ShellExtensionRegistrar.IsHandlerRegistered(handler.Guid))
+                {
+                    log.Info($"\nUnregistering shell extension {handler.Name} with CLSID {handler.Guid:B}...\n");
 
-            CommonShellExtension.ShellExtensionRegistrar.UnregisterHandler(typeof(ThumbnailProviderIntegrated).GUID);
-            CommonShellExtension.ShellExtensionRegistrar.UnregisterHandler(typeof(ContextMenuVerbIntegrated).GUID);
-            CommonShellExtension.ShellExtensionRegistrar.UnregisterHandler(typeof(CustomStateProviderIntegrated).GUID);
-            CommonShellExtension.ShellExtensionRegistrar.UnregisterHandler(typeof(UriSourceIntegrated).GUID);
+                    CommonShellExtension.ShellExtensionRegistrar.UnregisterHandler(handler.Guid);
+                }
+            }
         }
 
         /// <summary>
@@ -45,35 +59,13 @@ namespace VirtualDrive
         /// </summary>
         internal static void RegisterHandlerClasses(LocalServer server)
         {
-            server.RegisterClass<ThumbnailProviderIntegrated>();
-            server.RegisterClass<ContextMenuVerbIntegrated>();
-            server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProviderIntegrated>();
-            server.RegisterWinRTClass<IStorageProviderUriSource, UriSourceIntegrated>();
-        }
-
-        /// <summary>
-        /// Returns true if the process started with "-Embedding" command line parameter. Usually this happens when COM is launching the process.
-        /// Also see <see href="https://docs.microsoft.com/en-us/windows/win32/com/localserver32#remarks">here</see>.
-        /// </summary>
-        internal static bool IsEmbedding(string[] args)
-        {
-            return args.Length == 1 && args[0] == "-Embedding";
-        }
-
-        /// <summary>
-        /// Returns true if the process started with "-Install" command line parameter. Usually this happens automatically on a post-build event.
-        /// </summary>
-        internal static bool IsInstall(string[] args)
-        {
-            return args.Length == 1 && args[0] == "-Install";
-        }
-
-        /// <summary>
-        /// Returns true if the process started with "-Uninstall" command line parameter.
-        /// </summary>
-        internal static bool IsUninstall(string[] args)
-        {
-            return args.Length == 1 && args[0] == "-Uninstall";
+            if (PackageRegistrar.IsRunningWithSparsePackageIdentity())
+            {
+                server.RegisterClass<ThumbnailProviderIntegrated>();
+                server.RegisterClass<ContextMenuVerbIntegrated>();
+                server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProviderIntegrated>();
+                server.RegisterWinRTClass<IStorageProviderUriSource, UriSourceIntegrated>();
+            }
         }
     }
 }

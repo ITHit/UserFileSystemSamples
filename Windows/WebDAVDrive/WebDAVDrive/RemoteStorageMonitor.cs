@@ -221,7 +221,7 @@ namespace WebDAVDrive
 
                             // Because of the on-demand population, the parent folder placeholder may not exist in the user file system
                             // or the folder may be offline. In this case the IServerNotifications.CreateAsync() call is ignored.
-                            Logger.LogMessage($"Created succesefully", userFileSystemPath);
+                            Logger.LogMessage($"Created successfully", userFileSystemPath);
                         }
                     }
                 }
@@ -267,7 +267,7 @@ namespace WebDAVDrive
 
                         if (await engine.ServerNotifications(userFileSystemPath, Logger).UpdateAsync(itemMetadata))
                         {
-                            Logger.LogMessage("Updated succesefully", userFileSystemPath);
+                            Logger.LogMessage("Updated successfully", userFileSystemPath);
                         }
 
                         // Restore the read-only attribute.
@@ -308,7 +308,7 @@ namespace WebDAVDrive
                     // Source item is loaded, move it to a new location or delete.
                     if (await engine.ServerNotifications(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath))
                     {
-                        Logger.LogMessage("Moved succesefully", userFileSystemOldPath, userFileSystemNewPath);
+                        Logger.LogMessage("Moved successfully", userFileSystemOldPath, userFileSystemNewPath);
                     }
                     else
                     {
@@ -345,7 +345,7 @@ namespace WebDAVDrive
                     {
                         // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                         // In this case the IServerNotifications.DeleteAsync() call is ignored.
-                        Logger.LogMessage("Deleted succesefully", userFileSystemPath);
+                        Logger.LogMessage("Deleted successfully", userFileSystemPath);
                     }
                 }
             }
@@ -415,7 +415,7 @@ namespace WebDAVDrive
                     //    // Remove lock icon and lock info in custom columns.
                     //    await customDataManager.SetLockInfoAsync(null);
 
-                    //    Logger.LogMessage("Unlocked succesefully", userFileSystemPath);
+                    //    Logger.LogMessage("Unlocked successfully", userFileSystemPath);
                     //}
                 }
             }

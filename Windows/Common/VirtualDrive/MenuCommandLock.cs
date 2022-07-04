@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using ITHit.FileSystem.Samples.Common.Windows.VirtualDrive.Interop;
 using ITHit.FileSystem.Windows;
-
 
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
@@ -78,8 +76,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                         await clientNotifications.UnlockAsync();
                     else
                         await clientNotifications.LockAsync();
-
-                    Shell32.SHChangeNotify(SHCNE.SHCNE_UPDATEITEM, SHCNF.SHCNF_PATHW, userFileSystemPath, null);
                 }
                 catch (Exception ex)
                 {

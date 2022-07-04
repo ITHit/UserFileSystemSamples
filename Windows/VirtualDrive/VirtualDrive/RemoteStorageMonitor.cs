@@ -120,7 +120,7 @@ namespace VirtualDrive
                         {
                             // Because of the on-demand population, the parent folder placeholder may not exist in the user file system
                             // or the folder may be offline. In this case the IServerNotifications.CreateAsync() call is ignored.
-                            Logger.LogMessage($"Created succesefully", userFileSystemPath);
+                            Logger.LogMessage($"Created successfully", userFileSystemPath);
                         }
                     }
                 }
@@ -165,7 +165,7 @@ namespace VirtualDrive
                         {
                             // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                             // In this case the IServerNotifications.UpdateAsync() call is ignored.
-                            Logger.LogMessage("Updated succesefully", userFileSystemPath);
+                            Logger.LogMessage("Updated successfully", userFileSystemPath);
                         }
                     }
                 }
@@ -206,7 +206,7 @@ namespace VirtualDrive
                     // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                     if (await engine.ServerNotifications(userFileSystemPath, Logger).DeleteAsync())
                     {
-                        Logger.LogMessage("Deleted succesefully", userFileSystemPath);
+                        Logger.LogMessage("Deleted successfully", userFileSystemPath);
                     }
                 }
             }
@@ -242,7 +242,7 @@ namespace VirtualDrive
                     {
                         // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                         // In this case the IServerNotifications.MoveToAsync() call is ignored.
-                        Logger.LogMessage("Renamed succesefully", userFileSystemOldPath, userFileSystemNewPath);
+                        Logger.LogMessage("Renamed successfully", userFileSystemOldPath, userFileSystemNewPath);
                     }
                 }
 

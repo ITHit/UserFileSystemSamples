@@ -125,7 +125,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <summary>
-        /// Determins if the syn root is registered for specified folder.
+        /// Determines if the syn root is registered for specified folder.
         /// </summary>
         /// <param name="path">Sync root path.</param>
         /// <returns>True if the sync root is registered, false otherwise.</returns>

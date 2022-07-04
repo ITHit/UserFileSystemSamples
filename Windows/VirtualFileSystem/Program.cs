@@ -46,11 +46,11 @@ namespace VirtualFileSystem
 
             logFormatter = new LogFormatter(log, Settings.AppID, Settings.RemoteStorageRootPath);
 
+            // Log environment description.
+            logFormatter.PrintEnvironmentDescription();
+
             try
             {
-                // Log environment description.
-                logFormatter.PrintEnvironmentDescription();
-
                 // Register sync root and create app folders.
                 await RegisterSyncRootAsync();
 

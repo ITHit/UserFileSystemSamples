@@ -80,7 +80,7 @@ namespace VirtualFileSystem
                     (remoteStorageOldItem as DirectoryInfo).MoveTo(remoteStorageNewPath);
                 }
 
-                Logger.LogDebug("Moved in the remote storage succesefully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
+                Logger.LogDebug("Moved in the remote storage successfully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
             }
         }
         
@@ -126,7 +126,7 @@ namespace VirtualFileSystem
                     {
                         (remoteStorageItem as DirectoryInfo).Delete(true);
                     }
-                    Logger.LogDebug("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+                    Logger.LogDebug("Deleted in the remote storage successfully", UserFileSystemPath, default, operationContext);
                 }
             }
             catch (UnauthorizedAccessException)

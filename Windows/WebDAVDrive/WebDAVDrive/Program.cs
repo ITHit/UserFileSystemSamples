@@ -22,6 +22,7 @@ using System.Net.Http;
 using WebDAVDrive.UI;
 using WebDAVDrive.UI.ViewModels;
 using ITHit.FileSystem.Windows.ShellExtension.ComInfrastructure;
+using System.Linq;
 
 namespace WebDAVDrive
 {
@@ -71,120 +72,140 @@ namespace WebDAVDrive
 
         static async Task Main(string[] args)
         {
-            if (ShellExtensionRegistrar.IsInstall(args))
+            // Load Settings.
+            Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
+            logFormatter = new LogFormatter(log, Settings.AppID, Settings.WebDAVServerUrl);
+
+            // Log environment description.
+            logFormatter.PrintEnvironmentDescription();
+
+            switch (args.FirstOrDefault())
             {
-                // Called by a post-build event.
-                CertificateRegistrar.InstallDeveloperCertificate(args);
-            }
-            else if (ShellExtensionRegistrar.IsUninstall(args))
-            {
-                CertificateRegistrar.UninstallDeveloperCertificate();
-            }
-            else if (!ShellExtensionRegistrar.IsEmbedding(args))
-            {
-                // Load Settings.
-                Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
-
-                logFormatter = new LogFormatter(log, Settings.AppID, Settings.WebDAVServerUrl);
-
-                await RegisterSparsePackageAsync(args);
-                await StartServer();
-            }
-        }
-
-        private static async Task RegisterSparsePackageAsync(string[] args)
-        {
-            try
-            {
-                if (PackageRegistrar.IsRunningWithIdentity())
-                {
-                    PackageRegistrar.EnsureIdentityContextIsCorrect();
-                    PackageRegistrar.EnsureNoConflictingClassesRegistered();
-                }
-                else if (!PackageRegistrar.SparsePackageRegistered())
-                {
-                    // In case this method was not called by a post-build event.
-                    // In a real world application the user system should have trusted certificate installed or an installer (msi) should install it.
-                    // This method call should be omitted for packaged application.
-                    CertificateRegistrar.InstallDeveloperCertificate(args);
-
-                    // In the case of a regular installer (msi) call this method during installation.
-                    // This method call should be omitted for packaged application.
-                    await PackageRegistrar.RegisterSparsePackageAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                log.Error(ex);
-            }
-        }
-
-        private static async Task StartServer()
-        {
-            if (PackageRegistrar.IsRunningWithSparsePackageIdentity())
-            {
-
-                using (var server = new LocalServer())
-                {
-                    ShellExtensionRegistrar.RegisterHandlerClasses(server);
-                    await StartSyncRootEngine();
-                }
-            }
-            else
-            {
-                await StartSyncRootEngine();
-            }
-        }
-
-        private static async Task StartSyncRootEngine()
-        {
-            try
-            {
-                // Log environment description.
-                logFormatter.PrintEnvironmentDescription();
-
-                // Register sync root and create app folders.
-                await RegisterSyncRootAsync();
-
-                using (DavClient = ConfigureWebDavSession())
-                {
-                    using (Engine = new VirtualEngine(
-                        Settings.UserFileSystemLicense,
-                        Settings.UserFileSystemRootPath,
-                        Settings.WebDAVServerUrl,
-                        Settings.WebSocketServerUrl,
-                        Settings.IconsFolderPath,
-                        logFormatter))
-                    {
-                        Engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
-                        Engine.AutoLock = Settings.AutoLock;
-
-                        // Start tray application in a separate thread.
-                        WindowsTrayInterface.CreateTrayInterface(Settings.ProductName, Engine, exitEvent);
-
-                        // Print Engine config, settings, console commands, logging headers.
-                        await logFormatter.PrintEngineStartInfoAsync(Engine);
-
-                        // Start processing OS file system calls.
-                        await Engine.StartAsync();
-
 #if DEBUG
-                        // Opens Windows File Manager with user file system folder and remote storage folder.
-                        ShowTestEnvironment();
-#endif
-                        // Read console input in a separate thread.
-                        await ConsoleReadKeyAsync();
+                case "-InstallDevCert":
+                    /// Called by <see cref="CertificateRegistrar.TryInstallCertificate"/> in elevated mode.
+                    EnsureDevelopmentCertificateInstalled();
+                    return;
 
-                        // Keep this application running and reading user input
-                        // untill the tray app exits or an exit key in the console is selected. 
-                        exitEvent.WaitOne();
+                case "-UninstallDevCert":
+                    /// Called by <see cref="CertificateRegistrar.TryUninstallCertificate"/> in elevated mode.
+                    EnsureDevelopmentCertificateUninstalled();
+                    return;
+#endif
+                case "-Embedding":
+                    // Called by COM to access COM components.
+                    // https://docs.microsoft.com/en-us/windows/win32/com/localserver32#remarks
+                    return;
+            }
+
+            try
+            {
+                ValidatePackagePrerequisites();
+
+                if (await RegisterSparsePackageAsync())
+                {
+                    using (LocalServer server = new LocalServer())
+                    {
+                        // In case of sparse package our app also processes COM calls, register to process them.
+                        ShellExtensionRegistrar.RegisterHandlerClasses(server);
+
+                        await RunEngine();
                     }
                 }
             }
             catch (Exception ex)
             {
-                log.Error(ex);
+                log.Error($"\n\n Press Shift-Esc to fully uninstall the app. Then start the app again.\n\n", ex);
                 await ProcessUserInputAsync();
+            }
+        }
+
+        /// <summary>
+        /// Check if there is any remains from previous program deployments.
+        /// </summary>
+        private static void ValidatePackagePrerequisites()
+        {
+            if (PackageRegistrar.IsRunningWithIdentity())
+            {
+                PackageRegistrar.EnsureIdentityContextIsCorrect();
+                PackageRegistrar.EnsureNoConflictingClassesRegistered();
+            }
+        }
+
+        /// <summary>
+        /// Ensures the app is a packaged app or sparse package is registered.
+        /// Registers sparse package if needed.
+        /// </summary>
+        /// <returns>
+        /// True if the app is running with app identity or package identity or sparse package is registered. False - otherwise.
+        /// </returns>
+        private static async Task<bool> RegisterSparsePackageAsync()
+        {
+            if (PackageRegistrar.IsRunningWithIdentity())
+            {
+                return true; // App has identity, ready to run.
+            }
+
+            if (!PackageRegistrar.SparsePackageRegistered())
+            {
+#if DEBUG
+                /// Registering sparse package requires a valid certificate.
+                /// In the development mode we use the below call to install the development certificate.
+                if (!EnsureDevelopmentCertificateInstalled())
+                {
+                    return false;
+                }
+#endif
+                // In the case of a regular installer (msi) call this method during installation.
+                // This method call should be omitted for packaged application.
+                log.Info("\n\nRegistering sparse package...");
+                await PackageRegistrar.RegisterSparsePackageAsync();
+                log.Info("\nSparse package successfully registered. Restart the application.\n\n");
+
+                return false;
+            }
+
+            return true;
+        }
+
+        private static async Task RunEngine()
+        {
+            // Register sync root and create app folders.
+            await RegisterSyncRootAsync();
+
+            using (DavClient = ConfigureWebDavSession())
+            {
+                using (Engine = new VirtualEngine(
+                    Settings.UserFileSystemLicense,
+                    Settings.UserFileSystemRootPath,
+                    Settings.WebDAVServerUrl,
+                    Settings.WebSocketServerUrl,
+                    Settings.IconsFolderPath,
+                    logFormatter))
+                {
+                    Engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
+                    Engine.AutoLock = Settings.AutoLock;
+
+                    // Start tray application in a separate thread.
+                    WindowsTrayInterface.CreateTrayInterface(Settings.ProductName, Engine, exitEvent);
+
+                    // Print Engine config, settings, console commands, logging headers.
+                    await logFormatter.PrintEngineStartInfoAsync(Engine);
+
+                    // Start processing OS file system calls.
+                    await Engine.StartAsync();
+
+#if DEBUG
+                    // Opens Windows File Manager with user file system folder and remote storage folder.
+                    ShowTestEnvironment();
+#endif
+                    // Read console input in a separate thread.
+                    await ConsoleReadKeyAsync();
+
+                    // Keep this application running and reading user input
+                    // untill the tray app exits or an exit key in the console is selected. 
+                    exitEvent.WaitOne();
+                }
             }
         }
 
@@ -419,47 +440,43 @@ namespace WebDAVDrive
                         break;
 
                     case ConsoleKey.Escape:
-                        if (Engine.State == EngineState.Running)
+                        if (Engine?.State == EngineState.Running)
                         {
                             await Engine.StopAsync();
                         }
 
                         // Call the code below during programm uninstall using classic msi.
-                        await UnregisterSyncRootAsync();
+                        if (await Registrar.IsRegisteredAsync(Settings.UserFileSystemRootPath))
+                        {
+                            await UnregisterSyncRootAsync();
+                        }
+
+                        ShellExtensionRegistrar.Unregister(log);
 
                         // Delete all files/folders.
                         await CleanupAppFoldersAsync();
 
-                        // Unregister sparse package.
-                        await UnregisterSparsePackageAsync();
+                        if (keyInfo.Modifiers.HasFlag(ConsoleModifiers.Shift))
+                        {
+                            // Uninstall developer certificate.
+                            EnsureDevelopmentCertificateUninstalled();
+
+                            // Uninstall conflicting packages if any
+                            await EnsureConflictingPackagesUninstalled();
+
+                            // Unregister sparse package.
+                            await UnregisterSparsePackageAsync();
+                        }
+
                         return;
 
                     case ConsoleKey.Spacebar:
-                        if (Engine.State == EngineState.Running)
+                        if (Engine?.State == EngineState.Running)
                         {
                             await Engine.StopAsync();
                         }
                         log.Info("\n\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.\n");
                         return;
-
-                    case ConsoleKey.P:
-                        if (Engine.State == EngineState.Running)
-                        {
-                            await Engine.StopAsync();
-                        }
-
-                        // Call the code below during programm uninstall using classic msi.
-                        await UnregisterSyncRootAsync();
-
-                        // Delete all files/folders.
-                        await CleanupAppFoldersAsync();
-
-                        // Uninstall developer certificate.
-                        CertificateRegistrar.UninstallDeveloperCertificate();
-
-                        // Unregister sparse package.
-                        await UnregisterSparsePackageAsync();
-                        break;
 
                     default:
                         break;
@@ -512,40 +529,116 @@ namespace WebDAVDrive
         {
             log.Info($"\n\nUnregistering sync root.");
             await Registrar.UnregisterAsync(SyncRootId);
-
-            ShellExtensionRegistrar.Unregister(log);
         }
 
         private static async Task CleanupAppFoldersAsync()
         {
-            log.Info("\nDeleting all file and folder placeholders.\n");
+            log.Info("\n\nDeleting all file and folder placeholders.");
             try
             {
-                Directory.Delete(Settings.UserFileSystemRootPath, true);
+                if (Directory.Exists(Settings.UserFileSystemRootPath))
+                {
+                    Directory.Delete(Settings.UserFileSystemRootPath, true);
+                }
             }
             catch (Exception ex)
             {
-                log.Error($"\n{ex}");
+                log.Error("Failed to delete placeholders.", ex);
             }
 
             try
             {
-                await ((EngineWindows)Engine).UninstallCleanupAsync();
+                if (Engine != null)
+                {
+                    await Engine.UninstallCleanupAsync();
+                }
             }
             catch (Exception ex)
             {
                 log.Error($"\n{ex}");
             }
         }
+
+        /// <summary>
+        /// Unregisters sparse package.
+        /// </summary>
         private static async Task UnregisterSparsePackageAsync()
         {
-            // Unregister sparse package.
-            log.Info("\nUnregistering sparse package...");
+            log.Info("\n\nUnregistering sparse package...");
             await PackageRegistrar.UnregisterSparsePackageAsync();
             log.Info("\nSparse package unregistered sucessfully.");
         }
 
 #if DEBUG
+        /// <summary>
+        /// Installs the development certificate.
+        /// </summary>
+        /// <remarks>
+        /// In a real-world application your application will be signed with a trusted
+        /// certificate and you do not need to install it.
+        /// Development certificate installation is needed for sparse package only,
+        /// should be omitted for packaged application.
+        /// </remarks>
+        /// <returns>True if the the certificate is installed, false - if the installation failed.</returns>
+        private static bool EnsureDevelopmentCertificateInstalled()
+        {
+            string sparsePackagePath = PackageRegistrar.GetSparsePackagePath();
+            CertificateRegistrar certificateRegistrar = new CertificateRegistrar(sparsePackagePath);
+            if (!certificateRegistrar.IsCertificateInstalled())
+            {
+                log.Info("\n\nInstalling developer certificate...");
+                if (certificateRegistrar.TryInstallCertificate(true, out int errorCode))
+                {
+                    log.Info("\nDeveloper certificate successfully installed.");
+                }
+                else
+                {
+                    log.Error($"\nFailed to install the developer certificate. Error code: {errorCode}");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Uninstalls the development certificate.
+        /// </summary>
+        /// <returns>True if the the certificate is uninstalled, false - if the uninstallation failed.</returns>
+        private static bool EnsureDevelopmentCertificateUninstalled()
+        {
+            string sparsePackagePath = PackageRegistrar.GetSparsePackagePath();
+            CertificateRegistrar certRegistrar = new CertificateRegistrar(sparsePackagePath);
+            if (certRegistrar.IsCertificateInstalled())
+            {
+                log.Info("\n\nUninstalling developer certificate...");
+                if (certRegistrar.TryUninstallCertificate(true, out int errorCode))
+                {
+                    log.Info("\nDeveloper certificate successfully uninstalled.");
+                }
+                else
+                {
+                    log.Error($"\nFailed to uninstall the developer certificate. Error code: {errorCode}");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Uninstalls packages that registered classes when sparse package contains them to prevent conflicts.
+        /// </summary>
+        /// <returns></returns>
+        private static async Task EnsureConflictingPackagesUninstalled()
+        {
+            if (PackageRegistrar.IsRunningWithSparsePackageIdentity() && PackageRegistrar.ConflictingPackagesRegistered())
+            {
+                log.Info("\nUninstalling conflicting packages...");
+                await PackageRegistrar.UnregisterConflictingPackages();
+            }
+        }
+
         /// <summary>
         /// Opens Windows File Manager with both remote storage and user file system for testing.
         /// </summary>

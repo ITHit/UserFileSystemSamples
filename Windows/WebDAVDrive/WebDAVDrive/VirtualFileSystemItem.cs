@@ -75,7 +75,7 @@ namespace WebDAVDrive
             string remoteStorageNewPath = Mapping.MapPath(userFileSystemNewPath);
 
             await Program.DavClient.MoveToAsync(new Uri(remoteStorageOldPath), new Uri(remoteStorageNewPath), true, null, cancellationToken);
-            Logger.LogDebug("Moved in the remote storage succesefully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
+            Logger.LogDebug("Moved in the remote storage successfully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
         }
 
         ///<inheritdoc>
@@ -105,7 +105,7 @@ namespace WebDAVDrive
             try
             {
                 await Program.DavClient.DeleteAsync(new Uri(RemoteStoragePath), null, cancellationToken);
-                Logger.LogDebug("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+                Logger.LogDebug("Deleted in the remote storage successfully", UserFileSystemPath, default, operationContext);
             }
             catch (WebDavHttpException ex)
             {
@@ -278,7 +278,7 @@ namespace WebDAVDrive
             await placeholder.Properties.AddOrUpdateAsync("LockInfo", serverLockInfo);
             await placeholder.Properties.AddOrUpdateAsync("LockMode", lockMode);
 
-            Logger.LogDebug("Locked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+            Logger.LogDebug("Locked in the remote storage successfully", UserFileSystemPath, default, operationContext);
         }
         
 
@@ -316,7 +316,7 @@ namespace WebDAVDrive
             try
             {
                 await Program.DavClient.UnlockAsync(new Uri(RemoteStoragePath), lockTokens, cancellationToken);
-                Logger.LogDebug("Unlocked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+                Logger.LogDebug("Unlocked in the remote storage successfully", UserFileSystemPath, default, operationContext);
             }
             catch (ITHit.WebDAV.Client.Exceptions.ConflictException)
             {

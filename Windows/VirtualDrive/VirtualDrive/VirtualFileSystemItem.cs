@@ -87,7 +87,7 @@ namespace VirtualDrive
                     (remoteStorageOldItem as DirectoryInfo).MoveTo(remoteStorageNewPath);
                 }
 
-                Logger.LogDebug("Moved in the remote storage succesefully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
+                Logger.LogDebug("Moved in the remote storage successfully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
             }
         }
 
@@ -131,7 +131,7 @@ namespace VirtualDrive
                     {
                         (remoteStorageItem as DirectoryInfo).Delete(true);
                     }
-                    Logger.LogDebug("Deleted in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+                    Logger.LogDebug("Deleted in the remote storage successfully", UserFileSystemPath, default, operationContext);
                 }
             }
             catch (UnauthorizedAccessException)
@@ -259,10 +259,10 @@ namespace VirtualDrive
             // For demo purposes we just fill some generic data.
             ServerLockInfo serverLockInfo = new ServerLockInfo() 
             { 
-                LockToken = "ServerToken", 
-                Owner = "You", 
-                Exclusive = true, 
-                LockExpirationDateUtc = DateTimeOffset.Now.AddMinutes(30) 
+                LockToken = "ServerToken",
+                Owner = "You",
+                Exclusive = true,
+                LockExpirationDateUtc = DateTimeOffset.Now.AddMinutes(30)
             };
 
             // Save lock-token and lock-mode.
@@ -270,7 +270,9 @@ namespace VirtualDrive
             {
                 await placeholder.Properties.AddOrUpdateAsync("LockInfo", serverLockInfo);
                 await placeholder.Properties.AddOrUpdateAsync("LockMode", lockMode);
-                Logger.LogDebug("Locked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+                placeholder.UpdateUI();
+
+                Logger.LogDebug("Locked in the remote storage successfully", UserFileSystemPath, default, operationContext);
             }
         }
 
@@ -303,8 +305,9 @@ namespace VirtualDrive
                 // Delete lock-mode and lock-token info.
                 placeholder.Properties.Remove("LockInfo");
                 placeholder.Properties.Remove("LockMode");
+                placeholder.UpdateUI();
 
-                Logger.LogDebug("Unlocked in the remote storage succesefully", UserFileSystemPath, default, operationContext);
+                Logger.LogDebug("Unlocked in the remote storage successfully", UserFileSystemPath, default, operationContext);
             }
         }
     }

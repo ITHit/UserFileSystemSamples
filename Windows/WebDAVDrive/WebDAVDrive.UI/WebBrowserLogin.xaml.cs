@@ -25,7 +25,7 @@ namespace WebDAVDrive.UI
         private Uri url;
 
         /// <summary>
-        /// WebDAV Client to make a test request to verify that user has loged-in succesefully.
+        /// WebDAV Client to make a test request to verify that user has loged-in successfully.
         /// </summary>
         private WebDavSession davClient;
 
@@ -143,7 +143,7 @@ namespace WebDAVDrive.UI
 
                             Cookies = netCookies;
 
-                            // Original request completed succesefully. Close the login form.
+                            // Original request completed successfully. Close the login form.
                             this.Close();
                         }
                         catch

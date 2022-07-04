@@ -80,7 +80,7 @@ namespace VirtualDrive
         /// </remarks>
         /// <param name="remoteStorageId">Remote storage ID.</param>
         /// <param name="remoteStoragePath">Remote storage path.</param>
-        /// <returns>True if the method completed succesefully, false - otherwise.</returns>
+        /// <returns>True if the method completed successfully, false - otherwise.</returns>
         public static bool TryGetRemoteStoragePathById(byte[] remoteStorageId, out string remoteStoragePath)
         {
             return WindowsFileSystemItem.TryGetPathByItemId(remoteStorageId, out remoteStoragePath);
