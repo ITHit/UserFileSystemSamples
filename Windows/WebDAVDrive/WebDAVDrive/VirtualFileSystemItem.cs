@@ -286,17 +286,18 @@ namespace WebDAVDrive
         ///<inheritdoc>
         public async Task<LockMode> GetLockModeAsync(IOperationContext operationContext = null, CancellationToken cancellationToken = default)
         {
-            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
+            if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
+            {
+                if (placeholder.Properties.TryGetValue("LockMode", out IDataItem property))
+                {
+                    if (property.TryGetValue<LockMode>(out LockMode lockMode))
+                    {
+                        return lockMode;
+                    }
+                }
+            }
 
-            IDataItem property;
-            if (placeholder.Properties.TryGetValue("LockMode", out property))
-            {
-                return await property.GetValueAsync<LockMode>();
-            }
-            else
-            {
-                return LockMode.None;
-            }
+            return LockMode.None;
         }
         
 

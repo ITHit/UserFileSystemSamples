@@ -11,7 +11,7 @@ namespace WebDAVDrive.ShellExtension
     [ComVisible(true)]
     [ProgId("WebDAVDrive.CustomStateProvider")]
     [Guid("754F334F-095C-46CD-B033-B2C0523D2829")]
-    public class CustomStateProviderRpc : CustomStateProviderRpcBase
+    public class CustomStateProviderRpc : CustomStateHandlerRpcBase
     {
 
     }

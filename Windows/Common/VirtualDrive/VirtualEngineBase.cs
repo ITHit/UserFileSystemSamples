@@ -63,28 +63,28 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <inheritdoc/>
-        public override async Task<bool> FilterAsync(SyncDirection direction, OperationType operationType, string path, string newPath = null, FileAttributes? attributes = null, IOperationContext operationContext = null)
+        public override async Task<bool> FilterAsync(SyncDirection direction, OperationType operationType, string path, FileSystemItemType itemType, string newPath = null, FileAttributes? attributes = null, IOperationContext operationContext = null)
         {
             // Use the code below to filter based on files and folders attributes.
-            //if (await new AttributesFilter(FileAttributes.Hidden | FileAttributes.Temporary).FilterAsync(direction, operationType, path, newPath, attributes))
+            //if (await new AttributesFilter(FileAttributes.Hidden | FileAttributes.Temporary).FilterAsync(direction, operationType, path, itemType, newPath, attributes))
             //{
             //    LogDebug($"{nameof(AttributesFilter)} filtered {operationType}", path, newPath, operationContext);
             //    return true;
             //}
 
-            if (await new ZipFilter().FilterAsync(direction, operationType, path, newPath, attributes))
+            if (await new ZipFilter().FilterAsync(direction, operationType, path, itemType, newPath, attributes))
             {
                 LogDebug($"{nameof(ZipFilter)} filtered {operationType}", path, newPath, operationContext);
                 return true;
             }
 
-            if (await new MsOfficeFilter().FilterAsync(direction, operationType, path, newPath, attributes))
+            if (await new MsOfficeFilter().FilterAsync(direction, operationType, path, itemType, newPath, attributes))
             {
                 LogDebug($"{nameof(MsOfficeFilter)} filtered {operationType}", path, newPath, operationContext);
                 return true;
             }
 
-            if (await new AutoCadFilter().FilterAsync(direction, operationType, path, newPath, attributes))
+            if (await new AutoCadFilter().FilterAsync(direction, operationType, path, itemType, newPath, attributes))
             {
                 LogDebug($"{nameof(AutoCadFilter)} filtered {operationType}", path, newPath, operationContext);
                 return true;

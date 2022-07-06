@@ -10,7 +10,7 @@ namespace WebDAVDrive.ShellExtension
     [ComVisible(true)]
     [ProgId("WebDAVDrive.ThumbnailProvider")]
     [Guid("A5B0C82F-50AA-445C-A404-66DEB510E84B")]
-    public class ThumbnailProviderRpc : ThumbnailProviderRpcBase
+    public class ThumbnailProviderRpc : ThumbnailProviderHandlerRpcBase
     {
 
     }

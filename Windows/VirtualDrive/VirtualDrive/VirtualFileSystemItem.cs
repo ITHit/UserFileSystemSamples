@@ -283,7 +283,10 @@ namespace VirtualDrive
             {
                 if (placeholder.Properties.TryGetValue("LockMode", out IDataItem property))
                 {
-                    return await property.GetValueAsync<LockMode>();
+                    if(property.TryGetValue<LockMode>(out LockMode lockMode))
+                    {
+                        return lockMode;
+                    }
                 }
             }
 

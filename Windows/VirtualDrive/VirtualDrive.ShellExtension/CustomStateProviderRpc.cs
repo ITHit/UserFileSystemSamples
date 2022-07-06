@@ -12,7 +12,7 @@ namespace VirtualDrive.ShellExtension
     [ComVisible(true)]
     [ProgId("VirtualDrive.CustomStateProvider")]
     [Guid("000562AA-2879-4CF1-89E8-0AEC9596FE19")]
-    public class CustomStateProviderRpc : CustomStateProviderRpcBase
+    public class CustomStateProviderRpc : CustomStateHandlerRpcBase
     {
 
     }

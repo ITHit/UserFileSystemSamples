@@ -10,7 +10,7 @@ namespace VirtualDrive.ShellExtension
     [ComVisible(true)]
     [ProgId("VirtualDrive.ThumbnailProvider")]
     [Guid("05CF065E-E135-4B2B-9D4D-CFB3FBAC73A4")]
-    public class ThumbnailProviderRpc : ThumbnailProviderRpcBase
+    public class ThumbnailProviderRpc : ThumbnailProviderHandlerRpcBase
     {
 
     }
