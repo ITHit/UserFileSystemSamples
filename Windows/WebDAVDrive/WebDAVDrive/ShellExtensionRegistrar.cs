@@ -2,10 +2,10 @@ using System.Reflection;
 using log4net;
 using CommonShellExtension = ITHit.FileSystem.Windows.ShellExtension;
 using WebDAVDrive.ShellExtension;
-using ITHit.FileSystem.Windows.ShellExtension.ComInfrastructure;
 using Windows.Storage.Provider;
 using System.Collections.Generic;
 using System;
+using ITHit.FileSystem.Windows.ShellExtension;
 
 namespace WebDAVDrive
 {

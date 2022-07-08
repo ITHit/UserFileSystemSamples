@@ -21,8 +21,8 @@ using System.Net.Http;
 
 using WebDAVDrive.UI;
 using WebDAVDrive.UI.ViewModels;
-using ITHit.FileSystem.Windows.ShellExtension.ComInfrastructure;
 using System.Linq;
+using ITHit.FileSystem.Windows.ShellExtension;
 
 namespace WebDAVDrive
 {
@@ -648,7 +648,7 @@ namespace WebDAVDrive
             // Enable UTF8 for Console Window and set width.
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight / 3);
-            Console.SetBufferSize(Console.LargestWindowWidth * 2, Console.BufferHeight);
+            Console.SetBufferSize(Console.LargestWindowWidth * 2, short.MaxValue / 2);
 
             // Open Windows File Manager with user file system.
             ProcessStartInfo ufsInfo = new ProcessStartInfo(Program.Settings.UserFileSystemRootPath);

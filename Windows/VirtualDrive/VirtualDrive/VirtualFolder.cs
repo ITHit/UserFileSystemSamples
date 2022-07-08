@@ -33,7 +33,14 @@ namespace VirtualDrive
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
 
-            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath))
+            {
+                // Possibly parent is deleted in the remote storage.
+                Logger.LogMessage($"Can't create. Parent not found", userFileSystemNewItemPath, BitConverter.ToString(RemoteStorageItemId).Replace("-", ""));
+                inSyncResultContext.SetInSync = false;
+                return null;
+            }
+
             FileInfo remoteStorageNewItem = new FileInfo(Path.Combine(remoteStoragePath, fileMetadata.Name));
 
             // Create remote storage file.
@@ -79,7 +86,14 @@ namespace VirtualDrive
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, folderMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
 
-            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath))
+            {
+                // Possibly parent is deleted in the remote storage.
+                Logger.LogMessage($"Can't create. Parent not found", userFileSystemNewItemPath, BitConverter.ToString(RemoteStorageItemId).Replace("-", ""));
+                inSyncResultContext.SetInSync = false;
+                return null;
+            }
+
             DirectoryInfo remoteStorageNewItem = new DirectoryInfo(Path.Combine(remoteStoragePath, folderMetadata.Name));
             remoteStorageNewItem.Create();
 
@@ -125,7 +139,7 @@ namespace VirtualDrive
             // To signal that the children enumeration is completed 
             // always call ReturnChildren(), even if the folder is empty.
             await resultContext.ReturnChildrenAsync(remoteStorageChildren.ToArray(), totalCount);
-            Engine.LogDebug($"Listed {totalCount} item(s). Took: {watch.ElapsedMilliseconds:N0}ms", UserFileSystemPath);
+            Engine.LogDebug($"Listed {totalCount} item(s). Took: {watch.Elapsed.ToString(@"hh\:mm\:ss\.ff")}", UserFileSystemPath);
 
             // Save data that you wish to display in custom columns here.
             //foreach (FileSystemItemMetadataExt itemMetadata in userFileSystemChildren)
@@ -138,7 +152,7 @@ namespace VirtualDrive
 
         public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern, IOperationContext operationContext, CancellationToken cancellationToken)
         {
-            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return Enumerable.Empty<FileSystemItemMetadataExt>();
             var userFileSystemChildren = new System.Collections.Concurrent.ConcurrentBag<FileSystemItemMetadataExt>();
             IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(remoteStoragePath).EnumerateFileSystemInfos(pattern);
 

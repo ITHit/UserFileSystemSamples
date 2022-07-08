@@ -196,7 +196,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="level">Log level.</param>
         private void WriteLog(IEngine sender, EngineMessageEventArgs e, log4net.Core.Level level)
         {
-            string att = FsPath.GetAttString(e.TargetPath ?? e.SourcePath);
+            string att = GetAttString(e.TargetPath ?? e.SourcePath);
             string process = null;
             byte? priorityHint = null;
             string fileId = null;
@@ -207,7 +207,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 process = System.IO.Path.GetFileName(e.OperationContext.ProcessInfo?.ImagePath);
                 priorityHint = e.OperationContext.PriorityHint;
                 fileId = (e.OperationContext as IWindowsOperationContext).FileId.ToString();
-                size = FsPath.FormatBytes((e.OperationContext as IWindowsOperationContext).FileSize);
+                size = FormatBytes((e.OperationContext as IWindowsOperationContext).FileSize);
             }
 
             string sourcePath = e.SourcePath?.FitString(sourcePathWidth, 6);
@@ -221,8 +221,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 if (ex != null)
                 {
                     message += Environment.NewLine;
-                    log.Error(message, ex);
                 }
+                log.Error(message, ex);
             }
             else if (level == log4net.Core.Level.Info)
             {
@@ -249,6 +249,65 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             log.Info("\n");
             log.Info(Format("Time", "Process Name", "Prty", "FS ID", "RS ID", "Component", "Line", "Caller Member Name", "Caller File Path", "Message", "Source Path", "Attributes", "Target Path"));
             log.Info(Format("----", "------------", "----", "_____", "_____", "---------", "____", "------------------", "----------------", "-------", "-----------", "----------", "-----------"));
+        }
+
+        /// <summary>
+        /// Gets file or folder attributes in a human-readable form.
+        /// </summary>
+        /// <param name="path">Path to the file or folder.</param>
+        /// <returns>String that represents file or folder attributes or null if the file/folder is not found.</returns>
+        public static string GetAttString(string path)
+        {
+            if (WindowsFileSystemItem.TryGetAttributes(path, out System.IO.FileAttributes? attributes))
+            {
+                return WindowsFileSystemItem.GetFileAttributesString(attributes.Value);
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets formatted file size or null for folders or if the file is not found.
+        /// </summary>
+        /// <param name="path">Path to a file or folder.</param>
+        public static string Size(string path)
+        {
+            if (!File.Exists(path))
+            {
+                return null;
+            }
+
+            long length;
+            try
+            {
+                length = new FileInfo(path).Length;
+            }
+            catch
+            {
+                return null;
+            }
+
+            return FormatBytes(length);
+        }
+
+        /// <summary>
+        /// Formats bytes to string.
+        /// </summary>
+        /// <param name="length">Bytes to format.</param>
+        /// <returns>Human readable bytes string.</returns>
+        public static string FormatBytes(long length)
+        {
+            string[] suf = { "b ", "KB", "MB", "GB", "TB", "PB", "EB" };
+            if (length == 0)
+            {
+                return "0" + suf[0];
+            }
+            long bytes = Math.Abs(length);
+            int place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
+            double num = Math.Round(bytes / Math.Pow(1024, place), 1);
+            return (Math.Sign(length) * num).ToString() + suf[place];
         }
     }
 

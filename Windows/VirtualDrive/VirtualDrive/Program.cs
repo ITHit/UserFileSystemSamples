@@ -11,8 +11,8 @@ using log4net;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
-using ITHit.FileSystem.Windows.ShellExtension.ComInfrastructure;
 using ITHit.FileSystem.Windows.Package;
+using ITHit.FileSystem.Windows.ShellExtension;
 
 namespace VirtualDrive
 {
@@ -207,12 +207,10 @@ namespace VirtualDrive
                                 Engine.SyncService.Logger.LogError("Failed to start. The Engine must be running.");
                                 break;
                             }
-                            await Engine.SyncServiceRecent.StartAsync();
                             await Engine.SyncService.StartAsync();
                         }
                         else
                         {
-                            await Engine.SyncServiceRecent.StopAsync();
                             await Engine.SyncService.StopAsync();
                         }
                         break;
@@ -466,7 +464,7 @@ namespace VirtualDrive
             // Enable UTF8 for Console Window and set width.
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight / 3);
-            Console.SetBufferSize(Console.LargestWindowWidth * 2, Console.BufferHeight);
+            Console.SetBufferSize(Console.LargestWindowWidth * 2, short.MaxValue / 2);
 
             // Open Windows File Manager with remote storage.
             ProcessStartInfo rsInfo = new ProcessStartInfo(Program.Settings.RemoteStorageRootPath);

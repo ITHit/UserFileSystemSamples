@@ -83,7 +83,26 @@ namespace VirtualDrive
         /// <returns>True if the method completed successfully, false - otherwise.</returns>
         public static bool TryGetRemoteStoragePathById(byte[] remoteStorageId, out string remoteStoragePath)
         {
-            return WindowsFileSystemItem.TryGetPathByItemId(remoteStorageId, out remoteStoragePath);
+            if (WindowsFileSystemItem.TryGetPathByItemId(remoteStorageId, out remoteStoragePath))
+            {
+                // Extra check to avoid errors in the log if the item was deleted while the Engine was still processing it.
+                if (!IsRecycleBin(remoteStoragePath))
+                {
+                    return true;
+                }
+            }
+
+            remoteStoragePath = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Returns true if the path points to a recycle bin folder.
+        /// </summary>
+        /// <param name="path">Path to the file or folder.</param>
+        private static bool IsRecycleBin(string path)
+        {
+            return path.IndexOf("\\$Recycle.Bin", StringComparison.InvariantCultureIgnoreCase) != -1;
         }
 
         /// <summary>

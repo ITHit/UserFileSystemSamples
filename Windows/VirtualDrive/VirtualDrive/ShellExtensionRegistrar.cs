@@ -3,10 +3,10 @@ using log4net;
 using CommonShellExtension = ITHit.FileSystem.Windows.ShellExtension;
 using VirtualDrive.ShellExtension;
 using Windows.Storage.Provider;
-using ITHit.FileSystem.Windows.ShellExtension.ComInfrastructure;
 using ITHit.FileSystem.Windows.Package;
 using System;
 using System.Collections.Generic;
+using ITHit.FileSystem.Windows.ShellExtension;
 
 namespace VirtualDrive
 {

@@ -137,7 +137,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 try
                 {
                     StorageProviderSyncRootManager.GetSyncRootInformationForFolder(storageFolder);
-                    return FileSystem.Windows.PlaceholderItem.IsPlaceholder(path);
+                    return true;
                 }
                 catch
                 {

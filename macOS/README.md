@@ -35,10 +35,10 @@
 <p><strong>Download profiles and certificates in XCode.</strong>&nbsp;Run XCode and go to Xcode Menu &gt; Preferences -&gt; Accounts tab. Select team and click on “Download Manual Profiles”. You can find more detailed instructions:&nbsp;<a href="https://docs.microsoft.com/en-us/xamarin/mac/deploy-test/publishing-to-the-app-store/profiles" rel="nofollow">here</a></p>
 </li>
 <li>
-<p><strong>Set bundle identifier name in Container project.</strong>&nbsp;The bundle identifier is located in VirtualFilesystemMacApp/Info.plist file. You can edit it either in Visual Studio or directly in Info.plist file in the CFBundleIdentifier field (by default it is set to <span class="code">com.userfilesystem.vfs.app</span>). You must set this identifier to the value specified in Step 2.</p>
+<p><strong>Set bundle identifier name in Container project.</strong>&nbsp;The bundle identifier is located in VirtualFilesystemMacApp/Info.plist file. You can edit it either in Visual Studio or directly in Info.plist file in the CFBundleIdentifier field (by default it is set to <code class="code">com.userfilesystem.vfs.app</code>). You must set this identifier to the value specified in Step 2.</p>
 </li>
 <li>
-<p><strong>Set bundle identifier name in the Extension project.</strong>&nbsp;The bundle identifier is located in FileProviderExtension/Info.plist file. You can edit it either in Visual Studio or directly in Info.plist file in the CFBundleIdentifier field (by default it is set to <span class="code">com.userfilesystem.vfs.app.extension</span>). You must set this identifier to the value specified in Step 2.</p>
+<p><strong>Set bundle identifier name in the Extension project.</strong>&nbsp;The bundle identifier is located in FileProviderExtension/Info.plist file. You can edit it either in Visual Studio or directly in Info.plist file in the CFBundleIdentifier field (by default it is set to <code class="code">com.userfilesystem.vfs.app.extension</code>). You must set this identifier to the value specified in Step 2.</p>
 </li>
 <li>
 <p><strong>Configure macOS bundle signing in Container and Extension projects.</strong>&nbsp;For each project in Visual Studio go to the project Options. Select Mac Signing and check 'Sign the application bundle'. Select Identity and Provisioning profile.</p>
@@ -47,14 +47,14 @@
 <p><strong>Configure application permissions in Container and Extension projects.</strong>&nbsp;Select Entitlements.plist and select group created in Step 1 in App Groups field for each project.</p>
 </li>
 <li>
-<p><strong>Set App Group ID in code.</strong>&nbsp;Edit <span class="code">AppGroupsSettings.cs</span>&nbsp;file located in <span class="code">/VirtualFilesystemCommon/</span>&nbsp;folder. Specify AppGroupId.</p>
+<p><strong>Set App Group ID in code.</strong>&nbsp;Edit <code class="code">AppGroupsSettings.cs</code>&nbsp;file located in <code class="code">/VirtualFilesystemCommon/</code>&nbsp;folder. Specify AppGroupId.</p>
 </li>
 <li>
-<p><strong>Set the license.</strong>&nbsp;Download the license file&nbsp;<a href="https://www.userfilesystem.com/download/downloads/" rel="nofollow">here</a>. With the trial license, the product is fully functional and does not have any limitations. As soon as the trial license expires the product will stop working. Open the&nbsp;<span class="code">VirtualFilesystemMacApp/Resources/appsettings.json</span>&nbsp;file and set the <span class="code">License</span> string:&nbsp;</p>
+<p><strong>Set the license.</strong>&nbsp;Download the license file&nbsp;<a href="https://www.userfilesystem.com/download/downloads/" rel="nofollow">here</a>. With the trial license, the product is fully functional and does not have any limitations. As soon as the trial license expires the product will stop working. Open the&nbsp;<code class="code">VirtualFilesystemMacApp/Resources/appsettings.json</code>&nbsp;file and set the <code class="code">License</code> string:&nbsp;</p>
 <pre class="brush:js;auto-links:false;toolbar:false">"License": "&lt;?xml version='1.0'...",</pre>
 </li>
 <li>
-<p><strong>Set the remote storage directory.</strong> Here you must set the path to the folder that simulates your remote storage. Your virtual drive will mirror files and folders from this folder. Note that the extension runs as a sandboxed application and has access to a limited number of locations in the local file system. To simulate the remote storage structure you can copy the <span class="code">\RemoteStorage\</span> folder provided with the project under the <span class="code">~/Pictures/</span> folder.&nbsp;To set the remote storage directory open the&nbsp;<span class="code">VirtualFilesystemMacApp/Resources/appsettings.json</span>&nbsp;file and set <span class="code">RemoteStorageRootPath</span> string. Make sure to replace the ${USER} with a real user name:</p>
+<p><strong>Set the remote storage directory.</strong> Here you must set the path to the folder that simulates your remote storage. Your virtual drive will mirror files and folders from this folder. Note that the extension runs as a sandboxed application and has access to a limited number of locations in the local file system. To simulate the remote storage structure you can copy the <code class="code">\RemoteStorage\</code> folder provided with the project under the <code class="code">~/Pictures/</code> folder.&nbsp;To set the remote storage directory open the&nbsp;<code class="code">VirtualFilesystemMacApp/Resources/appsettings.json</code>&nbsp;file and set <code class="code">RemoteStorageRootPath</code> string. Make sure to replace the ${USER} with a real user name:</p>
 <pre class="brush:js;auto-links:false;toolbar:false">"RemoteStorageRootPath": "/Users/User1/Pictures/RemoteStorage"</pre>
 </li>
 </ol>

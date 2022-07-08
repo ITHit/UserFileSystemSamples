@@ -1,10 +1,8 @@
+using ITHit.FileSystem.Windows.ShellExtension;
 using System;
-using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Windows.Storage.Provider;
-
-using ITHit.FileSystem.Windows.ShellExtension.ComInfrastructure;
-
 
 namespace WebDAVDrive.ShellExtension
 {

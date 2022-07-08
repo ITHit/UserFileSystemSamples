@@ -33,7 +33,13 @@ namespace VirtualFileSystem
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
 
-            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath))
+            {
+                // Possibly parent is deleted in the remote storage.
+                Logger.LogMessage($"Can't create. Parent not found", userFileSystemNewItemPath, BitConverter.ToString(RemoteStorageItemId).Replace("-", ""));
+                inSyncResultContext.SetInSync = false;
+                return null;
+            }
             FileInfo remoteStorageNewItem = new FileInfo(Path.Combine(remoteStoragePath, fileMetadata.Name));
 
             // Create remote storage file.
@@ -72,7 +78,14 @@ namespace VirtualFileSystem
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, folderMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
 
-            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath))
+            {
+                // Possibly parent is deleted in the remote storage.
+                Logger.LogMessage($"Can't create. Parent not found", userFileSystemNewItemPath, BitConverter.ToString(RemoteStorageItemId).Replace("-", ""));
+                inSyncResultContext.SetInSync = false;
+                return null;
+            }
+
             DirectoryInfo remoteStorageNewItem = new DirectoryInfo(Path.Combine(remoteStoragePath, folderMetadata.Name));
             remoteStorageNewItem.Create();
 
@@ -97,23 +110,29 @@ namespace VirtualFileSystem
 
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath, default, operationContext);
 
-            string remoteStoragePath = Mapping.GetRemoteStoragePathById(RemoteStorageItemId);
-
-            IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(remoteStoragePath).EnumerateFileSystemInfos(pattern);
-
             List<IFileSystemItemMetadata> userFileSystemChildren = new List<IFileSystemItemMetadata>();
-            foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
+            if (Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath))
             {
-                IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(remoteStoragePath).EnumerateFileSystemInfos(pattern);
 
-                string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemInfo.Name);
-
-                // Filtering existing files/folders. This is only required to avoid extra errors in the log.
-                if (!FsPath.Exists(userFileSystemItemPath))
+                foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
                 {
-                    Logger.LogDebug("Creating", userFileSystemItemPath, null, operationContext);
-                    userFileSystemChildren.Add(itemInfo);
+                    IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+
+                    string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemInfo.Name);
+
+                    // Filtering existing files/folders. This is only required to avoid extra errors in the log.
+                    if (!FsPath.Exists(userFileSystemItemPath))
+                    {
+                        Logger.LogMessage("Creating", userFileSystemItemPath, null, operationContext);
+                        userFileSystemChildren.Add(itemInfo);
+                    }
                 }
+            }
+            else
+            {
+                // Possibly folder was deleted in the remote storage.
+                Logger.LogError($"Listing failed. Folder not found", UserFileSystemPath, default, null, operationContext); 
             }
 
             // To signal that the children enumeration is completed 
