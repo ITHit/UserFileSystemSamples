@@ -206,7 +206,7 @@ namespace WebDAVDrive
                 // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                 // We do not want to send extra requests to the remote storage if the parent folder is offline.
                 if (Directory.Exists(userFileSystemParentPath)
-                    && !new DirectoryInfo(userFileSystemParentPath).Attributes.HasFlag(System.IO.FileAttributes.Offline)
+                    && !new DirectoryInfo(userFileSystemParentPath).Attributes.HasFlag(FileAttributes.Offline)
                     && !FsPath.Exists(userFileSystemPath))
                 {
                     IHierarchyItem remoteStorageItem = await Program.DavClient.GetItemAsync(new Uri(remoteStoragePath));

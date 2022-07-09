@@ -264,7 +264,9 @@ namespace WebDAVDrive
             // Save the lock token and other lock info received from the remote storage on the client.
             // Supply the lock-token as part of each remote storage update in IFile.WriteAsync() method.
 
-            LockInfo lockInfo = await Program.DavClient.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, null, TimeSpan.MaxValue, cancellationToken);
+            // Here we set lock owner name to loged-in user for demo purposes.
+            string lockOwner = Environment.UserName;
+            LockInfo lockInfo = await Program.DavClient.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, lockOwner, TimeSpan.MaxValue, cancellationToken);
             ServerLockInfo serverLockInfo = new ServerLockInfo
             {
                 LockToken = lockInfo.LockToken.LockToken,
@@ -274,11 +276,14 @@ namespace WebDAVDrive
             };
 
             // Save lock-token and lock-mode.
-            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
-            await placeholder.Properties.AddOrUpdateAsync("LockInfo", serverLockInfo);
-            await placeholder.Properties.AddOrUpdateAsync("LockMode", lockMode);
+            if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
+            {
+                await placeholder.Properties.AddOrUpdateAsync("LockInfo", serverLockInfo);
+                await placeholder.Properties.AddOrUpdateAsync("LockMode", lockMode);
+                placeholder.UpdateUI();
 
-            Logger.LogDebug("Locked in the remote storage successfully", UserFileSystemPath, default, operationContext);
+                Logger.LogDebug("Locked in the remote storage successfully", UserFileSystemPath, default, operationContext);
+            }
         }
         
 
@@ -308,25 +313,28 @@ namespace WebDAVDrive
             Logger.LogMessage($"{nameof(ILock)}.{nameof(UnlockAsync)}()", UserFileSystemPath, default, operationContext);
 
             // Read the lock-token.
-            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
-            string lockToken = (await placeholder.Properties["LockInfo"].GetValueAsync<ServerLockInfo>())?.LockToken;
-
-            LockUriTokenPair[] lockTokens = new LockUriTokenPair[] { new LockUriTokenPair(new Uri(RemoteStoragePath), lockToken)};
-
-            // Unlock the item in the remote storage.
-            try
+            if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
             {
-                await Program.DavClient.UnlockAsync(new Uri(RemoteStoragePath), lockTokens, cancellationToken);
-                Logger.LogDebug("Unlocked in the remote storage successfully", UserFileSystemPath, default, operationContext);
-            }
-            catch (ITHit.WebDAV.Client.Exceptions.ConflictException)
-            {
-                Logger.LogDebug("The item is already unlocked.", UserFileSystemPath, default, operationContext);
-            }
+                string lockToken = (await placeholder.Properties["LockInfo"].GetValueAsync<ServerLockInfo>())?.LockToken;
 
-            // Delete lock-mode and lock-token info.
-            placeholder.Properties.Remove("LockInfo");
-            placeholder.Properties.Remove("LockMode");
+                LockUriTokenPair[] lockTokens = new LockUriTokenPair[] { new LockUriTokenPair(new Uri(RemoteStoragePath), lockToken) };
+
+                // Unlock the item in the remote storage.
+                try
+                {
+                    await Program.DavClient.UnlockAsync(new Uri(RemoteStoragePath), lockTokens, cancellationToken);
+                    Logger.LogDebug("Unlocked in the remote storage successfully", UserFileSystemPath, default, operationContext);
+                }
+                catch (ITHit.WebDAV.Client.Exceptions.ConflictException)
+                {
+                    Logger.LogDebug("The item is already unlocked.", UserFileSystemPath, default, operationContext);
+                }
+
+                // Delete lock-mode and lock-token info.
+                placeholder.Properties.Remove("LockInfo");
+                placeholder.Properties.Remove("LockMode");
+                placeholder.UpdateUI();
+            }
         }
         
     }
