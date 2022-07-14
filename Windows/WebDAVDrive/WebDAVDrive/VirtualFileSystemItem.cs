@@ -107,9 +107,14 @@ namespace WebDAVDrive
                 await Program.DavClient.DeleteAsync(new Uri(RemoteStoragePath), null, cancellationToken);
                 Logger.LogDebug("Deleted in the remote storage successfully", UserFileSystemPath, default, operationContext);
             }
+            catch(NotFoundException ex)
+            {
+                // The item is not found. We do not want the Engine to repeat the delete operation.
+                Logger.LogDebug("Item already deleted", UserFileSystemPath, default, operationContext);
+            }
             catch (WebDavHttpException ex)
             {
-                // We want the Engine to try deleting this file again at a later time.
+                // We want the Engine to try deleting this item again later.
                 resultContext.SetInSync = false;
                 Logger.LogMessage(ex.Message, UserFileSystemPath, default, operationContext);
             }

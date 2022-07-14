@@ -55,11 +55,6 @@ namespace WebDAVDrive
         internal static WebDavSession DavClient;
 
         /// <summary>
-        /// Event to be fired when the tray app exits or an exit key in the console is selected.
-        /// </summary>
-        private static readonly EventWaitHandle exitEvent = new EventWaitHandle(false, EventResetMode.ManualReset);
-
-        /// <summary>
         /// Maximum number of login attempts.
         /// </summary>
         private static uint loginRetriesMax = 3;
@@ -173,25 +168,22 @@ namespace WebDAVDrive
             // Register sync root and create app folders.
             await RegisterSyncRootAsync();
 
-            using (DavClient = ConfigureWebDavSession())
+            using (Engine = new VirtualEngine(
+                Settings.UserFileSystemLicense,
+                Settings.UserFileSystemRootPath,
+                Settings.WebDAVServerUrl,
+                Settings.WebSocketServerUrl,
+                Settings.IconsFolderPath,
+                logFormatter))
             {
-                using (Engine = new VirtualEngine(
-                    Settings.UserFileSystemLicense,
-                    Settings.UserFileSystemRootPath,
-                    Settings.WebDAVServerUrl,
-                    Settings.WebSocketServerUrl,
-                    Settings.IconsFolderPath,
-                    logFormatter))
+                Engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
+                Engine.AutoLock = Settings.AutoLock;
+
+                // Print Engine config, settings, console commands, logging headers.
+                await logFormatter.PrintEngineStartInfoAsync(Engine);
+
+                using (DavClient = CreateWebDavSession(Engine.InstanceId))
                 {
-                    Engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
-                    Engine.AutoLock = Settings.AutoLock;
-
-                    // Start tray application in a separate thread.
-                    WindowsTrayInterface.CreateTrayInterface(Settings.ProductName, Engine, exitEvent);
-
-                    // Print Engine config, settings, console commands, logging headers.
-                    await logFormatter.PrintEngineStartInfoAsync(Engine);
-
                     // Start processing OS file system calls.
                     await Engine.StartAsync();
 
@@ -199,31 +191,24 @@ namespace WebDAVDrive
                     // Opens Windows File Manager with user file system folder and remote storage folder.
                     ShowTestEnvironment();
 #endif
-                    // Read console input in a separate thread.
-                    await ConsoleReadKeyAsync();
-
                     // Keep this application running and reading user input
                     // untill the tray app exits or an exit key in the console is selected. 
-                    exitEvent.WaitOne();
+                    Task.WaitAny(ConsoleReadKeyAsync(), WindowsTrayInterface.CreateTrayInterface(Settings.ProductName, Settings.IconsFolderPath, Engine));
                 }
             }
+
         }
 
         private static async Task ConsoleReadKeyAsync()
         {
-            Thread readKeyThread = new Thread(async () =>
-            {
-                await ProcessUserInputAsync();
-                exitEvent.Set();
-            });
-            readKeyThread.IsBackground = true;
-            readKeyThread.Start();
+            await Task.Run(async () => await ProcessUserInputAsync());
         }
 
         /// <summary>
         /// Creates and configures WebDAV client to access the remote storage.
         /// </summary>
-        private static WebDavSession ConfigureWebDavSession()
+        /// <param name="engineInstanceId">Engine instance ID to be sent with every request to the remote storage.</param>
+        private static WebDavSession CreateWebDavSession(Guid engineInstanceId)
         {
             HttpClientHandler handler = new HttpClientHandler()
             {
@@ -236,11 +221,12 @@ namespace WebDAVDrive
             WebDavSession davClient = new WebDavSession(Program.Settings.WebDAVClientLicense);
             davClient.WebDavError += DavClient_WebDavError;
             davClient.WebDavMessage += DavClient_WebDAVMessage;
+            davClient.CustomHeaders.Add("ITHitUserFileSystemEngineInstanceId", engineInstanceId.ToString());
             return davClient;
         }
 
         /// <summary>
-        /// Event handler to process WebDAV messages. 
+        /// Fired on every request to the WebDAV server. 
         /// </summary>
         /// <param name="sender">Request to the WebDAV client.</param>
         /// <param name="e">WebDAV message details.</param>
@@ -248,17 +234,10 @@ namespace WebDAVDrive
         {
             string msg = $"\n{e.Message}";
 
-            if(logFormatter.DebugLoggingEnabled)
+            if (logFormatter.DebugLoggingEnabled)
             {
                 log.Debug($"{msg}\n");
             }
-
-            /*
-            if (e.LogLevel == ITHit.WebDAV.Client.Logger.LogLevel.Debug)
-                log.Debug($"{msg}\n");
-            else
-                log.Info($"{msg}\n");
-            */
         }
 
         /// <summary>
@@ -270,13 +249,13 @@ namespace WebDAVDrive
         private static void DavClient_WebDavError(ISession sender, WebDavErrorEventArgs e)
         {
             WebDavHttpException httpException = e.Exception as WebDavHttpException;
-            log.Info($"\n{httpException?.Status.Code} {httpException?.Status.Description} {e.Exception.Message} ");
             if (httpException != null)
             {
                 switch (httpException.Status.Code)
                 {
                     // 302 redirect to login page.
                     case 302:
+                        log.Debug($"\n{httpException?.Status.Code} {httpException?.Status.Description} {e.Exception.Message} ");
 
                         // Show login dialog.
 
@@ -287,19 +266,27 @@ namespace WebDAVDrive
                         Uri failedUri = (e.Exception as WebDavHttpException).Uri;
 
                         WebDAVDrive.UI.WebBrowserLogin webBrowserLogin = null;
-                        Thread thread = new Thread(() => {
-                            webBrowserLogin = new WebDAVDrive.UI.WebBrowserLogin(failedUri, DavClient, log);
+                        Thread thread = new Thread(() =>
+                        {
+                            webBrowserLogin = new WebDAVDrive.UI.WebBrowserLogin(failedUri, log);
                             webBrowserLogin.Title = Settings.ProductName;
                             webBrowserLogin.ShowDialog();
                         });
                         thread.SetApartmentState(ApartmentState.STA);
                         thread.Start();
                         thread.Join();
+
+                        // Set cookies collected from the web browser dialog.
+                        DavClient.CookieContainer.Add(webBrowserLogin.Cookies);
+
+                        // Replay the request, so the listing can complete succesefully.
                         e.Result = WebDavErrorEventResult.Repeat;
                         break;
 
                     // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
                     case 401:
+                        log.Debug($"\n{httpException?.Status.Code} {httpException?.Status.Description} {e.Exception.Message} ");
+
                         if (loginRetriesCurrent < loginRetriesMax)
                         {
                             failedUri = (e.Exception as WebDavHttpException).Uri;
@@ -351,6 +338,9 @@ namespace WebDAVDrive
                                 }
                             }
                         }
+                        break;
+                    default:
+                        log.Info($"\n{httpException?.Status.Code} {httpException?.Status.Description} {e.Exception.Message} ");
                         break;
                 }
             }
@@ -509,7 +499,7 @@ namespace WebDAVDrive
             }
             else
             {
-                log.Info($"\n{Settings.UserFileSystemRootPath} sync root already registered.");
+                log.Info($"\n\n{Settings.UserFileSystemRootPath} sync root already registered.");
             }
         }
 

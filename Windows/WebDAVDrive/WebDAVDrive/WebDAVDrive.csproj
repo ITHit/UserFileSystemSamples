@@ -29,12 +29,16 @@
     <Compile Remove="SyncService.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="Images\Group 11.png" />
+    <None Remove="Images\Group 12.png" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="5.6.16415.0" />
-    <PackageReference Include="ITHit.FileSystem.Windows.ShellExtension" Version="5.6.16415.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="5.6.16427.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows.ShellExtension" Version="5.6.16427.0" />
     <ProjectReference Include="..\..\Common\VirtualDrive\Common.Windows.VirtualDrive.csproj" />
     <ProjectReference Include="..\WebDAVDrive.ShellExtension\WebDAVDrive.ShellExtension.csproj" />
     <ProjectReference Include="..\WebDAVDrive.UI\WebDAVDrive.UI.csproj" />
@@ -46,7 +50,16 @@
     <None Update="Images\Blank.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Images\Drive - Copy.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Images\Drive.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\DrivePause.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\DriveSync.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Images\Empty.ico">

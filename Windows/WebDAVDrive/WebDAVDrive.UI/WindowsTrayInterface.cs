@@ -1,15 +1,12 @@
 using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.IO;
-using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
-using ITHit.FileSystem;
-using ITHit.FileSystem.Samples.Common;
-using System.Reflection;
 
+using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
+
 
 namespace WebDAVDrive.UI
 {
@@ -18,149 +15,203 @@ namespace WebDAVDrive.UI
     /// </summary>
     public class WindowsTrayInterface
     {
-        private string imageFolder;
-
-        /// <summary>
-        /// Create new tray icon.
-        /// </summary>s
-        /// <param name="productName">Product name.</param>
-        /// <param name="virtualDrive">VirtualDriveBase, need to get syncService and fileSystemMonitor.</param>
-        /// <param name="exitEvent">ManualResetEvent, used to stop application.</param>
-        /// <returns></returns>
-        public static Thread CreateTrayInterface(string productName, IEngine virtualDrive, EventWaitHandle exitEvent) 
-        {
-            // Start tray application.
-            Thread thread = new Thread(() => {
-                WindowsTrayInterface windowsTrayInterface = new WindowsTrayInterface($"{productName}", virtualDrive);
-                Application.Run();
-                exitEvent.Set();
-            });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
-            thread.IsBackground = true;
-            return thread;
-        }
-
-        /// <summary>
-        /// Changes button status to Idle.
-        /// </summary>
-        private void StatusToIdle() 
-        {
-            notifyIcon.Text = Title + $"\n{Localization.Resources.Idle}";
-            notifyIcon.ContextMenuStrip.Items[0].Text = Localization.Resources.StopSync;
-            notifyIcon.Icon = new System.Drawing.Icon($"{imageFolder}\\Drive.ico"); ;
-        }
-
-        /// <summary>
-        /// Changes button status to Synching.
-        /// </summary>
-        private void StatusToSynching() 
-        {
-            notifyIcon.Text = Title + $"\n{Localization.Resources.StatusSync}";
-            notifyIcon.ContextMenuStrip.Items[0].Text = Localization.Resources.StopSync;
-            notifyIcon.Icon = new System.Drawing.Icon($"{imageFolder}\\DriveSync.ico"); ;
-        }
-
-        private void StatusToSyncStopped() 
-        {
-            notifyIcon.Text = Title + $"\n{Localization.Resources.StatusSyncStopped}";
-            notifyIcon.ContextMenuStrip.Items[0].Text = Localization.Resources.StartSync;
-            notifyIcon.Icon = new System.Drawing.Icon($"{imageFolder}\\DrivePause.ico"); ;
-        }
         /// <summary>
         /// Icon in the status bar notification area.
         /// </summary>
-        public NotifyIcon notifyIcon;
+        private readonly NotifyIcon notifyIcon;
 
         /// <summary>
-        /// Visibility of notify icon.
+        /// Engine instance.
         /// </summary>
-        public static bool Visible = true;
+        private readonly EngineWindows engine;
 
         /// <summary>
         /// Notify icon title.
         /// </summary>
-        public string Title { get; set; }
+        private readonly string title;
 
         /// <summary>
         /// Icon click handler delegete
         /// </summary>
-        public delegate void ItemClickHanler();
+        //public delegate void ItemClickHanler();
+
+        /// <summary>
+        /// Path to the icons folder.
+        /// </summary>
+        private readonly string iconsFolderPath;
+
+        /// <summary>
+        /// Context menu.
+        /// </summary>
+        private readonly ContextMenuStrip contextMenu;
+
+        /// <summary>
+        /// Start / Stop Engine menu.
+        /// </summary>
+        private readonly ToolStripItem menuStartStop;
+
+        /// <summary>
+        /// Show / Hide console menu.
+        /// </summary>
+        private readonly ToolStripItem menuConsole;
+
+        /// <summary>
+        /// Starts a new tray application instance.
+        /// </summary>s
+        /// <param name="productName">Product name.</param>
+        /// <param name="iconsFolderPath">Path to the icons folder.</param>
+        /// <param name="engine">Engine instance. The tray app will start and stop this instance as well as will display its status.</param>
+        /// <param name="exitEvent">ManualResetEvent, used to stop the application.</param>
+        /// <returns></returns>
+        public static async Task CreateTrayInterface(string productName, string iconsFolderPath, EngineWindows engine)
+        {
+            await Task.Run(async () =>
+            {
+                WindowsTrayInterface windowsTrayInterface = new WindowsTrayInterface(productName, iconsFolderPath, engine);
+                Application.Run();
+                if (engine.State == EngineState.Running)
+                {
+                    await engine.StopAsync();
+                }
+            });
+        }
 
         /// <summary>
         /// Creates a tray application instance.
         /// </summary>
         /// <param name="title">Tray application title.</param>
-        /// <param name="syncService">
-        /// Synchronization service instance. The tray application will enable/disable this application and show its status.
-        /// </param>
-        public WindowsTrayInterface(string title, IEngine virtualDrive) 
+        /// <param name="iconsFolderPath">Path to the icons folder.</param>
+        /// <param name="engine">Engine instance.</param>
+        public WindowsTrayInterface(string title, string iconsFolderPath, EngineWindows engine)
         {
-            imageFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\Images";
+            this.title = title;
+            this.iconsFolderPath = iconsFolderPath ?? throw new ArgumentNullException(nameof(iconsFolderPath));
+            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
 
-            Title = title;
             notifyIcon = new NotifyIcon();
 
             notifyIcon.Visible = true;
-            notifyIcon.Icon = new System.Drawing.Icon($"{imageFolder}\\Drive.ico");
+            notifyIcon.Icon = new System.Drawing.Icon(Path.Combine(iconsFolderPath, "DrivePause.ico"));
             notifyIcon.Text = title;
 
-            ContextMenuStrip contextMenu = new ContextMenuStrip();
-            contextMenu.Items.Add(Localization.Resources.StopSync, null, (s, e) => { StartStopSync(virtualDrive); });
-#if !DEBUG
-            // Hide console on app start.
-            Visible = false;
-            ConsoleManager.SetConsoleWindowVisibility(false);
-            contextMenu.Items.Add(Localization.Resources.ShowLog, null, (s, e) => {
-#else
-            contextMenu.Items.Add(Localization.Resources.HideLog, null, (s, e) => {
-#endif
-                Visible = !Visible;
-                ConsoleManager.SetConsoleWindowVisibility(Visible);
-                contextMenu.Items[1].Text = (Visible)? Localization.Resources.HideLog : Localization.Resources.ShowLog;
-            });
+            // Show/Hide console on app start. Required to hide the console in the release mode.
+            ConsoleManager.SetConsoleWindowVisibility(ConsoleManager.ConsoleVisible);
 
-            contextMenu.Items.Add($"{Localization.Resources.Exit} {title}",null, (s,e) => { Application.Exit(); });
+            contextMenu = new ContextMenuStrip();
+
+            // Add Start/Stop Engine icon.
+            menuStartStop = new ToolStripMenuItem();
+            menuStartStop.Text = Localization.Resources.StopSync;
+            menuStartStop.Click += MenuStartStop_Click;
+            contextMenu.Items.Add(menuStartStop);
+
+            // Add Show/Hide console menu item.
+            menuConsole = new ToolStripMenuItem();
+            menuConsole.Text = ConsoleManager.ConsoleVisible ? Localization.Resources.HideLog : Localization.Resources.ShowLog;
+            menuConsole.Click += MenuConsole_Click;
+            contextMenu.Items.Add(menuConsole);
+
+            // Add menu separator.
+            contextMenu.Items.Add(new ToolStripSeparator());
+
+            // Add Exit menu item.
+            ToolStripItem menuExit = new ToolStripMenuItem();
+            menuExit.Text = $"{Localization.Resources.Exit} {title}";
+            menuExit.Click += (s, e) => { Application.Exit(); };
+            contextMenu.Items.Add(menuExit);
 
             notifyIcon.ContextMenuStrip = contextMenu;
+
+            // Listen to engine notifications to change menu and icon states.
+            engine.StateChanged += Engine_StateChanged;
+            engine.SyncService.StateChanged += SyncService_StateChanged;
         }
 
         /// <summary>
-        /// Defines StartStop sync button in tray app.
+        /// Start/Stop menu handler.
         /// </summary>
-        private static bool sycnStopped = false;
+        private async void MenuStartStop_Click(object sender, EventArgs e)
+        {
+            switch (engine.State)
+            {
+                case EngineState.Running:
+                    await engine.StopAsync();
+                    break;
+
+                case EngineState.Stopped:
+                    await engine.StartAsync();
+                    break;
+            }
+        }
 
         /// <summary>
-        /// This method handles StartStop Sycn button in tray menu.
+        /// Show / Hide menu handler.
         /// </summary>
-        private async void StartStopSync(IEngine virtualDrive)
+        private void MenuConsole_Click(object sender, EventArgs e)
         {
-            if (!sycnStopped)
+            ConsoleManager.SetConsoleWindowVisibility(!ConsoleManager.ConsoleVisible);
+            menuConsole.Text = ConsoleManager.ConsoleVisible ? Localization.Resources.HideLog : Localization.Resources.ShowLog;
+        }
+
+        /// <summary>
+        /// Updates title and image of Start/Stop menu item.
+        /// </summary>
+        /// <param name="state">Engine state</param>
+        private void UpdateMenuStartStop(EngineState state)
+        {
+            switch (state)
             {
-                //await virtualDrive.SetEnabledAsync(false);
-                //sycnStopped = true;
-                //StatusToSyncStopped();
+                case EngineState.Running:
+                    menuStartStop.Text = Localization.Resources.StopSync;
+                    notifyIcon.Text = $"{title}\n{Localization.Resources.Idle}";
+                    notifyIcon.Icon = new System.Drawing.Icon(Path.Combine(iconsFolderPath, "Drive.ico"));
+                    break;
+                case EngineState.Stopped:
+                    menuStartStop.Text = Localization.Resources.StartSync;
+                    notifyIcon.Text = $"{title}\n{Localization.Resources.StatusSyncStopped}";
+                    notifyIcon.Icon = new System.Drawing.Icon(Path.Combine(iconsFolderPath, "DrivePause.ico"));
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Fired on Engine status change.
+        /// </summary>
+        /// <param name="engine">Engine</param>
+        /// <param name="e">Contains new and old Engine state.</param>
+        private void Engine_StateChanged(Engine engine, EngineWindows.StateChangeEventArgs e)
+        {
+            if (contextMenu.IsHandleCreated)
+            {
+                contextMenu.Invoke(() =>
+                {
+                    UpdateMenuStartStop(e.NewState);
+                });
             }
             else
             {
-                //await virtualDrive.SetEnabledAsync(true);
-                //sycnStopped = false;
-                //StatusToIdle();
+                UpdateMenuStartStop(e.NewState);
             }
         }
 
         /// <summary>
-        /// Start/stop synching evenet handler.
+        /// Fired on sync service status change.
         /// </summary>
-        public void HandleStatusChange(object sender, SynchEventArgs  synchEventArgs)
+        /// <param name="sender">Sync service.</param>
+        /// <param name="e">Contains new and old sync service state.</param>
+        private void SyncService_StateChanged(object sender, SynchEventArgs e)
         {
-            if (synchEventArgs.NewState == SynchronizationState.Synchronizing)
+            switch (e.NewState)
             {
-                StatusToSynching();
-            }
-            else 
-            {
-                StatusToIdle();
+                case SynchronizationState.Synchronizing:
+                    notifyIcon.Text = $"{title}\n{Localization.Resources.StatusSync}";
+                    notifyIcon.Icon = new System.Drawing.Icon(Path.Combine(iconsFolderPath, "DriveSync.ico"));
+                    break;
+
+                case SynchronizationState.Idle:
+                    notifyIcon.Text = $"{title}\n{Localization.Resources.Idle}";
+                    notifyIcon.Icon = new System.Drawing.Icon(Path.Combine(iconsFolderPath, "Drive.ico"));
+                    break;
             }
         }
     }

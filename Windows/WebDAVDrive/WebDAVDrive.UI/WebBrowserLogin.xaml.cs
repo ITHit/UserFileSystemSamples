@@ -25,11 +25,6 @@ namespace WebDAVDrive.UI
         private Uri url;
 
         /// <summary>
-        /// WebDAV Client to make a test request to verify that user has loged-in successfully.
-        /// </summary>
-        private WebDavSession davClient;
-
-        /// <summary>
         ///  Microsoft Edge Chromium instance.
         /// </summary>
         private Microsoft.Web.WebView2.Wpf.WebView2 webView;
@@ -55,10 +50,9 @@ namespace WebDAVDrive.UI
         /// Creates instance of this class.
         /// </summary>
         /// <param name="url">URL to navigate to. This URL must redirect to a log-in page.</param>
-        public WebBrowserLogin(Uri url, WebDavSession davClient, ILog log)
+        public WebBrowserLogin(Uri url, ILog log)
         {
             this.url = url;
-            this.davClient = davClient;
             this.log = log;
             InitializeComponent();
 
@@ -137,10 +131,6 @@ namespace WebDAVDrive.UI
 
                         try
                         {
-                            davClient.CookieContainer.Add(netCookies);
-                            // Can't validate cookies the following way, as it triggers a continues Login dialog appear if cookies are incorrect
-                            //await davClient.GetItemAsync(url);
-
                             Cookies = netCookies;
 
                             // Original request completed successfully. Close the login form.

@@ -105,20 +105,21 @@ namespace WebDAVDrive
             {
                 userFileSystemItem = new FileMetadataExt();
                 ((FileMetadataExt)userFileSystemItem).Length = ((Client.IFile)remoteStorageItem).ContentLength;
+                userFileSystemItem.Attributes = FileAttributes.Normal;
             }
             else
             {
                 userFileSystemItem = new FolderMetadataExt();
+                userFileSystemItem.Attributes = FileAttributes.Normal | FileAttributes.Directory;
             }
 
-            userFileSystemItem.Name = remoteStorageItem.DisplayName;
-            userFileSystemItem.Attributes = FileAttributes.Normal;
+            userFileSystemItem.Name = remoteStorageItem.DisplayName;            
             userFileSystemItem.CreationTime = remoteStorageItem.CreationDate;
             userFileSystemItem.LastWriteTime = remoteStorageItem.LastModified;
             userFileSystemItem.LastAccessTime = remoteStorageItem.LastModified;
             userFileSystemItem.ChangeTime = remoteStorageItem.LastModified;
 
-            // Ser information about third-party lock if any.
+            // Set information about third-party lock, if any.
             Client.LockInfo lockInfo = remoteStorageItem.ActiveLocks.FirstOrDefault();
             if (lockInfo != null)
             {

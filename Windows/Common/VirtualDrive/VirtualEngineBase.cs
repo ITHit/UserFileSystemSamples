@@ -47,7 +47,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             LogFormatter logFormatter) 
             : base(license, userFileSystemRootPath)
         {
-            this.iconsFolderPath = iconsFolderPath ?? throw new NullReferenceException(nameof(iconsFolderPath));
+            this.iconsFolderPath = iconsFolderPath ?? throw new ArgumentNullException(nameof(iconsFolderPath));
+            _ = logFormatter ?? throw new ArgumentNullException(nameof(logFormatter));
 
             // We want our file system to run regardless of any errors.
             // If any request to file system fails in user code or in Engine itself we continue processing.

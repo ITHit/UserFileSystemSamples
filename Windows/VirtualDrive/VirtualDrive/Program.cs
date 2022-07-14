@@ -325,7 +325,7 @@ namespace VirtualDrive
             }
             else
             {
-                log.Info($"\n{Settings.UserFileSystemRootPath} sync root already registered.");
+                log.Info($"\n\n{Settings.UserFileSystemRootPath} sync root already registered.");
             }
         }
 

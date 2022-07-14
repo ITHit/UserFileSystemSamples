@@ -13,12 +13,23 @@ namespace WebDAVDrive
     public class VirtualEngine : VirtualEngineBase
     {
         /// <summary>
+        /// Engine instance ID, unique for every Engine instance.
+        /// </summary>
+        /// <remarks>
+        /// Used to prevent circular calls between remote storage and user file system.
+        /// You can send this ID with every update to the remote storage. Your remote storage 
+        /// will return this ID back to the client. If IDs match you do not update the item.
+        /// </remarks>
+        public readonly Guid InstanceId = Guid.NewGuid();
+
+        /// <summary>
         /// Monitors changes in the remote storage, notifies the client and updates the user file system.
         /// </summary>
         internal readonly RemoteStorageMonitor RemoteStorageMonitor;
 
         /// <summary>
-        /// Gets or sets a value that indicates whether to send an authenticate header with the websocket.
+        /// Credentials used to connect to the server. 
+        /// Used for challenge-responce auth (Basic, Digest, NTLM or Kerberos).
         /// </summary>
         public NetworkCredential Credentials { get; set; }
 
@@ -33,8 +44,6 @@ namespace WebDAVDrive
         /// <param name="remoteStorageRootPath">Path to the remote storage root.</param>
         /// <param name="webSocketServerUrl">Web sockets server that sends notifications about changes on the server.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
-        /// <param name="syncIntervalMs">Full synchronization interval in milliseconds.</param>
-        /// <param name="log4net">Log4net logger.</param>
         public VirtualEngine(
             string license, 
             string userFileSystemRootPath, 
