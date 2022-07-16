@@ -364,10 +364,7 @@ namespace VirtualDrive
 
             try
             {
-                if (Engine != null)
-                {
-                    await Engine.UninstallCleanupAsync();
-                }
+                await Engine?.UninstallCleanupAsync();
             }
             catch (Exception ex)
             {

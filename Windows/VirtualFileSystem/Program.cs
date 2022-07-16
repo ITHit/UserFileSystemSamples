@@ -253,7 +253,7 @@ namespace VirtualFileSystem
 
             try
             {
-                await ((EngineWindows)Engine).UninstallCleanupAsync();
+                await Engine?.UninstallCleanupAsync();
             }
             catch (Exception ex)
             {

@@ -14,7 +14,7 @@ namespace VirtualDrive.ShellExtension
     [Guid("000562AA-2879-4CF1-89E8-0AEC9596FE19")]
     public class CustomStateProviderIntegrated : CustomStateHandlerIntegratedBase
     {
-        public CustomStateProviderIntegrated() : base(Program.Engine, Program.Engine.IconsFolderPath)
+        public CustomStateProviderIntegrated() : base(Program.Engine)
         {
         }
     }

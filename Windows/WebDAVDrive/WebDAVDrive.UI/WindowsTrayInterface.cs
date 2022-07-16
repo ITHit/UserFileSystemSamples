@@ -13,7 +13,7 @@ namespace WebDAVDrive.UI
     /// <summary>
     /// Represents tray application.
     /// </summary>
-    public class WindowsTrayInterface
+    public class WindowsTrayInterface : IDisposable
     {
         /// <summary>
         /// Icon in the status bar notification area.
@@ -63,15 +63,17 @@ namespace WebDAVDrive.UI
         /// <param name="engine">Engine instance. The tray app will start and stop this instance as well as will display its status.</param>
         /// <param name="exitEvent">ManualResetEvent, used to stop the application.</param>
         /// <returns></returns>
-        public static async Task CreateTrayInterface(string productName, string iconsFolderPath, EngineWindows engine)
+        public static async Task CreateTrayInterfaceAsync(string productName, string iconsFolderPath, EngineWindows engine)
         {
             await Task.Run(async () =>
             {
-                WindowsTrayInterface windowsTrayInterface = new WindowsTrayInterface(productName, iconsFolderPath, engine);
-                Application.Run();
-                if (engine.State == EngineState.Running)
+                using (WindowsTrayInterface windowsTrayInterface = new WindowsTrayInterface(productName, iconsFolderPath, engine))
                 {
-                    await engine.StopAsync();
+                    Application.Run();
+                    if (engine.State == EngineState.Running)
+                    {
+                        await engine.StopAsync();
+                    }
                 }
             });
         }
@@ -213,6 +215,14 @@ namespace WebDAVDrive.UI
                     notifyIcon.Icon = new System.Drawing.Icon(Path.Combine(iconsFolderPath, "Drive.ico"));
                     break;
             }
+        }
+
+        public void Dispose()
+        {
+            notifyIcon?.Dispose();
+            contextMenu?.Dispose();
+            menuStartStop?.Dispose();
+            menuConsole?.Dispose();
         }
     }
 }

@@ -193,7 +193,7 @@ namespace WebDAVDrive
 #endif
                     // Keep this application running and reading user input
                     // untill the tray app exits or an exit key in the console is selected. 
-                    Task.WaitAny(ConsoleReadKeyAsync(), WindowsTrayInterface.CreateTrayInterface(Settings.ProductName, Settings.IconsFolderPath, Engine));
+                    Task.WaitAny(ConsoleReadKeyAsync(), WindowsTrayInterface.CreateTrayInterfaceAsync(Settings.ProductName, Settings.IconsFolderPath, Engine));
                 }
             }
 
@@ -538,10 +538,7 @@ namespace WebDAVDrive
 
             try
             {
-                if (Engine != null)
-                {
-                    await Engine.UninstallCleanupAsync();
-                }
+                await Engine?.UninstallCleanupAsync();
             }
             catch (Exception ex)
             {
