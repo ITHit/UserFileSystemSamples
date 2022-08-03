@@ -26,6 +26,7 @@
     <Compile Remove="MsOfficeDocsMonitor.cs" />
     <Compile Remove="MsOfficeHelper.cs" />
     <Compile Remove="RemoteStorageMonitor1.cs" />
+    <Compile Remove="ShellExtensionRegistrar.cs" />
     <Compile Remove="SyncService.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -37,10 +38,8 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="5.6.16439.0" />
-    <PackageReference Include="ITHit.FileSystem.Windows.ShellExtension" Version="5.6.16439.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="6.0.16872.0-Beta" />
     <ProjectReference Include="..\..\Common\VirtualDrive\Common.Windows.VirtualDrive.csproj" />
-    <ProjectReference Include="..\WebDAVDrive.ShellExtension\WebDAVDrive.ShellExtension.csproj" />
     <ProjectReference Include="..\WebDAVDrive.UI\WebDAVDrive.UI.csproj" />
   </ItemGroup>
   <ItemGroup>

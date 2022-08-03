@@ -19,7 +19,7 @@ namespace VirtualDrive
     /// In your application, instead of using FileWatchWrapper, you will connect to your remote storage using web sockets 
     /// or use any other technology to get notifications about changes in your remote storage.
     /// </remarks>
-    public class RemoteStorageMonitor : IDisposable
+    public class RemoteStorageMonitor : ISyncService, IDisposable
     {
         /// <summary>
         /// Current synchronization state.
@@ -78,7 +78,7 @@ namespace VirtualDrive
         /// <summary>
         /// Starts monitoring changes on the server.
         /// </summary>
-        internal void Start()
+        public async Task StartAsync()
         {
             watcher.EnableRaisingEvents = true;
             Logger.LogMessage($"Started", watcher.Path);
@@ -87,7 +87,7 @@ namespace VirtualDrive
         /// <summary>
         /// Stops monitoring changes in the remote storage.
         /// </summary>
-        internal void Stop()
+        public async Task StopAsync()
         {
             watcher.EnableRaisingEvents = false;
             Logger.LogMessage($"Stopped", watcher.Path);

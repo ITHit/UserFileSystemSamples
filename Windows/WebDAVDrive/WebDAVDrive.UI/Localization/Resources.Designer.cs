@@ -19,7 +19,7 @@ namespace WebDAVDrive.UI.Localization {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     public class Resources {
@@ -115,7 +115,7 @@ namespace WebDAVDrive.UI.Localization {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to LoginError	Please enter login.
+        ///   Looks up a localized string similar to Provide login.
         /// </summary>
         public static string LoginError {
             get {
@@ -138,6 +138,24 @@ namespace WebDAVDrive.UI.Localization {
         public static string OK {
             get {
                 return ResourceManager.GetString("OK", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Open folder.
+        /// </summary>
+        public static string OpenFolder {
+            get {
+                return ResourceManager.GetString("OpenFolder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Open remote storage.
+        /// </summary>
+        public static string OpenRemoteStorage {
+            get {
+                return ResourceManager.GetString("OpenRemoteStorage", resourceCulture);
             }
         }
         

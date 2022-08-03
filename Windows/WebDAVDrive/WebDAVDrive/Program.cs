@@ -1,17 +1,16 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 using Microsoft.Extensions.Configuration;
 
 using log4net;
 
 using ITHit.FileSystem;
-using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Windows.Package;
 
@@ -21,11 +20,22 @@ using System.Net.Http;
 
 using WebDAVDrive.UI;
 using WebDAVDrive.UI.ViewModels;
-using System.Linq;
-using ITHit.FileSystem.Windows.ShellExtension;
 
 namespace WebDAVDrive
 {
+    /// <summary>
+    /// - To run this app with a sparse package application identity run this project directly from Virual Studio in debug mode.
+    /// This will install the dev certificate and register sparse package. Then restart the project to use the app.
+    /// Shell extensions are installed/ununstalled automatically via sparse package manifest located in this project.
+    /// 
+    /// - To run this app with a package identity run the .Package project provided with this sample.
+    /// Packaged application enables deployment to Microsoft Store.
+    /// Shell extensions are installed/ununstalled automatically via a manifest located in the .Package project.
+    /// 
+    /// - To run this app without identity comment out the <see cref="SparsePackageInstaller.RegisterSparsePackageAsync"/> call in
+    /// this class and run this project.
+    /// Shell extensions are installed/uninstalled using the <see cref="Registrar"/> class, when sync root is registered/unregistered.
+    /// </summary>
     class Program
     {
         /// <summary>
@@ -50,6 +60,21 @@ namespace WebDAVDrive
         private static LogFormatter logFormatter;
 
         /// <summary>
+        /// Provides sync root registration functionality and sparse package installation.
+        /// </summary>
+        private static SparsePackageRegistrar registrar;
+
+        /// <summary>
+        /// Application commands.
+        /// </summary>
+        private static Commands commands;
+
+        /// <summary>
+        /// Processes console input.
+        /// </summary>
+        private static ConsoleProcessor consoleProcessor;
+
+        /// <summary>
         /// WebDAV client for accessing the WebDAV server.
         /// </summary>
         internal static WebDavSession DavClient;
@@ -69,22 +94,28 @@ namespace WebDAVDrive
         {
             // Load Settings.
             Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
+
             logFormatter = new LogFormatter(log, Settings.AppID, Settings.WebDAVServerUrl);
 
             // Log environment description.
             logFormatter.PrintEnvironmentDescription();
+
+            registrar = new SparsePackageRegistrar(SyncRootId, Settings.UserFileSystemRootPath, log, ShellExtension.ShellExtensions.Handlers);
+
+            commands = new Commands(log, Settings.WebDAVServerUrl);
+            consoleProcessor = new ConsoleProcessor(registrar, logFormatter, commands);
 
             switch (args.FirstOrDefault())
             {
 #if DEBUG
                 case "-InstallDevCert":
                     /// Called by <see cref="CertificateRegistrar.TryInstallCertificate"/> in elevated mode.
-                    EnsureDevelopmentCertificateInstalled();
+                    registrar.EnsureDevelopmentCertificateInstalled();
                     return;
 
                 case "-UninstallDevCert":
                     /// Called by <see cref="CertificateRegistrar.TryUninstallCertificate"/> in elevated mode.
-                    EnsureDevelopmentCertificateUninstalled();
+                    registrar.EnsureDevelopmentCertificateUninstalled();
                     return;
 #endif
                 case "-Embedding":
@@ -97,21 +128,23 @@ namespace WebDAVDrive
             {
                 ValidatePackagePrerequisites();
 
-                if (await RegisterSparsePackageAsync())
+                // Install dev cert and register sparse package.
+                if (!await registrar.RegisterSparsePackageAsync())
                 {
-                    using (LocalServer server = new LocalServer())
-                    {
-                        // In case of sparse package our app also processes COM calls, register to process them.
-                        ShellExtensionRegistrar.RegisterHandlerClasses(server);
+                    return; // Sparse package registered - restart the sample.
+                }
 
-                        await RunEngine();
-                    }
+                // Register this app to process COM shell extensions calls.
+                using (ShellExtension.ShellExtensions.StartComServer(Settings.ShellExtensionsComServerRpcEnabled))
+                {
+                    // Run the User File System Engine.
+                    await RunEngine();
                 }
             }
             catch (Exception ex)
             {
                 log.Error($"\n\n Press Shift-Esc to fully uninstall the app. Then start the app again.\n\n", ex);
-                await ProcessUserInputAsync();
+                await consoleProcessor.ProcessUserInputAsync();
             }
         }
 
@@ -127,46 +160,10 @@ namespace WebDAVDrive
             }
         }
 
-        /// <summary>
-        /// Ensures the app is a packaged app or sparse package is registered.
-        /// Registers sparse package if needed.
-        /// </summary>
-        /// <returns>
-        /// True if the app is running with app identity or package identity or sparse package is registered. False - otherwise.
-        /// </returns>
-        private static async Task<bool> RegisterSparsePackageAsync()
-        {
-            if (PackageRegistrar.IsRunningWithIdentity())
-            {
-                return true; // App has identity, ready to run.
-            }
-
-            if (!PackageRegistrar.SparsePackageRegistered())
-            {
-#if DEBUG
-                /// Registering sparse package requires a valid certificate.
-                /// In the development mode we use the below call to install the development certificate.
-                if (!EnsureDevelopmentCertificateInstalled())
-                {
-                    return false;
-                }
-#endif
-                // In the case of a regular installer (msi) call this method during installation.
-                // This method call should be omitted for packaged application.
-                log.Info("\n\nRegistering sparse package...");
-                await PackageRegistrar.RegisterSparsePackageAsync();
-                log.Info("\nSparse package successfully registered. Restart the application.\n\n");
-
-                return false;
-            }
-
-            return true;
-        }
-
         private static async Task RunEngine()
         {
             // Register sync root and create app folders.
-            await RegisterSyncRootAsync();
+            await registrar.RegisterSyncRootAsync(Settings.ProductName, Path.Combine(Settings.IconsFolderPath, "Drive.ico"), Settings.ShellExtensionsComServerExePath);
 
             using (Engine = new VirtualEngine(
                 Settings.UserFileSystemLicense,
@@ -176,32 +173,40 @@ namespace WebDAVDrive
                 Settings.IconsFolderPath,
                 logFormatter))
             {
+                commands.Engine = Engine;
+                commands.RemoteStorageMonitor = Engine.RemoteStorageMonitor;
+
                 Engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
                 Engine.AutoLock = Settings.AutoLock;
+                Engine.MaxConcurrentRequests = Settings.MaxConcurrentRequests.Value;
+                Engine.ShellExtensionsComServerRpcEnabled = Settings.ShellExtensionsComServerRpcEnabled; // Enable RPC in case RPC shaell extension handlers, hosted in separate process. 
 
-                // Print Engine config, settings, console commands, logging headers.
+                // Print console commands.
+                consoleProcessor.PrintHelp();
+
+                // Print Engine config, settings, logging headers.
                 await logFormatter.PrintEngineStartInfoAsync(Engine);
 
                 using (DavClient = CreateWebDavSession(Engine.InstanceId))
                 {
                     // Start processing OS file system calls.
                     await Engine.StartAsync();
-
 #if DEBUG
                     // Opens Windows File Manager with user file system folder and remote storage folder.
-                    ShowTestEnvironment();
+                    commands.ShowTestEnvironment();
 #endif
                     // Keep this application running and reading user input
-                    // untill the tray app exits or an exit key in the console is selected. 
-                    Task.WaitAny(ConsoleReadKeyAsync(), WindowsTrayInterface.CreateTrayInterfaceAsync(Settings.ProductName, Settings.IconsFolderPath, Engine));
+                    // untill the tray app exits or an exit key in the console is selected.
+                    Task console = StartConsoleReadKeyAsync();
+                    Task tray = WindowsTrayInterface.StartTrayInterfaceAsync(Settings.ProductName, Settings.IconsFolderPath, commands, Engine);
+                    Task.WaitAny(console, tray);
                 }
             }
-
         }
 
-        private static async Task ConsoleReadKeyAsync()
+        private static async Task StartConsoleReadKeyAsync()
         {
-            await Task.Run(async () => await ProcessUserInputAsync());
+            await Task.Run(async () => await consoleProcessor.ProcessUserInputAsync());
         }
 
         /// <summary>
@@ -265,19 +270,7 @@ namespace WebDAVDrive
 
                         Uri failedUri = (e.Exception as WebDavHttpException).Uri;
 
-                        WebDAVDrive.UI.WebBrowserLogin webBrowserLogin = null;
-                        Thread thread = new Thread(() =>
-                        {
-                            webBrowserLogin = new WebDAVDrive.UI.WebBrowserLogin(failedUri, log);
-                            webBrowserLogin.Title = Settings.ProductName;
-                            webBrowserLogin.ShowDialog();
-                        });
-                        thread.SetApartmentState(ApartmentState.STA);
-                        thread.Start();
-                        thread.Join();
-
-                        // Set cookies collected from the web browser dialog.
-                        DavClient.CookieContainer.Add(webBrowserLogin.Cookies);
+                        WebBrowserLogin(failedUri);
 
                         // Replay the request, so the listing can complete succesefully.
                         e.Result = WebDavErrorEventResult.Repeat;
@@ -290,370 +283,86 @@ namespace WebDAVDrive
                         if (loginRetriesCurrent < loginRetriesMax)
                         {
                             failedUri = (e.Exception as WebDavHttpException).Uri;
-                            Windows.Security.Credentials.PasswordCredential passwordCredential = CredentialManager.GetCredentials(Settings.ProductName, log);
-                            if (passwordCredential != null)
-                            {
-                                passwordCredential.RetrievePassword();
-                                NetworkCredential networkCredential = new NetworkCredential(passwordCredential.UserName, passwordCredential.Password);
-                                DavClient.Credentials = networkCredential;
-                                Engine.Credentials = networkCredential;
-                                e.Result = WebDavErrorEventResult.Repeat;
-                            }
-                            else
-                            {
-                                string login = null;
-                                SecureString password = null;
-                                bool dialogResult = false;
-                                bool keepLogedin = false;
-
-                                // Show login dialog
-                                WebDAVDrive.UI.ChallengeLogin loginForm = null;
-                                thread = new Thread(() =>
-                                {
-                                    loginForm = new WebDAVDrive.UI.ChallengeLogin();
-                                    ((ChallengeLoginViewModel)loginForm.DataContext).Url = failedUri.OriginalString;
-                                    ((ChallengeLoginViewModel)loginForm.DataContext).WindowTitle = Settings.ProductName;
-                                    loginForm.ShowDialog();
-
-                                    login = ((ChallengeLoginViewModel)loginForm.DataContext).Login;
-                                    password = ((ChallengeLoginViewModel)loginForm.DataContext).Password;
-                                    keepLogedin = ((ChallengeLoginViewModel)loginForm.DataContext).KeepLogedIn;
-                                    dialogResult = (bool)loginForm.DialogResult;
-                                });
-                                thread.SetApartmentState(ApartmentState.STA);
-                                thread.Start();
-                                thread.Join();
-
-                                loginRetriesCurrent++;
-                                if (dialogResult)
-                                {
-                                    if (keepLogedin)
-                                    {
-                                        CredentialManager.SaveCredentials(Settings.ProductName, login, password);
-                                    }
-                                    NetworkCredential newNetworkCredential = new NetworkCredential(login, password);
-                                    Engine.Credentials = newNetworkCredential;
-                                    DavClient.Credentials = newNetworkCredential;
-                                    e.Result = WebDavErrorEventResult.Repeat;
-                                }
-                            }
+                            e.Result = ChallengeLoginLogin(failedUri);
                         }
                         break;
                     default:
-                        log.Info($"\n{httpException?.Status.Code} {httpException?.Status.Description} {e.Exception.Message} ");
+                        ILogger logger = Engine.Logger.CreateLogger("WebDAV Session");
+                        logger.LogMessage($"{httpException.Status.Code} {e.Exception.Message}", httpException.Uri.ToString());
                         break;
                 }
             }
         }
 
-        private static async Task ProcessUserInputAsync()
+        private static void WebBrowserLogin(Uri failedUri)
         {
-            do
+            WebDAVDrive.UI.WebBrowserLogin webBrowserLogin = null;
+            Thread thread = new Thread(() =>
             {
-                ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+                webBrowserLogin = new WebDAVDrive.UI.WebBrowserLogin(failedUri, log);
+                webBrowserLogin.Title = Settings.ProductName;
+                webBrowserLogin.ShowDialog();
+            });
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            thread.Join();
 
-                switch (keyInfo.Key)
-                {
-                    case ConsoleKey.F1:
-                    case ConsoleKey.H:
-                        // Print help info.
-                        logFormatter.PrintHelp();
-                        break;
-
-                    case ConsoleKey.E:
-                        // Start/stop the Engine and all sync services.
-                        if (Engine.State == EngineState.Running)
-                        {
-                            await Engine.StopAsync();
-                        }
-                        else if (Engine.State == EngineState.Stopped)
-                        {
-                            await Engine.StartAsync();
-                        }
-                        break;
-
-                    case ConsoleKey.S:
-                        // Start/stop full synchronization.
-                        if (Engine.SyncService.SyncState == SynchronizationState.Disabled)
-                        {
-                            if (Engine.State != EngineState.Running)
-                            {
-                                Engine.SyncService.Logger.LogError("Failed to start. The Engine must be running.");
-                                break;
-                            }
-                            await Engine.SyncService.StartAsync();
-                        }
-                        else
-                        {
-                            await Engine.SyncService.StopAsync();
-                        }
-                        break;
-
-                    case ConsoleKey.D:
-                        // Enables/disables debug logging.
-                        logFormatter.DebugLoggingEnabled = !logFormatter.DebugLoggingEnabled;
-                        break;
-
-                    case ConsoleKey.M:
-                        // Start/stop remote storage monitor.
-                        if (Engine.RemoteStorageMonitor.SyncState == SynchronizationState.Disabled)
-                        {
-                            if (Engine.State != EngineState.Running)
-                            {
-                                Engine.RemoteStorageMonitor.Logger.LogError("Failed to start. The Engine must be running.");
-                                break;
-                            }
-                            await Engine.RemoteStorageMonitor.StartAsync();
-                        }
-                        else
-                        {
-                            await Engine.RemoteStorageMonitor.StopAsync();
-                        }
-                        break;
-
-                    case ConsoleKey.L:
-                        // Open log file.
-                        ProcessStartInfo psiLog = new ProcessStartInfo(logFormatter.LogFilePath);
-                        psiLog.UseShellExecute = true;
-                        using (Process.Start(psiLog))
-                        {
-                        }
-                        break;
-
-                    case ConsoleKey.B:
-                        // Submit support tickets, report bugs, suggest features.
-                        ProcessStartInfo psiSupport = new ProcessStartInfo("https://www.userfilesystem.com/support/");
-                        psiSupport.UseShellExecute = true;
-                        using (Process.Start(psiSupport))
-                        {
-                        }
-                        break;
-
-                    case ConsoleKey.Escape:
-                        if (Engine?.State == EngineState.Running)
-                        {
-                            await Engine.StopAsync();
-                        }
-
-                        // Call the code below during programm uninstall using classic msi.
-                        if (await Registrar.IsRegisteredAsync(Settings.UserFileSystemRootPath))
-                        {
-                            await UnregisterSyncRootAsync();
-                        }
-
-                        ShellExtensionRegistrar.Unregister(log);
-
-                        // Delete all files/folders.
-                        await CleanupAppFoldersAsync();
-
-                        if (keyInfo.Modifiers.HasFlag(ConsoleModifiers.Shift))
-                        {
-                            // Uninstall developer certificate.
-                            EnsureDevelopmentCertificateUninstalled();
-
-                            // Uninstall conflicting packages if any
-                            await EnsureConflictingPackagesUninstalled();
-
-                            // Unregister sparse package.
-                            await UnregisterSparsePackageAsync();
-                        }
-
-                        return;
-
-                    case ConsoleKey.Spacebar:
-                        if (Engine?.State == EngineState.Running)
-                        {
-                            await Engine.StopAsync();
-                        }
-                        log.Info("\n\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.\n");
-                        return;
-
-                    default:
-                        break;
-                }
-
-            } while (true);
+            // Set cookies collected from the web browser dialog.
+            DavClient.CookieContainer.Add(webBrowserLogin.Cookies);
         }
 
-        /// <summary>
-        /// Registers sync root and creates application folders.
-        /// </summary>
-        /// <remarks>
-        /// In the case of a packaged installer (msix) call this method during first program start.
-        /// In the case of a regular installer (msi) call this method during installation.
-        /// </remarks>
-        private static async Task RegisterSyncRootAsync()
+        private static WebDavErrorEventResult ChallengeLoginLogin(Uri failedUri)
         {
-            if (!await Registrar.IsRegisteredAsync(Settings.UserFileSystemRootPath))
+            Windows.Security.Credentials.PasswordCredential passwordCredential = CredentialManager.GetCredentials(Settings.ProductName, log);
+            if (passwordCredential != null)
             {
-                log.Info($"\n\nRegistering sync root.");
-                Directory.CreateDirectory(Settings.UserFileSystemRootPath);
-
-                await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
-                    Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
-
-                if (!PackageRegistrar.IsRunningWithIdentity())
-                {
-                    ShellExtensionRegistrar.Register(SyncRootId, log);
-                }
+                passwordCredential.RetrievePassword();
+                NetworkCredential networkCredential = new NetworkCredential(passwordCredential.UserName, passwordCredential.Password);
+                DavClient.Credentials = networkCredential;
+                Engine.Credentials = networkCredential;
+                return WebDavErrorEventResult.Repeat;
             }
             else
             {
-                log.Info($"\n\n{Settings.UserFileSystemRootPath} sync root already registered.");
-            }
-        }
+                string login = null;
+                SecureString password = null;
+                bool dialogResult = false;
+                bool keepLogedin = false;
 
-        /// <summary>
-        /// Unregisters sync root.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// In the case of a packaged installer (msix) you do not need to call this method. 
-        /// The platform will automatically delete sync root registartion during program uninstall.
-        /// </para>
-        /// <para>
-        /// In the case of a regular installer (msi) call this method during uninstall.
-        /// </para>
-        /// </remarks>
-        private static async Task UnregisterSyncRootAsync()
-        {
-            log.Info($"\n\nUnregistering sync root.");
-            await Registrar.UnregisterAsync(SyncRootId);
-        }
-
-        private static async Task CleanupAppFoldersAsync()
-        {
-            log.Info("\n\nDeleting all file and folder placeholders.");
-            try
-            {
-                if (Directory.Exists(Settings.UserFileSystemRootPath))
+                // Show login dialog
+                WebDAVDrive.UI.ChallengeLogin loginForm = null;
+                Thread thread = new Thread(() =>
                 {
-                    Directory.Delete(Settings.UserFileSystemRootPath, true);
-                }
-            }
-            catch (Exception ex)
-            {
-                log.Error("Failed to delete placeholders.", ex);
-            }
+                    loginForm = new WebDAVDrive.UI.ChallengeLogin();
+                    ((ChallengeLoginViewModel)loginForm.DataContext).Url = failedUri.OriginalString;
+                    ((ChallengeLoginViewModel)loginForm.DataContext).WindowTitle = Settings.ProductName;
+                    loginForm.ShowDialog();
 
-            try
-            {
-                await Engine?.UninstallCleanupAsync();
-            }
-            catch (Exception ex)
-            {
-                log.Error($"\n{ex}");
-            }
-        }
+                    login = ((ChallengeLoginViewModel)loginForm.DataContext).Login;
+                    password = ((ChallengeLoginViewModel)loginForm.DataContext).Password;
+                    keepLogedin = ((ChallengeLoginViewModel)loginForm.DataContext).KeepLogedIn;
+                    dialogResult = (bool)loginForm.DialogResult;
+                });
+                thread.SetApartmentState(ApartmentState.STA);
+                thread.Start();
+                thread.Join();
 
-        /// <summary>
-        /// Unregisters sparse package.
-        /// </summary>
-        private static async Task UnregisterSparsePackageAsync()
-        {
-            log.Info("\n\nUnregistering sparse package...");
-            await PackageRegistrar.UnregisterSparsePackageAsync();
-            log.Info("\nSparse package unregistered sucessfully.");
-        }
-
-#if DEBUG
-        /// <summary>
-        /// Installs the development certificate.
-        /// </summary>
-        /// <remarks>
-        /// In a real-world application your application will be signed with a trusted
-        /// certificate and you do not need to install it.
-        /// Development certificate installation is needed for sparse package only,
-        /// should be omitted for packaged application.
-        /// </remarks>
-        /// <returns>True if the the certificate is installed, false - if the installation failed.</returns>
-        private static bool EnsureDevelopmentCertificateInstalled()
-        {
-            string sparsePackagePath = PackageRegistrar.GetSparsePackagePath();
-            CertificateRegistrar certificateRegistrar = new CertificateRegistrar(sparsePackagePath);
-            if (!certificateRegistrar.IsCertificateInstalled())
-            {
-                log.Info("\n\nInstalling developer certificate...");
-                if (certificateRegistrar.TryInstallCertificate(true, out int errorCode))
+                loginRetriesCurrent++;
+                if (dialogResult)
                 {
-                    log.Info("\nDeveloper certificate successfully installed.");
-                }
-                else
-                {
-                    log.Error($"\nFailed to install the developer certificate. Error code: {errorCode}");
-                    return false;
+                    if (keepLogedin)
+                    {
+                        CredentialManager.SaveCredentials(Settings.ProductName, login, password);
+                    }
+                    NetworkCredential newNetworkCredential = new NetworkCredential(login, password);
+                    Engine.Credentials = newNetworkCredential;
+                    DavClient.Credentials = newNetworkCredential;
+                    return WebDavErrorEventResult.Repeat;
                 }
             }
 
-            return true;
+            return WebDavErrorEventResult.Fail;
         }
-
-        /// <summary>
-        /// Uninstalls the development certificate.
-        /// </summary>
-        /// <returns>True if the the certificate is uninstalled, false - if the uninstallation failed.</returns>
-        private static bool EnsureDevelopmentCertificateUninstalled()
-        {
-            string sparsePackagePath = PackageRegistrar.GetSparsePackagePath();
-            CertificateRegistrar certRegistrar = new CertificateRegistrar(sparsePackagePath);
-            if (certRegistrar.IsCertificateInstalled())
-            {
-                log.Info("\n\nUninstalling developer certificate...");
-                if (certRegistrar.TryUninstallCertificate(true, out int errorCode))
-                {
-                    log.Info("\nDeveloper certificate successfully uninstalled.");
-                }
-                else
-                {
-                    log.Error($"\nFailed to uninstall the developer certificate. Error code: {errorCode}");
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Uninstalls packages that registered classes when sparse package contains them to prevent conflicts.
-        /// </summary>
-        /// <returns></returns>
-        private static async Task EnsureConflictingPackagesUninstalled()
-        {
-            if (PackageRegistrar.IsRunningWithSparsePackageIdentity() && PackageRegistrar.ConflictingPackagesRegistered())
-            {
-                log.Info("\nUninstalling conflicting packages...");
-                await PackageRegistrar.UnregisterConflictingPackages();
-            }
-        }
-
-        /// <summary>
-        /// Opens Windows File Manager with both remote storage and user file system for testing.
-        /// </summary>
-        /// <remarks>This method is provided solely for the development and testing convenience.</remarks>
-        private static void ShowTestEnvironment()
-        {
-            // Enable UTF8 for Console Window and set width.
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
-            Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight / 3);
-            Console.SetBufferSize(Console.LargestWindowWidth * 2, short.MaxValue / 2);
-
-            // Open Windows File Manager with user file system.
-            ProcessStartInfo ufsInfo = new ProcessStartInfo(Program.Settings.UserFileSystemRootPath);
-            ufsInfo.UseShellExecute = true; // Open window only if not opened already.
-            using (Process ufsWinFileManager = Process.Start(ufsInfo))
-            {
-
-            }
-
-            // Open web browser with WebDAV content.
-            ProcessStartInfo rsInfo = new ProcessStartInfo(Program.Settings.WebDAVServerUrl);
-            rsInfo.UseShellExecute = true; // Open window only if not opened already.
-            using (Process rsWinFileManager = Process.Start(rsInfo))
-            {
-
-            }
-        }
-#endif
 
         /// <summary>
         /// Gets automatically generated Sync Root ID.

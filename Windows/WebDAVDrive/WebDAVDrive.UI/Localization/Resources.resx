@@ -136,13 +136,19 @@
     <value>Login</value>
   </data>
   <data name="LoginError" xml:space="preserve">
-    <value>LoginError	Please enter login</value>
+    <value>Provide login</value>
   </data>
   <data name="LoginMessage" xml:space="preserve">
     <value>Enter your credentials</value>
   </data>
   <data name="OK" xml:space="preserve">
     <value>OK</value>
+  </data>
+  <data name="OpenFolder" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="OpenRemoteStorage" xml:space="preserve">
+    <value>Open remote storage</value>
   </data>
   <data name="Password" xml:space="preserve">
     <value>Password</value>

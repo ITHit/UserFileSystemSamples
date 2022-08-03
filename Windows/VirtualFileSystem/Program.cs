@@ -38,6 +38,21 @@ namespace VirtualFileSystem
         /// </summary>
         private static LogFormatter logFormatter;
 
+        /// <summary>
+        /// Provides sync root registration functionality.
+        /// </summary>
+        private static Registrar registrar;
+
+        /// <summary>
+        /// Application commands.
+        /// </summary>
+        private static Commands commands;
+
+        /// <summary>
+        /// Processes console input.
+        /// </summary>
+        private static ConsoleProcessor consoleProcessor;
+
         
         public static async Task Main(string[] args)
         {
@@ -49,10 +64,15 @@ namespace VirtualFileSystem
             // Log environment description.
             logFormatter.PrintEnvironmentDescription();
 
+            registrar = new Registrar(SyncRootId, Settings.UserFileSystemRootPath, log);
+
+            commands = new Commands(log, Settings.RemoteStorageRootPath);
+            consoleProcessor = new ConsoleProcessor(registrar, logFormatter, commands);
+
             try
             {
                 // Register sync root and create app folders.
-                await RegisterSyncRootAsync();
+                await registrar.RegisterSyncRootAsync(Settings.ProductName, Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
 
                 using (Engine = new VirtualEngine(
                     Settings.UserFileSystemLicense,
@@ -60,236 +80,37 @@ namespace VirtualFileSystem
                     Settings.RemoteStorageRootPath,
                     logFormatter))
                 {
+                    commands.Engine = Engine;
+                    commands.RemoteStorageMonitor = Engine.RemoteStorageMonitor;
+
                     // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
                     // method as a remoteStorageItemId parameter when a root folder is requested. 
                     byte[] itemId = WindowsFileSystemItem.GetItemIdByPath(Settings.RemoteStorageRootPath);
                     Engine.Placeholders.GetRootItem().SetRemoteStorageItemId(itemId);
 
-                    // Print Engine config, settings, console commands, logging headers.
+                    // Print console commands.
+                    consoleProcessor.PrintHelp();
+
+                    // Print Engine config, settings, logging headers.
                     await logFormatter.PrintEngineStartInfoAsync(Engine);
 
                     // Start processing OS file system calls.
                     await Engine.StartAsync();
-
 #if DEBUG
                     // Opens Windows File Manager with user file system folder and remote storage folder.
-                    ShowTestEnvironment();
+                    commands.ShowTestEnvironment();
 #endif
                     // Keep this application running and reading user input.
-                    await ProcessUserInputAsync();
+                    await consoleProcessor.ProcessUserInputAsync();
                 }
             }
             catch (Exception ex)
             {
                 log.Error(ex);
-                await ProcessUserInputAsync();
+                await consoleProcessor.ProcessUserInputAsync();
             }
         }
         
-
-        private static async Task ProcessUserInputAsync()
-        {
-            do
-            {
-                ConsoleKeyInfo keyInfo = Console.ReadKey(true);
-
-                switch (keyInfo.Key)
-                {
-                    case ConsoleKey.F1:
-                    case ConsoleKey.H:
-                        // Print help info.
-                        logFormatter.PrintHelp();
-                        break;
-
-                    case ConsoleKey.E:
-                        // Start/stop the Engine and all sync services.
-                        if (Engine.State == EngineState.Running)
-                        {
-                            await Engine.StopAsync();
-                        }
-                        else if (Engine.State == EngineState.Stopped)
-                        {
-                            await Engine.StartAsync();
-                        }
-                        break;
-
-                    case ConsoleKey.S:
-                        // Start/stop full synchronization.
-                        if (Engine.SyncService.SyncState == SynchronizationState.Disabled)
-                        {
-                            if (Engine.State != EngineState.Running)
-                            {
-                                Engine.SyncService.Logger.LogError("Failed to start. The Engine must be running.");
-                                break;
-                            }
-                            await Engine.SyncService.StartAsync();
-                        }
-                        else
-                        {
-                            await Engine.SyncService.StopAsync();
-                        }
-                        break;
-
-                    case ConsoleKey.D:
-                        // Enables/disables debug logging.
-                        logFormatter.DebugLoggingEnabled = !logFormatter.DebugLoggingEnabled;
-                        break;
-
-                    case ConsoleKey.M:
-                        // Start/stop remote storage monitor.
-                        if (Engine.RemoteStorageMonitor.SyncState == SynchronizationState.Disabled)
-                        {
-                            if (Engine.State != EngineState.Running)
-                            {
-                                Engine.RemoteStorageMonitor.Logger.LogError("Failed to start. The Engine must be running.");
-                                break;
-                            }
-                            Engine.RemoteStorageMonitor.Start();
-                        }
-                        else
-                        {
-                            Engine.RemoteStorageMonitor.Stop();
-                        }
-                        break;
-
-                    case ConsoleKey.L:
-                        // Open log file.
-                        ProcessStartInfo psiLog = new ProcessStartInfo(logFormatter.LogFilePath);
-                        psiLog.UseShellExecute = true;
-                        using (Process.Start(psiLog))
-                        {
-                        }
-                        break;
-
-                    case ConsoleKey.B:
-                        // Submit support tickets, report bugs, suggest features.
-                        ProcessStartInfo psiSupport = new ProcessStartInfo("https://www.userfilesystem.com/support/");
-                        psiSupport.UseShellExecute = true;
-                        using (Process.Start(psiSupport))
-                        {
-                        }
-                        break;
-
-                    case ConsoleKey.Escape:
-                        if (Engine.State == EngineState.Running)
-                        {
-                            await Engine.StopAsync();
-                        }
-
-                        // Call the code below during programm uninstall using classic msi.
-                        await UnregisterSyncRootAsync();
-
-                        // Delete all files/folders.
-                        await CleanupAppFoldersAsync();
-                        return;
-
-                    case ConsoleKey.Spacebar:
-                        if (Engine.State == EngineState.Running)
-                        {
-                            await Engine.StopAsync();
-                        }
-                        log.Info("\n\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.\n");
-                        return;
-
-                    default:
-                        break;
-                }
-
-            } while (true);
-        }
-
-        /// <summary>
-        /// Registers sync root and creates application folders.
-        /// </summary>
-        /// <remarks>
-        /// In the case of a packaged installer (msix) call this method during first program start.
-        /// In the case of a regular installer (msi) call this method during installation.
-        /// </remarks>
-        private static async Task RegisterSyncRootAsync()
-        {
-            if (!await Registrar.IsRegisteredAsync(Settings.UserFileSystemRootPath))
-            {
-                log.Info($"\n\nRegistering sync root.");
-                Directory.CreateDirectory(Settings.UserFileSystemRootPath);
-
-                await Registrar.RegisterAsync(SyncRootId, Settings.UserFileSystemRootPath, Settings.ProductName,
-                    Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
-            }
-            else
-            {
-                log.Info($"\n\n{Settings.UserFileSystemRootPath} sync root already registered.");
-            }
-        }
-
-        /// <summary>
-        /// Unregisters sync root.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// In the case of a packaged installer (msix) you do not need to call this method. 
-        /// The platform will automatically delete sync root registartion during program uninstall.
-        /// </para>
-        /// <para>
-        /// In the case of a regular installer (msi) call this method during uninstall.
-        /// </para>
-        /// </remarks>
-        private static async Task UnregisterSyncRootAsync()
-        {
-            log.Info($"\n\nUnregistering sync root.");
-            await Registrar.UnregisterAsync(SyncRootId);
-        }
-
-        private static async Task CleanupAppFoldersAsync()
-        {
-            log.Info("\nDeleting all file and folder placeholders.\n");
-            try
-            {
-                Directory.Delete(Settings.UserFileSystemRootPath, true);
-            }
-            catch (Exception ex)
-            {
-                log.Error($"\n{ex}");
-            }
-
-            try
-            {
-                await Engine?.UninstallCleanupAsync();
-            }
-            catch (Exception ex)
-            {
-                log.Error($"\n{ex}");
-            }
-        }
-
-#if DEBUG
-        /// <summary>
-        /// Opens Windows File Manager with both remote storage and user file system for testing.
-        /// </summary>
-        /// <remarks>This method is provided solely for the development and testing convenience.</remarks>
-        private static void ShowTestEnvironment()
-        {
-            // Enable UTF8 for Console Window and set width.
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
-            Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight / 3);
-            Console.SetBufferSize(Console.LargestWindowWidth * 2, short.MaxValue/2);
-
-            // Open Windows File Manager with remote storage.
-            ProcessStartInfo rsInfo = new ProcessStartInfo(Program.Settings.RemoteStorageRootPath);
-            rsInfo.UseShellExecute = true; // Open window only if not opened already.
-            using (Process rsWinFileManager = Process.Start(rsInfo))
-            {
-
-            }
-
-            // Open Windows File Manager with user file system.
-            ProcessStartInfo ufsInfo = new ProcessStartInfo(Program.Settings.UserFileSystemRootPath);
-            ufsInfo.UseShellExecute = true; // Open window only if not opened already.
-            using (Process ufsWinFileManager = Process.Start(ufsInfo))
-            {
-
-            }
-        }
-#endif
 
         /// <summary>
         /// Gets automatically generated Sync Root ID.

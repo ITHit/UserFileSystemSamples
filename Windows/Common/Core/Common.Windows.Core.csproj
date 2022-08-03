@@ -5,11 +5,11 @@
     <Authors>IT Hit LTD.</Authors>
     <Product>IT Hit User File System</Product>
     <Copyright>IT Hit LTD.</Copyright>
-    <RootNamespace>ITHit.FileSystem.Samples.Common.Windows.Core</RootNamespace>
+    <RootNamespace>ITHit.FileSystem.Samples.Common.Windows</RootNamespace>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="ConsoleProcessor.cs" />
+    <Compile Remove="Installer.cs" />
     <Compile Remove="Logger.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -20,8 +20,8 @@
     <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.19041.1" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="5.6.16439.0" />
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="5.6.16439.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="6.0.16872.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="6.0.16872.0-Beta" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
   </ItemGroup>
 </Project>

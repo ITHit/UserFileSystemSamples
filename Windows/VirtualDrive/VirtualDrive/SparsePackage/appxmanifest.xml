@@ -61,8 +61,10 @@
 
         <!--
         To use out-of-proc handlers with gRPC:
-        1. Comment <ApplicationManifest>app.manifest</ApplicationManifest> element in VirtualDrive.csproj
-        2. Uncomment <com:Extension> section here:
+        1. Add a reference to ShellExtensions project, so the shell extension COM executable is copied to the app folder
+        2. Enable RPC by setting ShellExtensionsComServerRpcEnabled to true in appsettings.json
+        3. Comment <ApplicationManifest>app.manifest</ApplicationManifest> element in VirtualDrive.csproj
+        4. Uncomment <com:Extension> section here:
         -->
 
         <!--<com:Extension Category="windows.comServer">

@@ -22,7 +22,7 @@ namespace WebDAVDrive
     /// If any file or folder is modified, created, delated, renamed or attributes changed in the remote storage, 
     /// triggers an event with information about changes being made.
     /// </summary>
-    internal class RemoteStorageMonitor : IDisposable
+    internal class RemoteStorageMonitor : ISyncService, IDisposable
     {
         /// <summary>
         /// Current synchronization state.
@@ -104,7 +104,7 @@ namespace WebDAVDrive
         /// <summary>
         /// Starts websockets to monitor changes in remote storage.
         /// </summary>
-        internal async Task StartAsync()
+        public async Task StartAsync()
         {
             await Task.Factory.StartNew(
               async () =>
@@ -136,7 +136,7 @@ namespace WebDAVDrive
         /// <summary>
         /// Stops monitoring changes in the remote storage.
         /// </summary>
-        internal async Task StopAsync()
+        public async Task StopAsync()
         {
             try
             {

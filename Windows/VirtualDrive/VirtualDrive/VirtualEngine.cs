@@ -62,7 +62,7 @@ namespace VirtualDrive
 
             Logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString());
 
-            Guid menuCommandLockGuid = typeof(VirtualDrive.ShellExtension.ContextMenuVerbRpc).GUID;
+            Guid menuCommandLockGuid = typeof(ShellExtension.ContextMenuVerbIntegrated).GUID;
 
             if (menuGuid == menuCommandLockGuid)
             {
@@ -78,14 +78,14 @@ namespace VirtualDrive
         public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
         {
             await base.StartAsync(processModified, cancellationToken);
-            RemoteStorageMonitor.Start();
+            await RemoteStorageMonitor.StartAsync();
         }
 
         /// <inheritdoc/>
         public override async Task StopAsync()
         {
             await base.StopAsync();
-            RemoteStorageMonitor.Stop();
+            await RemoteStorageMonitor.StopAsync();
         }
 
         private bool disposedValue;

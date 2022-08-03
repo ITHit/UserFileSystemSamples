@@ -96,13 +96,13 @@ namespace VirtualFileSystem
         public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
         {
             await base.StartAsync(processModified, cancellationToken);
-            RemoteStorageMonitor.Start();
+            await RemoteStorageMonitor.StartAsync();
         }
 
         public override async Task StopAsync()
         {
             await base.StopAsync();
-            RemoteStorageMonitor.Stop();
+            await RemoteStorageMonitor.StopAsync();
         }
 
         /// <summary>

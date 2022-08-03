@@ -1,11 +1,12 @@
-using ITHit.WebDAV.Client;
-using log4net;
-using Microsoft.Web.WebView2.Core;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
+using Microsoft.Web.WebView2.Core;
+
+using log4net;
+
 
 namespace WebDAVDrive.UI
 {
@@ -22,12 +23,12 @@ namespace WebDAVDrive.UI
         /// <summary>
         /// URL to navigate to. This URL must redirect to a log-in page.
         /// </summary>
-        private Uri url;
+        private readonly Uri url;
 
         /// <summary>
         ///  Microsoft Edge Chromium instance.
         /// </summary>
-        private Microsoft.Web.WebView2.Wpf.WebView2 webView;
+        private readonly Microsoft.Web.WebView2.Wpf.WebView2 webView;
 
         /// <summary>
         /// Task for initializign of WebView2
@@ -44,7 +45,7 @@ namespace WebDAVDrive.UI
         /// </summary>
         Delegate DoNavigation;
 
-        private ILog log;
+        private readonly ILog log;
 
         /// <summary>
         /// Creates instance of this class.
@@ -149,7 +150,7 @@ namespace WebDAVDrive.UI
             }
         }
 
-        private bool IsSuccess(int statusCode)
+        private static bool IsSuccess(int statusCode)
         {
             return (statusCode >= 200) && (statusCode <= 299);
         }

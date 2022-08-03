@@ -132,11 +132,12 @@ namespace VirtualDrive
             }
 
             // Update remote storage file metadata.
-            remoteStorageItem.Attributes = fileMetadata.Attributes;
+            remoteStorageItem.Attributes = fileMetadata.Attributes & ~FileAttributes.ReadOnly;
             remoteStorageItem.CreationTimeUtc = fileMetadata.CreationTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
             remoteStorageItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
+            remoteStorageItem.Attributes = fileMetadata.Attributes;
 
             // Save ETag received from your remote storage in persistent placeholder properties.
             //string newEtag = ...

@@ -1,11 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 using ITHit.FileSystem.Samples.Common;
 using WebDAVDrive.UI;
@@ -38,6 +35,11 @@ namespace WebDAVDrive
         public double SyncIntervalMs { get; set; }
 
         /// <summary>
+        /// Throttling max concurrent requests.
+        /// </summary>
+        public int? MaxConcurrentRequests { get; set; }
+
+        /// <summary>
         /// URL to get a thumbnail for Windows Explorer thumbnails mode.
         /// Your server must return 404 Not Found if the thumbnail can not be generated.
         /// If incorrect size is returned, the image will be resized by the platform automatically.
@@ -50,6 +52,17 @@ namespace WebDAVDrive
         /// To request thumbnails for all file types set the value to "*".
         /// </summary>
         public string RequestThumbnailsFor { get; set; }
+
+        /// <summary>
+        /// Absolute or relative path of external COM server executable.
+        /// If empty, will host COM classes in the current process.
+        /// </summary>
+        public string ShellExtensionsComServerExePath { get; set; }
+
+        /// <summary>
+        /// Is RPC server enabled
+        /// </summary>
+        public bool ShellExtensionsComServerRpcEnabled { get; set; }
     }
 
     /// <summary>
@@ -91,12 +104,23 @@ namespace WebDAVDrive
             }
 
             string assemblyLocation = Assembly.GetEntryAssembly().Location;
+            string applicationDirectory = Path.GetDirectoryName(assemblyLocation);
+
+            if (!Path.IsPathRooted(settings.ShellExtensionsComServerExePath))
+            {
+                settings.ShellExtensionsComServerExePath = !string.IsNullOrWhiteSpace(settings.ShellExtensionsComServerExePath) ? Path.Combine(applicationDirectory, settings.ShellExtensionsComServerExePath) : null;
+            }
 
             // Icons folder.
-            settings.IconsFolderPath = Path.Combine(Path.GetDirectoryName(assemblyLocation), @"Images");
+            settings.IconsFolderPath = Path.Combine(applicationDirectory, @"Images");
 
             // Load product name from entry exe file.
             settings.ProductName = FileVersionInfo.GetVersionInfo(assemblyLocation).ProductName;
+
+            if (!settings.MaxConcurrentRequests.HasValue)
+            {
+                settings.MaxConcurrentRequests = int.MaxValue;
+            }
 
             return settings;
         }

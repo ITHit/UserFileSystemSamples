@@ -20,10 +20,27 @@ namespace VirtualDrive
         /// In your real-life application you will read data from your cloud storage, database or any other location, instead of this folder.
         /// </remarks>
         public string RemoteStorageRootPath { get; set; }
+
         /// <summary>
         /// Full synchronization interval in milliseconds.
         /// </summary>
         public double SyncIntervalMs { get; set; }
+
+        /// <summary>
+        /// Throttling max concurrent requests.
+        /// </summary>
+        public int? MaxConcurrentRequests { get; set; }
+
+        /// <summary>
+        /// Absolute or relative path of external COM server executable.
+        /// If empty, will host COM classes in the current process.
+        /// </summary>
+        public string ShellExtensionsComServerExePath { get; set; }
+
+        /// <summary>
+        /// Is RPC server enabled
+        /// </summary>
+        public bool ShellExtensionsComServerRpcEnabled { get; set; }
     }
 
     /// <summary>
@@ -57,18 +74,19 @@ namespace VirtualDrive
                 throw new ArgumentNullException("Settings.UserFileSystemRootPath");
             }
 
+            string applicationDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+
             if (!Path.IsPathRooted(settings.RemoteStorageRootPath))
             {
-                string execPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                 // Path to RemoteStorage folder when Any CPU is selected.  
-                string remoteStorageRootPath = Path.GetFullPath(Path.Combine(execPath, "..", "..", "..", settings.RemoteStorageRootPath));
+                string remoteStorageRootPath = Path.GetFullPath(Path.Combine(applicationDirectory, "..", "..", "..", settings.RemoteStorageRootPath));
 
                 if (!Directory.Exists(remoteStorageRootPath))
                 {
                     // Path to RemoteStorage folder when x64/x86 is selected.
-                    remoteStorageRootPath = Path.GetFullPath(Path.Combine(execPath, "..", "..", "..", "..", settings.RemoteStorageRootPath));
+                    remoteStorageRootPath = Path.GetFullPath(Path.Combine(applicationDirectory, "..", "..", "..", "..", settings.RemoteStorageRootPath));
                     
-                    if (execPath.Contains("WindowsApps"))
+                    if (applicationDirectory.Contains("WindowsApps"))
                     {
                         // Path to RemoteStorage for msix package.
                         string applicationDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), settings.AppID);
@@ -82,18 +100,23 @@ namespace VirtualDrive
                         if (!Directory.Exists(remoteStorageRootPath))
                         {
                             // Copy RemoteStorage folder to ProgramData folder.
-                            CopyDirectoryRecursively(new DirectoryInfo(Path.GetFullPath(Path.Combine(execPath, settings.RemoteStorageRootPath))),
+                            CopyDirectoryRecursively(new DirectoryInfo(Path.GetFullPath(Path.Combine(applicationDirectory, settings.RemoteStorageRootPath))),
                                 new DirectoryInfo(remoteStorageRootPath));
                         }
                     }
                     else if (!Directory.Exists(remoteStorageRootPath))
                     {
                         // Path to RemoteStorage folder when run VirtualDrive.Package project directly.
-                        remoteStorageRootPath = Path.GetFullPath(Path.Combine(execPath, "..", "..", "..", "..", "..", "..", settings.AppID, settings.RemoteStorageRootPath));
+                        remoteStorageRootPath = Path.GetFullPath(Path.Combine(applicationDirectory, "..", "..", "..", "..", "..", "..", settings.AppID, settings.RemoteStorageRootPath));
                     }
                 }
 
                 settings.RemoteStorageRootPath = remoteStorageRootPath;
+            }
+
+            if (!Path.IsPathRooted(settings.ShellExtensionsComServerExePath))
+            {
+                settings.ShellExtensionsComServerExePath = !string.IsNullOrWhiteSpace(settings.ShellExtensionsComServerExePath) ? Path.Combine(applicationDirectory, settings.ShellExtensionsComServerExePath) : null;
             }
 
             if (!Directory.Exists(settings.RemoteStorageRootPath))
@@ -113,6 +136,11 @@ namespace VirtualDrive
 
             // Load product name from entry exe file.
             settings.ProductName = FileVersionInfo.GetVersionInfo(assemblyLocation).ProductName;
+
+            if (!settings.MaxConcurrentRequests.HasValue)
+            {
+                settings.MaxConcurrentRequests = int.MaxValue;
+            }
 
             return settings;
         }

@@ -1,0 +1,183 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+using log4net;
+
+using ITHit.FileSystem.Windows;
+using ITHit.FileSystem.Windows.ShellExtension;
+using ITHit.FileSystem.Windows.Package;
+
+
+namespace ITHit.FileSystem.Samples.Common.Windows
+{
+    /// <summary>
+    /// Provides sparse package registration functionality.
+    /// </summary>
+    /// <remarks>
+    /// As soon as sparse package requires a valid cerificate, this class also registers 
+    /// a development certificate if the application runs in the debug mode.
+    /// </remarks>
+    public class SparsePackageRegistrar : Registrar
+    {
+        /// <summary>
+        /// Creates instance of this class.
+        /// </summary>
+        /// <param name="syncRootId">ID of the sync root.</param>
+        /// <param name="userFileSystemRootPath">A root folder of your user file system. Your file system tree will be located under this folder.</param>
+        /// <param name="log">log4net logger.</param>
+        /// <param name="shellExtensionHandlers">
+        /// List of shell extension handlers. Use it only for applications without application or package identity.
+        /// For applications with identity this list is ignored.
+        /// </param>
+        public SparsePackageRegistrar(
+            string syncRootId,
+            string userFileSystemRootPath,
+            ILog log,
+            IEnumerable<(string Name, Guid Guid)> shellExtensionHandlers = null)
+            : base(syncRootId, userFileSystemRootPath, log, shellExtensionHandlers)
+        {
+
+        }
+
+        /// <summary>
+        /// Registers sparse package if needed. In development mode also registers development certificate.
+        /// </summary>
+        /// <returns>
+        /// True if app has identity and the app can start execution. 
+        /// False if the app needs to restart after sparse package registrtatio or if installation failed.
+        /// </returns>
+        public async Task<bool> RegisterSparsePackageAsync()
+        {
+            // This check is in case this method is called form the packaged app
+            // or from installed sparse package.
+            if (PackageRegistrar.IsRunningWithIdentity())
+            {
+                return true; // App has identity, ready to run.
+            }
+
+            if (!PackageRegistrar.SparsePackageRegistered())
+            {
+#if DEBUG
+                /// Registering sparse package requires a valid certificate.
+                /// In the development mode we use the below call to install the development certificate.
+                if (!EnsureDevelopmentCertificateInstalled())
+                {
+                    return false;
+                }
+#endif
+                // In the case of a regular installer (msi) call this method during installation.
+                // This method call should be omitted for packaged application.
+                Log.Info("\n\nRegistering sparse package...");
+                await PackageRegistrar.RegisterSparsePackageAsync();
+                Log.Info("\nSparse package successfully registered. Restart the application.\n\n");
+
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Unregisters sparse package. In development mode also registers development certificate.
+        /// </summary>
+        public async Task UnregisterSparsePackageAsync()
+        {
+#if DEBUG
+            // Uninstall developer certificate.
+            EnsureDevelopmentCertificateUninstalled();
+
+            // Uninstall conflicting packages if any
+            await EnsureConflictingPackagesUninstalled();
+#endif
+            // Unregister sparse package.
+            Log.Info("\n\nUnregistering sparse package...");
+            await PackageRegistrar.UnregisterSparsePackageAsync();
+            Log.Info("\nSparse package unregistered sucessfully.");
+        }
+
+        /// <inheritdocs/>
+        public override async Task UnregisterAsync(EngineWindows engine, bool fullUnregistration = true)
+        {
+            await base.UnregisterAsync(engine, fullUnregistration);
+
+            if (fullUnregistration)
+            {
+                await UnregisterSparsePackageAsync();
+            }
+        }
+
+#if DEBUG
+        /// <summary>
+        /// Installs a development certificate.
+        /// </summary>
+        /// <remarks>
+        /// In a real-world application your application will be signed with a trusted
+        /// certificate and you do not need to install it.
+        /// Development certificate installation is needed for sparse package only,
+        /// should be omitted for packaged application.
+        /// </remarks>
+        /// <returns>True if the the certificate is installed, false - if the installation failed.</returns>
+        public bool EnsureDevelopmentCertificateInstalled()
+        {
+            string sparsePackagePath = PackageRegistrar.GetSparsePackagePath();
+            CertificateRegistrar certificateRegistrar = new CertificateRegistrar(sparsePackagePath);
+            if (!certificateRegistrar.IsCertificateInstalled())
+            {
+                Log.Info("\n\nInstalling developer certificate...");
+                if (certificateRegistrar.TryInstallCertificate(true, out int errorCode))
+                {
+                    Log.Info("\nDeveloper certificate successfully installed.");
+                }
+                else
+                {
+                    Log.Error($"\nFailed to install the developer certificate. Error code: {errorCode}");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Uninstalls a development certificate.
+        /// </summary>
+        /// <returns>True if the the certificate is uninstalled, false - if the uninstallation failed.</returns>
+        public bool EnsureDevelopmentCertificateUninstalled()
+        {
+            string sparsePackagePath = PackageRegistrar.GetSparsePackagePath();
+            CertificateRegistrar certRegistrar = new CertificateRegistrar(sparsePackagePath);
+            if (certRegistrar.IsCertificateInstalled())
+            {
+                Log.Info("\n\nUninstalling developer certificate...");
+                if (certRegistrar.TryUninstallCertificate(true, out int errorCode))
+                {
+                    Log.Info("\nDeveloper certificate successfully uninstalled.");
+                }
+                else
+                {
+                    Log.Error($"\nFailed to uninstall the developer certificate. Error code: {errorCode}");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Uninstalls packages that registered classes when sparse package contains them to prevent conflicts.
+        /// </summary>
+        /// <returns></returns>
+        private async Task EnsureConflictingPackagesUninstalled()
+        {
+            if (PackageRegistrar.IsRunningWithSparsePackageIdentity() && PackageRegistrar.ConflictingPackagesRegistered())
+            {
+                Log.Info("\nUninstalling conflicting packages...");
+                await PackageRegistrar.UnregisterConflictingPackages();
+            }
+        }
+#endif
+    }
+}

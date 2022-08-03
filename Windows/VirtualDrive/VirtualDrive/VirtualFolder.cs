@@ -63,11 +63,12 @@ namespace VirtualDrive
             }
 
             // Update remote storage file metadata.
-            remoteStorageNewItem.Attributes = fileMetadata.Attributes;
+            remoteStorageNewItem.Attributes = fileMetadata.Attributes & ~FileAttributes.ReadOnly;
             remoteStorageNewItem.CreationTimeUtc = fileMetadata.CreationTime.UtcDateTime;
             remoteStorageNewItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
             remoteStorageNewItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
             remoteStorageNewItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
+            remoteStorageNewItem.Attributes = fileMetadata.Attributes;
 
             // Save Etag received from your remote storage in
             // persistent placeholder properties unlil the next update.
@@ -98,11 +99,12 @@ namespace VirtualDrive
             remoteStorageNewItem.Create();
 
             // Update remote storage folder metadata.
-            remoteStorageNewItem.Attributes = folderMetadata.Attributes;
+            remoteStorageNewItem.Attributes = folderMetadata.Attributes & ~FileAttributes.ReadOnly;
             remoteStorageNewItem.CreationTimeUtc = folderMetadata.CreationTime.UtcDateTime;
             remoteStorageNewItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
             remoteStorageNewItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
             remoteStorageNewItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
+            remoteStorageNewItem.Attributes = folderMetadata.Attributes;
 
             // Save ETag received from your remote storage in persistent placeholder properties.
             //string eTag = ...
@@ -175,11 +177,12 @@ namespace VirtualDrive
             DirectoryInfo remoteStorageItem = new DirectoryInfo(remoteStoragePath);
 
             // Update remote storage folder metadata.
-            remoteStorageItem.Attributes = folderMetadata.Attributes;
+            remoteStorageItem.Attributes = folderMetadata.Attributes & ~FileAttributes.ReadOnly;
             remoteStorageItem.CreationTimeUtc = folderMetadata.CreationTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
             remoteStorageItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
+            remoteStorageItem.Attributes = folderMetadata.Attributes;
         }
     }
 }

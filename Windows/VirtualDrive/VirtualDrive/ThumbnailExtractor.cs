@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
-
+using ITHit.FileSystem.Windows.Interop;
 using ITHit.FileSystem.Windows.ShellExtension.Interop;
 
 namespace VirtualDrive

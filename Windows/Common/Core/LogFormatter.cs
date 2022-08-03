@@ -107,9 +107,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             {
                 log.Info($"\n{"Sparse package:",-25} Not found");
             }
-
-            // Log console commands.
-            PrintHelp();
         }
 
         /// <summary>
@@ -119,14 +116,14 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="remoteStorageRootPath">Remote storage root path.</param>
         public async Task PrintEngineStartInfoAsync(EngineWindows engine)
         {
-            await PrintEngineEnvironmentDescriptionAsync(engine);
+            await PrintEngineDescriptionAsync(engine);
             log.Info("\n");
 
             // Log logging columns headers.
             PrintHeader();
         }
 
-        public async Task PrintEngineEnvironmentDescriptionAsync(EngineWindows engine)
+        public async Task PrintEngineDescriptionAsync(EngineWindows engine)
         {
             log.Info($"\n");
             log.Info($"\n{"File system root:",-25} {engine.Path}");
@@ -149,28 +146,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             log.Info($"\n{"Indexed state:",-25} {await userFileSystemRootFolder.GetIndexedStateAsync()}");
         }
 
-        /// <summary>
-        /// Prints console commands.
-        /// </summary>
-        public void PrintHelp()
+        public void LogMessage(string message)
         {
-            log.Info("\n\n ----------------------------------------------------------------------------------------");
-            log.Info("\n Commands:");
-            PrintCommandDescription("Spacebar", "Exit without unregistering (simulate reboot)");
-            PrintCommandDescription("Esc", "Unregister file system, delete all files/folders, unregister handlers and exit.");
-            PrintCommandDescription("Shift-Esc", "Unregister file system, delete all files/folders, unregister handlers, uninstall developer certificate, unregister sparse package and exit (simulate full uninstall).");
-            PrintCommandDescription("e", "Start/stop the Engine and all sync services.");
-            PrintCommandDescription("s", "Start/stop synchronization service.");
-            PrintCommandDescription("m", "Start/stop remote storage monitor.");
-            PrintCommandDescription("d", "Enable/disable debug and performance logging.");
-            PrintCommandDescription("l", $"Open log file. ({LogFilePath})");
-            PrintCommandDescription("b", "Submit support tickets, report bugs, suggest features. (https://userfilesystem.com/support/)");
-            log.Info("\n ----------------------------------------------------------------------------------------");
-        }
-
-        private void PrintCommandDescription(string key, string description)
-        {
-            log.Info($"{Environment.NewLine} {key, 12} - {description,-25}");
+            log.Info(message);
         }
 
         public void LogError(IEngine sender, EngineErrorEventArgs e)
@@ -192,7 +170,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Outputs log message.
         /// </summary>
         /// <param name="log">log4net</param>
-        /// <param name="e">Message or error description.</param>
+        /// <param name="e">Engine message, error or debug info.</param>
         /// <param name="level">Log level.</param>
         private void WriteLog(IEngine sender, EngineMessageEventArgs e, log4net.Core.Level level)
         {

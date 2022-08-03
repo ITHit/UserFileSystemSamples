@@ -6,7 +6,7 @@ using System.Windows.Forms;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
-
+using ITHit.FileSystem.Samples.Common.Windows;
 
 namespace WebDAVDrive.UI
 {
@@ -21,9 +21,9 @@ namespace WebDAVDrive.UI
         private readonly NotifyIcon notifyIcon;
 
         /// <summary>
-        /// Engine instance.
+        /// App commands.
         /// </summary>
-        private readonly EngineWindows engine;
+        private readonly Commands commands;
 
         /// <summary>
         /// Notify icon title.
@@ -55,6 +55,8 @@ namespace WebDAVDrive.UI
         /// </summary>
         private readonly ToolStripItem menuConsole;
 
+        private bool disposedValue;
+
         /// <summary>
         /// Starts a new tray application instance.
         /// </summary>s
@@ -63,17 +65,17 @@ namespace WebDAVDrive.UI
         /// <param name="engine">Engine instance. The tray app will start and stop this instance as well as will display its status.</param>
         /// <param name="exitEvent">ManualResetEvent, used to stop the application.</param>
         /// <returns></returns>
-        public static async Task CreateTrayInterfaceAsync(string productName, string iconsFolderPath, EngineWindows engine)
+        public static async Task StartTrayInterfaceAsync(string productName, string iconsFolderPath, Commands commands, EngineWindows engine)
         {
             await Task.Run(async () =>
             {
-                using (WindowsTrayInterface windowsTrayInterface = new WindowsTrayInterface(productName, iconsFolderPath, engine))
+                using (WindowsTrayInterface windowsTrayInterface = new WindowsTrayInterface(productName, iconsFolderPath, commands))
                 {
+                    // Listen to engine notifications to change menu and icon states.
+                    engine.StateChanged += windowsTrayInterface.Engine_StateChanged;
+                    engine.SyncService.StateChanged += windowsTrayInterface.SyncService_StateChanged;
+
                     Application.Run();
-                    if (engine.State == EngineState.Running)
-                    {
-                        await engine.StopAsync();
-                    }
                 }
             });
         }
@@ -84,11 +86,11 @@ namespace WebDAVDrive.UI
         /// <param name="title">Tray application title.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
         /// <param name="engine">Engine instance.</param>
-        public WindowsTrayInterface(string title, string iconsFolderPath, EngineWindows engine)
+        public WindowsTrayInterface(string title, string iconsFolderPath, Commands commands)
         {
             this.title = title;
             this.iconsFolderPath = iconsFolderPath ?? throw new ArgumentNullException(nameof(iconsFolderPath));
-            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.commands = commands ?? throw new ArgumentNullException(nameof(commands));
 
             notifyIcon = new NotifyIcon();
 
@@ -113,46 +115,54 @@ namespace WebDAVDrive.UI
             menuConsole.Click += MenuConsole_Click;
             contextMenu.Items.Add(menuConsole);
 
+            // Add Open Folder menu item.
+            ToolStripMenuItem menuOpenFolder = new ToolStripMenuItem();
+            menuOpenFolder.Text = Localization.Resources.OpenFolder;
+            menuOpenFolder.Click += async (s, e) => { await commands.OpenFolderAsync(); };
+            contextMenu.Items.Add(menuOpenFolder);
+
+            // Add open web browser menu item.
+            ToolStripMenuItem menuOpenRemoteStorage = new ToolStripMenuItem();
+            menuOpenRemoteStorage.Text = Localization.Resources.OpenRemoteStorage;
+            menuOpenRemoteStorage.Click += async (s, e) => { await commands.OpenRemoteStorageAsync(); };
+            contextMenu.Items.Add(menuOpenRemoteStorage);
+
             // Add menu separator.
             contextMenu.Items.Add(new ToolStripSeparator());
 
             // Add Exit menu item.
             ToolStripItem menuExit = new ToolStripMenuItem();
             menuExit.Text = $"{Localization.Resources.Exit} {title}";
-            menuExit.Click += (s, e) => { Application.Exit(); };
+            menuExit.Click += MenuExit_Click;
             contextMenu.Items.Add(menuExit);
 
             notifyIcon.ContextMenuStrip = contextMenu;
-
-            // Listen to engine notifications to change menu and icon states.
-            engine.StateChanged += Engine_StateChanged;
-            engine.SyncService.StateChanged += SyncService_StateChanged;
         }
 
         /// <summary>
-        /// Start/Stop menu handler.
+        /// Start / Stop menu handler.
         /// </summary>
         private async void MenuStartStop_Click(object sender, EventArgs e)
         {
-            switch (engine.State)
-            {
-                case EngineState.Running:
-                    await engine.StopAsync();
-                    break;
-
-                case EngineState.Stopped:
-                    await engine.StartAsync();
-                    break;
-            }
+            await commands.StartStopEngineAsync();
         }
 
         /// <summary>
-        /// Show / Hide menu handler.
+        /// Show / Hide console.
         /// </summary>
         private void MenuConsole_Click(object sender, EventArgs e)
         {
             ConsoleManager.SetConsoleWindowVisibility(!ConsoleManager.ConsoleVisible);
             menuConsole.Text = ConsoleManager.ConsoleVisible ? Localization.Resources.HideLog : Localization.Resources.ShowLog;
+        }
+
+        /// <summary>
+        /// App exit.
+        /// </summary>
+        private async void MenuExit_Click(object sender, EventArgs e)
+        {
+            await commands.AppExitAsync();
+            Application.Exit();
         }
 
         /// <summary>
@@ -217,12 +227,35 @@ namespace WebDAVDrive.UI
             }
         }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects)
+                    //notifyIcon?.Icon?.Dispose();
+                    notifyIcon?.Dispose();
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                // TODO: set large fields to null
+                disposedValue = true;
+            }
+        }
+
+        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+        // ~WindowsTrayInterface()
+        // {
+        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        //     Dispose(disposing: false);
+        // }
+
         public void Dispose()
         {
-            notifyIcon?.Dispose();
-            contextMenu?.Dispose();
-            menuStartStop?.Dispose();
-            menuConsole?.Dispose();
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }
