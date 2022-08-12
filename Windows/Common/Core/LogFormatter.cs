@@ -50,6 +50,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         private const int sourcePathWidth = 60;
         private const int remoteStorageIdWidth = 20;
 
+        private const int indent = -30;
+
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
@@ -88,24 +90,24 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         public void PrintEnvironmentDescription()
         {
             // Log environment description.
-            log.Info($"\n{"AppID:",-25} {appId}");
-            log.Info($"\n{"Engine version:",-25} {typeof(IEngine).Assembly.GetName().Version}");
-            log.Info($"\n{"OS version:",-25} {RuntimeInformation.OSDescription}");
-            log.Info($"\n{".NET version:",-25} {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
-            log.Info($"\n{"Package or app identity:",-25} {PackageRegistrar.IsRunningWithIdentity()}");
-            log.Info($"\n{"Sparse package identity:",-25} {PackageRegistrar.IsRunningWithSparsePackageIdentity()}");
-            log.Info($"\n{"Elevated mode:",-25} {new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent()).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator)}");
+            log.Info($"\n{"AppID:",indent} {appId}");
+            log.Info($"\n{"Engine version:",indent} {typeof(IEngine).Assembly.GetName().Version}");
+            log.Info($"\n{"OS version:",indent} {RuntimeInformation.OSDescription}");
+            log.Info($"\n{".NET version:",indent} {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
+            log.Info($"\n{"Package or app identity:",indent} {PackageRegistrar.IsRunningWithIdentity()}");
+            log.Info($"\n{"Sparse package identity:",indent} {PackageRegistrar.IsRunningWithSparsePackageIdentity()}");
+            log.Info($"\n{"Elevated mode:",indent} {new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent()).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator)}");
 
             string sparsePackagePath = PackageRegistrar.GetSparsePackagePath();
             if (File.Exists(sparsePackagePath))
             {
-                log.Info($"\n{"Sparse package location:",-25} {sparsePackagePath}");
+                log.Info($"\n{"Sparse package location:",indent} {sparsePackagePath}");
                 var cert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(sparsePackagePath);
-                log.Info($"\n{"Sparse package cert:",-25} Subject: {cert.Subject}, Issued by: {cert.Issuer}");
+                log.Info($"\n{"Sparse package cert:", indent} Subject: {cert.Subject}, Issued by: {cert.Issuer}");
             }
             else
             {
-                log.Info($"\n{"Sparse package:",-25} Not found");
+                log.Info($"\n{"Sparse package:", indent} Not found");
             }
         }
 
@@ -126,11 +128,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         public async Task PrintEngineDescriptionAsync(EngineWindows engine)
         {
             log.Info($"\n");
-            log.Info($"\n{"File system root:",-25} {engine.Path}");
-            log.Info($"\n{"Remote storage root:",-25} {remoteStorageRootPath}");
-            log.Info($"\n{"AutoLock:",-25} {engine.AutoLock}");
-            log.Info($"\n{"Outgoing sync, ms:",-25} {engine.SyncService.SyncIntervalMs}");
-
+            log.Info($"\n{"File system root:",indent} {engine.Path}");
+            log.Info($"\n{"Remote storage root:",indent} {remoteStorageRootPath}");
+            log.Info($"\n{"AutoLock:",indent} {engine.AutoLock}");
+            log.Info($"\n{"Outgoing sync, ms:",indent} {engine.SyncService.SyncIntervalMs}");
+            log.Info($"\n{"Shell extensions RPC enabled:",indent} {engine.ShellExtensionsComServerRpcEnabled}");
+            log.Info($"\n{"Max Transfer concurrent requests:",indent} {engine.MaxTransferConcurrentRequests}");
 
             // Log indexing state. Sync root must be indexed.
             await PrintIndexingStateAsync(engine.Path);
@@ -143,7 +146,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         private async Task PrintIndexingStateAsync(string path)
         {
             StorageFolder userFileSystemRootFolder = await StorageFolder.GetFolderFromPathAsync(path);
-            log.Info($"\n{"Indexed state:",-25} {await userFileSystemRootFolder.GetIndexedStateAsync()}");
+            log.Info($"\n{"Indexed state:",indent} {await userFileSystemRootFolder.GetIndexedStateAsync()}");
         }
 
         public void LogMessage(string message)

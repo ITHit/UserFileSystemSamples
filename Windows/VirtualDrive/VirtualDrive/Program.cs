@@ -151,7 +151,8 @@ namespace VirtualDrive
 
                 Engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
                 Engine.AutoLock = Settings.AutoLock;
-                Engine.MaxConcurrentRequests = Settings.MaxConcurrentRequests.Value;
+                Engine.MaxTransferConcurrentRequests = Settings.MaxTransferConcurrentRequests.Value;
+                Engine.MaxOperationsConcurrentRequests = Settings.MaxOperationsConcurrentRequests.Value;
                 Engine.ShellExtensionsComServerRpcEnabled = Settings.ShellExtensionsComServerRpcEnabled; // Enable RPC in case RPC shaell extension handlers, hosted in separate process.  
 
                 // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()

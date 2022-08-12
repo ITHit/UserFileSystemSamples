@@ -27,9 +27,14 @@ namespace VirtualDrive
         public double SyncIntervalMs { get; set; }
 
         /// <summary>
-        /// Throttling max concurrent requests.
+        /// Throttling max of create/update/read concurrent requests.
         /// </summary>
-        public int? MaxConcurrentRequests { get; set; }
+        public int? MaxTransferConcurrentRequests { get; set; }
+
+        /// <summary>
+        /// Throttling max of listing/move/delete concurrent requests.
+        /// </summary>
+        public int? MaxOperationsConcurrentRequests { get; set; }
 
         /// <summary>
         /// Absolute or relative path of external COM server executable.
@@ -137,9 +142,14 @@ namespace VirtualDrive
             // Load product name from entry exe file.
             settings.ProductName = FileVersionInfo.GetVersionInfo(assemblyLocation).ProductName;
 
-            if (!settings.MaxConcurrentRequests.HasValue)
+            if (!settings.MaxTransferConcurrentRequests.HasValue)
             {
-                settings.MaxConcurrentRequests = int.MaxValue;
+                settings.MaxTransferConcurrentRequests = 6;
+            }
+
+            if (!settings.MaxOperationsConcurrentRequests.HasValue)
+            {
+                settings.MaxOperationsConcurrentRequests = int.MaxValue;
             }
 
             return settings;

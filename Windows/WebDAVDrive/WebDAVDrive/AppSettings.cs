@@ -35,9 +35,14 @@ namespace WebDAVDrive
         public double SyncIntervalMs { get; set; }
 
         /// <summary>
-        /// Throttling max concurrent requests.
+        /// Throttling max of create/update/read concurrent requests.
         /// </summary>
-        public int? MaxConcurrentRequests { get; set; }
+        public int? MaxTransferConcurrentRequests { get; set; }
+
+        /// <summary>
+        /// Throttling max of listing/move/delete concurrent requests.
+        /// </summary>
+        public int? MaxOperationsConcurrentRequests { get; set; }
 
         /// <summary>
         /// URL to get a thumbnail for Windows Explorer thumbnails mode.
@@ -117,9 +122,14 @@ namespace WebDAVDrive
             // Load product name from entry exe file.
             settings.ProductName = FileVersionInfo.GetVersionInfo(assemblyLocation).ProductName;
 
-            if (!settings.MaxConcurrentRequests.HasValue)
+            if (!settings.MaxTransferConcurrentRequests.HasValue)
             {
-                settings.MaxConcurrentRequests = int.MaxValue;
+                settings.MaxTransferConcurrentRequests = 6;
+            }
+
+            if (!settings.MaxOperationsConcurrentRequests.HasValue)
+            {
+                settings.MaxOperationsConcurrentRequests = int.MaxValue;
             }
 
             return settings;

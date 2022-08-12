@@ -178,7 +178,8 @@ namespace WebDAVDrive
 
                 Engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
                 Engine.AutoLock = Settings.AutoLock;
-                Engine.MaxConcurrentRequests = Settings.MaxConcurrentRequests.Value;
+                Engine.MaxTransferConcurrentRequests = Settings.MaxTransferConcurrentRequests.Value;
+                Engine.MaxOperationsConcurrentRequests = Settings.MaxOperationsConcurrentRequests.Value;
                 Engine.ShellExtensionsComServerRpcEnabled = Settings.ShellExtensionsComServerRpcEnabled; // Enable RPC in case RPC shaell extension handlers, hosted in separate process. 
 
                 // Print console commands.
