@@ -40,7 +40,7 @@ This is an advanced project with ETags support, Microsoft Office documents editi
     <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="6.0.16897.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="6.0.16962.0-Beta" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\..\Common\VirtualDrive\Common.Windows.VirtualDrive.csproj" />
   </ItemGroup>
