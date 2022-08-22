@@ -44,7 +44,7 @@ namespace WebDAVDrive
         public async Task ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {
             // On Windows this method has a 60 sec timeout. 
-            // To process longer requests and reset the timout timer call the resultContext.ReportProgress() or resultContext.ReturnData() method.
+            // To process longer requests and reset the timout timer write to the output stream or call the resultContext.ReportProgress() or resultContext.ReturnData() methods.
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
@@ -129,16 +129,26 @@ namespace WebDAVDrive
                     }
                 }
 
-                // Update remote storage file content,
-                // also get and save a new ETag returned by the server, if any.
-                string newEtag = await Program.DavClient.UploadAsync(new Uri(RemoteStoragePath), async (outputStream) =>
+                try
                 {
-                    // Setting position to 0 is required in case of retry.
-                    content.Position = 0;
-                    await content.CopyToAsync(outputStream);
-                }, null, content.Length, 0, -1, lockTokens, oldEtag, cancellationToken);
+                    // Update remote storage file content.
+                    string newEtag = await Program.DavClient.UploadAsync(new Uri(RemoteStoragePath), async (outputStream) =>
+                    {
+                        content.Position = 0; // Setting position to 0 is required in case of retry.
+                        await content.CopyToAsync(outputStream);
+                    }, null, content.Length, 0, -1, lockTokens, oldEtag, cancellationToken);
 
-                await placeholder.Properties.AddOrUpdateAsync("ETag", newEtag);
+                    // Save a new ETag returned by the server, if any.
+                    await placeholder.Properties.AddOrUpdateAsync("ETag", newEtag);
+                }
+                catch (Client.Exceptions.PreconditionFailedException)
+                {
+                    // Server and client ETags do not match.
+                    // Set conflict status in Windows Explorer.
+
+                    Logger.LogMessage($"Conflict. The item is modified.", UserFileSystemPath, default, operationContext);
+                    placeholder.SetErrorStatus(true);
+                }
             }
         }
     }

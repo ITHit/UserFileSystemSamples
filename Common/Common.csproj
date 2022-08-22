@@ -10,6 +10,6 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem" Version="6.0.16962.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem" Version="6.1.17328.0-Beta" />
   </ItemGroup>
 </Project>

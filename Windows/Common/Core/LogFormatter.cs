@@ -50,7 +50,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         private const int sourcePathWidth = 60;
         private const int remoteStorageIdWidth = 20;
 
-        private const int indent = -30;
+        private const int indent = -45;
 
         /// <summary>
         /// Creates instance of this class.
@@ -133,7 +133,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             log.Info($"\n{"AutoLock:",indent} {engine.AutoLock}");
             log.Info($"\n{"Outgoing sync, ms:",indent} {engine.SyncService.SyncIntervalMs}");
             log.Info($"\n{"Shell extensions RPC enabled:",indent} {engine.ShellExtensionsComServerRpcEnabled}");
-            log.Info($"\n{"Max Transfer concurrent requests:",indent} {engine.MaxTransferConcurrentRequests}");
+            log.Info($"\n{"Max create/read/write concurrent requests:",indent} {engine.MaxTransferConcurrentRequests}");
+            log.Info($"\n{"Max list/move/delete concurrent requests:",indent} {engine.MaxOperationsConcurrentRequests}");
 
             // Log indexing state. Sync root must be indexed.
             await PrintIndexingStateAsync(engine.Path);
