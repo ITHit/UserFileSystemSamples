@@ -51,19 +51,25 @@ namespace VirtualFileSystem
 
             if (await new ZipFilter().FilterAsync(direction, operationType, path, itemType, newPath))
             {
-                LogDebug($"{nameof(ZipFilter)} filtered {operationType}", path, newPath, operationContext);
+                Logger.LogDebug($"{nameof(ZipFilter)} filtered {operationType}", path, newPath, operationContext);
                 return true;
             }
 
             if (await new MsOfficeFilter().FilterAsync(direction, operationType, path, itemType, newPath))
             {
-                LogDebug($"{nameof(MsOfficeFilter)} filtered {operationType}", path, newPath, operationContext);
+                Logger.LogDebug($"{nameof(MsOfficeFilter)} filtered {operationType}", path, newPath, operationContext);
                 return true;
             }
 
             if (await new AutoCadFilter().FilterAsync(direction, operationType, path, itemType, newPath))
             {
-                LogDebug($"{nameof(AutoCadFilter)} filtered {operationType}", path, newPath, operationContext);
+                Logger.LogDebug($"{nameof(AutoCadFilter)} filtered {operationType}", path, newPath, operationContext);
+                return true;
+            }
+
+            if (await new ErrorStatusFilter().FilterAsync(direction, operationType, path, itemType, newPath))
+            {
+                Logger.LogDebug($"{nameof(ErrorStatusFilter)} filtered {operationType}", path, newPath, operationContext);
                 return true;
             }
 

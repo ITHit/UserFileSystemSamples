@@ -148,6 +148,7 @@ namespace WebDAVDrive
 
                     Logger.LogMessage($"Conflict. The item is modified.", UserFileSystemPath, default, operationContext);
                     placeholder.SetErrorStatus(true);
+                    inSyncResultContext.SetInSync = false;
                 }
             }
         }

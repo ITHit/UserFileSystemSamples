@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ITHit.FileSystem.Exceptions;
 
 namespace ITHit.FileSystem.Samples.Common
 {
@@ -12,7 +13,6 @@ namespace ITHit.FileSystem.Samples.Common
     /// </summary>
     public static class StreamCopy
     {
-
         /// <summary>
         /// Asynchronously copies specified number of bytes from current stream to destination stream, using a specified buffer size.
         /// </summary>
@@ -30,6 +30,11 @@ namespace ITHit.FileSystem.Samples.Common
             {
                 await destination.WriteAsync(buffer, 0, read, cancellationToken);
                 count -= read;
+            }
+
+            if (count > 0)
+            {
+                throw new CloudFileException("Source file was modified");
             }
         }
     }
