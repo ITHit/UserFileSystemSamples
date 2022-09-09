@@ -141,13 +141,14 @@ namespace WebDAVDrive
             try
             {
                 cancellationTokenSource?.Cancel();
-                if (clientWebSocket != null 
-                    && (clientWebSocket?.State == WebSocketState.Open || clientWebSocket?.State == WebSocketState.CloseSent || clientWebSocket?.State == WebSocketState.CloseReceived) )
+                if (clientWebSocket != null
+                    && (clientWebSocket?.State == WebSocketState.Open || clientWebSocket?.State == WebSocketState.CloseSent || clientWebSocket?.State == WebSocketState.CloseReceived))
                 {
                     await clientWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
                 }
             }
-            catch (WebSocketException ex) {
+            catch (WebSocketException ex)
+            {
                 Logger.LogError("Failed to close websocket.", webSocketServerUrl, null, ex);
             };
 
@@ -159,7 +160,10 @@ namespace WebDAVDrive
         /// </summary>
         internal async Task ProcessAsync(string jsonString)
         {
-            WebSocketMessage jsonMessage = JsonSerializer.Deserialize<WebSocketMessage>(jsonString);
+            WebSocketMessage jsonMessage = JsonSerializer.Deserialize<WebSocketMessage>(jsonString, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
             string remoteStoragePath = Mapping.GetAbsoluteUri(jsonMessage.ItemPath);
 
             // Check if remote URL starts with WebDAVServerUrl.
@@ -316,7 +320,7 @@ namespace WebDAVDrive
                         await DeletedAsync(userFileSystemOldPath);
                     }
                 }
-                else 
+                else
                 {
                     // Source item is not loaded. Creating the a item in the target folder, if the target parent folder is loaded.
                     await CreatedAsync(remoteStorageNewPath);
@@ -400,7 +404,7 @@ namespace WebDAVDrive
 
                 if (FsPath.Exists(userFileSystemPath))
                 {
-                    if(engine.Placeholders.GetItem(userFileSystemPath).Properties.Remove("ThirdPartyLockInfo"))
+                    if (engine.Placeholders.GetItem(userFileSystemPath).Properties.Remove("ThirdPartyLockInfo"))
                     {
                         Logger.LogMessage("Third-party lock info deleted", userFileSystemPath);
                     }
@@ -439,7 +443,7 @@ namespace WebDAVDrive
             if (!disposedValue)
             {
                 if (disposing)
-                {        
+                {
                     clientWebSocket.Dispose();
                     Logger.LogMessage($"Disposed");
                 }

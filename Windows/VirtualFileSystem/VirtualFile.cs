@@ -106,7 +106,6 @@ namespace VirtualFileSystem
             remoteStorageItem.CreationTimeUtc = fileMetadata.CreationTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
             remoteStorageItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
-            remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
             remoteStorageItem.Attributes = fileMetadata.Attributes;
         }
     }

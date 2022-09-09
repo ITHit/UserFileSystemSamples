@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 using log4net;
 
 using ITHit.FileSystem.Windows;
-using ITHit.FileSystem.Windows.ShellExtension;
 using ITHit.FileSystem.Windows.Package;
 
 
@@ -22,6 +19,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
     /// </remarks>
     public class SparsePackageRegistrar : Registrar
     {
+        private static Version minimalSupportedVersion = new Version(10, 0, 19043);
+
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
@@ -46,7 +45,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Registers sparse package if needed. In development mode also registers development certificate.
         /// </summary>
         /// <returns>
-        /// True if app has identity and the app can start execution. 
+        /// True if app has identity and the app can start execution.
         /// False if the app needs to restart after sparse package registrtatio or if installation failed.
         /// </returns>
         public async Task<bool> RegisterSparsePackageAsync()
@@ -60,6 +59,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
             if (!PackageRegistrar.SparsePackageRegistered())
             {
+                EnsureOSVersionIsSupported();
 #if DEBUG
                 /// Registering sparse package requires a valid certificate.
                 /// In the development mode we use the below call to install the development certificate.
@@ -81,7 +81,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <summary>
-        /// Unregisters sparse package. In development mode also registers development certificate.
+        /// Unregisters sparse package. In development mode also unregisters development certificate.
         /// </summary>
         public async Task UnregisterSparsePackageAsync()
         {
@@ -179,5 +179,13 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
         }
 #endif
+
+        private void EnsureOSVersionIsSupported()
+        {
+            if (minimalSupportedVersion.CompareTo(Environment.OSVersion.Version) == 1)
+            {
+                throw new NotSupportedException($"Minimal Windows version with sparse package support is: {minimalSupportedVersion}. Please, update your Windows version.");
+            }
+        }
     }
 }

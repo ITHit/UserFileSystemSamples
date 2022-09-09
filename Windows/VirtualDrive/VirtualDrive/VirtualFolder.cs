@@ -67,7 +67,6 @@ namespace VirtualDrive
             remoteStorageNewItem.CreationTimeUtc = fileMetadata.CreationTime.UtcDateTime;
             remoteStorageNewItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
             remoteStorageNewItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
-            remoteStorageNewItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
             remoteStorageNewItem.Attributes = fileMetadata.Attributes;
 
             // Save Etag received from your remote storage in
@@ -103,7 +102,6 @@ namespace VirtualDrive
             remoteStorageNewItem.CreationTimeUtc = folderMetadata.CreationTime.UtcDateTime;
             remoteStorageNewItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
             remoteStorageNewItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
-            remoteStorageNewItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
             remoteStorageNewItem.Attributes = folderMetadata.Attributes;
 
             // Save ETag received from your remote storage in persistent placeholder properties.
@@ -181,7 +179,6 @@ namespace VirtualDrive
             remoteStorageItem.CreationTimeUtc = folderMetadata.CreationTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
             remoteStorageItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
-            remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
             remoteStorageItem.Attributes = folderMetadata.Attributes;
         }
     }
