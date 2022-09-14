@@ -6,6 +6,7 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace VirtualFileSystem
 {
@@ -78,7 +79,7 @@ namespace VirtualFileSystem
         /// <summary>
         /// Starts monitoring changes on the server.
         /// </summary>
-        public async Task StartAsync()
+        public async Task StartAsync(CancellationToken cancellationToken = default)
         {
             watcher.EnableRaisingEvents = true;
             Logger.LogMessage($"Started", watcher.Path);
@@ -165,6 +166,8 @@ namespace VirtualFileSystem
                         {
                             // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                             // In this case the IServerNotifications.UpdateAsync() call is ignored.
+
+                            PlaceholderItem.UpdateUI(userFileSystemPath);
                             Logger.LogMessage("Updated successfully", userFileSystemPath);
                         }
                     }

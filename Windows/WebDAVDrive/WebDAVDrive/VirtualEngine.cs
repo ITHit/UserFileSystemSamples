@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Threading;
 
 using ITHit.FileSystem;
+using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 
 
@@ -26,6 +27,11 @@ namespace WebDAVDrive
         /// Monitors changes in the remote storage, notifies the client and updates the user file system.
         /// </summary>
         internal readonly RemoteStorageMonitor RemoteStorageMonitor;
+
+        /// <summary>
+        /// Performs complete remote storage scan for changes by comparing every item eTag.
+        /// </summary>
+        internal readonly IncomingFullSync IncomingFullSync;
 
         /// <summary>
         /// Credentials used to connect to the server. 
@@ -53,7 +59,10 @@ namespace WebDAVDrive
             LogFormatter logFormatter)
             : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, logFormatter)
         {
-            RemoteStorageMonitor = new RemoteStorageMonitor(webSocketServerUrl, this, this.Logger);
+            RemoteStorageMonitor = new RemoteStorageMonitor(webSocketServerUrl, this);
+            IncomingFullSync = new IncomingFullSync(this);
+
+            this.SyncService.BeforeStateChanged += SyncService_BeforeStateChanged;
         }
 
         /// <inheritdoc/>
@@ -66,6 +75,14 @@ namespace WebDAVDrive
             else
             {
                 return new VirtualFolder(userFileSystemPath, this, logger);
+            }
+        }
+
+        private async void SyncService_BeforeStateChanged(object sender, SynchEventArgs synchEventArgs)
+        {
+            if (synchEventArgs.NewState == SynchronizationState.Idle)
+            {
+                await IncomingFullSync.TrySyncronizeAsync();
             }
         }
 
@@ -88,19 +105,19 @@ namespace WebDAVDrive
             throw new NotImplementedException();
         }
 
-        //public override IMapping Mapping { get { return new Mapping(this); } }
-
         /// <inheritdoc/>
         public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
         {
             await base.StartAsync(processModified, cancellationToken);
             await RemoteStorageMonitor.StartAsync();
+            await IncomingFullSync.StartAsync();
         }
 
         public override async Task StopAsync()
         {
             await base.StopAsync();
             await RemoteStorageMonitor.StopAsync();
+            await IncomingFullSync.StopAsync();
         }
 
         private bool disposedValue;

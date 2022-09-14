@@ -22,7 +22,7 @@ namespace WebDAVDrive
     /// If any file or folder is modified, created, delated, renamed or attributes changed in the remote storage, 
     /// triggers an event with information about changes being made.
     /// </summary>
-    internal class RemoteStorageMonitor : ISyncService, IDisposable
+    internal class RemoteStorageMonitor : IncomingServerNotifications, ISyncService, IDisposable
     {
         /// <summary>
         /// Current synchronization state.
@@ -37,11 +37,6 @@ namespace WebDAVDrive
                     ? SynchronizationState.Enabled : SynchronizationState.Disabled;
             }
         }
-
-        /// <summary>
-        /// Logger.
-        /// </summary>
-        public readonly ILogger Logger;
 
         /// <summary>
         /// WebSocket client.
@@ -59,22 +54,14 @@ namespace WebDAVDrive
         private CancellationTokenSource cancellationTokenSource;
 
         /// <summary>
-        /// Virtul drive instance. This class will call <see cref="Engine"/> methods 
-        /// to update user file system when any data is changed in the remote storage.
-        /// </summary>
-        private readonly VirtualEngine engine;
-
-        /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="webSocketServerUrl">WebSocket server url.</param>
         /// <param name="engine">Engine to send notifications about changes in the remote storage.</param>
-        /// <param name="logger">Logger.</param>
-        internal RemoteStorageMonitor(string webSocketServerUrl, VirtualEngine engine, ILogger logger)
+        internal RemoteStorageMonitor(string webSocketServerUrl, VirtualEngine engine)
+            : base(engine, engine.Logger.CreateLogger("Remote Storage Monitor"))
         {
             this.webSocketServerUrl = webSocketServerUrl;
-            this.engine = engine;
-            this.Logger = logger.CreateLogger("Remote Storage Monitor");
         }
 
         /// <summary>
@@ -104,7 +91,7 @@ namespace WebDAVDrive
         /// <summary>
         /// Starts websockets to monitor changes in remote storage.
         /// </summary>
-        public async Task StartAsync()
+        public async Task StartAsync(CancellationToken cancellationToken = default)
         {
             await Task.Factory.StartNew(
               async () =>
@@ -115,7 +102,7 @@ namespace WebDAVDrive
                       try
                       {
                           repeat = false;
-                          await StartMonitoringAsync(engine.Credentials);
+                          await StartMonitoringAsync(Engine.Credentials);
                       }
                       catch (Exception e) when (e is WebSocketException || e is AggregateException)
                       {
@@ -215,18 +202,10 @@ namespace WebDAVDrive
                 {
                     IHierarchyItem remoteStorageItem = await Program.DavClient.GetItemAsync(new Uri(remoteStoragePath));
 
-                    if (remoteStorageItem != null
-                        && !FsPath.Exists(userFileSystemPath))
+                    if ( (remoteStorageItem != null) && !FsPath.Exists(userFileSystemPath))
                     {
                         FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
-                        if (await engine.ServerNotifications(userFileSystemParentPath, Logger).CreateAsync(new[] { itemMetadata }) > 0)
-                        {
-                            await engine.Placeholders.GetItem(userFileSystemPath).SavePropertiesAsync(itemMetadata);
-
-                            // Because of the on-demand population, the parent folder placeholder may not exist in the user file system
-                            // or the folder may be offline. In this case the IServerNotifications.CreateAsync() call is ignored.
-                            Logger.LogMessage($"Created successfully", userFileSystemPath);
-                        }
+                        await IncomingCreatedAsync(userFileSystemParentPath, itemMetadata);
                     }
                 }
             }
@@ -257,25 +236,9 @@ namespace WebDAVDrive
                     IHierarchyItem remoteStorageItem = await Program.DavClient.GetItemAsync(new Uri(remoteStoragePath));
                     if (remoteStorageItem != null)
                     {
+                        
                         FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
-
-                        await engine.Placeholders.GetItem(userFileSystemPath).SavePropertiesAsync(itemMetadata);
-
-                        // Can not update read-only files, read-only attribute must be removed.
-                        FileInfo userFileSystemFile = new FileInfo(userFileSystemPath);
-                        bool isReadOnly = userFileSystemFile.IsReadOnly;
-                        if (isReadOnly)
-                        {
-                            userFileSystemFile.IsReadOnly = false;
-                        }
-
-                        if (await engine.ServerNotifications(userFileSystemPath, Logger).UpdateAsync(itemMetadata))
-                        {
-                            Logger.LogMessage("Updated successfully", userFileSystemPath);
-                        }
-
-                        // Restore the read-only attribute.
-                        userFileSystemFile.IsReadOnly = isReadOnly;
+                        await IncomingChangedAsync(userFileSystemPath, itemMetadata);
                     }
                 }
             }
@@ -310,7 +273,7 @@ namespace WebDAVDrive
                 if (FsPath.Exists(userFileSystemOldPath))
                 {
                     // Source item is loaded, move it to a new location or delete.
-                    if (await engine.ServerNotifications(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath))
+                    if (await Engine.ServerNotifications(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath))
                     {
                         Logger.LogMessage("Moved successfully", userFileSystemOldPath, userFileSystemNewPath);
                     }
@@ -336,7 +299,7 @@ namespace WebDAVDrive
         /// Called when a file or folder is deleted in the remote storage.
         /// </summary>
         /// <param name="remoteStoragePath">Path in the remote storage.</param>
-        /// <remarks>In this method we delete corresponding file/folder in user file system.</remarks>
+        /// <remarks>In this method we delete corresponding file/folder in the user file system.</remarks>
         private async Task DeletedAsync(string remoteStoragePath)
         {
             try
@@ -345,12 +308,7 @@ namespace WebDAVDrive
 
                 if (FsPath.Exists(userFileSystemPath))
                 {
-                    if (await engine.ServerNotifications(userFileSystemPath, Logger).DeleteAsync())
-                    {
-                        // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                        // In this case the IServerNotifications.DeleteAsync() call is ignored.
-                        Logger.LogMessage("Deleted successfully", userFileSystemPath);
-                    }
+                    await IncomingDeletedAsync(userFileSystemPath);
                 }
             }
             catch (Exception ex)
@@ -358,7 +316,6 @@ namespace WebDAVDrive
                 Logger.LogError(nameof(DeletedAsync), remoteStoragePath, null, ex);
             }
         }
-
 
         /// <summary>
         /// Called when a file or folder is being locked in the remote storage.
@@ -379,7 +336,8 @@ namespace WebDAVDrive
                         FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
 
                         // Save info about the third-party lock.
-                        await engine.Placeholders.GetItem(userFileSystemPath).SavePropertiesAsync(itemMetadata);
+                        await Engine.Placeholders.GetItem(userFileSystemPath).SavePropertiesAsync(itemMetadata);
+                        PlaceholderItem.UpdateUI(userFileSystemPath);
 
                         Logger.LogMessage("Third-party lock info added", userFileSystemPath);
                     }
@@ -404,8 +362,9 @@ namespace WebDAVDrive
 
                 if (FsPath.Exists(userFileSystemPath))
                 {
-                    if (engine.Placeholders.GetItem(userFileSystemPath).Properties.Remove("ThirdPartyLockInfo"))
+                    if (Engine.Placeholders.GetItem(userFileSystemPath).Properties.Remove("ThirdPartyLockInfo"))
                     {
+                        PlaceholderItem.UpdateUI(userFileSystemPath);
                         Logger.LogMessage("Third-party lock info deleted", userFileSystemPath);
                     }
 

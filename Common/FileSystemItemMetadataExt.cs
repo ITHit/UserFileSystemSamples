@@ -8,7 +8,8 @@ namespace ITHit.FileSystem.Samples.Common
 {
     /// <summary>
     /// Represents a basic information about the file or the folder in the user file system.
-    /// In addition to properties provided by <see cref="IFileSystemItem"/> this class contains Etag property.
+    /// In addition to properties provided by <see cref="IFileSystemItem"/> this class contains 
+    /// <see cref="ETag"/> and <see cref="Lock"/> properties.
     /// </summary>
     public class FileSystemItemMetadataExt : IFileSystemItemMetadata
     {
@@ -34,12 +35,13 @@ namespace ITHit.FileSystem.Samples.Common
         public DateTimeOffset ChangeTime { get; set; }
 
         /// <summary>
-        /// Lock info.
+        /// ETag.
         /// </summary>
-        /// <remarks>
-        /// If the item is locked, this property contains info about the lock. 
-        /// It is set to null otherwise.
-        /// </remarks>
+        public string ETag { get; set; }
+
+        /// <summary>
+        /// Lock info or null if the item is not locked.
+        /// </summary>
         public ServerLockInfo Lock { get; set; }
 
         /// <summary>

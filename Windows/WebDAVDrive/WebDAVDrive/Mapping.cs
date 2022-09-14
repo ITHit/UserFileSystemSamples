@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using ITHit.FileSystem;
-using ITHit.FileSystem.Samples.Common;
-using ITHit.FileSystem.Samples.Common.Windows;
+
 using ITHit.FileSystem.Windows;
+using ITHit.FileSystem.Samples.Common;
 using Client = ITHit.WebDAV.Client;
 
 namespace WebDAVDrive
@@ -15,15 +14,8 @@ namespace WebDAVDrive
     /// Maps a user file system path to the remote storage path and back. 
     /// </summary>
     /// <remarks>You will change methods of this class to map the user file system path to your remote storage path.</remarks>
-    internal static class Mapping // : IMapping
+    internal static class Mapping
     {
-        //private readonly VirtualEngineBase engine;
-
-        //internal Mapping(VirtualEngineBase engine)
-        //{
-        //    this.engine = engine;
-        //}
-
         /// <summary>
         /// Returns a remote storage URI that corresponds to the user file system path.
         /// </summary>
@@ -103,8 +95,10 @@ namespace WebDAVDrive
 
             if (remoteStorageItem is Client.IFile)
             {
+                Client.IFile remoteStorageFile = (Client.IFile)remoteStorageItem;
                 userFileSystemItem = new FileMetadataExt();
-                ((FileMetadataExt)userFileSystemItem).Length = ((Client.IFile)remoteStorageItem).ContentLength;
+                ((FileMetadataExt)userFileSystemItem).Length = remoteStorageFile.ContentLength;
+                userFileSystemItem.ETag = remoteStorageFile.Etag;
                 userFileSystemItem.Attributes = FileAttributes.Normal;
             }
             else
@@ -132,7 +126,6 @@ namespace WebDAVDrive
                 };
             }
 
-
             /*
             // Set custom columns to be displayed in file manager.
             // We create property definitions when registering the sync root with corresponding IDs.
@@ -143,17 +136,34 @@ namespace WebDAVDrive
             return userFileSystemItem;
         }
 
-        /// <inheritdoc/>
-        //public async Task<bool> IsModifiedAsync(string userFileSystemPath, FileSystemItemMetadataExt remoteStorageItemMetadata, ILogger logger)
-        //{
-        //    return !await engine.ExternalDataManager(userFileSystemPath, logger).ETagManager.ETagEqualsAsync(remoteStorageItemMetadata);
-        //}
+        /// <summary>
+        /// Returns true if the remote item is modified. False - otherwise.
+        /// </summary>
+        /// <remarks>
+        /// This method compares client and server eTags and returns true if the 
+        /// item in the user file system must be updated with the data from the remote storage.
+        /// </remarks>
+        /// <param name="placeholder">User file system item.</param>
+        /// <param name="remoteStorageItem">Remote storage item metadata.</param>
+        /// <returns></returns>
+        public static async Task<bool> IsModifiedAsync(this PlaceholderItem placeholder, FileSystemItemMetadataExt remoteStorageItemMetadata)
+        {
+            string clientEtag = null;
+            if (placeholder.Properties.TryGetValue("ETag", out IDataItem propETag))
+            {
+                propETag.TryGetValue<string>(out clientEtag);
+            }
+
+            return clientEtag != remoteStorageItemMetadata.ETag;
+        }
 
 
         /// <summary>
         /// Saves all data that is displayed in custom columns in file manager
         /// as well as any additional custom data required by the client.
         /// </summary>
+        /// <param name="placeholder">User file system item.</param>
+        /// <param name="remoteStorageItem">Remote storage item metadata.</param>
         public static async Task SavePropertiesAsync(this PlaceholderItem placeholder, FileSystemItemMetadataExt metadata)
         {
             // Save lock applied by other users.
@@ -162,7 +172,9 @@ namespace WebDAVDrive
                 await placeholder.Properties.AddOrUpdateAsync("ThirdPartyLockInfo", metadata.Lock);
             }
 
-            //foreach (FileSystemItemPropertyData prop in itemMetadata.CustomProperties)
+            await placeholder.Properties.AddOrUpdateAsync("ETag", metadata.ETag);
+
+            //foreach (FileSystemItemPropertyData prop in metadata.CustomProperties)
             //{
             //    string key = ((CustomColumnIds)prop.Id).ToString();
             //    await placeholder.Properties.AddOrUpdateAsync(key, prop);

@@ -9,7 +9,11 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="6.1.18304.0-Beta" />
+    <Compile Remove="IncomingFullSync.cs" />
+    <Compile Remove="IVirtualFolder.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="6.1.18982.0-Beta" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Core\Common.Windows.Core.csproj" />
   </ItemGroup>

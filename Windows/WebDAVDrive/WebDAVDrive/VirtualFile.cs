@@ -75,14 +75,9 @@ namespace WebDAVDrive
                 eTag = response.GetHeaderValue("ETag");
             }
 
-            //// Store ETag here.
+            // Store ETag here.
             PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
             await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
-
-            //using (Stream stream = await Program.DavClient.DownloadAsync(new Uri(RemoteStoragePath), offset, length))
-            //{
-            //    await stream.CopyToAsync(output, bufferSize, length);
-            //}
         }
 
         /// <inheritdoc/>
