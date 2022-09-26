@@ -171,6 +171,8 @@ namespace WebDAVDrive
                 Settings.WebDAVServerUrl,
                 Settings.WebSocketServerUrl,
                 Settings.IconsFolderPath,
+                Settings.AutoLockTimoutMs,
+                Settings.ManualLockTimoutMs,
                 logFormatter))
             {
                 commands.Engine = Engine;
@@ -221,14 +223,14 @@ namespace WebDAVDrive
             {
                 AllowAutoRedirect = false,
 
-                // Enable pre-authentication to avoid double requests.
+                // To enable pre-authentication (to avoid double requests) uncomment the code below.
                 // This option improves performance but is less secure. 
                 // PreAuthenticate = true,
             };
             WebDavSession davClient = new WebDavSession(Program.Settings.WebDAVClientLicense);
             davClient.WebDavError += DavClient_WebDavError;
             davClient.WebDavMessage += DavClient_WebDAVMessage;
-            davClient.CustomHeaders.Add("ITHitUserFileSystemEngineInstanceId", engineInstanceId.ToString());
+            davClient.CustomHeaders.Add("InstanceId", engineInstanceId.ToString());
             return davClient;
         }
 
@@ -274,8 +276,12 @@ namespace WebDAVDrive
 
                         WebBrowserLogin(failedUri);
 
-                        // Replay the request, so the listing can complete succesefully.
-                        e.Result = WebDavErrorEventResult.Repeat;
+                        // Replay the request, so the listing or update can complete succesefully.
+                        // Unless this is LOCK - incorrect lock owner map be passed in this case.
+                        //bool isLock = httpException.HttpMethod.NotEquals("LOCK", StringComparison.InvariantCultureIgnoreCase);
+                        bool isLock = false;
+                        e.Result = isLock ? WebDavErrorEventResult.Fail : WebDavErrorEventResult.Repeat;
+
                         break;
 
                     // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
@@ -309,8 +315,14 @@ namespace WebDAVDrive
             thread.Start();
             thread.Join();
 
+            // Request currenly loged-in user name or ID from server here and set it below. 
+            // In case of WebDAV current-user-principal can be used for this purpose.
+            // For demo purposes we just set "DemoUserX".
+            Engine.CurrentUserPrincipal = "DemoUserX";
+
             // Set cookies collected from the web browser dialog.
             DavClient.CookieContainer.Add(webBrowserLogin.Cookies);
+            Engine.Cookies = webBrowserLogin.Cookies;
         }
 
         private static WebDavErrorEventResult ChallengeLoginLogin(Uri failedUri)
@@ -322,6 +334,7 @@ namespace WebDAVDrive
                 NetworkCredential networkCredential = new NetworkCredential(passwordCredential.UserName, passwordCredential.Password);
                 DavClient.Credentials = networkCredential;
                 Engine.Credentials = networkCredential;
+                Engine.CurrentUserPrincipal = networkCredential.UserName;
                 return WebDavErrorEventResult.Repeat;
             }
             else
@@ -357,8 +370,9 @@ namespace WebDAVDrive
                         CredentialManager.SaveCredentials(Settings.ProductName, login, password);
                     }
                     NetworkCredential newNetworkCredential = new NetworkCredential(login, password);
-                    Engine.Credentials = newNetworkCredential;
                     DavClient.Credentials = newNetworkCredential;
+                    Engine.Credentials = newNetworkCredential;
+                    Engine.CurrentUserPrincipal = newNetworkCredential.UserName;
                     return WebDavErrorEventResult.Repeat;
                 }
             }

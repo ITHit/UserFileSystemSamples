@@ -181,59 +181,45 @@ namespace VirtualDrive
             if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
             {
 
-                // Read LockInfo.
-                if (placeholder.Properties.TryGetValue("LockInfo", out IDataItem propLockInfo))
+                // Read LockInfo and choose the lock icon.
+                if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
                 {
-                    if (propLockInfo.TryGetValue<ServerLockInfo>(out ServerLockInfo lockInfo))
-                    {
-                        // Get Lock Owner.
-                        FileSystemItemPropertyData propertyLockOwner = new FileSystemItemPropertyData()
-                        {
-                            Id = (int)CustomColumnIds.LockOwnerIcon,
-                            Value = lockInfo.Owner,
-                            IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, "Locked.ico")
-                        };
-                        props.Add(propertyLockOwner);
+                    // Determine if the item is locked by this user or thirt-party user.
+                    bool thisUser = Engine.CurrentUserPrincipal.Equals(lockInfo.Owner, StringComparison.InvariantCultureIgnoreCase);
+                    string lockIconName = thisUser ? "Locked" : "LockedByAnotherUser";
 
-                        // Get Lock Expires.
-                        FileSystemItemPropertyData propertyLockExpires = new FileSystemItemPropertyData()
-                        {
-                            Id = (int)CustomColumnIds.LockExpirationDate,
-                            Value = lockInfo.LockExpirationDateUtc.ToString(),
-                            IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, "Empty.ico")
-                        };
-                        props.Add(propertyLockExpires);
-                    }
-                }
-
-                // Read LockMode.
-                if (placeholder.Properties.TryGetValue("LockMode", out IDataItem propLockMode))
-                {
-                    if (propLockMode.TryGetValue<LockMode>(out LockMode lockMode) && lockMode != LockMode.None)
+                    // Get Lock Mode.
+                    if (thisUser && (lockInfo.Mode == LockMode.Auto))
                     {
-                        FileSystemItemPropertyData propertyLockMode = new FileSystemItemPropertyData()
-                        {
-                            Id = (int)CustomColumnIds.LockScope,
-                            Value = "Locked",
-                            IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, "Empty.ico")
-                        };
-                        props.Add(propertyLockMode);
+                        lockIconName += "Auto";
                     }
-                }
 
-                // Read ETag.
-                if (placeholder.Properties.TryGetValue("ETag", out IDataItem propETag))
-                {
-                    if (propETag.TryGetValue<string>(out string eTag))
+                    // Set Lock Owner.
+                    FileSystemItemPropertyData propertyLockOwner = new FileSystemItemPropertyData()
                     {
-                        FileSystemItemPropertyData propertyETag = new FileSystemItemPropertyData()
-                        {
-                            Id = (int)CustomColumnIds.ETag,
-                            Value = eTag,
-                            IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, "Empty.ico")
-                        };
-                        props.Add(propertyETag);
-                    }
+                        Id = (int)CustomColumnIds.LockOwnerIcon,
+                        Value = lockInfo.Owner,
+                        IconResource = Path.Combine(Engine.IconsFolderPath, lockIconName + ".ico")
+                    };
+                    props.Add(propertyLockOwner);
+
+                    // Set Lock Expires.
+                    FileSystemItemPropertyData propertyLockExpires = new FileSystemItemPropertyData()
+                    {
+                        Id = (int)CustomColumnIds.LockExpirationDate,
+                        Value = lockInfo.LockExpirationDateUtc.ToString(),
+                        IconResource = Path.Combine(Engine.IconsFolderPath, "Empty.ico")
+                    };
+                    props.Add(propertyLockExpires);
+
+                    // Set Lock Scope
+                    FileSystemItemPropertyData propertyLockScope = new FileSystemItemPropertyData()
+                    {
+                        Id = (int)CustomColumnIds.LockScope,
+                        Value = lockInfo.Exclusive ? "Exclusive" : "Shared",
+                        IconResource = Path.Combine(Engine.IconsFolderPath, "Empty.ico")
+                    };
+                    props.Add(propertyLockScope);
                 }
             }
 
@@ -260,16 +246,16 @@ namespace VirtualDrive
             ServerLockInfo serverLockInfo = new ServerLockInfo() 
             { 
                 LockToken = "ServerToken",
-                Owner = "You",
+                Owner = Engine.CurrentUserPrincipal,
                 Exclusive = true,
-                LockExpirationDateUtc = DateTimeOffset.Now.AddMinutes(30)
+                LockExpirationDateUtc = DateTimeOffset.Now.AddMinutes(30),
+                Mode = lockMode
             };
 
             // Save lock-token and lock-mode.
             if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
             {
-                await placeholder.Properties.AddOrUpdateAsync("LockInfo", serverLockInfo);
-                await placeholder.Properties.AddOrUpdateAsync("LockMode", lockMode);
+                placeholder.SetLockInfo(serverLockInfo);
                 placeholder.UpdateUI();
 
                 Logger.LogDebug("Locked in the remote storage successfully", UserFileSystemPath, default, operationContext);
@@ -281,12 +267,9 @@ namespace VirtualDrive
         {
             if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
             {
-                if (placeholder.Properties.TryGetValue("LockMode", out IDataItem property))
+                if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
                 {
-                    if(property.TryGetValue<LockMode>(out LockMode lockMode))
-                    {
-                        return lockMode;
-                    }
+                    return lockInfo.Mode;
                 }
             }
 
@@ -301,13 +284,12 @@ namespace VirtualDrive
             if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
             {
                 // Read the lock-token.
-                string lockToken = (await placeholder.Properties["LockInfo"].GetValueAsync<ServerLockInfo>())?.LockToken;
-
-                // Unlock the item in the remote storage here.
-
+                if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
+                {
+                    // Unlock the item in the remote storage here.
+                }
                 // Delete lock-mode and lock-token info.
-                placeholder.Properties.Remove("LockInfo");
-                placeholder.Properties.Remove("LockMode");
+                placeholder.TryDeleteLockInfo();
                 placeholder.UpdateUI();
 
                 Logger.LogDebug("Unlocked in the remote storage successfully", UserFileSystemPath, default, operationContext);

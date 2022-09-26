@@ -22,8 +22,11 @@ namespace WebDAVDrive
         /// </summary>
         /// <param name="path">File path in the user file system.</param>
         /// <param name="engine">Engine instance.</param>
+        /// <param name="autoLockTimoutMs">Automatic lock timout in milliseconds.</param>
+        /// <param name="manualLockTimoutMs">Manual lock timout in milliseconds.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFile(string path, VirtualEngine engine, ILogger logger) : base(path, engine, logger)
+        public VirtualFile(string path, VirtualEngine engine, double autoLockTimoutMs, double manualLockTimoutMs, ILogger logger) 
+            : base(path, engine, autoLockTimoutMs, manualLockTimoutMs, logger)
         {
 
         }
@@ -50,7 +53,7 @@ namespace WebDAVDrive
 
             if (offset == 0 && length == operationContext.FileSize)
             {
-                // If we read entire file, do not add Range header. Pass -1 to not add it.
+                // If we read entire file we do not add a Range header.
                 offset = -1;
             }
 
@@ -76,8 +79,7 @@ namespace WebDAVDrive
             }
 
             // Store ETag here.
-            PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
-            await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
+            Engine.Placeholders.GetItem(UserFileSystemPath).SetETag(eTag);
         }
 
         /// <inheritdoc/>
@@ -103,21 +105,16 @@ namespace WebDAVDrive
                 // Send the ETag to the server as part of the update to ensure
                 // the file in the remote storge is not modified since last read.
                 PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
-
-                string oldEtag = null;
-
-                if (placeholder.Properties.TryGetValue("ETag", out IDataItem propETag))
-                {
-                    propETag.TryGetValue<string>(out oldEtag);
-                }
+                
+                placeholder.TryGetETag(out string oldEtag);
 
                 // Read the lock-token and send it to the server as part of the update.
                 Client.LockUriTokenPair[] lockTokens = null;
-                IDataItem propLockInfo;
-                if (placeholder.Properties.TryGetValue("LockInfo", out propLockInfo))
+                if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
                 {
-                    ServerLockInfo lockInfo;
-                    if (propLockInfo.TryGetValue<ServerLockInfo>(out lockInfo))
+                    // Send the lock-token only in case the item is locked by this user.
+                    bool thisUser = Engine.CurrentUserPrincipal.Equals(lockInfo.Owner, StringComparison.InvariantCultureIgnoreCase);
+                    if (thisUser)
                     {
                         string lockToken = lockInfo.LockToken;
                         lockTokens = new Client.LockUriTokenPair[] { new Client.LockUriTokenPair(new Uri(RemoteStoragePath), lockToken) };
@@ -134,7 +131,7 @@ namespace WebDAVDrive
                     }, null, content.Length, 0, -1, lockTokens, oldEtag, cancellationToken);
 
                     // Save a new ETag returned by the server, if any.
-                    await placeholder.Properties.AddOrUpdateAsync("ETag", newEtag);
+                    placeholder.SetETag(newEtag);
                 }
                 catch (Client.Exceptions.PreconditionFailedException)
                 {

@@ -1,3 +1,4 @@
+using ITHit.FileSystem.Windows;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -5,7 +6,7 @@ using System.Text;
 namespace ITHit.FileSystem.Samples.Common
 {
     /// <summary>
-    /// Information about the lock returned from the remote storage as a result of the lock operation.
+    /// Information about the lock.
     /// </summary>
     public class ServerLockInfo
     {
@@ -28,5 +29,14 @@ namespace ITHit.FileSystem.Samples.Common
         /// True if the item is locked exclusively. False in case the item has a shared lock.
         /// </summary>
         public bool Exclusive { get; set; } = true;
+
+        /// <summary>
+        /// Lock mode.
+        /// </summary>
+        /// <remarks>
+        /// If the item is locked by this user on this machine the value of this property indicates automatic or manual lock.
+        /// If the item is locked by other user or locked by this user on other machine contains <see cref="LockMode.None"/> value.
+        /// </remarks>
+        public LockMode Mode { get; set; } = LockMode.None;
     }
 }

@@ -2,14 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using ITHit.FileSystem;
+using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Samples.Common;
 using Client = ITHit.WebDAV.Client;
-using ITHit.FileSystem.Windows;
-using System.Threading;
+
 
 namespace WebDAVDrive
 {
@@ -21,8 +22,11 @@ namespace WebDAVDrive
         /// </summary>
         /// <param name="path">Folder path in the user file system.</param>
         /// <param name="engine">Engine instance.</param>
+        /// <param name="autoLockTimoutMs">Automatic lock timout in milliseconds.</param>
+        /// <param name="manualLockTimoutMs">Manual lock timout in milliseconds.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFolder(string path, VirtualEngine engine, ILogger logger) : base(path, engine, logger)
+        public VirtualFolder(string path, VirtualEngine engine, double autoLockTimoutMs, double manualLockTimoutMs, ILogger logger) 
+            : base(path, engine, autoLockTimoutMs, manualLockTimoutMs, logger)
         {
 
         }
@@ -49,9 +53,8 @@ namespace WebDAVDrive
                 }
             }, null, contentLength, 0, -1, null, null, cancellationToken);
 
-            // Store ETag it in persistent placeholder properties untill the next update.
-            PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemNewItemPath);
-            await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
+            // Store ETag in persistent placeholder properties untill the next update.
+            Engine.Placeholders.GetItem(userFileSystemNewItemPath).SetETag(eTag);
             
             // WebDAV does not use any item IDs, returning null.
             return null;
@@ -66,10 +69,9 @@ namespace WebDAVDrive
             Uri newFolderUri = new Uri(new Uri(RemoteStoragePath), folderMetadata.Name);
             await Program.DavClient.CreateFolderAsync(newFolderUri, null, cancellationToken);
 
-            // WebDAV server typically does not provide eTags for folders.
             // Store ETag (if any) unlil the next update here.
-            //PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemNewItemPath);
-            //await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
+            // WebDAV server typically does not provide eTags for folders.
+            // Engine.Placeholders.GetItem(userFileSystemNewItemPath).SetETag(eTag);
 
             // WebDAV does not use any item IDs, returning null.
             return null;

@@ -7,6 +7,7 @@ using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 using System.Threading.Tasks;
 using System.Threading;
+using ITHit.FileSystem.Samples.Common;
 
 namespace VirtualDrive
 {
@@ -17,10 +18,10 @@ namespace VirtualDrive
     /// </summary>
     /// <remarks>
     /// Here, for demo purposes we simulate server by monitoring source file path using FileWatchWrapper.
-    /// In your application, instead of using FileWatchWrapper, you will connect to your remote storage using web sockets 
+    /// In your application, instead, you will connect to your remote storage using web sockets 
     /// or use any other technology to get notifications about changes in your remote storage.
     /// </remarks>
-    public class RemoteStorageMonitor : ISyncService, IDisposable
+    public class RemoteStorageMonitor : IncomingServerNotifications, ISyncService, IDisposable
     {
         /// <summary>
         /// Current synchronization state.
@@ -32,17 +33,6 @@ namespace VirtualDrive
                 return watcher.EnableRaisingEvents ? SynchronizationState.Enabled : SynchronizationState.Disabled;
             }
         }
-
-        /// <summary>
-        /// Logger.
-        /// </summary>
-        public readonly ILogger Logger;
-
-        /// <summary>
-        /// Engine instance. We will call <see cref="Engine"/> methods 
-        /// to update user file system when any data is changed in the remote storage.
-        /// </summary>
-        private readonly Engine engine;
 
         /// <summary>
         /// Watches for changes in the remote storage file system.
@@ -57,11 +47,9 @@ namespace VirtualDrive
         /// <param name="remoteStorageRootPath">Remote storage path. Folder that contains source files to monitor changes.</param>
         /// <param name="engine">Virtual drive to send notifications about changes in the remote storage.</param>
         /// <param name="logger">Logger.</param>
-        internal RemoteStorageMonitor(string remoteStorageRootPath, Engine engine, ILogger logger)
+        internal RemoteStorageMonitor(string remoteStorageRootPath, EngineWindows engine, ILogger logger)
+            : base(engine, engine.Logger.CreateLogger("Remote Storage Monitor"))
         {
-            this.engine = engine;
-            this.Logger = logger.CreateLogger("Remote Storage Monitor");
-
             mapping = new Mapping(engine.Path, remoteStorageRootPath);
 
             watcher.IncludeSubdirectories = true;
@@ -116,13 +104,8 @@ namespace VirtualDrive
                     FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
                     if (remoteStorageItem != null)
                     {
-                        IFileSystemItemMetadata newItemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
-                        if (await engine.ServerNotifications(userFileSystemParentPath, Logger).CreateAsync(new[] { newItemInfo }) > 0)
-                        {
-                            // Because of the on-demand population, the parent folder placeholder may not exist in the user file system
-                            // or the folder may be offline. In this case the IServerNotifications.CreateAsync() call is ignored.
-                            Logger.LogMessage($"Created successfully", userFileSystemPath);
-                        }
+                        FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                        await IncomingCreatedAsync(userFileSystemParentPath, itemMetadata);
                     }
                 }
                 else
@@ -160,16 +143,8 @@ namespace VirtualDrive
                     FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
                     if (remoteStorageItem != null)
                     {
-                        IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
-
-                        if (await engine.ServerNotifications(userFileSystemPath, Logger).UpdateAsync(itemInfo))
-                        {
-                            // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                            // In this case the IServerNotifications.UpdateAsync() call is ignored.
-
-                            PlaceholderItem.UpdateUI(userFileSystemPath);
-                            Logger.LogMessage("Updated successfully", userFileSystemPath);
-                        }
+                        FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                        await IncomingChangedAsync(userFileSystemPath, itemMetadata);
                     }
                 }
             }
@@ -206,11 +181,7 @@ namespace VirtualDrive
                 System.Threading.Thread.Sleep(1000);
                 if (FsPath.Exists(userFileSystemPath))
                 {
-                    // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                    if (await engine.ServerNotifications(userFileSystemPath, Logger).DeleteAsync())
-                    {
-                        Logger.LogMessage("Deleted successfully", userFileSystemPath);
-                    }
+                    await IncomingDeletedAsync(userFileSystemPath);
                 }
             }
             catch (UnauthorizedAccessException)
@@ -241,7 +212,7 @@ namespace VirtualDrive
                 // In your real-life application you will not send updates from server back to client that issued the update.
                 if (FsPath.Exists(userFileSystemOldPath))
                 {
-                    if (await engine.ServerNotifications(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath))
+                    if (await Engine.ServerNotifications(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath))
                     {
                         // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
                         // In this case the IServerNotifications.MoveToAsync() call is ignored.
@@ -251,7 +222,7 @@ namespace VirtualDrive
 
                 // Possibly the item was filtered by MS Office filter because of the transactional save.
                 // The target item should be updated in this case.
-                // This call, is onlly required to support MS Office editing in the folder simulating remote storage.
+                // This call, is onlly required to support MS Office/AutoCAD editing in the folder simulating remote storage.
                 ChangedAsync(sender, e);
             }
             catch (Exception ex)

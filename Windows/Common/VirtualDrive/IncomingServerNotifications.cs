@@ -6,17 +6,17 @@ using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Windows;
 
-namespace WebDAVDrive
+namespace ITHit.FileSystem.Samples.Common.Windows
 {
     /// <summary>
     /// Provides custom properties storage and logging for incoming updates from remote storage.
     /// </summary>
-    internal class IncomingServerNotifications
+    public class IncomingServerNotifications
     {
         /// <summary>
         /// Virtual drive.
         /// </summary>
-        protected readonly VirtualEngine Engine;
+        protected readonly EngineWindows Engine;
 
         /// <summary>
         /// Logger.
@@ -27,7 +27,7 @@ namespace WebDAVDrive
         /// Creates instance of this class.
         /// </summary>
         /// <param name="engine">Engine instance.</param>
-        internal IncomingServerNotifications(VirtualEngine engine, ILogger logger)
+        public IncomingServerNotifications(EngineWindows engine, ILogger logger)
         {
             this.Engine = engine;
             this.Logger = logger;

@@ -22,7 +22,7 @@ namespace WebDAVDrive
     /// client (in case the client or network was offline or the item was blocked),
     /// this service synchronizes all created, updated and deleted items.
     /// </remarks>
-    internal class IncomingFullSync : IncomingServerNotifications
+    public class IncomingFullSync : IncomingServerNotifications
     {
         /// <summary>
         /// Synchronization interval in milliseconds. Default is 60000 ms.
@@ -46,22 +46,30 @@ namespace WebDAVDrive
 
         internal async Task<bool> TrySyncronizeAsync(CancellationToken cancellationToken = default)
         {
-            // Because full synchcronization may send alot of requests to the remote storage,
-            // we want synchronization to run only after the SyncIntervalMs elapsed.
-            if (lastRun <= DateTimeOffset.Now.AddMilliseconds(-SyncIntervalMs))
+            try
             {
-                lastRun = DateTimeOffset.MaxValue; // Wait until synchronization finished.
+                // Because full synchcronization may send alot of requests to the remote storage,
+                // we want synchronization to run only after the SyncIntervalMs elapsed.
+                if (lastRun <= DateTimeOffset.Now.AddMilliseconds(-SyncIntervalMs))
+                {
+                    lastRun = DateTimeOffset.MaxValue; // Wait until synchronization finished.
 
-                var watch = System.Diagnostics.Stopwatch.StartNew();
-                string userFileSystemFolderPath = Engine.Path;
-                Logger.LogDebug("Synchronizing...", userFileSystemFolderPath);
-                await SyncronizeFolderAsync(userFileSystemFolderPath, cancellationToken);
-                lastRun = DateTimeOffset.Now;
-                watch.Stop();
-                string elapsed = watch.Elapsed.ToString(@"hh\:mm\:ss\.ff");
-                Logger.LogDebug($"Synchronization completed in {elapsed}", userFileSystemFolderPath);
-                return true;
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
+                    string userFileSystemFolderPath = Engine.Path;
+                    Logger.LogDebug("Synchronizing...", userFileSystemFolderPath);
+                    await SyncronizeFolderAsync(userFileSystemFolderPath, cancellationToken);
+                    lastRun = DateTimeOffset.Now;
+                    watch.Stop();
+                    string elapsed = watch.Elapsed.ToString(@"hh\:mm\:ss\.ff");
+                    Logger.LogDebug($"Synchronization completed in {elapsed}", userFileSystemFolderPath);
+                    return true;
+                }
             }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex.Message, Engine.Path, default, ex);
+            }
+
             return false;
         }
 

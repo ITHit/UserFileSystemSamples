@@ -139,9 +139,9 @@ namespace VirtualDrive
             userFileSystemItem.LastAccessTime = remoteStorageItem.LastAccessTime;
             userFileSystemItem.ChangeTime = remoteStorageItem.LastWriteTime;
 
-            // Set custom columns to be displayed in file manager.
-            // We create property definitions when registering the sync root with corresponding IDs.
-            // The columns are rendered in IVirtualEngine.GetItemPropertiesAsync() call.           
+            // Set custom columns here to be displayed in file manager.
+            // - We create property definitions when registering the sync root with corresponding IDs.
+            // - The columns are rendered in IVirtualEngine.GetItemPropertiesAsync() call.
             //userFileSystemItem.CustomProperties = ;
 
             return userFileSystemItem;

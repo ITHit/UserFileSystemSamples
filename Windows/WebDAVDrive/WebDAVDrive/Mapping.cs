@@ -31,13 +31,13 @@ namespace WebDAVDrive
             string[] segments = relativePath.Split('\\');
 
             IEnumerable<string> encodedSegments = segments.Select(x => Uri.EscapeDataString(x));
-            relativePath = string.Join('/', encodedSegments);      
+            relativePath = string.Join('/', encodedSegments);
 
             string path = $"{Program.Settings.WebDAVServerUrl}{relativePath}";
 
 
             // Add trailing slash to folder URLs so Uri class concatenation works correctly.
-            if(!path.EndsWith('/') && Directory.Exists(userFileSystemPath))
+            if (!path.EndsWith('/') && Directory.Exists(userFileSystemPath))
             {
                 path = $"{path}/";
             }
@@ -107,7 +107,7 @@ namespace WebDAVDrive
                 userFileSystemItem.Attributes = FileAttributes.Normal | FileAttributes.Directory;
             }
 
-            userFileSystemItem.Name = remoteStorageItem.DisplayName;            
+            userFileSystemItem.Name = remoteStorageItem.DisplayName;
             userFileSystemItem.CreationTime = remoteStorageItem.CreationDate;
             userFileSystemItem.LastWriteTime = remoteStorageItem.LastModified;
             userFileSystemItem.LastAccessTime = remoteStorageItem.LastModified;
@@ -134,51 +134,6 @@ namespace WebDAVDrive
             */
 
             return userFileSystemItem;
-        }
-
-        /// <summary>
-        /// Returns true if the remote item is modified. False - otherwise.
-        /// </summary>
-        /// <remarks>
-        /// This method compares client and server eTags and returns true if the 
-        /// item in the user file system must be updated with the data from the remote storage.
-        /// </remarks>
-        /// <param name="placeholder">User file system item.</param>
-        /// <param name="remoteStorageItem">Remote storage item metadata.</param>
-        /// <returns></returns>
-        public static async Task<bool> IsModifiedAsync(this PlaceholderItem placeholder, FileSystemItemMetadataExt remoteStorageItemMetadata)
-        {
-            string clientEtag = null;
-            if (placeholder.Properties.TryGetValue("ETag", out IDataItem propETag))
-            {
-                propETag.TryGetValue<string>(out clientEtag);
-            }
-
-            return clientEtag != remoteStorageItemMetadata.ETag;
-        }
-
-
-        /// <summary>
-        /// Saves all data that is displayed in custom columns in file manager
-        /// as well as any additional custom data required by the client.
-        /// </summary>
-        /// <param name="placeholder">User file system item.</param>
-        /// <param name="remoteStorageItem">Remote storage item metadata.</param>
-        public static async Task SavePropertiesAsync(this PlaceholderItem placeholder, FileSystemItemMetadataExt metadata)
-        {
-            // Save lock applied by other users.
-            if (metadata.Lock != null)
-            {
-                await placeholder.Properties.AddOrUpdateAsync("ThirdPartyLockInfo", metadata.Lock);
-            }
-
-            await placeholder.Properties.AddOrUpdateAsync("ETag", metadata.ETag);
-
-            //foreach (FileSystemItemPropertyData prop in metadata.CustomProperties)
-            //{
-            //    string key = ((CustomColumnIds)prop.Id).ToString();
-            //    await placeholder.Properties.AddOrUpdateAsync(key, prop);
-            //}
         }
     }
 }

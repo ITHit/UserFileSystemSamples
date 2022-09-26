@@ -26,18 +26,34 @@ namespace WebDAVDrive
         /// <summary>
         /// Monitors changes in the remote storage, notifies the client and updates the user file system.
         /// </summary>
-        internal readonly RemoteStorageMonitor RemoteStorageMonitor;
+        public readonly RemoteStorageMonitor RemoteStorageMonitor;
 
         /// <summary>
         /// Performs complete remote storage scan for changes by comparing every item eTag.
         /// </summary>
-        internal readonly IncomingFullSync IncomingFullSync;
+        public readonly IncomingFullSync IncomingFullSync;
 
         /// <summary>
         /// Credentials used to connect to the server. 
         /// Used for challenge-responce auth (Basic, Digest, NTLM or Kerberos).
         /// </summary>
         public NetworkCredential Credentials { get; set; }
+
+        /// <summary>
+        /// Cookies used to connect to the server. 
+        /// Used for cookies auth and MS-OFBA auth.
+        /// </summary>
+        public CookieCollection Cookies { get; set; } = new CookieCollection();
+
+        /// <summary>
+        /// Automatic lock timout in milliseconds.
+        /// </summary>
+        private readonly double autoLockTimoutMs;
+
+        /// <summary>
+        /// Manual lock timout in milliseconds.
+        /// </summary>
+        private readonly double manualLockTimoutMs;
 
         /// <summary>
         /// Creates a vitual file system Engine.
@@ -55,7 +71,9 @@ namespace WebDAVDrive
             string userFileSystemRootPath, 
             string remoteStorageRootPath, 
             string webSocketServerUrl, 
-            string iconsFolderPath, 
+            string iconsFolderPath,
+            double autoLockTimoutMs, 
+            double manualLockTimoutMs,
             LogFormatter logFormatter)
             : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, logFormatter)
         {
@@ -63,6 +81,8 @@ namespace WebDAVDrive
             IncomingFullSync = new IncomingFullSync(this);
 
             this.SyncService.BeforeStateChanged += SyncService_BeforeStateChanged;
+            this.autoLockTimoutMs = autoLockTimoutMs;
+            this.manualLockTimoutMs = manualLockTimoutMs;
         }
 
         /// <inheritdoc/>
@@ -70,11 +90,11 @@ namespace WebDAVDrive
         {
             if (itemType == FileSystemItemType.File)
             {
-                return new VirtualFile(userFileSystemPath, this, logger);
+                return new VirtualFile(userFileSystemPath, this, autoLockTimoutMs, manualLockTimoutMs, logger);
             }
             else
             {
-                return new VirtualFolder(userFileSystemPath, this, logger);
+                return new VirtualFolder(userFileSystemPath, this, autoLockTimoutMs, manualLockTimoutMs, logger);
             }
         }
 

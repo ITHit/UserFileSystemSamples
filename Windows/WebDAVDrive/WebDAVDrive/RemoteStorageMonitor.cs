@@ -19,11 +19,16 @@ namespace WebDAVDrive
 {
     /// <summary>
     /// Monitors changes in the remote storage, notifies the client and updates the user file system.
-    /// If any file or folder is modified, created, delated, renamed or attributes changed in the remote storage, 
+    /// If any file or folder is created, updated, delated, moved, locked or unlocked in the remote storage, 
     /// triggers an event with information about changes being made.
     /// </summary>
-    internal class RemoteStorageMonitor : IncomingServerNotifications, ISyncService, IDisposable
+    public class RemoteStorageMonitor : IncomingServerNotifications, ISyncService, IDisposable
     {
+        /// <summary>
+        /// Virtual drive.
+        /// </summary>
+        private new readonly VirtualEngine Engine;
+
         /// <summary>
         /// Current synchronization state.
         /// </summary>
@@ -61,18 +66,22 @@ namespace WebDAVDrive
         internal RemoteStorageMonitor(string webSocketServerUrl, VirtualEngine engine)
             : base(engine, engine.Logger.CreateLogger("Remote Storage Monitor"))
         {
+            this.Engine = engine;
             this.webSocketServerUrl = webSocketServerUrl;
         }
 
         /// <summary>
         /// Starts monitoring changes in the remote storage.
         /// </summary>
-        private async Task StartMonitoringAsync(NetworkCredential credentials)
+        private async Task StartMonitoringAsync(NetworkCredential credentials, CookieCollection cookies, Guid thisInstanceId)
         {
             cancellationTokenSource = new CancellationTokenSource();
             clientWebSocket = new ClientWebSocket();
             clientWebSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(10);
             clientWebSocket.Options.Credentials = credentials;
+            clientWebSocket.Options.Cookies = new CookieContainer();
+            clientWebSocket.Options.Cookies.Add(cookies);
+            clientWebSocket.Options.SetRequestHeader("InstanceId", thisInstanceId.ToString());
 
             await clientWebSocket.ConnectAsync(new Uri(webSocketServerUrl), CancellationToken.None);
 
@@ -102,11 +111,11 @@ namespace WebDAVDrive
                       try
                       {
                           repeat = false;
-                          await StartMonitoringAsync(Engine.Credentials);
+                          await StartMonitoringAsync(Engine.Credentials, Engine.Cookies, Engine.InstanceId);
                       }
                       catch (Exception e) when (e is WebSocketException || e is AggregateException)
                       {
-                          // Start socket after first success webdav propfind. Restart socket when it disconnects.
+                          // Start socket after first success WebDAV PROPFIND. Restart socket when it disconnects.
                           if (clientWebSocket != null && clientWebSocket?.State != WebSocketState.Closed)
                           {
                               Logger.LogError(e.Message, webSocketServerUrl);
@@ -156,7 +165,7 @@ namespace WebDAVDrive
             // Check if remote URL starts with WebDAVServerUrl.
             if (remoteStoragePath.StartsWith(Program.Settings.WebDAVServerUrl, StringComparison.InvariantCultureIgnoreCase))
             {
-                Logger.LogMessage($"EventType: {jsonMessage.EventType}", jsonMessage.ItemPath, jsonMessage.TargetPath);
+                Logger.LogDebug($"EventType: {jsonMessage.EventType}", jsonMessage.ItemPath, jsonMessage.TargetPath);
                 switch (jsonMessage.EventType)
                 {
                     case "created":
@@ -236,7 +245,6 @@ namespace WebDAVDrive
                     IHierarchyItem remoteStorageItem = await Program.DavClient.GetItemAsync(new Uri(remoteStoragePath));
                     if (remoteStorageItem != null)
                     {
-                        
                         FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
                         await IncomingChangedAsync(userFileSystemPath, itemMetadata);
                     }
@@ -280,7 +288,7 @@ namespace WebDAVDrive
                     else
                     {
                         // The target parent folder does not exists or is offline, delete the source item.
-                        await DeletedAsync(userFileSystemOldPath);
+                        await DeletedAsync(remoteStorageOldPath);
                     }
                 }
                 else
@@ -336,10 +344,10 @@ namespace WebDAVDrive
                         FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
 
                         // Save info about the third-party lock.
-                        await Engine.Placeholders.GetItem(userFileSystemPath).SavePropertiesAsync(itemMetadata);
+                        Engine.Placeholders.GetItem(userFileSystemPath).SetLockInfo(itemMetadata.Lock);
                         PlaceholderItem.UpdateUI(userFileSystemPath);
 
-                        Logger.LogMessage("Third-party lock info added", userFileSystemPath);
+                        Logger.LogMessage("Locked", userFileSystemPath);
                     }
                 }
             }
@@ -362,24 +370,12 @@ namespace WebDAVDrive
 
                 if (FsPath.Exists(userFileSystemPath))
                 {
-                    if (Engine.Placeholders.GetItem(userFileSystemPath).Properties.Remove("ThirdPartyLockInfo"))
+                    PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemPath);
+                    if (placeholder.TryDeleteLockInfo())
                     {
                         PlaceholderItem.UpdateUI(userFileSystemPath);
-                        Logger.LogMessage("Third-party lock info deleted", userFileSystemPath);
+                        Logger.LogMessage("Unlocked", userFileSystemPath);
                     }
-
-                    //ExternalDataManager customDataManager = engine.ExternalDataManager(userFileSystemPath);
-
-                    //if (!await customDataManager.LockManager.IsLockedByThisUserAsync())
-                    //{
-                    //    // Remove the read-only attribute and all custom columns data.
-                    //    await customDataManager.SetLockedByAnotherUserAsync(false);
-
-                    //    // Remove lock icon and lock info in custom columns.
-                    //    await customDataManager.SetLockInfoAsync(null);
-
-                    //    Logger.LogMessage("Unlocked successfully", userFileSystemPath);
-                    //}
                 }
             }
             catch (Exception ex)

@@ -12,9 +12,15 @@ namespace ITHit.FileSystem.Samples.Common.Windows
     public abstract class VirtualEngineBase : EngineWindows
     {
         /// <summary>
-        /// Monitors changes in the remote storage, notifies the client and updates the user file system.
+        /// Currently loged-in user name or user ID. 
         /// </summary>
-        //  public readonly RemoteStorageMonitor RemoteStorageMonitor;
+        /// <remarks>
+        /// Used to set lock Owner name as well as to distinguish locks applied
+        /// by the currently loged-in user from locks applied by other users, across multiple devices.
+        /// 
+        /// The default value of the Environment.UserName is used for demo purposes only.
+        /// </remarks>
+        public string CurrentUserPrincipal { get; set; } = Environment.UserName;
 
         /// <summary>
         /// Path to the icons folder.
@@ -25,8 +31,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Folder that contains images displayed in Status column, context menu, etc. 
         /// </summary>
         public string IconsFolderPath => iconsFolderPath;
-
-        //public abstract IMapping Mapping { get; }
 
         /// <summary>
         /// Creates a vitual file system Engine.
@@ -59,8 +63,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             Error += logFormatter.LogError;
             Message += logFormatter.LogMessage;
             Debug += logFormatter.LogDebug;
-
-            //RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, log4net);
         }
 
         /// <inheritdoc/>
@@ -98,13 +100,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
         {
             await base.StartAsync(processModified, cancellationToken);
-            //RemoteStorageMonitor.Start();            
         }
 
         public override async Task StopAsync()
         {
-            await base.StopAsync();
-            //RemoteStorageMonitor.Stop();            
+            await base.StopAsync();        
         }
 
         /// <summary>
@@ -139,7 +139,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             {
                 if (disposing)
                 {
-                    //RemoteStorageMonitor.Dispose();
+
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer

@@ -19,7 +19,7 @@
     <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.ShellExtension" Version="6.1.18982.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows.ShellExtension" Version="6.1.19907.0-Beta" />
   </ItemGroup>
   <ItemGroup>
     <None Update="log4net.config">

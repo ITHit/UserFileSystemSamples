@@ -30,6 +30,16 @@ namespace WebDAVDrive
         public string WebSocketServerUrl { get; set; }
 
         /// <summary>
+        /// Automatic lock timout in milliseconds.
+        /// </summary>
+        public double AutoLockTimoutMs { get; set; }
+
+        /// <summary>
+        /// Manual lock timout in milliseconds.
+        /// </summary>
+        public double ManualLockTimoutMs { get; set; }
+
+        /// <summary>
         /// Full outgoing synchronization and hydration/dehydration interval in milliseconds.
         /// </summary>
         public double SyncIntervalMs { get; set; }

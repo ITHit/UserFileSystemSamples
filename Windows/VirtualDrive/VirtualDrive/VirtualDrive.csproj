@@ -40,7 +40,7 @@ This is an advanced project with ETags support, Microsoft Office documents editi
     <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="6.1.18982.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="6.1.19907.0-Beta" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\..\Common\VirtualDrive\Common.Windows.VirtualDrive.csproj" />
   </ItemGroup>
@@ -61,6 +61,9 @@ This is an advanced project with ETags support, Microsoft Office documents editi
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Images\Locked.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\LockedAuto.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Images\LockedByAnotherUser.ico">

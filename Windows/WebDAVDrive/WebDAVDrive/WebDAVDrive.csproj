@@ -38,7 +38,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="6.1.18982.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="6.1.19907.0-Beta" />
     <ProjectReference Include="..\..\Common\VirtualDrive\Common.Windows.VirtualDrive.csproj" />
     <ProjectReference Include="..\WebDAVDrive.UI\WebDAVDrive.UI.csproj" />
   </ItemGroup>
@@ -65,6 +65,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Images\Error.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\LockedAuto.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Images\Locked.ico">

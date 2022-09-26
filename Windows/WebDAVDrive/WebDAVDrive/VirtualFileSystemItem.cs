@@ -7,10 +7,12 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using ITHit.FileSystem;
-using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Windows;
+using ITHit.FileSystem.Samples.Common;
+using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.WebDAV.Client;
 using ITHit.WebDAV.Client.Exceptions;
+
 
 namespace WebDAVDrive
 {
@@ -38,12 +40,24 @@ namespace WebDAVDrive
         protected readonly VirtualEngine Engine;
 
         /// <summary>
+        /// Automatic lock timout in milliseconds.
+        /// </summary>
+        private readonly double autoLockTimoutMs;
+
+        /// <summary>
+        /// Manual lock timout in milliseconds.
+        /// </summary>
+        private readonly double manualLockTimoutMs;
+
+        /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="userFileSystemPath">File or folder path in the user file system.</param>
         /// <param name="engine">Engine instance.</param>
+        /// <param name="autoLockTimoutMs">Automatic lock timout in milliseconds.</param>
+        /// <param name="manualLockTimoutMs">Manual lock timout in milliseconds.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFileSystemItem(string userFileSystemPath, VirtualEngine engine, ILogger logger)
+        public VirtualFileSystemItem(string userFileSystemPath, VirtualEngine engine, double autoLockTimoutMs, double manualLockTimoutMs, ILogger logger)
         {
             if (string.IsNullOrEmpty(userFileSystemPath))
             {
@@ -54,6 +68,9 @@ namespace WebDAVDrive
 
             UserFileSystemPath = userFileSystemPath;
             RemoteStoragePath = Mapping.MapPath(userFileSystemPath);
+
+            this.autoLockTimoutMs = autoLockTimoutMs;
+            this.manualLockTimoutMs = manualLockTimoutMs;
         }
 
         ///<inheritdoc>
@@ -183,69 +200,57 @@ namespace WebDAVDrive
             {
 
                 // Read LockInfo and choose the lock icon.
-                string lockIconName = null;
-                if (placeholder.Properties.TryGetValue("LockInfo", out IDataItem propLockInfo))
+                if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
                 {
-                    // The file is locked by this user.
-                    lockIconName = "Locked.ico";
-                }
-                else if (placeholder.Properties.TryGetValue("ThirdPartyLockInfo", out propLockInfo))
-                {
-                    // The file is locked by somebody else on the server.
-                    lockIconName = "LockedByAnotherUser.ico";
-                }
+                    // Determine if the item is locked by this user or thirt-party user.
+                    bool thisUser = Engine.CurrentUserPrincipal.Equals(lockInfo.Owner, StringComparison.InvariantCultureIgnoreCase);
+                    string lockIconName = thisUser ? "Locked" : "LockedByAnotherUser";
 
-                if (propLockInfo != null && propLockInfo.TryGetValue<ServerLockInfo>(out ServerLockInfo lockInfo))
-                {
+                    // Get Lock Mode.
+                    if(thisUser && (lockInfo.Mode == LockMode.Auto))
+                    {
+                        lockIconName += "Auto";
+                    }
 
-                    // Get Lock Owner.
+                    // Set Lock Owner.
                     FileSystemItemPropertyData propertyLockOwner = new FileSystemItemPropertyData()
                     {
                         Id = (int)CustomColumnIds.LockOwnerIcon,
                         Value = lockInfo.Owner,
-                        IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, lockIconName)
+                        IconResource = Path.Combine(Engine.IconsFolderPath, lockIconName + ".ico")
                     };
                     props.Add(propertyLockOwner);
 
-                    // Get Lock Expires.
+                    // Set Lock Expires.
                     FileSystemItemPropertyData propertyLockExpires = new FileSystemItemPropertyData()
                     {
                         Id = (int)CustomColumnIds.LockExpirationDate,
                         Value = lockInfo.LockExpirationDateUtc.ToString(),
-                        IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, "Empty.ico")
+                        IconResource = Path.Combine(Engine.IconsFolderPath, "Empty.ico")
                     };
                     props.Add(propertyLockExpires);
-                }
 
-
-                // Read LockMode.
-                if (placeholder.Properties.TryGetValue("LockMode", out IDataItem propLockMode))
-                {
-                    if (propLockMode.TryGetValue<LockMode>(out LockMode lockMode) && lockMode != LockMode.None)
+                    // Set Lock Scope
+                    FileSystemItemPropertyData propertyLockScope = new FileSystemItemPropertyData()
                     {
-                        FileSystemItemPropertyData propertyLockMode = new FileSystemItemPropertyData()
-                        {
-                            Id = (int)CustomColumnIds.LockScope,
-                            Value = "Locked",
-                            IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, "Empty.ico")
-                        };
-                        props.Add(propertyLockMode);
-                    }
+                        Id = (int)CustomColumnIds.LockScope,
+                        Value = lockInfo.Exclusive ? "Exclusive" : "Shared",
+                        IconResource = Path.Combine(Engine.IconsFolderPath, "Empty.ico")
+                    };
+                    props.Add(propertyLockScope);
                 }
+
 
                 // Read ETag.
-                if (placeholder.Properties.TryGetValue("ETag", out IDataItem propETag))
+                if (placeholder.TryGetETag(out string eTag))
                 {
-                    if (propETag.TryGetValue<string>(out string eTag))
+                    FileSystemItemPropertyData propertyETag = new FileSystemItemPropertyData()
                     {
-                        FileSystemItemPropertyData propertyETag = new FileSystemItemPropertyData()
-                        {
-                            Id = (int)CustomColumnIds.ETag,
-                            Value = eTag,
-                            IconResource = System.IO.Path.Combine(Engine.IconsFolderPath, "Empty.ico")
-                        };
-                        props.Add(propertyETag);
-                    }
+                        Id = (int)CustomColumnIds.ETag,
+                        Value = eTag,
+                        IconResource = Path.Combine(Engine.IconsFolderPath, "Empty.ico")
+                    };
+                    props.Add(propertyETag);
                 }
             }
 
@@ -268,26 +273,102 @@ namespace WebDAVDrive
             // Call your remote storage here to lock the item.
             // Save the lock token and other lock info received from the remote storage on the client.
             // Supply the lock-token as part of each remote storage update in IFile.WriteAsync() method.
+            // Note that the actual lock timout applied by the server may be different from the one requested.
 
-            // Here we set lock owner name to loged-in user for demo purposes.
-            string lockOwner = Environment.UserName;
-            LockInfo lockInfo = await Program.DavClient.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, lockOwner, TimeSpan.MaxValue, cancellationToken);
-            ServerLockInfo serverLockInfo = new ServerLockInfo
-            {
-                LockToken = lockInfo.LockToken.LockToken,
-                Exclusive = lockInfo.LockScope == LockScope.Exclusive,
-                Owner = lockInfo.Owner,
-                LockExpirationDateUtc = DateTimeOffset.Now.Add(lockInfo.TimeOut)
-            };
+            string lockOwner = Engine.CurrentUserPrincipal;
+            double timOutMs = lockMode == LockMode.Auto ? autoLockTimoutMs : manualLockTimoutMs;
+            TimeSpan timeOut = timOutMs == -1 ? TimeSpan.MaxValue : TimeSpan.FromMilliseconds(timOutMs);
 
-            // Save lock-token and lock-mode.
+            LockInfo lockInfo = await Program.DavClient.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, lockOwner, timeOut, cancellationToken);
+
+            // Save lock-token and lock-mode. Start the timer to refresh the lock.
+            await SaveLockAsync(lockInfo, lockMode, cancellationToken);
+        }
+
+        /// <summary>
+        /// Saves lock token, lock mode, refreshes Windows Explorer UI and starts a timer to extend the lock.
+        /// </summary>
+        /// <param name="lockInfo">Lock info.</param>
+        /// <param name="lockMode">Lock mode.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>A task object that can be awaited.</returns>
+        private async Task SaveLockAsync(LockInfo lockInfo, LockMode lockMode, CancellationToken cancellationToken)
+        {
             if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
             {
-                await placeholder.Properties.AddOrUpdateAsync("LockInfo", serverLockInfo);
-                await placeholder.Properties.AddOrUpdateAsync("LockMode", lockMode);
+                // Save lock-token and lock-mode.
+                ServerLockInfo serverLockInfo = new ServerLockInfo
+                {
+                    LockToken = lockInfo.LockToken.LockToken,
+                    Exclusive = lockInfo.LockScope == LockScope.Exclusive,
+                    Owner = lockInfo.Owner,
+                    LockExpirationDateUtc = DateTimeOffset.Now.Add(lockInfo.TimeOut),
+                    Mode = lockMode
+                };
+                placeholder.SetLockInfo(serverLockInfo);
                 placeholder.UpdateUI();
 
-                Logger.LogDebug("Locked in the remote storage successfully", UserFileSystemPath, default, operationContext);
+                Logger.LogDebug($"Locked/Refreshed by {lockInfo.Owner}, timout: {lockInfo.TimeOut:hh\\:mm\\:ss\\.ff}", UserFileSystemPath);
+
+                // Start the timer to extend (refresh) the automatic lock when it is about to expire.
+                if (lockInfo.TimeOut < TimeSpan.MaxValue && lockMode == LockMode.Auto)
+                {
+                    // We want to refresh the lock some time before the lock expires.
+                    // Either 1 minute before, for release config, or 1/5 of a timout time, for dev config.
+                    double refreshTimeOut = lockInfo.TimeOut.TotalMilliseconds;
+                    refreshTimeOut -= refreshTimeOut > 120000 ? 60000 : refreshTimeOut / 5;
+
+                    var timer = new System.Timers.Timer(refreshTimeOut);
+                    timer.AutoReset = false;
+                    timer.Elapsed += (object sender, System.Timers.ElapsedEventArgs e) => { 
+                        LockRefreshAsync(
+                            lockInfo.LockToken.LockToken, 
+                            lockInfo.TimeOut, 
+                            lockMode, 
+                            cancellationToken, 
+                            timer); };
+                    timer.Start();
+                }
+            }
+        }
+
+        private async void LockRefreshAsync(string lockToken, TimeSpan timOut, LockMode lockMode, CancellationToken cancellationToken, System.Timers.Timer timer)
+        {
+            try
+            {
+                timer.Dispose();
+
+                if (cancellationToken.IsCancellationRequested) return;
+
+                if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
+                {
+                    // Check that the item is still locked.
+                    if (placeholder.TryGetLockInfo(out ServerLockInfo serverLockInfo))
+                    {
+                        // The item may be unlocked and than locked again. Check that the stored lock is the same as passed to this method.
+                        bool sameToken = lockToken.Equals(serverLockInfo.LockToken, StringComparison.InvariantCultureIgnoreCase);
+                        if (sameToken)
+                        {
+                            // Extend (refresh) the lock.
+                            //Program.DavClient.RefreshLockAsync(new Uri(RemoteStoragePath), lockToken, timout, cancellationToken);
+                            IHierarchyItem item = await Program.DavClient.GetItemAsync(new Uri(RemoteStoragePath), cancellationToken);
+                            LockInfo lockInfo = await item.RefreshLockAsync(lockToken, timOut, cancellationToken);
+
+                            Logger.LogMessage($"Lock extended, new timout: {lockInfo.TimeOut:hh\\:mm\\:ss\\.ff}", UserFileSystemPath);
+
+                            // Save the new lock. Start the timer to refresh the lock.
+                            await SaveLockAsync(lockInfo, lockMode, cancellationToken);
+                        }
+                    }
+                }
+            }
+            catch(TaskCanceledException ex)
+            {
+                Logger.LogDebug("Lock refresh canceled", UserFileSystemPath);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Lock refresh failed", UserFileSystemPath, default, ex);
             }
         }
         
@@ -298,12 +379,9 @@ namespace WebDAVDrive
         {
             if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
             {
-                if (placeholder.Properties.TryGetValue("LockMode", out IDataItem property))
+                if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
                 {
-                    if (property.TryGetValue<LockMode>(out LockMode lockMode))
-                    {
-                        return lockMode;
-                    }
+                    return lockInfo.Mode;
                 }
             }
 
@@ -317,27 +395,27 @@ namespace WebDAVDrive
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(UnlockAsync)}()", UserFileSystemPath, default, operationContext);
 
-            // Read the lock-token.
             if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
             {
-                string lockToken = (await placeholder.Properties["LockInfo"].GetValueAsync<ServerLockInfo>())?.LockToken;
-
-                LockUriTokenPair[] lockTokens = new LockUriTokenPair[] { new LockUriTokenPair(new Uri(RemoteStoragePath), lockToken) };
-
-                // Unlock the item in the remote storage.
-                try
+                // Read the lock-token.
+                if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
                 {
-                    await Program.DavClient.UnlockAsync(new Uri(RemoteStoragePath), lockTokens, cancellationToken);
-                    Logger.LogDebug("Unlocked in the remote storage successfully", UserFileSystemPath, default, operationContext);
-                }
-                catch (ITHit.WebDAV.Client.Exceptions.ConflictException)
-                {
-                    Logger.LogDebug("The item is already unlocked.", UserFileSystemPath, default, operationContext);
+                    LockUriTokenPair[] lockTokens = new LockUriTokenPair[] { new LockUriTokenPair(new Uri(RemoteStoragePath), lockInfo.LockToken) };
+
+                    // Unlock the item in the remote storage.
+                    try
+                    {
+                        await Program.DavClient.UnlockAsync(new Uri(RemoteStoragePath), lockTokens, cancellationToken);
+                        Logger.LogDebug("Unlocked in the remote storage successfully", UserFileSystemPath, default, operationContext);
+                    }
+                    catch (ITHit.WebDAV.Client.Exceptions.ConflictException)
+                    {
+                        Logger.LogDebug("The item is already unlocked.", UserFileSystemPath, default, operationContext);
+                    }
                 }
 
                 // Delete lock-mode and lock-token info.
-                placeholder.Properties.Remove("LockInfo");
-                placeholder.Properties.Remove("LockMode");
+                placeholder.TryDeleteLockInfo();
                 placeholder.UpdateUI();
             }
         }

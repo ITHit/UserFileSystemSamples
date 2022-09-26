@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
+using ITHit.FileSystem.Samples.Common.Windows;
 
 namespace VirtualDrive
 {
@@ -71,9 +72,8 @@ namespace VirtualDrive
 
             // Save Etag received from your remote storage in
             // persistent placeholder properties unlil the next update.
-            //string eTag = ...
-            //PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemNewItemPath);
-            //await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
+            // string eTag = ...
+            // Engine.Placeholders.GetItem(userFileSystemNewItemPath).SetETag(eTag);
 
             // Return remote storage item ID. It will be passed later
             // into IEngine.GetFileSystemItemAsync() method on every call.
@@ -105,9 +105,8 @@ namespace VirtualDrive
             remoteStorageNewItem.Attributes = folderMetadata.Attributes;
 
             // Save ETag received from your remote storage in persistent placeholder properties.
-            //string eTag = ...
-            //PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemNewItemPath);
-            //await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
+            // string eTag = ...
+            // Engine.Placeholders.GetItem(userFileSystemNewItemPath).SetETag(eTag);
 
             // Return remote storage item ID. It will be passed later
             // into IEngine.GetFileSystemItemAsync() method on every call.

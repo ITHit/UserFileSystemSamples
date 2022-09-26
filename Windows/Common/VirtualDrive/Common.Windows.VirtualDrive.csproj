@@ -5,7 +5,7 @@
     <Authors>IT Hit LTD.</Authors>
     <Product>IT Hit User File System</Product>
     <Copyright>IT Hit LTD.</Copyright>
-    <RootNamespace>ITHit.FileSystem.Samples.Common.Windows.VirtualDrive</RootNamespace>
+    <RootNamespace>ITHit.FileSystem.Samples.Common.Windows</RootNamespace>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
@@ -13,7 +13,7 @@
     <Compile Remove="IVirtualFolder.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="6.1.18982.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="6.1.19907.0-Beta" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Core\Common.Windows.Core.csproj" />
   </ItemGroup>

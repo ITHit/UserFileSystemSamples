@@ -16,11 +16,6 @@ namespace ITHit.FileSystem.Samples.Common
         LockOwnerIcon = 2,
 
         /// <summary>
-        /// Conflict icon column ID. The conflict icon is being displayed in the Windows File Manager Status column.
-        /// </summary>
-        ConflictIcon = 3,
-
-        /// <summary>
         /// Lock Scope column ID. Shows if the lock is Exclusive or Shared.
         /// </summary>
         LockScope = 4,
@@ -33,6 +28,6 @@ namespace ITHit.FileSystem.Samples.Common
         /// <summary>
         /// ETag column ID.
         /// </summary>
-        ETag = 6
+        ETag = 6,
     }
 }

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+
 using ITHit.FileSystem.Windows;
+
 
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
@@ -15,7 +17,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
     /// </summary>
     public class MenuCommandLock : IMenuCommandWindows
     {
-        private readonly EngineWindows engine;
+        private readonly VirtualEngineBase engine;
         private readonly ILogger logger;
 
         private const string lockCommandIcon = @"Images\Locked.ico";
@@ -26,7 +28,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         /// <param name="engine">Engine instance.</param>
         /// <param name="logger">Logger.</param>
-        public MenuCommandLock(EngineWindows engine, ILogger logger)
+        public MenuCommandLock(VirtualEngineBase engine, ILogger logger)
         {
             this.engine = engine;
             this.logger = logger.CreateLogger("Lock Menu Command");
@@ -96,7 +98,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Returns files lock status.
         /// </summary>
         /// <remarks>
-        /// True - if all items are locked. False - if all items are unlocked. null - if some items are locked, others unlocked.
+        /// True - if all items are locked by this user. 
+        /// False - if all items are unlocked. 
+        /// null - if some items are locked, others unlocked or if any item is locked by another user.
         /// </remarks>
         private async Task<bool?> IsLockedAsync(IEnumerable<string> filesPath, CancellationToken cancellationToken = default)
         {
@@ -105,12 +109,24 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             {
                 try
                 {
-                    IClientNotifications clientNotifications = engine.ClientNotifications(userFileSystemPath, logger);
-                    LockMode lockMode = await clientNotifications.GetLockModeAsync(cancellationToken);
+                    bool isLocked = false;
+                    if (engine.Placeholders.TryGetItem(userFileSystemPath, out PlaceholderItem placeholder))
+                    {
+                        if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
+                        {
+                            // Detect if locked by this user.
+                            bool thisUser = engine.CurrentUserPrincipal.Equals(lockInfo.Owner, StringComparison.InvariantCultureIgnoreCase);
+                            if (!thisUser)
+                            {
+                                // Typically we can not unlock items locked by other users. We must hide or disable the menu in tis case.
+                                return null;
+                            }
 
-                    bool isLocked = lockMode != LockMode.None;
+                            isLocked = true;
+                        }
+                    }
 
-                    if(allLocked.HasValue && (allLocked != isLocked))
+                    if (allLocked.HasValue && (allLocked != isLocked))
                     {
                         return null;
                     }

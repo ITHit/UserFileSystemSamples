@@ -72,9 +72,8 @@ namespace VirtualDrive
             }
 
             // Save ETag received from your remote storage in persistent placeholder properties.
-            //string eTag = ...
-            //PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
-            //await placeholder.Properties.AddOrUpdateAsync("ETag", eTag);
+            // string eTag = ...
+            // Engine.Placeholders.GetItem(UserFileSystemPath).SetETag(eTag);
         }
 
         /// <inheritdoc/>
@@ -99,16 +98,18 @@ namespace VirtualDrive
 
             // Send the ETag to the server as part of the update to ensure
             // the file in the remote storge is not modified since last read.
-            //string oldEtag = await placeholder.Properties["ETag"].GetValueAsync<string>();
+            // placeholder.TryGetETag(out string oldEtag);
 
             // Send the lock-token to the server as part of the update.
+            // Here we read the lock-token for demo purposes only.
             string lockToken;
             if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
             {
-                if (placeholder.Properties.TryGetValue("LockInfo", out IDataItem propLockInfo))
+                if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
                 {
-                    ServerLockInfo lockInfo;
-                    if (propLockInfo.TryGetValue<ServerLockInfo>(out lockInfo))
+                    // Send the lock-token only in case the item is locked by this user.
+                    bool thisUser = Engine.CurrentUserPrincipal.Equals(lockInfo.Owner, StringComparison.InvariantCultureIgnoreCase);
+                    if (thisUser)
                     {
                         lockToken = lockInfo.LockToken;
                     }
@@ -119,14 +120,6 @@ namespace VirtualDrive
 
             if (content != null)
             {
-                // Typically you will compare ETags on the server.
-                // Here we compare ETags before the update for the demo purposes. 
-                //string eTag = (await WindowsFileSystemItem.GetUsnByPathAsync(remoteStoragePath)).ToString();
-                //if(oldEtag != eTag)
-                //{
-                //    throw new ConflictException(Modified.Server, "The file is modified in remote storage.");
-                //}
-
                 // Upload file content to the remote storage.
                 using (FileStream remoteStorageStream = remoteStorageItem.Open(FileMode.Open, FileAccess.Write, FileShare.Delete))
                 {
@@ -143,8 +136,8 @@ namespace VirtualDrive
             remoteStorageItem.Attributes = fileMetadata.Attributes;
 
             // Save ETag received from your remote storage in persistent placeholder properties.
-            //string newEtag = ...
-            //await placeholder.Properties.AddOrUpdateAsync("ETag", newEtag);
+            // string newEtag = ...
+            // placeholder.SetETag(newEtag);
         }
     }
 }
