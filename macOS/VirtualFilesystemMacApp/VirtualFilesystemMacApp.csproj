@@ -8,9 +8,8 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>VirtualFilesystemMacApp</RootNamespace>
     <AssemblyName>Virtual Filesystem Sample</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
-    <ReleaseVersion>5.5.15752</ReleaseVersion>
+    <ReleaseVersion>6.1.20210.0</ReleaseVersion>
     <UseXamMacFullFramework>true</UseXamMacFullFramework>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">

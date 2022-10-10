@@ -25,8 +25,7 @@ namespace FileProviderExtension
         {
             License = AppGroupSettings.GetLicense();
             logger = new ConsoleLogger(GetType().Name);
-
-            remoteStorageMonitor = new RemoteStorageMonitor(AppGroupSettings.GetRemoteRootPath(), NSFileProviderManager.FromDomain(domain));
+            remoteStorageMonitor = new RemoteStorageMonitor(AppGroupSettings.GetRemoteRootPath(), this);
             remoteStorageMonitor.Start();
         }
 

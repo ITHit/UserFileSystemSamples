@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using FileProvider;
+using ITHit.FileSystem;
 
 namespace FileProviderExtension
 {
@@ -32,16 +33,13 @@ namespace FileProviderExtension
         /// </summary>
         private FileSystemWatcher watcher = new FileSystemWatcher();
 
-        /// <summary>
-        /// File provider manager for signals an update to virtual system.
-        /// </summary>
-        private NSFileProviderManager fileProviderManager;
+        private IEngine engine;
 
-        public RemoteStorageMonitor(string remoteStorageRootPath, NSFileProviderManager fileProviderManager)
+        public RemoteStorageMonitor(string remoteStorageRootPath, IEngine engine)
         {
             this.remoteStorageRootPath = remoteStorageRootPath;
             this.logger = new ConsoleLogger(GetType().Name);
-            this.fileProviderManager = fileProviderManager;
+            this.engine = engine;
         }
 
         /// <summary>
@@ -76,59 +74,28 @@ namespace FileProviderExtension
         {
             logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
 
-            string userFileSystemParentPath = Path.GetDirectoryName(e.FullPath);
-            logger.LogMessage(e.ChangeType.ToString(), Mapping.ReverseMapPath(userFileSystemParentPath));
-
-            fileProviderManager.SignalEnumerator(Mapping.ReverseMapPath(userFileSystemParentPath), error => {
-                if (error != null)
-                {
-                    logger.LogError(error.Description);
-                }
-            });
-
+            engine.ServerNotifications(Mapping.ReverseMapPath(e.OldFullPath)).MoveToAsync(e.FullPath);
         }
 
         private void DeletedAsync(object sender, FileSystemEventArgs e)
         {
             logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
-            string userFileSystemParentPath = Path.GetDirectoryName(e.FullPath);
-            logger.LogMessage(e.ChangeType.ToString(), Mapping.ReverseMapPath(userFileSystemParentPath));
 
-            fileProviderManager.SignalEnumerator(Mapping.ReverseMapPath(userFileSystemParentPath), error => {
-                if (error != null)
-                {
-                    logger.LogError(error.Description);
-                }
-            });
+            engine.ServerNotifications(Mapping.ReverseMapPath(e.FullPath)).DeleteAsync();
         }
 
         private void CreatedAsync(object sender, FileSystemEventArgs e)
         {
             logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
-            string userFileSystemParentPath = Path.GetDirectoryName(e.FullPath);
-            logger.LogMessage(e.ChangeType.ToString(), Mapping.ReverseMapPath(userFileSystemParentPath));
-            
-            fileProviderManager.SignalEnumerator(Mapping.ReverseMapPath(userFileSystemParentPath), error => {
-                if (error != null)
-                {
-                    logger.LogError(error.Description);
-                }
-            });
 
-            
+            engine.ServerNotifications(Mapping.ReverseMapPath(e.FullPath)).CreateAsync(null);
         }
 
         private void ChangedAsync(object sender, FileSystemEventArgs e)
         {
             logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
-            string remoteStoragePath = e.FullPath;
 
-            //fileProviderManager.SignalEnumerator(Mapping.ReverseMapPath(remoteStoragePath), error => {
-            //    if (error != null)
-            //    {
-            //        logger.LogError(error.Description);
-            //    }
-            //});            
+            engine.ServerNotifications(Mapping.ReverseMapPath(e.FullPath)).UpdateAsync(null);
         }
 
         private void Error(object sender, ErrorEventArgs e)
