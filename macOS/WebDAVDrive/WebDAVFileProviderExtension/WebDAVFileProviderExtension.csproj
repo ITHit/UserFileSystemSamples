@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{A7BA911A-34E1-4218-A926-727709847A15}</ProjectGuid>
+    <ProjectTypeGuids>{10CE9E57-9141-4DF0-916A-2C4FD4EE2A73};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <RootNamespace>WebDAVFileProviderExtension</RootNamespace>
+    <AssemblyName>WebDAVFileProviderExtension</AssemblyName>
+    <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
+    <ReleaseVersion>6.1.20210.0</ReleaseVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <UseXamMacFullFramework>true</UseXamMacFullFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <EnableCodeSigning>true</EnableCodeSigning>
+    <CodeSigningKey>Mac Developer</CodeSigningKey>
+    <CreatePackage>false</CreatePackage>
+    <EnablePackageSigning>false</EnablePackageSigning>
+    <IncludeMonoRuntime>false</IncludeMonoRuntime>
+    <UseSGen>true</UseSGen>
+    <UseRefCounting>true</UseRefCounting>
+    <HttpClientHandler></HttpClientHandler>
+    <LinkMode>None</LinkMode>
+    <AOTMode>None</AOTMode>
+    <PackageSigningKey>3rd Party Mac Developer Installer</PackageSigningKey>
+    <CodeSignProvision>Automatic</CodeSignProvision>
+    <LangVersion>9.0</LangVersion>
+    <UseHardenedRuntime>true</UseHardenedRuntime>
+    <XamMacArch>x86_64</XamMacArch>
+    <CodeSignEntitlements>Entitlements.plist</CodeSignEntitlements>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <DefineConstants></DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <EnableCodeSigning>false</EnableCodeSigning>
+    <CreatePackage>true</CreatePackage>
+    <EnablePackageSigning>false</EnablePackageSigning>
+    <IncludeMonoRuntime>true</IncludeMonoRuntime>
+    <UseSGen>true</UseSGen>
+    <UseRefCounting>true</UseRefCounting>
+    <CodeSignEntitlements>Entitlements.plist</CodeSignEntitlements>
+    <LinkMode>None</LinkMode>
+    <HttpClientHandler></HttpClientHandler>
+    <AOTMode>None</AOTMode>
+    <LangVersion>9.0</LangVersion>
+    <UseHardenedRuntime>true</UseHardenedRuntime>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="Xamarin.Mac" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="ITHit.WebDAV.Client">
+      <HintPath>..\..\packages\ITHitWebDAVClient.6.0.4047-Beta\lib\netstandard2.0\ITHit.WebDAV.Client.dll</HintPath>
+    </Reference>
+    <Reference Include="ITHit.FileSystem">
+      <HintPath>..\..\packages\ITHit.FileSystem.6.2.20461\lib\netstandard2.0\ITHit.FileSystem.dll</HintPath>
+    </Reference>
+    <Reference Include="ITHit.FileSystem.Mac">
+      <HintPath>..\..\packages\ITHit.FileSystem.Mac.6.2.20461\lib\net48\ITHit.FileSystem.Mac.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Drawing.Common.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Resources\" />
+    <Folder Include="Extensions\" />
+    <Folder Include="Synchronization\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Info.plist" />
+    <None Include="Entitlements.plist" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="VirtualFolder.cs" />
+    <Compile Include="VirtualEngine.cs" />
+    <Compile Include="VirtualFile.cs" />
+    <Compile Include="VirtualFileSystemItem.cs" />
+    <Compile Include="Mapping.cs" />
+    <Compile Include="Extensions\StreamExtensions.cs" />
+    <Compile Include="ActionMenuCommand.cs" />
+    <Compile Include="NSUrlSessionHandler.cs" />
+    <Compile Include="Synchronization\Changes.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\WebDAVCommon\WebDAVCommon.csproj">
+      <Project>{63D17988-E0A7-40A5-9DE6-9A01E104FCE5}</Project>
+      <Name>WebDAVCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Common\Core\Common.Core.csproj">
+      <Project>{FC3C471C-1B0E-4CAD-A084-408525EA86A7}</Project>
+      <Name>Common.Core</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Xamarin\Mac\Xamarin.Mac.AppExtension.CSharp.targets" />
+</Project>

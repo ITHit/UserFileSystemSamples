@@ -44,7 +44,7 @@
 <p>You can find more more about locking programming <a title="Creating Virtual Drive in .NET" href="https://www.userfilesystem.com/programming/creating_virtual_drive/#nav_locking">in this section</a>.&nbsp;</p>
 <h2>Packaging Project</h2>
 <p><span class="warn">Starting with IT Hit User File System v5 Beta, the VirtualDrive project supports identity and provides&nbsp;the same functionality as VirtualDrive.Packaging project. Starting VirtualDrive project directly registers thumbnails handler shell extension, context menu handler and custom states &amp; columns handler.</span></p>
-<p>This sample provides a Windows Application Packaging Project which allows deployment of your application to the Windows Store. The&nbsp;package can be also used for direct&nbsp;<a href="https://www.youtube.com/watch?v=fJkbYPyd08w&amp;t=73s">deployment to users</a>.</p>
+<p>This sample provides a Windows Application Packaging Project which allows deployment of your application to the Windows Store. The&nbsp;package can be also used for direct&nbsp;deployment to users in a corporate environment or consumer environment. Start reading about various deployment scenarios in <a href="https://learn.microsoft.com/en-us/windows/msix/desktop/managing-your-msix-deployment-targetdevices">this article</a>.</p>
 <p>To start the project with thumbnails and context menu support follow these steps:</p>
 <ol>
 <li>Set the packaging project as your startup project.</li>

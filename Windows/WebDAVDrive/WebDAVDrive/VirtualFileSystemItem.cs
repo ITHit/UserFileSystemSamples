@@ -91,7 +91,7 @@ namespace WebDAVDrive
             string remoteStorageOldPath = RemoteStoragePath;
             string remoteStorageNewPath = Mapping.MapPath(userFileSystemNewPath);
 
-            await Program.DavClient.MoveToAsync(new Uri(remoteStorageOldPath), new Uri(remoteStorageNewPath), true, null, cancellationToken);
+            await Program.DavClient.MoveToAsync(new Uri(remoteStorageOldPath), new Uri(remoteStorageNewPath), true, null, null, cancellationToken);
             Logger.LogDebug("Moved in the remote storage successfully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
         }
 
@@ -121,7 +121,7 @@ namespace WebDAVDrive
 
             try
             {
-                await Program.DavClient.DeleteAsync(new Uri(RemoteStoragePath), null, cancellationToken);
+                await Program.DavClient.DeleteAsync(new Uri(RemoteStoragePath), null, null, cancellationToken);
                 Logger.LogDebug("Deleted in the remote storage successfully", UserFileSystemPath, default, operationContext);
             }
             catch(NotFoundException ex)
@@ -279,7 +279,7 @@ namespace WebDAVDrive
             double timOutMs = lockMode == LockMode.Auto ? autoLockTimoutMs : manualLockTimoutMs;
             TimeSpan timeOut = timOutMs == -1 ? TimeSpan.MaxValue : TimeSpan.FromMilliseconds(timOutMs);
 
-            LockInfo lockInfo = await Program.DavClient.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, lockOwner, timeOut, cancellationToken);
+            LockInfo lockInfo = await Program.DavClient.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, lockOwner, timeOut, null, cancellationToken);
 
             // Save lock-token and lock-mode. Start the timer to refresh the lock.
             await SaveLockAsync(lockInfo, lockMode, cancellationToken);
@@ -351,8 +351,8 @@ namespace WebDAVDrive
                         {
                             // Extend (refresh) the lock.
                             //Program.DavClient.RefreshLockAsync(new Uri(RemoteStoragePath), lockToken, timout, cancellationToken);
-                            IHierarchyItem item = await Program.DavClient.GetItemAsync(new Uri(RemoteStoragePath), cancellationToken);
-                            LockInfo lockInfo = await item.RefreshLockAsync(lockToken, timOut, cancellationToken);
+                            IHierarchyItem item = await Program.DavClient.GetItemAsync(new Uri(RemoteStoragePath), null, cancellationToken);
+                            LockInfo lockInfo = await item.RefreshLockAsync(lockToken, timOut, null, cancellationToken);
 
                             Logger.LogMessage($"Lock extended, new timout: {lockInfo.TimeOut:hh\\:mm\\:ss\\.ff}", UserFileSystemPath);
 
@@ -405,7 +405,7 @@ namespace WebDAVDrive
                     // Unlock the item in the remote storage.
                     try
                     {
-                        await Program.DavClient.UnlockAsync(new Uri(RemoteStoragePath), lockTokens, cancellationToken);
+                        await Program.DavClient.UnlockAsync(new Uri(RemoteStoragePath), lockTokens, null, cancellationToken);
                         Logger.LogDebug("Unlocked in the remote storage successfully", UserFileSystemPath, default, operationContext);
                     }
                     catch (ITHit.WebDAV.Client.Exceptions.ConflictException)

@@ -27,7 +27,7 @@
 <p>You can start managing and editing files on your WebDAV server&nbsp;and will see all changes being propagated to the file system on the client machine. You can also edit documents and manage file structure on the client and all changes will automatically be reflected on the WebDAV server.</p>
 <h2 class="heading-link" id="nav_packagingproject">Packaging Project<a class="list-link d-inline" href="https://www.userfilesystem.com/examples/virtual_drive/#nav_packagingproject"></a></h2>
 <p><span class="warn">Starting with IT Hit User File System v5 Beta, the WebDAVDrive project supports identity and provides&nbsp;the same functionality as <span>WebDAVDrive</span>.Packaging project. Starting&nbsp;<span>WebDAVDrive</span> project directly registers thumbnails handler shell extension, context menu handler and custom states &amp; columns handler.</span></p>
-<p>This sample provides a Windows Application Packaging Project which allows deployment of your application to the Windows Store. The&nbsp;package can be also used for direct&nbsp;<a href="https://www.youtube.com/watch?v=fJkbYPyd08w&amp;t=73s">deployment to users</a>.</p>
+<p>This sample provides a Windows Application Packaging Project which allows deployment of your application to the Windows Store. The&nbsp;package can be also used for direct&nbsp;deployment to users in a corporate environment or consumer environment. Start reading about various deployment scenarios in&nbsp;<a href="https://learn.microsoft.com/en-us/windows/msix/desktop/managing-your-msix-deployment-targetdevices">this article</a>.</p>
 <p>To start the project with thumbnails and context menu support follow these steps:</p>
 <ol>
 <li>Set the packaging project as your startup project.</li>

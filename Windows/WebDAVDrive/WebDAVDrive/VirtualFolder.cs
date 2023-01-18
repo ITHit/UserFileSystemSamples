@@ -51,7 +51,7 @@ namespace WebDAVDrive
                     content.Position = 0;
                     await content.CopyToAsync(outputStream);
                 }
-            }, null, contentLength, 0, -1, null, null, cancellationToken);
+            }, null, contentLength, 0, -1, null, null, null, cancellationToken);
 
             // Store ETag in persistent placeholder properties untill the next update.
             Engine.Placeholders.GetItem(userFileSystemNewItemPath).SetETag(eTag);
@@ -67,7 +67,7 @@ namespace WebDAVDrive
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
 
             Uri newFolderUri = new Uri(new Uri(RemoteStoragePath), folderMetadata.Name);
-            await Program.DavClient.CreateFolderAsync(newFolderUri, null, cancellationToken);
+            await Program.DavClient.CreateFolderAsync(newFolderUri, null, null, cancellationToken);
 
             // Store ETag (if any) unlil the next update here.
             // WebDAV server typically does not provide eTags for folders.
@@ -118,7 +118,7 @@ namespace WebDAVDrive
         public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern, CancellationToken cancellationToken = default)
         {
             // WebDAV Client lib will retry the request in case authentication is requested by the server.
-            Client.IHierarchyItem[] remoteStorageChildren = await Program.DavClient.GetChildrenAsync(new Uri(RemoteStoragePath), false, null, cancellationToken);
+            Client.IHierarchyItem[] remoteStorageChildren = await Program.DavClient.GetChildrenAsync(new Uri(RemoteStoragePath), false, null, null, cancellationToken);
 
             List<FileSystemItemMetadataExt> userFileSystemChildren = new List<FileSystemItemMetadataExt>();
 

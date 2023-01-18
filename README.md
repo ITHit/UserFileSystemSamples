@@ -32,7 +32,7 @@ This sample implements a virtual file system for Mac with synchronization suppor
 <a href="https://github.com/ITHit/UserFileSystemSamples/tree/master/Windows/VirtualDrive/">
 <p>
 This is a virtual drive implementation with thumbnail support, custom context menu and custom states &amp;amp; columns support. It also demonstrates automatic Microsoft Office/AutoCAD documents locking.&nbsp;
-To simulate the remote storage, this sample is usi                                            <span>...</span>
+To simulate the remote storage, this sample is us                                            <span>...</span>
 </p>
 </a>
 </li>
