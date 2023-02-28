@@ -16,6 +16,9 @@ namespace ITHit.FileSystem.Samples.Common
         /// <inheritdoc/>
         public byte[] RemoteStorageItemId { get; set; }
 
+        /// <inheritdoc/>
+        public byte[] RemoteStorageParentItemId { get; set; }
+
         ///<inheritdoc/>
         public string Name { get; set; }
 

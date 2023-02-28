@@ -1,6 +1,6 @@
 
-<h1 class="d-xl-block d-none">Virtual File System Sample in .NET, C#</h1>
-<p>This sample implements a virtual file system with synchronization support, on-demand loading,&nbsp;selective offline files support, upload and download progress, and error reporting. It synchronizes files and folders both from remote storage to the user file system and from the user file system to remote storage. It is written in .NET Core, C#.&nbsp;&nbsp;</p>
+<h1 class="d-xl-block d-none">Virtual File System Sample for Windows in .NET, C#</h1>
+<p>This sample implements a virtual file system for Windows with synchronization support, on-demand loading,&nbsp;selective offline files support, upload and download progress, and error reporting. It synchronizes files and folders both from remote storage to the user file system and from the user file system to remote storage. It is written in .NET Core, C#.&nbsp;&nbsp;</p>
 <p><span class="warn">Since IT Hit User File System v5.5 Beta 2 this sample supports Microsoft Office and AutoCAD documents editing and synchronization.</span></p>
 <p>To simulate the remote storage, this sample is using a folder in the local file system on the same machine.&nbsp;</p>
 <p>The purpose of this sample is to demonstrate the major features of the IT Hit User File System for .NET and provide patterns for its programming. You will use this sample as a starting point for creating a OneDrive-like file system for your DMS/CRM/ERP and will reprogram it to publish data from your real storage instead of the local file system.&nbsp;This sample provides a bare minimum code and functionality for demo purposes. For advanced features, such as thumbnails support, context menu, automatic locking and custom states/properties support see the <a title="Virtual Drive Sample in .NET, C#" href="https://www.userfilesystem.com/examples/virtual_drive/">Virtual Drive sample</a>&nbsp;and <a title="WebDAV Drive Sample" href="https://www.userfilesystem.com/examples/webdav_drive/">WebDAV Drive sample</a>.</p>
@@ -63,5 +63,5 @@
 <h3>Synchronization after Application Restart&nbsp;</h3>
 <p>When your application is not running and a user modifies any documents or creates, deletes or moves any files or folders on the drive, this sample will automatically find all changes and will sync them to the server. See <a title="User File System to Remote Storage Synchronization" href="https://www.userfilesystem.com/programming/creating_virtual_file_system/#nav_userfilesystemtoremotestoragesynchronization">this paragraph</a> for more details.</p>
 <h3 class="para d-inline next-article-heading">Next Article:</h3>
-<a title="Virtual File System Sample for Mac in .NET, C#" href="https://www.userfilesystem.com/examples/virtual_file_system_mac/">Virtual File System Sample for Mac in .NET, C#</a>
+<a title="Virtual File System Sample for Mac in .NET, C#" href="https://www.userfilesystem.com/examples/virtual_file_system_mac/">Virtual File System Sample for macOS in .NET, C#</a>
 

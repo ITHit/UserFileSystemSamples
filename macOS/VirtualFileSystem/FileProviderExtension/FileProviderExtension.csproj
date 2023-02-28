@@ -9,7 +9,7 @@
     <RootNamespace>FileProviderExtension</RootNamespace>
     <AssemblyName>FileProviderExtension</AssemblyName>
     <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
-    <ReleaseVersion>6.1.20210.0</ReleaseVersion>
+    <ReleaseVersion>6.3.20496.0</ReleaseVersion>
     <UseXamMacFullFramework>true</UseXamMacFullFramework>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
   </PropertyGroup>
@@ -64,10 +64,10 @@
     <Reference Include="Xamarin.Mac" />
     <Reference Include="System.Drawing.Common.dll" />
     <Reference Include="ITHit.FileSystem">
-      <HintPath>..\..\packages\ITHit.FileSystem.6.2.20461\lib\netstandard2.0\ITHit.FileSystem.dll</HintPath>
+      <HintPath>..\..\packages\ITHit.FileSystem.6.3.20496\lib\netstandard2.0\ITHit.FileSystem.dll</HintPath>
     </Reference>
     <Reference Include="ITHit.FileSystem.Mac">
-      <HintPath>..\..\packages\ITHit.FileSystem.Mac.6.2.20461\lib\net48\ITHit.FileSystem.Mac.dll</HintPath>
+      <HintPath>..\..\packages\ITHit.FileSystem.Mac.6.3.20496\lib\net48\ITHit.FileSystem.Mac.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

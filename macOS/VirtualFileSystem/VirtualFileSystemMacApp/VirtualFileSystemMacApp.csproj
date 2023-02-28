@@ -9,7 +9,7 @@
     <RootNamespace>VirtualFilesystemMacApp</RootNamespace>
     <AssemblyName>Virtual Filesystem Sample</AssemblyName>
     <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
-    <ReleaseVersion>6.1.20210.0</ReleaseVersion>
+    <ReleaseVersion>6.3.20496.0</ReleaseVersion>
     <UseXamMacFullFramework>true</UseXamMacFullFramework>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
   </PropertyGroup>

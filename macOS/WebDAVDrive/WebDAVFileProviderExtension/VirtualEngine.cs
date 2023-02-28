@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 using Common.Core;
 using FileProvider;
@@ -27,24 +28,26 @@ namespace WebDAVFileProviderExtension
         {
             License = AppGroupSettings.GetLicense();
             logger = new ConsoleLogger(GetType().Name);
+            logger.LogMessage("Engine started.");
             webDavSession = new WebDavSession(AppGroupSettings.GetWebDAVClientLicense(), new NSUrlSessionHandler());
-
-            logger.LogMessage("Init vfs engine v3.");
+            webDavSession.CustomHeaders.Add("InstanceId", Environment.MachineName);
+            // set remote root storage item id.
+            SetRemoteRootStorageItemId(GetRootStorageItemIdAsync().Result);
         }
 
         /// <inheritdoc/>
         public override async Task<IFileSystemItem> GetFileSystemItemAsync(string userFileSystemPath, FileSystemItemType itemType, byte[] remoteStorageItemId = null, ILogger logger = null)
         {
-            string remotePath = Mapping.MapPath(userFileSystemPath);
-            logger.LogMessage($"{nameof(IEngine)}.{nameof(GetFileSystemItemAsync)}()", userFileSystemPath, remotePath);
+            string remoteStorageUrl = Encoding.UTF8.GetString(remoteStorageItemId);
+            logger.LogMessage($"{nameof(IEngine)}.{nameof(GetFileSystemItemAsync)}()", userFileSystemPath);
 
-            if (Path.GetExtension(userFileSystemPath).Length > 0)
+            if (itemType == FileSystemItemType.File)
             {
-                return new VirtualFile(userFileSystemPath, webDavSession, this);
+                return new VirtualFile(remoteStorageUrl, webDavSession, this);
             }
             else
             {
-                return new VirtualFolder(userFileSystemPath, webDavSession, this);
+                return new VirtualFolder(remoteStorageUrl, webDavSession, this);
             }
         }
 
@@ -69,6 +72,16 @@ namespace WebDAVFileProviderExtension
 
             throw new NotImplementedException();
         }
+
+        /// <summary>
+        /// Returns remote storage item id.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<byte[]> GetRootStorageItemIdAsync()
+        {
+            return (await new VirtualFolder(AppGroupSettings.GetWebDAVServerUrl(), webDavSession, this).GetMetadataAsync()).RemoteStorageItemId;
+        }
+
         
 
         public override void LogDebug(string message, string sourcePath = null, string targetPath = null, IOperationContext operationContext = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)

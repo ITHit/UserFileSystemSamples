@@ -17,57 +17,6 @@ namespace WebDAVFileProviderExtension
     /// <remarks>You will change methods of this class to map the user file system path to your remote storage path.</remarks>
     internal static class Mapping
     {
-        /// <summary>
-        /// Returns a remote storage URI that corresponds to the user file system path.
-        /// </summary>
-        /// <param name="userFileSystemPath">Full path in the user file system.</param>
-        /// <returns>Remote storage URI that corresponds to the <paramref name="userFileSystemPath"/>.</returns>
-        public static string MapPath(string userFileSystemPath)
-        {
-            // Get path relative to the virtual root.
-            string relativePath = userFileSystemPath.TrimEnd(Path.DirectorySeparatorChar).Substring(
-                AppGroupSettings.GetUserRootPath().TrimEnd(Path.DirectorySeparatorChar).Length);
-            relativePath = relativePath.TrimStart(Path.DirectorySeparatorChar);
-
-            string[] segments = relativePath.Split('/');
-
-            IEnumerable<string> encodedSegments = segments.Select(x => Uri.EscapeDataString(x));
-            relativePath = string.Join('/', encodedSegments);
-
-            string path = $"{AppGroupSettings.GetWebDAVServerUrl()}{relativePath}";
-
-            // Add trailing slash to folder URLs so Uri class concatenation works correctly.
-            if (!path.EndsWith('/') && Path.GetExtension(userFileSystemPath).Length == 0)
-            {
-                path = $"{path}/";
-            }
-
-            return path;
-        }
-
-        /// <summary>
-        /// Returns a user file system path that corresponds to the remote storage URI.
-        /// </summary>
-        /// <param name="remoteStorageUri">Remote storage URI.</param>
-        /// <returns>Path in the user file system that corresponds to the <paramref name="remoteStorageUri"/>.</returns>
-        public static string ReverseMapPath(string remoteStorageUri)
-        {
-            // Remove the 'https://server:8080/' part.
-            string rsPath = new UriBuilder(remoteStorageUri).Path;
-            string webDAVServerUrlPath = new UriBuilder(AppGroupSettings.GetWebDAVServerUrl()).Path;
-
-            // Get path relative to the virtual root.
-            string relativePath = rsPath.Substring(webDAVServerUrlPath.TrimEnd('/').Length);
-            relativePath = relativePath.TrimStart('/');
-
-            string[] segments = relativePath.Split('/');
-
-            IEnumerable<string> decodedSegments = segments.Select(x => Uri.UnescapeDataString(x));
-            relativePath = string.Join(Path.DirectorySeparatorChar, decodedSegments);
-
-            string path = $"{AppGroupSettings.GetUserRootPath().TrimEnd(Path.DirectorySeparatorChar)}{Path.DirectorySeparatorChar}{relativePath.TrimEnd('/')}";
-            return path;
-        }
 
         /// <summary>
         /// Gets a user file system item info from the remote storage data.
@@ -93,14 +42,8 @@ namespace WebDAVFileProviderExtension
             }
 
             userFileSystemItem.Name = remoteStorageItem.DisplayName;
-            try
-            {
-                userFileSystemItem.RemoteStorageItemId = Encoding.UTF8.GetBytes(ReverseMapPath(remoteStorageItem.Href.AbsoluteUri));
-            }
-            catch(Exception ex)
-            {
-                (new ConsoleLogger("Mapping")).LogError($"Error {remoteStorageItem.Href.AbsoluteUri}", ex: ex);
-            }
+            userFileSystemItem.RemoteStorageItemId = GetPropertyValue(remoteStorageItem, "resource-id", remoteStorageItem.Href.AbsoluteUri);
+            userFileSystemItem.RemoteStorageParentItemId = GetPropertyValue(remoteStorageItem, "parent-resource-id", null);
 
             if (DateTime.MinValue != remoteStorageItem.CreationDate)
             {
@@ -131,6 +74,33 @@ namespace WebDAVFileProviderExtension
             */
 
             return userFileSystemItem;
+        }
+
+        /// <summary>
+        /// Returns property value, if property not exists returns default value.
+        /// </summary>
+        private static byte[] GetPropertyValue(Client.IHierarchyItem remoteStorageItem, string propertyName, string defaultValue)
+        {
+            byte[] resultValue = null;
+            try
+            {
+                Client.Property property = remoteStorageItem.Properties.Where(p => p.Name.Name == propertyName).FirstOrDefault();
+                if (property != null)
+                {
+                    resultValue = Encoding.UTF8.GetBytes(property.StringValue);
+                }
+                else if(defaultValue != null)
+                {
+                    resultValue = Encoding.UTF8.GetBytes(defaultValue);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                (new ConsoleLogger("Mapping")).LogError($"Error parsing {remoteStorageItem.Href.AbsoluteUri} property {propertyName}", ex: ex);
+            }
+
+            return resultValue;
         }
     }
 }

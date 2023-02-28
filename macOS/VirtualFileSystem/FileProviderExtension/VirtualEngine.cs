@@ -30,6 +30,8 @@ namespace FileProviderExtension
             logger = new ConsoleLogger(GetType().Name);
             remoteStorageMonitor = new RemoteStorageMonitor(AppGroupSettings.GetRemoteRootPath(), this);
             remoteStorageMonitor.Start();
+
+            logger.LogMessage($"Engine started");
         }
 
         /// <inheritdoc/>

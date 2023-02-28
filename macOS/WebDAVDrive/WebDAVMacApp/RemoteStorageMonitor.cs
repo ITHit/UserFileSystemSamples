@@ -58,6 +58,7 @@ namespace WebDAVMacApp
             cancellationTokenSource = new CancellationTokenSource();
             clientWebSocket = new ClientWebSocket();
             clientWebSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(10);
+            clientWebSocket.Options.SetRequestHeader("InstanceId", Environment.MachineName);
 
             await clientWebSocket.ConnectAsync(new Uri(webSocketServerUrl), CancellationToken.None);
 

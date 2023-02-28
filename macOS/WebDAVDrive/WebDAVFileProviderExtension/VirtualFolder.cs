@@ -8,7 +8,8 @@ using Client = ITHit.WebDAV.Client;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Synchronization;
 
-using WebDAVFileProviderExtension.Synchronization;
+using System.Text;
+using ITHit.FileSystem.Mac.Synchronization;
 
 namespace WebDAVFileProviderExtension
 {
@@ -31,8 +32,8 @@ namespace WebDAVFileProviderExtension
         /// <inheritdoc/>
         public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
-            Uri newFileUri = new Uri(new Uri(RemoteStoragePath), fileMetadata.Name);
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", Path.Combine(UserFileSystemPath, fileMetadata.Name), targetPath: newFileUri.AbsoluteUri);
+            Uri newFileUri = new Uri(await GetItemHrefAsync(), fileMetadata.Name);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", newFileUri.AbsoluteUri);
 
             // Create a new file in the remote storage.
             long contentLength = content != null ? content.Length : 0;
@@ -49,15 +50,15 @@ namespace WebDAVFileProviderExtension
             }, null, contentLength, 0, -1, null, null, null, cancellationToken);
 
             // WebDAV does not use any item IDs, returning null.
-            return null;
+            VirtualFile newFile = new VirtualFile(newFileUri.AbsoluteUri, Session, Logger);
+            return (await newFile.GetMetadataAsync()).RemoteStorageItemId;
         }
 
         /// <inheritdoc/>
         public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
-            Uri newFolderUri = new Uri(new Uri(RemoteStoragePath), folderMetadata.Name);
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()",
-                Path.Combine(UserFileSystemPath, folderMetadata.Name), targetPath: newFolderUri.AbsoluteUri);
+            Uri newFolderUri = new Uri(await GetItemHrefAsync(), folderMetadata.Name);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", newFolderUri.AbsoluteUri);
 
             await Session.CreateFolderAsync(newFolderUri, null, null, cancellationToken);
 
@@ -66,21 +67,27 @@ namespace WebDAVFileProviderExtension
             // Engine.Placeholders.GetItem(userFileSystemNewItemPath).SetETag(eTag);
 
             // WebDAV does not use any item IDs, returning null.
-            return null;
+            VirtualFolder newFolder = new VirtualFolder(newFolderUri.AbsoluteUri, Session, Logger);
+
+            return (await newFolder.GetMetadataAsync()).RemoteStorageItemId;
         }
 
         /// <inheritdoc/>
         public async Task<IChanges> GetChangesAsync(string syncToken)
         {
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChangesAsync)}({syncToken})", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChangesAsync)}({syncToken})", RemoteStorageID);
 
             Client.IChanges davChanges = null;
             Changes changes = new Changes();
             changes.NewSyncToken = syncToken;
 
+            Client.PropertyName[] propNames = new Client.PropertyName[2];
+            propNames[0] = new Client.PropertyName("resource-id", "DAV:");
+            propNames[1] = new Client.PropertyName("parent-resource-id", "DAV:");
+
             do
             {
-                davChanges = await Session.GetChangesAsync(new Uri(RemoteStoragePath), null, changes.NewSyncToken, true);
+                davChanges = await Session.GetChangesAsync(new Uri(RemoteStorageID), propNames, changes.NewSyncToken, true);
                 changes.NewSyncToken = davChanges.NewSyncToken;
 
                 foreach (Client.IChangedItem remoteStorageItem in davChanges)
@@ -99,9 +106,13 @@ namespace WebDAVFileProviderExtension
         /// <inheritdoc/>
         public async Task GetChildrenAsync(string pattern, IOperationContext operationContext, IFolderListingResultContext resultContext, CancellationToken cancellationToken)
         {
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath, RemoteStoragePath);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", RemoteStorageID);
 
-            Client.IHierarchyItem[] remoteStorageChildren = await Session.GetChildrenAsync(new Uri(RemoteStoragePath), false, null, null, cancellationToken);
+            Client.PropertyName[] propNames = new Client.PropertyName[2];
+            propNames[0] = new Client.PropertyName("resource-id", "DAV:");
+            propNames[1] = new Client.PropertyName("parent-resource-id", "DAV:");
+
+            Client.IHierarchyItem[] remoteStorageChildren = await Session.GetChildrenAsync(new Uri(RemoteStorageID), false, propNames, null, cancellationToken);
 
             List<IFileSystemItemMetadata> userFileSystemChildren = new List<IFileSystemItemMetadata>();
             foreach (Client.IHierarchyItem remoteStorageItem in remoteStorageChildren)
@@ -120,7 +131,7 @@ namespace WebDAVFileProviderExtension
         public async Task WriteAsync(IFolderMetadata folderMetadata, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             // Typically we can not change any folder metadata on a WebDAV server, just logging the call.
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", RemoteStorageID, default, operationContext);
         }
     }
     

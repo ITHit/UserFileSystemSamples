@@ -9,7 +9,7 @@
     <RootNamespace>WebDAVFileProviderExtension</RootNamespace>
     <AssemblyName>WebDAVFileProviderExtension</AssemblyName>
     <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
-    <ReleaseVersion>6.1.20210.0</ReleaseVersion>
+    <ReleaseVersion>6.3.20496.0</ReleaseVersion>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <UseXamMacFullFramework>true</UseXamMacFullFramework>
   </PropertyGroup>
@@ -64,20 +64,19 @@
     <Reference Include="Xamarin.Mac" />
     <Reference Include="System.Net.Http" />
     <Reference Include="ITHit.WebDAV.Client">
-      <HintPath>..\..\packages\ITHitWebDAVClient.6.0.4047-Beta\lib\netstandard2.0\ITHit.WebDAV.Client.dll</HintPath>
+      <HintPath>..\..\packages\ITHitWebDAVClient.6.0.4076\lib\netstandard2.0\ITHit.WebDAV.Client.dll</HintPath>
     </Reference>
     <Reference Include="ITHit.FileSystem">
-      <HintPath>..\..\packages\ITHit.FileSystem.6.2.20461\lib\netstandard2.0\ITHit.FileSystem.dll</HintPath>
+      <HintPath>..\..\packages\ITHit.FileSystem.6.3.20496\lib\netstandard2.0\ITHit.FileSystem.dll</HintPath>
     </Reference>
     <Reference Include="ITHit.FileSystem.Mac">
-      <HintPath>..\..\packages\ITHit.FileSystem.Mac.6.2.20461\lib\net48\ITHit.FileSystem.Mac.dll</HintPath>
+      <HintPath>..\..\packages\ITHit.FileSystem.Mac.6.3.20496\lib\net48\ITHit.FileSystem.Mac.dll</HintPath>
     </Reference>
     <Reference Include="System.Drawing.Common.dll" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Resources\" />
     <Folder Include="Extensions\" />
-    <Folder Include="Synchronization\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Info.plist" />
@@ -93,7 +92,6 @@
     <Compile Include="Extensions\StreamExtensions.cs" />
     <Compile Include="ActionMenuCommand.cs" />
     <Compile Include="NSUrlSessionHandler.cs" />
-    <Compile Include="Synchronization\Changes.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WebDAVCommon\WebDAVCommon.csproj">

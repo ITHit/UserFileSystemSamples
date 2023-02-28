@@ -25,14 +25,14 @@ namespace WebDAVFileProviderExtension
         /// <inheritdoc/>
         public async Task OpenAsync(IOperationContext operationContext, IResultContext context)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(OpenAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(OpenAsync)}()", RemoteStorageID);
         }
 
         
         /// <inheritdoc/>
         public async Task CloseAsync(IOperationContext operationContext, IResultContext context)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(CloseAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(CloseAsync)}()", RemoteStorageID);
         }
      
         /// <inheritdoc/>
@@ -41,13 +41,13 @@ namespace WebDAVFileProviderExtension
             // On Windows this method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer write to the output stream or call the resultContext.ReportProgress() or resultContext.ReturnData() methods.
 
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", RemoteStorageID, default, operationContext);
 
             string eTag = null;
 
             // Buffer size must be multiple of 4096 bytes for optimal performance.
             const int bufferSize = 0x500000; // 5Mb.
-            using (Client.IWebResponse response = await Session.DownloadAsync(new Uri(RemoteStoragePath), offset, length, null, cancellationToken))
+            using (Client.IWebResponse response = await Session.DownloadAsync(new Uri(RemoteStorageID), offset, length, null, cancellationToken))
             {
                 using (Stream stream = await response.GetResponseStreamAsync())
                 {
@@ -58,7 +58,7 @@ namespace WebDAVFileProviderExtension
                     catch (OperationCanceledException)
                     {
                         // Operation was canceled by the calling Engine.StopAsync() or the operation timeout occured.
-                        Logger.LogMessage($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default);
+                        Logger.LogMessage($"{nameof(ReadAsync)}({offset}, {length}) canceled", RemoteStorageID, default);
                     }
                 }
                 eTag = response.GetHeaderValue("ETag");
@@ -70,20 +70,20 @@ namespace WebDAVFileProviderExtension
         public async Task ValidateDataAsync(long offset, long length, IValidateDataOperationContext operationContext, IValidateDataResultContext resultContext)
         {
 
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", RemoteStorageID);
         }
 
         /// <inheritdoc/>
         public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", RemoteStorageID, default, operationContext);
 
             if (content != null)
             {
                 try
                 {
                     // Update remote storage file content.
-                    string newEtag = await Session.UploadAsync(new Uri(RemoteStoragePath), async (outputStream) =>
+                    string newEtag = await Session.UploadAsync(new Uri(RemoteStorageID), async (outputStream) =>
                     {
                         content.Position = 0; // Setting position to 0 is required in case of retry.
                         await content.CopyToAsync(outputStream);
@@ -94,8 +94,7 @@ namespace WebDAVFileProviderExtension
                     // Server and client ETags do not match.
                     // Set conflict status in Windows Explorer.
 
-                    Logger.LogMessage($"Conflict. The item is modified.", UserFileSystemPath, default, operationContext);
-                    inSyncResultContext.SetInSync = false;
+                    Logger.LogMessage($"Conflict. The item is modified.", RemoteStorageID, default, operationContext);
                 }
             }
         }

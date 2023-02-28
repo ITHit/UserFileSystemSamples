@@ -10,7 +10,7 @@
     <AssemblyName>VirtualFilesystemCommon</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
-    <ReleaseVersion>6.1.20210.0</ReleaseVersion>
+    <ReleaseVersion>6.3.20496.0</ReleaseVersion>
     <UseXamMacFullFramework>true</UseXamMacFullFramework>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">

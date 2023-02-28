@@ -1,6 +1,6 @@
 
-<h1 class="d-xl-block d-none">Virtual Drive Sample in .NET, C#</h1>
-<p>This is a virtual drive implementation with thumbnail support, custom context menu and custom states &amp; columns support. It also demonstrates automatic Microsoft Office/AutoCAD documents locking.&nbsp;</p>
+<h1 class="d-xl-block d-none">Virtual Drive Sample for Windows in .NET, C#</h1>
+<p>This is a virtual drive implementation for Windows with thumbnail support, custom context menu and custom states &amp; columns support. It also demonstrates automatic Microsoft Office/AutoCAD documents locking.&nbsp;</p>
 <p>To simulate the remote storage, this sample is using a folder in the local file system on the same machine.&nbsp;This sample supports all basic synchronization features provided by the <a title="Virtual File System Sample for Windows" href="https://www.userfilesystem.com/examples/virtual_file_system/">Virtual File System</a> sample: folders&nbsp;on-demand listing, files on-demand content loading, selective offline files support, hydration progress. The sample is written in C#/.NET.</p>
 <p><span>This sample supports application identity (sparce package) and provides a packaging project for deployment to Windows store.</span></p>
 <p><span>You can download this sample and a trial license in the&nbsp;</span><a title="Download" href="https://www.userfilesystem.com/download/">product download area</a>&nbsp;as well as you can clone it from<span>&nbsp;</span><a title="Virtual Drive Sample in .NET, C#" href="https://github.com/ITHit/UserFileSystemSamples/tree/master/Windows/VirtualDrive">GitHub</a><span>.&nbsp;</span></p>
@@ -60,5 +60,5 @@
 </ul>
 <p>&nbsp;</p>
 <h3 class="para d-inline next-article-heading">Next Article:</h3>
-<a title="WebDAV Drive Sample in .NET, C#" href="https://www.userfilesystem.com/examples/webdav_drive/">WebDAV Drive Sample in .NET, C#</a>
+<a title="WebDAV Drive Sample for Windows in .NET, C#" href="https://www.userfilesystem.com/examples/webdav_drive/">WebDAV Drive Sample for Windows in .NET, C#</a>
 
