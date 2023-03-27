@@ -33,8 +33,7 @@ namespace WebDAVDrive
             IEnumerable<string> encodedSegments = segments.Select(x => Uri.EscapeDataString(x));
             relativePath = string.Join('/', encodedSegments);
 
-            string path = $"{Program.Settings.WebDAVServerUrl}{relativePath}";
-
+            string path = $"{Program.Settings.WebDAVServerUrl.Trim('/')}/{relativePath}";
 
             // Add trailing slash to folder URLs so Uri class concatenation works correctly.
             if (!path.EndsWith('/') && Directory.Exists(userFileSystemPath))
@@ -65,8 +64,7 @@ namespace WebDAVDrive
             IEnumerable<string> decodedSegments = segments.Select(x => Uri.UnescapeDataString(x));
             relativePath = string.Join(Path.DirectorySeparatorChar, decodedSegments);
 
-            string path = $"{Program.Settings.UserFileSystemRootPath}{relativePath}";
-            return path;
+            return Path.Combine(Program.Settings.UserFileSystemRootPath, relativePath);
         }
 
         /// <summary>

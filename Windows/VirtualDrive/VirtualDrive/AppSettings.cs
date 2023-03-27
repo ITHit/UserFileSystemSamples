@@ -79,19 +79,18 @@ namespace VirtualDrive
                 throw new ArgumentNullException("Settings.UserFileSystemRootPath");
             }
 
-            string applicationDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-
+          
             if (!Path.IsPathRooted(settings.RemoteStorageRootPath))
             {
                 // Path to RemoteStorage folder when Any CPU is selected.  
-                string remoteStorageRootPath = Path.GetFullPath(Path.Combine(applicationDirectory, "..", "..", "..", settings.RemoteStorageRootPath));
+                string remoteStorageRootPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", settings.RemoteStorageRootPath));
 
                 if (!Directory.Exists(remoteStorageRootPath))
                 {
                     // Path to RemoteStorage folder when x64/x86 is selected.
-                    remoteStorageRootPath = Path.GetFullPath(Path.Combine(applicationDirectory, "..", "..", "..", "..", settings.RemoteStorageRootPath));
+                    remoteStorageRootPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", settings.RemoteStorageRootPath));
                     
-                    if (applicationDirectory.Contains("WindowsApps"))
+                    if (AppContext.BaseDirectory.Contains("WindowsApps"))
                     {
                         // Path to RemoteStorage for msix package.
                         string applicationDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), settings.AppID);
@@ -105,14 +104,14 @@ namespace VirtualDrive
                         if (!Directory.Exists(remoteStorageRootPath))
                         {
                             // Copy RemoteStorage folder to ProgramData folder.
-                            CopyDirectoryRecursively(new DirectoryInfo(Path.GetFullPath(Path.Combine(applicationDirectory, settings.RemoteStorageRootPath))),
+                            CopyDirectoryRecursively(new DirectoryInfo(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, settings.RemoteStorageRootPath))),
                                 new DirectoryInfo(remoteStorageRootPath));
                         }
                     }
                     else if (!Directory.Exists(remoteStorageRootPath))
                     {
                         // Path to RemoteStorage folder when run VirtualDrive.Package project directly.
-                        remoteStorageRootPath = Path.GetFullPath(Path.Combine(applicationDirectory, "..", "..", "..", "..", "..", "..", settings.AppID, settings.RemoteStorageRootPath));
+                        remoteStorageRootPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", settings.AppID, settings.RemoteStorageRootPath));
                     }
                 }
 
@@ -121,7 +120,7 @@ namespace VirtualDrive
 
             if (!Path.IsPathRooted(settings.ShellExtensionsComServerExePath))
             {
-                settings.ShellExtensionsComServerExePath = !string.IsNullOrWhiteSpace(settings.ShellExtensionsComServerExePath) ? Path.Combine(applicationDirectory, settings.ShellExtensionsComServerExePath) : null;
+                settings.ShellExtensionsComServerExePath = !string.IsNullOrWhiteSpace(settings.ShellExtensionsComServerExePath) ? Path.Combine(AppContext.BaseDirectory, settings.ShellExtensionsComServerExePath) : null;
             }
 
             if (!Directory.Exists(settings.RemoteStorageRootPath))
@@ -134,13 +133,15 @@ namespace VirtualDrive
                 settings.UserFileSystemRootPath = Environment.ExpandEnvironmentVariables(settings.UserFileSystemRootPath);
             }
 
-            string assemblyLocation = Assembly.GetEntryAssembly().Location;
-
             // Icons folder.
-            settings.IconsFolderPath = Path.Combine(Path.GetDirectoryName(assemblyLocation), @"Images");
+            settings.IconsFolderPath = Path.Combine(AppContext.BaseDirectory, @"Images");
 
             // Load product name from entry exe file.
-            settings.ProductName = FileVersionInfo.GetVersionInfo(assemblyLocation).ProductName;
+            object[] attributes = Assembly.GetEntryAssembly().GetCustomAttributes(typeof(AssemblyProductAttribute), false);
+            if (attributes.Length > 0)
+            {
+                settings.ProductName = (attributes[0] as AssemblyProductAttribute).Product;
+            }
 
             if (!settings.MaxTransferConcurrentRequests.HasValue)
             {

@@ -11,7 +11,6 @@ using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Samples.Common;
 using Client = ITHit.WebDAV.Client;
 
-
 namespace WebDAVDrive
 {
     /// <inheritdoc cref="IFolder"/>

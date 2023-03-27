@@ -1,0 +1,2 @@
+This folder demonstrates how to limit folder operations using IFolder.GetFolderOperationControlAsync() method. 
+When a user copies, moves, deletes, renames, hydrates or dehydrates this folder a message box is displayed to confirm or cancel the operation.

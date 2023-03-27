@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace VirtualDrive.ShellExtension
 {
     /// <summary>
-    /// Implements custom content uri source provider.
+    /// Implements custom content URI source provider. Runs in one process with Engine.
     /// </summary>
     [ComVisible(true)]
     [ProgId("VirtualDrive.UriSource")]

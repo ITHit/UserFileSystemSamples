@@ -13,7 +13,7 @@
     <Compile Remove="IVirtualFolder.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="6.3.20496.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="6.4.21210.0" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Core\Common.Windows.Core.csproj" />
   </ItemGroup>

@@ -8,6 +8,7 @@ namespace VirtualDrive.ShellExtension
     /// <summary>
     /// Implements custom state provider for virtual drive. 
     /// Displays custom colums and custom state icons in Status column in Windows Explorer.
+    /// Runs in one process with Engine.
     /// </summary>
     [ComVisible(true)]
     [ProgId("VirtualDrive.CustomStateProvider")]

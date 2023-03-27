@@ -14,11 +14,11 @@ This sample implements a virtual file system for Windows with synchronization su
 </a>
 </li>
 <li>
-<a class="link-header" href="https://github.com/ITHit/UserFileSystemSamples/tree/master/macOS">
+<a class="link-header" href="https://github.com/ITHit/UserFileSystemSamples/tree/master/macOS/VirtualFileSystem">
 <h2>Virtual File System Sample for macOS in .NET, C#</h2>
 </a>
 
-<a href="https://github.com/ITHit/UserFileSystemSamples/tree/master/macOS">
+<a href="https://github.com/ITHit/UserFileSystemSamples/tree/master/macOS/VirtualFileSystem">
 <p>
 This sample implements a virtual file system for macOS with synchronization support, folders on-demand listing, thumbnails and context menu support.&nbsp;It synchronizes files and folders both from remote storage to the user file system and from the user                                             <span>...</span>
 </p>
@@ -48,11 +48,11 @@ This sample implements a virtual file system for Windows that displays documents
 </a>
 </li>
 <li>
-<a class="link-header" href="https://www.userfilesystem.com/examples/webdav_drive_mac/">
+<a class="link-header" href="https://github.com/ITHit/UserFileSystemSamples/tree/master/macOS/WebDAVDrive">
 <h2>WebDAV Drive Sample for macOS in .NET, C#</h2>
 </a>
 
-<a href="https://www.userfilesystem.com/examples/webdav_drive_mac/">
+<a href="https://github.com/ITHit/UserFileSystemSamples/tree/master/macOS/WebDAVDrive">
 <p>
 This sample implements a virtual file system for macOS that displays documents from a WebDAV server. You can edit documents, upload and download documents as well as manage folders structure using macOS Finder. This sample supports synchronization, o                                            <span>...</span>
 </p>

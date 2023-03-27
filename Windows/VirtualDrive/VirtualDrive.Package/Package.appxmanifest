@@ -74,11 +74,15 @@
                 <com:Class Id="000562AA-2879-4CF1-89E8-0AEC9596FE19" />
             </com:ExeServer>
 
-              <com:ExeServer DisplayName="VirtualDrive.ShellExtension" Executable="VirtualDrive.ShellExtension\VirtualDrive.ShellExtension.exe">
+            <com:ExeServer DisplayName="VirtualDrive.ShellExtension" Executable="VirtualDrive.ShellExtension\VirtualDrive.ShellExtension.exe">
                 <com:Class Id="6D45BC7A-D0B7-4913-8984-FD7261550C08" />
             </com:ExeServer>
 
-          </com:ComServer>
+			<com:ExeServer DisplayName="VirtualDrive.ShellExtension" Executable="VirtualDrive.ShellExtension\VirtualDrive.ShellExtension.exe">
+				<com:Class Id="4E813313-2227-42AE-BDC9-53C17A9CF812" />
+			</com:ExeServer>
+
+		  </com:ComServer>
         </com:Extension>
       </Extensions>
       <!--//$>-->

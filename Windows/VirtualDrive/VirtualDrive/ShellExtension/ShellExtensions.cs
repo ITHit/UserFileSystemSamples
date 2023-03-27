@@ -26,6 +26,7 @@ namespace VirtualDrive.ShellExtension
             ("ThumbnailProvider", typeof(ThumbnailProviderIntegrated).GUID),
             ("MenuVerbHandler_0", typeof(ContextMenuVerbIntegrated).GUID),
             ("CustomStateHandler", typeof(CustomStateProviderIntegrated).GUID),
+            ("CopyHook", typeof(StorageProviderCopyHookIntegrated).GUID),
             //("UriHandler", typeof(ShellExtension.UriSourceIntegrated).GUID)
         };
 
@@ -48,10 +49,16 @@ namespace VirtualDrive.ShellExtension
 
             server.RegisterClass<ThumbnailProviderIntegrated>();
             server.RegisterClass<ContextMenuVerbIntegrated>();
+            server.RegisterClass<StorageProviderCopyHookIntegrated>();
             server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProviderIntegrated>();
             //server.RegisterWinRTClass<IStorageProviderUriSource, ShellExtension.UriSourceIntegrated>();
 
             return server;
+        }
+
+        public static void RegisterCopyHook(string syncRootId)
+        {
+            ShellExtensionRegistrar.RegisterHandler(syncRootId, "CopyHook", typeof(StorageProviderCopyHookIntegrated).GUID);
         }
     }
 }

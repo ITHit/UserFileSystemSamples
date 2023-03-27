@@ -3,18 +3,20 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
+using ITHit.FileSystem.Windows.Interop;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
 
 namespace VirtualDrive
 {
-    /// <inheritdoc cref="IFolder"/>
-    public class VirtualFolder : VirtualFileSystemItem, IFolder
+    /// <inheritdoc cref="IFolderWindows"/>
+    public class VirtualFolder : VirtualFileSystemItem, IFolderWindows
     {
         /// <summary>
         /// Creates instance of this class.
@@ -180,5 +182,60 @@ namespace VirtualDrive
             remoteStorageItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.Attributes = folderMetadata.Attributes;
         }
+
+        
+        /// <inheritdoc/>
+        public async Task<FolderOperationControl> GetFolderOperationControlAsync(FolderOperation fileOperation, string targetUserFileSystemPath, IntPtr parentWindow, uint flags, FileAttributes sourceAttributes, FileAttributes targetAttributes)
+        {
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetFolderOperationControlAsync)}()", UserFileSystemPath, targetUserFileSystemPath, default);
+
+            if (UserFileSystemPath?.IndexOf("LimitedOperationsFolder", StringComparison.OrdinalIgnoreCase) != -1)
+            {
+                return ConfirmOperation(fileOperation, targetUserFileSystemPath, parentWindow, flags, sourceAttributes, targetAttributes);
+            }
+
+            return FolderOperationControl.AllowOperation;
+        }
+
+        /// <summary>
+        /// User confirmation method to allow or cancel the operation.
+        /// </summary>
+        /// <param name="fileOperation">
+        /// The operation to perform.
+        /// </param>
+        /// <param name="targetUserFileSystemPath">
+        /// Name of the destination folder.
+        /// </param>
+        /// <param name="context">
+        /// Extended information for hook handler.
+        /// </param>
+        /// <returns>
+        /// Value that indicates whether the Shell should perform the operation.
+        /// </returns>
+        private FolderOperationControl ConfirmOperation(FolderOperation fileOperation, string targetUserFileSystemPath, IntPtr parentWindow, uint flags, FileAttributes sourceAttributes, FileAttributes destinationAttributes)
+        {
+            string message = $"Operation: {fileOperation}\n" +
+                $"Source path: {UserFileSystemPath}\n" +
+                $"Target path: {targetUserFileSystemPath}\n\n" +
+                "Continue?";
+
+            int result = WinApi.MessageBox(parentWindow, message, "Confirmation", 0x00000003);
+
+            switch (result)
+            {
+                case 6: // IDYES
+                    return FolderOperationControl.AllowOperation;
+
+                case 7: // IDNO
+                    return FolderOperationControl.PreventOperation;
+
+                case 2: // IDCANCEL
+                    return FolderOperationControl.CancelOperation;
+
+                default:
+                    return FolderOperationControl.AllowOperation;
+            }
+        }
+        
     }
 }

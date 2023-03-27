@@ -6,7 +6,7 @@ namespace VirtualDrive.ShellExtension
 {
     
     /// <summary>
-    /// Implements Windows Explorer context menu.
+    /// Implements Windows Explorer context menu. Runs in one process with Engine.
     /// </summary>
     [ComVisible(true)]
     [ProgId("VirtualDrive.ContextMenuVerb")]

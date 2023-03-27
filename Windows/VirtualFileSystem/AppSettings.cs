@@ -58,8 +58,7 @@ namespace VirtualFileSystem
 
             if (!Path.IsPathRooted(settings.RemoteStorageRootPath))
             {
-                string execPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                settings.RemoteStorageRootPath = Path.GetFullPath(Path.Combine(execPath, "..", "..", "..", settings.RemoteStorageRootPath));
+                settings.RemoteStorageRootPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", settings.RemoteStorageRootPath));
             }
 
             if (!Directory.Exists(settings.RemoteStorageRootPath))
@@ -72,13 +71,16 @@ namespace VirtualFileSystem
                 settings.UserFileSystemRootPath = Environment.ExpandEnvironmentVariables(settings.UserFileSystemRootPath);
             }
 
-            string assemblyLocation = Assembly.GetEntryAssembly().Location;
-
+        
             // Icons folder.
-            settings.IconsFolderPath = Path.Combine(Path.GetDirectoryName(assemblyLocation), @"Images");
+            settings.IconsFolderPath = Path.Combine(AppContext.BaseDirectory, @"Images");
 
             // Load product name from entry exe file.
-            settings.ProductName = FileVersionInfo.GetVersionInfo(assemblyLocation).ProductName;
+            object[] attributes = Assembly.GetEntryAssembly().GetCustomAttributes(typeof(AssemblyProductAttribute), false);
+            if (attributes.Length > 0)
+            {
+                settings.ProductName = (attributes[0] as AssemblyProductAttribute).Product;
+            }
 
 
             return settings;

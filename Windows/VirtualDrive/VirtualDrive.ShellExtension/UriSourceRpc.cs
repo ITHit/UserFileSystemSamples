@@ -5,7 +5,7 @@ using ITHit.FileSystem.Windows.ShellExtension;
 namespace VirtualDrive.ShellExtension
 {
     /// <summary>
-    /// Implements custom content uri source provider.
+    /// Implements custom content URI source provider. Runs in a separate process from Engine.
     /// </summary>
     [ComVisible(true)]
     [ProgId("VirtualDrive.UriSource")]

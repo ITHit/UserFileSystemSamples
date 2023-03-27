@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace VirtualDrive.ShellExtension
 {
     /// <summary>
-    /// Thumbnails provider Windows Shell Extension.
+    /// Thumbnails provider Windows Shell Extension. Runs in a separate process from Engine.
     /// </summary>
     [ComVisible(true)]
     [ProgId("VirtualDrive.ThumbnailProvider")]

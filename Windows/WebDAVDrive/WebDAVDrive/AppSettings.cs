@@ -123,19 +123,20 @@ namespace WebDAVDrive
                 settings.UserFileSystemRootPath = Environment.ExpandEnvironmentVariables(settings.UserFileSystemRootPath);
             }
 
-            string assemblyLocation = Assembly.GetEntryAssembly().Location;
-            string applicationDirectory = Path.GetDirectoryName(assemblyLocation);
-
             if (!Path.IsPathRooted(settings.ShellExtensionsComServerExePath))
             {
-                settings.ShellExtensionsComServerExePath = !string.IsNullOrWhiteSpace(settings.ShellExtensionsComServerExePath) ? Path.Combine(applicationDirectory, settings.ShellExtensionsComServerExePath) : null;
+                settings.ShellExtensionsComServerExePath = !string.IsNullOrWhiteSpace(settings.ShellExtensionsComServerExePath) ? Path.Combine(AppContext.BaseDirectory, settings.ShellExtensionsComServerExePath) : null;
             }
 
             // Icons folder.
-            settings.IconsFolderPath = Path.Combine(applicationDirectory, @"Images");
+            settings.IconsFolderPath = Path.Combine(AppContext.BaseDirectory, @"Images");
 
             // Load product name from entry exe file.
-            settings.ProductName = FileVersionInfo.GetVersionInfo(assemblyLocation).ProductName;
+            object[] attributes = Assembly.GetEntryAssembly().GetCustomAttributes(typeof(AssemblyProductAttribute), false);
+            if (attributes.Length > 0)
+            {
+                settings.ProductName = (attributes[0] as AssemblyProductAttribute).Product;
+            }
 
             if (!settings.MaxTransferConcurrentRequests.HasValue)
             {

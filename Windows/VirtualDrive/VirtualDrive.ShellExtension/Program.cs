@@ -16,6 +16,7 @@ namespace VirtualDrive.ShellExtension
                 {
                     server.RegisterClass<ThumbnailProviderRpc>();
                     server.RegisterClass<ContextMenuVerbRpc>();
+                    server.RegisterClass<StorageProviderCopyHookRpc>();
                     server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProviderRpc>();
                     server.RegisterWinRTClass<IStorageProviderUriSource, UriSourceRpc>();
 

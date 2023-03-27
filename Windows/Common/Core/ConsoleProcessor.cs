@@ -100,7 +100,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                     case ConsoleKey.Escape:
                         // Simulate app uninstall.
                         await commands.StopEngineAsync();
-                        bool removeSparsePackage = keyInfo.Modifiers.HasFlag(ConsoleModifiers.Shift);
+                        bool removeSparsePackage = FileSystem.Windows.Package.PackageRegistrar.IsRunningWithSparsePackageIdentity() ? 
+                            keyInfo.Modifiers.HasFlag(ConsoleModifiers.Shift) : false;
                         await registrar.UnregisterAsync(commands.Engine, removeSparsePackage);
                         return;
 
