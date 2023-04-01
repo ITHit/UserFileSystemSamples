@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace VirtualDrive.ShellExtension
 {
+    
     /// <summary>
     /// Determines whether the Shell will allow to move, copy, delete, rename, hydrate and dehydrate a folder. 
     /// Runs in one process with Engine.
@@ -18,4 +19,5 @@ namespace VirtualDrive.ShellExtension
           {
         }
     }
+    
 }

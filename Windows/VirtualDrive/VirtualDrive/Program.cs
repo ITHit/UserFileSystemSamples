@@ -139,9 +139,6 @@ namespace VirtualDrive
             // Register sync root and create app folders.
             await registrar.RegisterSyncRootAsync(Settings.ProductName, Path.Combine(Settings.IconsFolderPath, "Drive.ico"), Settings.ShellExtensionsComServerExePath);
 
-            // Register hook that allows limiting folder operations in GetFolderOperationControlAsync() method.
-            ShellExtension.ShellExtensions.RegisterCopyHook(SyncRootId);
-
             using (Engine = new VirtualEngine(
                     Settings.UserFileSystemLicense,
                     Settings.UserFileSystemRootPath,

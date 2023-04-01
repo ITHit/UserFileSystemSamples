@@ -23,7 +23,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         protected readonly string SyncRootId;
         protected readonly string UserFileSystemRootPath;
         protected readonly ILog Log;
-        private readonly IEnumerable<(string Name, Guid Guid)> shellExtensionHandlers;
+        private readonly IEnumerable<(string Name, Guid Guid, bool AlwaysRegister)> shellExtensionHandlers;
 
         /// <summary>
         /// Creates instance of this class.
@@ -37,7 +37,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// List of shell extension handlers. Use it only for applications without application or package identity.
         /// For applications with identity this list is ignored.
         /// </param>
-        public Registrar(string syncRootId, string userFileSystemRootPath, ILog log, IEnumerable<(string Name, Guid Guid)> shellExtensionHandlers = null)
+        public Registrar(string syncRootId, string userFileSystemRootPath, ILog log, IEnumerable<(string Name, Guid Guid, bool AlwaysRegister)> shellExtensionHandlers = null)
         {
             this.SyncRootId = syncRootId;
             this.UserFileSystemRootPath = userFileSystemRootPath;
@@ -71,16 +71,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
             if (shellExtensionHandlers != null)
             {
-                // Register thumbnails handler, custom states handler, etc,
-                // but only if this app has no identity. Otherwise manifest will do this automatically.
-                if (!PackageRegistrar.IsRunningWithIdentity())
-                {
-                    RegisterShellExtensions(shellExtensionsComServerExePath);
-                }
-                //else
-                //{
-                //    Log.Debug("\nThis app has identity. Shell extensions list is ignored. Shell extensions must be installed via sparse package manifest or app packaged app manifest.");
-                //}
+                // Register thumbnails handler, custom states handler, etc.
+                RegisterShellExtensions(shellExtensionsComServerExePath);
             }
         }
 
@@ -166,13 +158,18 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </remarks>
         private void RegisterShellExtensions(string shellExtensionsComServerExePath = null)
         {
+            bool isRunningWithIdentity = PackageRegistrar.IsRunningWithIdentity();
             foreach (var handler in shellExtensionHandlers)
             {
                 if (!ShellExtensionRegistrar.IsHandlerRegistered(handler.Guid))
                 {
-                    Log.Info($"\nRegistering shell extension {handler.Name} with CLSID {handler.Guid:B}...\n");
-
-                    ShellExtensionRegistrar.RegisterHandler(SyncRootId, handler.Name, handler.Guid, shellExtensionsComServerExePath);
+                    // Register handlers only if this app has no identity. Otherwise manifest will do this automatically.
+                    // Unlike other handlers, CopyHook requires registration regardless of identity.
+                    if (!isRunningWithIdentity || handler.AlwaysRegister)
+                    {
+                        Log.Info($"\nRegistering shell extension {handler.Name} with CLSID {handler.Guid:B}...\n");
+                        ShellExtensionRegistrar.RegisterHandler(SyncRootId, handler.Name, handler.Guid, shellExtensionsComServerExePath);
+                    }
                 }
             }
         }

@@ -185,7 +185,7 @@ namespace VirtualDrive
 
         
         /// <inheritdoc/>
-        public async Task<FolderOperationControl> GetFolderOperationControlAsync(FolderOperation fileOperation, string targetUserFileSystemPath, IntPtr parentWindow, uint flags, FileAttributes sourceAttributes, FileAttributes targetAttributes)
+        public async Task<FolderOperationControl> GetFolderOperationControlAsync(FolderOperation fileOperation, string targetUserFileSystemPath, IntPtr parentWindow, FolderControlFlags flags, FileAttributes sourceAttributes, FileAttributes targetAttributes)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetFolderOperationControlAsync)}()", UserFileSystemPath, targetUserFileSystemPath, default);
 
@@ -206,13 +206,10 @@ namespace VirtualDrive
         /// <param name="targetUserFileSystemPath">
         /// Name of the destination folder.
         /// </param>
-        /// <param name="context">
-        /// Extended information for hook handler.
-        /// </param>
         /// <returns>
         /// Value that indicates whether the Shell should perform the operation.
         /// </returns>
-        private FolderOperationControl ConfirmOperation(FolderOperation fileOperation, string targetUserFileSystemPath, IntPtr parentWindow, uint flags, FileAttributes sourceAttributes, FileAttributes destinationAttributes)
+        private FolderOperationControl ConfirmOperation(FolderOperation fileOperation, string targetUserFileSystemPath, IntPtr parentWindow, FolderControlFlags flags, FileAttributes sourceAttributes, FileAttributes destinationAttributes)
         {
             string message = $"Operation: {fileOperation}\n" +
                 $"Source path: {UserFileSystemPath}\n" +

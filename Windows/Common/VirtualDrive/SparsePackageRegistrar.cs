@@ -35,7 +35,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             string syncRootId,
             string userFileSystemRootPath,
             ILog log,
-            IEnumerable<(string Name, Guid Guid)> shellExtensionHandlers = null)
+            IEnumerable<(string Name, Guid Guid, bool AlwaysRegister)> shellExtensionHandlers = null)
             : base(syncRootId, userFileSystemRootPath, log, shellExtensionHandlers)
         {
 

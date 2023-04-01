@@ -21,12 +21,12 @@ namespace WebDAVDrive.ShellExtension
         /// Note that on Windows 11 your context menu will be shown under the "Show more options"
         /// menu if your app runs without identity.
         /// </remarks>
-        internal static readonly List<(string Name, Guid Guid)> Handlers = new List<(string, Guid)>
+        internal static readonly List<(string Name, Guid Guid, bool AlwaysRegister)> Handlers = new List<(string, Guid, bool)>
         {
-            ("ThumbnailProvider", typeof(ThumbnailProviderIntegrated).GUID),
-            ("MenuVerbHandler_0", typeof(ContextMenuVerbIntegrated).GUID),
-            ("CustomStateHandler", typeof(CustomStateProviderIntegrated).GUID),
-            //("UriHandler", typeof(ShellExtension.UriSourceIntegrated).GUID)
+            ("ThumbnailProvider", typeof(ThumbnailProviderIntegrated).GUID, false),
+            ("MenuVerbHandler_0", typeof(ContextMenuVerbIntegrated).GUID, false),
+            ("CustomStateHandler", typeof(CustomStateProviderIntegrated).GUID, false),
+            //("UriHandler", typeof(ShellExtension.UriSourceIntegrated).GUID, false)
         };
 
         /// <summary>
