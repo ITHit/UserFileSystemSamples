@@ -32,7 +32,7 @@ namespace WebDAVFileProviderExtension
             webDavSession = new WebDavSession(AppGroupSettings.GetWebDAVClientLicense(), new NSUrlSessionHandler());
             webDavSession.CustomHeaders.Add("InstanceId", Environment.MachineName);
             // set remote root storage item id.
-            SetRemoteRootStorageItemId(GetRootStorageItemIdAsync().Result);
+            SetRemoteStorageRootItemId(GetRootStorageItemIdAsync().Result);
         }
 
         /// <inheritdoc/>

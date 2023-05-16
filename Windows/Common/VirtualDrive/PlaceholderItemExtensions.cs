@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using ITHit.FileSystem.Windows;
+using ITHit.FileSystem.Windows.Properties;
 
 
 namespace ITHit.FileSystem.Samples.Common.Windows
@@ -38,12 +39,23 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="placeholder">User file system placeholder item.</param>
         /// <param name="remoteStorageItem">Remote storage item metadata.</param>
         /// <returns>A task object that can be awaited.</returns>
-        public static async Task SavePropertiesAsync(this PlaceholderItem placeholder, FileSystemItemMetadataExt metadata)
+        public static async Task SavePropertiesAsync(this PlaceholderItem placeholder, FileSystemItemMetadataExt metadata, ILogger logger = null)
         {
             // Save lock.
             if (metadata.Lock != null)
             {
                 placeholder.SetLockInfo(metadata.Lock);
+            }
+            else
+            {
+                if (placeholder.TryGetLockInfo(out _) && placeholder.TryDeleteLockInfo())
+                {
+                    PlaceholderItem.UpdateUI(placeholder.Path);
+                    if (logger != null)
+                    {
+                        logger.LogMessage("Unlocked", placeholder.Path);
+                    }
+                }
             }
 
             // Save eTag.

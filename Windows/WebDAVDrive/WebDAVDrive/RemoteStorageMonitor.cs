@@ -12,7 +12,6 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Windows;
-using ITHit.WebDAV.Client;
 
 
 namespace WebDAVDrive
@@ -152,7 +151,7 @@ namespace WebDAVDrive
         }
 
         /// <summary>
-        /// Process json string from websocket with update in the remote storage.
+        /// Processes notification received from server via WebSockets. Triggers reading all changes from the server. 
         /// </summary>
         internal async Task ProcessAsync(string jsonString)
         {
@@ -166,231 +165,21 @@ namespace WebDAVDrive
             if (remoteStoragePath.StartsWith(Program.Settings.WebDAVServerUrl, StringComparison.InvariantCultureIgnoreCase))
             {
                 Logger.LogDebug($"EventType: {jsonMessage.EventType}", jsonMessage.ItemPath, jsonMessage.TargetPath);
-                switch (jsonMessage.EventType)
+                try
                 {
-                    case "created":
-                        await CreatedAsync(remoteStoragePath);
-                        break;
-                    case "updated":
-                        await ChangedAsync(remoteStoragePath);
-                        break;
-                    case "moved":
-                        string remoteStorageNewPath = Mapping.GetAbsoluteUri(jsonMessage.TargetPath);
-                        await MovedAsync(remoteStoragePath, remoteStorageNewPath);
-                        break;
-                    case "deleted":
-                        await DeletedAsync(remoteStoragePath);
-                        break;
-                    case "locked":
-                        await LockedAsync(remoteStoragePath);
-                        break;
-                    case "unlocked":
-                        await UnlockedAsync(remoteStoragePath);
-                        break;
+                    // triggers ISynchronizationCollection.GetChangesAsync call to get all changes from server.                    
+                    await (Engine.ServerNotifications(Engine.Path, Logger) as IServerCollectionNotifications)
+                        .ProcessChangesAsync(async (metadata, userFileSystemPath) => 
+                        await Engine.Placeholders.GetItem(userFileSystemPath).SavePropertiesAsync(metadata as FileSystemItemMetadataExt, Logger));
+
+                }
+                catch(Exception ex)
+                {
+                    Logger.LogError(nameof(ProcessAsync), Engine.Path, null, ex);
                 }
             }
         }
-
-        /// <summary>
-        /// Called when a file or folder is created in the remote storage.
-        /// </summary>
-        /// <param name="remoteStoragePath">Path in the remote storage.</param>
-        /// <remarks>In this method we create a new file/folder in the user file system.</remarks>
-        private async Task CreatedAsync(string remoteStoragePath)
-        {
-            try
-            {
-                string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
-                string userFileSystemParentPath = Path.GetDirectoryName(userFileSystemPath);
-
-                // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                // We do not want to send extra requests to the remote storage if the parent folder is offline.
-                if (Directory.Exists(userFileSystemParentPath)
-                    && !new DirectoryInfo(userFileSystemParentPath).Attributes.HasFlag(FileAttributes.Offline)
-                    && !FsPath.Exists(userFileSystemPath))
-                {
-                    IHierarchyItem remoteStorageItem = await Program.DavClient.GetItemAsync(new Uri(remoteStoragePath));
-
-                    if ( (remoteStorageItem != null) && !FsPath.Exists(userFileSystemPath))
-                    {
-                        FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
-                        await IncomingCreatedAsync(userFileSystemParentPath, itemMetadata);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(nameof(CreatedAsync), remoteStoragePath, null, ex);
-            }
-        }
-
-        /// <summary>
-        /// Called when a file content changed or file/folder attributes changed in the remote storage.
-        /// </summary>
-        /// <param name="remoteStoragePath">Path in the remote storage.</param>
-        /// <remarks>
-        /// In this method we update corresponding file/folder information in user file system.
-        /// We also dehydrate the file if it is not blocked.
-        /// </remarks>
-        private async Task ChangedAsync(string remoteStoragePath)
-        {
-            try
-            {
-                string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
-
-                // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                // We do not want to send extra requests to the remote storage if the item does not exists in the user file system.
-                if (FsPath.Exists(userFileSystemPath))
-                {
-                    IHierarchyItem remoteStorageItem = await Program.DavClient.GetItemAsync(new Uri(remoteStoragePath));
-                    if (remoteStorageItem != null)
-                    {
-                        FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
-                        await IncomingChangedAsync(userFileSystemPath, itemMetadata);
-                    }
-                }
-            }
-            catch (IOException ex)
-            {
-                // The file is blocked in the user file system. This is a normal behaviour.
-                Logger.LogDebug(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(nameof(ChangedAsync), remoteStoragePath, null, ex);
-            }
-        }
-
-        /// <summary>
-        /// Called when a file or folder is renamed in the remote storage.
-        /// </summary>
-        /// <param name="remoteStorageOldPath">Old path in the remote storage.</param>
-        /// <param name="remoteStorageNewPath">New path in the remote storage.</param>
-        /// <remarks>
-        /// In this method we rename corresponding file/folder in the user file system.
-        /// If the target folder parent does not exists or is offline we delete the source item.
-        /// If the source item does not exists we create the target item.
-        /// </remarks>
-        private async Task MovedAsync(string remoteStorageOldPath, string remoteStorageNewPath)
-        {
-            try
-            {
-                string userFileSystemOldPath = Mapping.ReverseMapPath(remoteStorageOldPath);
-                string userFileSystemNewPath = Mapping.ReverseMapPath(remoteStorageNewPath);
-
-                if (FsPath.Exists(userFileSystemOldPath))
-                {
-                    // Source item is loaded, move it to a new location or delete.
-                    if (await Engine.ServerNotifications(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath))
-                    {
-                        Logger.LogMessage("Moved successfully", userFileSystemOldPath, userFileSystemNewPath);
-                    }
-                    else
-                    {
-                        // The target parent folder does not exists or is offline, delete the source item.
-                        await DeletedAsync(remoteStorageOldPath);
-                    }
-                }
-                else
-                {
-                    // Source item is not loaded. Creating the a item in the target folder, if the target parent folder is loaded.
-                    await CreatedAsync(remoteStorageNewPath);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(nameof(MovedAsync), remoteStorageOldPath, remoteStorageNewPath, ex);
-            }
-        }
-
-        /// <summary>
-        /// Called when a file or folder is deleted in the remote storage.
-        /// </summary>
-        /// <param name="remoteStoragePath">Path in the remote storage.</param>
-        /// <remarks>In this method we delete corresponding file/folder in the user file system.</remarks>
-        private async Task DeletedAsync(string remoteStoragePath)
-        {
-            try
-            {
-                string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
-
-                if (FsPath.Exists(userFileSystemPath))
-                {
-                    await IncomingDeletedAsync(userFileSystemPath);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(nameof(DeletedAsync), remoteStoragePath, null, ex);
-            }
-        }
-
-        /// <summary>
-        /// Called when a file or folder is being locked in the remote storage.
-        /// </summary>
-        /// <param name="remoteStoragePath">Path in the remote storage.</param>
-        /// <remarks>In this method we locked corresponding file/folder in user file system.</remarks>
-        private async Task LockedAsync(string remoteStoragePath)
-        {
-            try
-            {
-                string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
-
-                if (FsPath.Exists(userFileSystemPath))
-                {
-                    IHierarchyItem remoteStorageItem = await Program.DavClient.GetItemAsync(new Uri(remoteStoragePath));
-                    if (remoteStorageItem != null)
-                    {
-                        FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
-
-                        // Save info about the third-party lock.
-                        Engine.Placeholders.GetItem(userFileSystemPath).SetLockInfo(itemMetadata.Lock);
-                        PlaceholderItem.UpdateUI(userFileSystemPath);
-
-                        Logger.LogMessage("Locked", userFileSystemPath);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(nameof(LockedAsync), remoteStoragePath, null, ex);
-            }
-        }
-
-        /// <summary>
-        /// Called when a file or folder is unlocked in the remote storage.
-        /// </summary>
-        /// <param name="remoteStoragePath">Path in the remote storage.</param>
-        /// <remarks>In this method we unlocked corresponding file/folder in user file system.</remarks>
-        private async Task UnlockedAsync(string remoteStoragePath)
-        {
-            try
-            {
-                string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
-
-                if (FsPath.Exists(userFileSystemPath))
-                {
-                    PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemPath);
-                    if (placeholder.TryDeleteLockInfo())
-                    {
-                        PlaceholderItem.UpdateUI(userFileSystemPath);
-                        Logger.LogMessage("Unlocked", userFileSystemPath);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(nameof(UnlockedAsync), remoteStoragePath, null, ex);
-            }
-        }
-
-
-        private void Error(object sender, ErrorEventArgs e)
-        {
-            Logger.LogError(null, null, null, e.GetException());
-        }
-
-
+        
         private bool disposedValue = false; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
@@ -399,7 +188,7 @@ namespace WebDAVDrive
             {
                 if (disposing)
                 {
-                    clientWebSocket.Dispose();
+                    clientWebSocket?.Dispose();
                     Logger.LogMessage($"Disposed");
                 }
 

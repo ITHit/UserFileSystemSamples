@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using WebDAVCommon;
@@ -30,7 +31,7 @@ namespace WebDAVMacApp
 
             NSMenuItem installMenuItem = new NSMenuItem("Install WebDAV FS Extension", (a, b) =>
             {
-                Process.Start(AppGroupSettings.GetWebDAVServerUrl());
+                Process.Start("open", AppGroupSettings.GetWebDAVServerUrl());
                 LocalExtensionManager.InstallExtension();
             });
             NSMenuItem uninstallMenuItem = new NSMenuItem("Uninstall WebDAV FS Extension", (a, b) => { LocalExtensionManager.UninstallExtension(); });

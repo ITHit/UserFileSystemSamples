@@ -162,8 +162,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <summary>
         /// Opens Windows File Manager with both remote storage and user file system for testing.
         /// </summary>
+        /// <param name="openRemoteStorage">True if the Remote Storage must be opened. False - otherwise.</param>
         /// <remarks>This method is provided solely for the development and testing convenience.</remarks>
-        public void ShowTestEnvironment()
+        public void ShowTestEnvironment(bool openRemoteStorage = true)
         {
             // Enable UTF8 for Console Window and set width.
             Console.OutputEncoding = System.Text.Encoding.UTF8;
@@ -173,8 +174,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             // Open Windows File Manager with user file system.
             Commands.Open(Engine.Path);
 
-            // Open remote storage.
-            Commands.Open(remoteStorageRootPath);
+            if (openRemoteStorage)
+            {
+                // Open remote storage.
+                Commands.Open(remoteStorageRootPath);
+            }
         }
 #endif
     }

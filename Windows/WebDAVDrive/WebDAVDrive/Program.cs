@@ -20,6 +20,8 @@ using System.Net.Http;
 
 using WebDAVDrive.UI;
 using WebDAVDrive.UI.ViewModels;
+using ITHit.FileSystem.Windows;
+using Windows.Media.Protection.PlayReady;
 
 namespace WebDAVDrive
 {
@@ -138,7 +140,7 @@ namespace WebDAVDrive
                 using (ShellExtension.ShellExtensions.StartComServer(Settings.ShellExtensionsComServerRpcEnabled))
                 {
                     // Run the User File System Engine.
-                    await RunEngine();
+                    await RunEngineAsync();
                 }
             }
             catch (Exception ex)
@@ -160,7 +162,7 @@ namespace WebDAVDrive
             }
         }
 
-        private static async Task RunEngine()
+        private static async Task RunEngineAsync()
         {
             // Register sync root and create app folders.
             await registrar.RegisterSyncRootAsync(Settings.ProductName, Path.Combine(Settings.IconsFolderPath, "Drive.ico"), Settings.ShellExtensionsComServerExePath);
@@ -191,13 +193,33 @@ namespace WebDAVDrive
                 // Print Engine config, settings, logging headers.
                 await logFormatter.PrintEngineStartInfoAsync(Engine);
 
+#if DEBUG
+                // Open remote storage.
+                Commands.Open(Settings.WebDAVServerUrl);
+#endif
                 using (DavClient = CreateWebDavSession(Engine.InstanceId))
                 {
+                    // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
+                    // method as a remoteStorageItemId parameter when a root folder is requested.
+                    PropertyName[] propNames = new PropertyName[2];
+                    propNames[0] = new PropertyName("resource-id", "DAV:");
+                    propNames[1] = new PropertyName("parent-resource-id", "DAV:");
+                    byte[] remoteStorageItemId = Mapping.GetUserFileSystemItemMetadata((await DavClient.GetItemAsync(new Uri(Settings.WebDAVServerUrl), propNames)).WebDavResponse).RemoteStorageItemId;
+
+                    if (remoteStorageItemId != null)
+                    {
+                        Engine.SetRemoteStorageRootItemId(remoteStorageItemId);
+                    }
+                    else
+                    {
+                        log.Error("remote-id or parent-resource-id is not found. Your WebDAV server does not support collection synchronization. Upgrade your .NET WebDAV server to v13.2 or Java WebDAV server to v6.2 or later version.");
+                    }
+
                     // Start processing OS file system calls.
                     await Engine.StartAsync();
 #if DEBUG
                     // Opens Windows File Manager with user file system folder and remote storage folder.
-                    commands.ShowTestEnvironment();
+                    commands.ShowTestEnvironment(false);
 #endif
                     // Keep this application running and reading user input
                     // untill the tray app exits or an exit key in the console is selected.

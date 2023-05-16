@@ -47,7 +47,7 @@ namespace WebDAVFileProviderExtension
 
             // Buffer size must be multiple of 4096 bytes for optimal performance.
             const int bufferSize = 0x500000; // 5Mb.
-            using (Client.IWebResponse response = await Session.DownloadAsync(new Uri(RemoteStorageID), offset, length, null, cancellationToken))
+            using (Client.IDownloadResponse response = await Session.DownloadAsync(new Uri(RemoteStorageID), offset, length, null, cancellationToken))
             {
                 using (Stream stream = await response.GetResponseStreamAsync())
                 {
@@ -61,7 +61,7 @@ namespace WebDAVFileProviderExtension
                         Logger.LogMessage($"{nameof(ReadAsync)}({offset}, {length}) canceled", RemoteStorageID, default);
                     }
                 }
-                eTag = response.GetHeaderValue("ETag");
+                eTag = response.Headers.GetValues("ETag").FirstOrDefault() ?? string.Empty;
             }
         }
         
@@ -83,7 +83,7 @@ namespace WebDAVFileProviderExtension
                 try
                 {
                     // Update remote storage file content.
-                    string newEtag = await Session.UploadAsync(new Uri(RemoteStorageID), async (outputStream) =>
+                    await Session.UploadAsync(new Uri(RemoteStorageID), async (outputStream) =>
                     {
                         content.Position = 0; // Setting position to 0 is required in case of retry.
                         await content.CopyToAsync(outputStream);

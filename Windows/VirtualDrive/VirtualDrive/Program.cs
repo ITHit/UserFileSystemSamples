@@ -10,6 +10,7 @@ using log4net;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Windows.Package;
+using ITHit.FileSystem;
 
 namespace VirtualDrive
 {
@@ -112,7 +113,7 @@ namespace VirtualDrive
                 using (ShellExtension.ShellExtensions.StartComServer(Settings.ShellExtensionsComServerRpcEnabled))
                 {
                     // Run the User File System Engine.
-                    await RunEngine();
+                    await RunEngineAsync();
                 }
             }
             catch (Exception ex)
@@ -134,7 +135,7 @@ namespace VirtualDrive
             }
         }
 
-        private static async Task RunEngine()
+        private static async Task RunEngineAsync()
         {
             // Register sync root and create app folders.
             await registrar.RegisterSyncRootAsync(Settings.ProductName, Path.Combine(Settings.IconsFolderPath, "Drive.ico"), Settings.ShellExtensionsComServerExePath);
@@ -158,7 +159,7 @@ namespace VirtualDrive
                 // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
                 // method as a remoteStorageItemId parameter when a root folder is requested.
                 byte[] itemId = WindowsFileSystemItem.GetItemIdByPath(Settings.RemoteStorageRootPath);
-                Engine.Placeholders.GetRootItem().SetRemoteStorageItemId(itemId);
+                Engine.SetRemoteStorageRootItemId(itemId);
 
                 // Print console commands.
                 consoleProcessor.PrintHelp();

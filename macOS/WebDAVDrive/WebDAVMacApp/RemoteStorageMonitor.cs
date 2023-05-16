@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Common.Core;
 using FileProvider;
+using ITHit.FileSystem.Mac;
 using WebDAVCommon;
 
 namespace WebDAVMacApp
@@ -18,9 +19,9 @@ namespace WebDAVMacApp
     public class RemoteStorageMonitor
     {
         /// <summary>
-        /// File provider manager.
+        /// Server notifications manager.
         /// </summary>
-        private readonly NSFileProviderManager fileProviderManager;
+        private readonly ServerNotifications serverNotifications;
 
         /// <summary>
         /// WebSocket server url.
@@ -44,10 +45,10 @@ namespace WebDAVMacApp
 
 
         public RemoteStorageMonitor(NSFileProviderDomain domain)
-        {
-            this.fileProviderManager = NSFileProviderManager.FromDomain(domain); 
+        { 
             this.webSocketServerUrl = AppGroupSettings.GetWebSocketServerUrl();
             this.logger = new ConsoleLogger(GetType().Name);
+            this.serverNotifications = new ServerNotifications(NSFileProviderManager.FromDomain(domain), logger);
         }
 
         /// <summary>
@@ -71,12 +72,7 @@ namespace WebDAVMacApp
                 byte[] msgBytes = rcvBuffer.Skip(rcvBuffer.Offset).Take(rcvResult.Count).ToArray();
                 string rcvMsg = Encoding.UTF8.GetString(msgBytes);
 
-                fileProviderManager.SignalEnumerator(NSFileProviderItemIdentifier.WorkingSetContainer, error => {
-                    if (error != null)
-                    {
-                        logger.LogError(error.Description);
-                    }
-                });
+                await serverNotifications.ProcessChangesAsync(null);
             }
         }
 

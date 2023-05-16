@@ -152,7 +152,7 @@ namespace WebDAVDrive
 
                 try
                 {
-                    using (IWebResponse response = await Program.DavClient.DownloadAsync(new Uri(filePathRemote)))
+                    using (IDownloadResponse response = await Program.DavClient.DownloadAsync(new Uri(filePathRemote)))
                     {
                         using (Stream stream = await response.GetResponseStreamAsync())
                         {
@@ -279,7 +279,7 @@ namespace WebDAVDrive
             double timOutMs = lockMode == LockMode.Auto ? autoLockTimoutMs : manualLockTimoutMs;
             TimeSpan timeOut = timOutMs == -1 ? TimeSpan.MaxValue : TimeSpan.FromMilliseconds(timOutMs);
 
-            LockInfo lockInfo = await Program.DavClient.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, lockOwner, timeOut, null, cancellationToken);
+            LockInfo lockInfo = (await Program.DavClient.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, lockOwner, timeOut, null, cancellationToken)).WebDavResponse;
 
             // Save lock-token and lock-mode. Start the timer to refresh the lock.
             await SaveLockAsync(lockInfo, lockMode, cancellationToken);
@@ -351,8 +351,8 @@ namespace WebDAVDrive
                         {
                             // Extend (refresh) the lock.
                             //Program.DavClient.RefreshLockAsync(new Uri(RemoteStoragePath), lockToken, timout, cancellationToken);
-                            IHierarchyItem item = await Program.DavClient.GetItemAsync(new Uri(RemoteStoragePath), null, cancellationToken);
-                            LockInfo lockInfo = await item.RefreshLockAsync(lockToken, timOut, null, cancellationToken);
+                            IHierarchyItem item = (await Program.DavClient.GetItemAsync(new Uri(RemoteStoragePath), null, cancellationToken)).WebDavResponse;
+                            LockInfo lockInfo = (await item.RefreshLockAsync(lockToken, timOut, null, cancellationToken)).WebDavResponse;
 
                             Logger.LogMessage($"Lock extended, new timout: {lockInfo.TimeOut:hh\\:mm\\:ss\\.ff}", UserFileSystemPath);
 

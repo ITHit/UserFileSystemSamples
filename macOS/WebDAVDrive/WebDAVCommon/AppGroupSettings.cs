@@ -8,7 +8,7 @@ namespace WebDAVCommon
 {
     public static class AppGroupSettings
     {
-        private const string AppGroupId = "${TeamIdentificator}.group.com.webdav.vfs";
+        private const string AppGroupId = "65S3A9JQ35.group.com.webdav.vfs"; //TODO change this to correct group id;
         public const string LicenseId = "License";
         public const string WebDAVClientLicenseId = "WebDAVClientLicense";
         public const string WebDAVServerUrlId = "WebDAVServerUrl";

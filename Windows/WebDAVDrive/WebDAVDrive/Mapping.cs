@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
 using Client = ITHit.WebDAV.Client;
+using System.Text;
 
 namespace WebDAVDrive
 {
@@ -106,10 +107,18 @@ namespace WebDAVDrive
             }
 
             userFileSystemItem.Name = remoteStorageItem.DisplayName;
-            userFileSystemItem.CreationTime = remoteStorageItem.CreationDate;
-            userFileSystemItem.LastWriteTime = remoteStorageItem.LastModified;
-            userFileSystemItem.LastAccessTime = remoteStorageItem.LastModified;
-            userFileSystemItem.ChangeTime = remoteStorageItem.LastModified;
+
+            // In case the item is deleted, the min value is returned.
+            if (remoteStorageItem.CreationDate != DateTime.MinValue)
+            {
+                userFileSystemItem.CreationTime = remoteStorageItem.CreationDate;
+                userFileSystemItem.LastWriteTime = remoteStorageItem.LastModified;
+                userFileSystemItem.LastAccessTime = remoteStorageItem.LastModified;
+                userFileSystemItem.ChangeTime = remoteStorageItem.LastModified;
+            }
+
+            userFileSystemItem.RemoteStorageItemId = GetPropertyValue(remoteStorageItem, "resource-id");
+            userFileSystemItem.RemoteStorageParentItemId = GetPropertyValue(remoteStorageItem, "parent-resource-id");
 
             // Set information about third-party lock, if any.
             Client.LockInfo lockInfo = remoteStorageItem.ActiveLocks.FirstOrDefault();
@@ -132,6 +141,22 @@ namespace WebDAVDrive
             */
 
             return userFileSystemItem;
+        }
+
+        /// <summary>
+        /// Returns property value. If the property does not exist, returns default value.
+        /// </summary>
+        private static byte[] GetPropertyValue(Client.IHierarchyItem remoteStorageItem, string propertyName)
+        {
+            byte[] resultValue = null;
+
+            Client.Property property = remoteStorageItem.Properties.Where(p => p.Name.Name == propertyName).FirstOrDefault();
+            if (property != null)
+            {
+                resultValue = Encoding.UTF8.GetBytes(property.StringValue);
+            }
+
+            return resultValue;
         }
     }
 }

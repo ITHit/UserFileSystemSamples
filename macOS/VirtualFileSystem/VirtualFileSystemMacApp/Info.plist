@@ -5,7 +5,7 @@
 	<key>CFBundleName</key>
 	<string>VirtualFilesystemMacApp</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.userfilesystem.vfs.app</string>
+	<string>com.filesystem.vfs.app</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
 	<key>CFBundleVersion</key>

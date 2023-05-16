@@ -6,7 +6,7 @@
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>$(TeamIdentifierPrefix)group.com.webdav.vfs</string>
+		<string>65S3A9JQ35.group.com.webdav.vfs</string>
 	</array>
 	<key>com.apple.security.files.downloads.read-write</key>
 	<true/>
@@ -19,6 +19,10 @@
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
 	<key>com.apple.security.cs.allow-jit</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.cs.disable-library-validation</key>
 	<true/>
 </dict>
 </plist>

@@ -61,7 +61,7 @@ namespace WebDAVDrive
 
             // Buffer size must be multiple of 4096 bytes for optimal performance.
             const int bufferSize = 0x500000; // 5Mb.
-            using (Client.IWebResponse response = await Program.DavClient.DownloadAsync(new Uri(RemoteStoragePath), offset, length, null, cancellationToken))
+            using (Client.IDownloadResponse response = await Program.DavClient.DownloadAsync(new Uri(RemoteStoragePath), offset, length, null, cancellationToken))
             {
                 using (Stream stream = await response.GetResponseStreamAsync())
                 {
@@ -75,7 +75,7 @@ namespace WebDAVDrive
                         Logger.LogMessage($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default);
                     }
                 }
-                eTag = response.GetHeaderValue("ETag");
+                eTag = response.Headers.ETag.Tag;
             }
 
             // Store ETag here.
@@ -124,14 +124,14 @@ namespace WebDAVDrive
                 try
                 {
                     // Update remote storage file content.
-                    string newEtag = await Program.DavClient.UploadAsync(new Uri(RemoteStoragePath), async (outputStream) =>
+                    Client.IWebDavResponse<string> response = await Program.DavClient.UploadAsync(new Uri(RemoteStoragePath), async (outputStream) =>
                     {
                         content.Position = 0; // Setting position to 0 is required in case of retry.
                         await content.CopyToAsync(outputStream);
                     }, null, content.Length, 0, -1, lockTokens, oldEtag, null, cancellationToken);
 
                     // Save a new ETag returned by the server, if any.
-                    placeholder.SetETag(newEtag);
+                    placeholder.SetETag(response.WebDavResponse);
                 }
                 catch (Client.Exceptions.PreconditionFailedException)
                 {

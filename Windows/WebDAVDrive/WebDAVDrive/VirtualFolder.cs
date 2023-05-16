@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,11 +11,12 @@ using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Samples.Common;
 using Client = ITHit.WebDAV.Client;
+using ITHit.FileSystem.Synchronization;
 
 namespace WebDAVDrive
 {
     /// <inheritdoc cref="IFolder"/>
-    public class VirtualFolder : VirtualFileSystemItem, IFolder
+    public class VirtualFolder : VirtualFileSystemItem, IFolder, ISynchronizationCollection
     {
         /// <summary>
         /// Creates instance of this class.
@@ -24,7 +26,7 @@ namespace WebDAVDrive
         /// <param name="autoLockTimoutMs">Automatic lock timout in milliseconds.</param>
         /// <param name="manualLockTimoutMs">Manual lock timout in milliseconds.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFolder(string path, VirtualEngine engine, double autoLockTimoutMs, double manualLockTimoutMs, ILogger logger) 
+        public VirtualFolder(string path, VirtualEngine engine, double autoLockTimoutMs, double manualLockTimoutMs, ILogger logger)
             : base(path, engine, autoLockTimoutMs, manualLockTimoutMs, logger)
         {
 
@@ -43,20 +45,21 @@ namespace WebDAVDrive
 
             // Update remote storage file content.
             // Get the ETag returned by the server, if any.
-            string eTag = await Program.DavClient.UploadAsync(newFileUri, async (outputStream) => {
+            Client.IWebDavResponse<string> response = (await Program.DavClient.UploadAsync(newFileUri, async (outputStream) =>
+            {
                 if (content != null)
                 {
                     // Setting position to 0 is required in case of retry.
                     content.Position = 0;
                     await content.CopyToAsync(outputStream);
                 }
-            }, null, contentLength, 0, -1, null, null, null, cancellationToken);
+            }, null, contentLength, 0, -1, null, null, null, cancellationToken));
 
             // Store ETag in persistent placeholder properties untill the next update.
-            Engine.Placeholders.GetItem(userFileSystemNewItemPath).SetETag(eTag);
-            
+            Engine.Placeholders.GetItem(userFileSystemNewItemPath).SetETag(response.WebDavResponse);
+
             // WebDAV does not use any item IDs, returning null.
-            return null;
+            return Encoding.UTF8.GetBytes(response.Headers.GetValues("resource-id").FirstOrDefault());
         }
 
         /// <inheritdoc/>
@@ -66,14 +69,13 @@ namespace WebDAVDrive
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
 
             Uri newFolderUri = new Uri(new Uri(RemoteStoragePath), folderMetadata.Name);
-            await Program.DavClient.CreateFolderAsync(newFolderUri, null, null, cancellationToken);
+            Client.IResponse response =  await Program.DavClient.CreateFolderAsync(newFolderUri, null, null, cancellationToken);
 
             // Store ETag (if any) unlil the next update here.
             // WebDAV server typically does not provide eTags for folders.
             // Engine.Placeholders.GetItem(userFileSystemNewItemPath).SetETag(eTag);
 
-            // WebDAV does not use any item IDs, returning null.
-            return null;
+            return Encoding.UTF8.GetBytes(response.Headers.GetValues("resource-id").FirstOrDefault());
         }
 
         /// <inheritdoc/>
@@ -116,8 +118,12 @@ namespace WebDAVDrive
 
         public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern, CancellationToken cancellationToken = default)
         {
+            Client.PropertyName[] propNames = new Client.PropertyName[2];
+            propNames[0] = new Client.PropertyName("resource-id", "DAV:");
+            propNames[1] = new Client.PropertyName("parent-resource-id", "DAV:");
+
             // WebDAV Client lib will retry the request in case authentication is requested by the server.
-            Client.IHierarchyItem[] remoteStorageChildren = await Program.DavClient.GetChildrenAsync(new Uri(RemoteStoragePath), false, null, null, cancellationToken);
+            IList<Client.IHierarchyItem> remoteStorageChildren = (await Program.DavClient.GetChildrenAsync(new Uri(RemoteStoragePath), false, propNames, null, cancellationToken)).WebDavResponse;
 
             List<FileSystemItemMetadataExt> userFileSystemChildren = new List<FileSystemItemMetadataExt>();
 
@@ -135,6 +141,40 @@ namespace WebDAVDrive
         {
             // Typically we can not change any folder metadata on a WebDAV server, just logging the call.
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
+        }
+
+        /// <inheritdoc/>
+        public async Task<IChanges> GetChangesAsync(string syncToken)
+        {
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChangesAsync)}({syncToken})", UserFileSystemPath);
+
+            Client.IChanges davChanges = null;
+            Changes changes = new Changes();
+            changes.NewSyncToken = syncToken;
+
+            // In this sample we use sync id algoritm for synchronization.
+            Client.PropertyName[] propNames = new Client.PropertyName[2];
+            propNames[0] = new Client.PropertyName("resource-id", "DAV:");
+            propNames[1] = new Client.PropertyName("parent-resource-id", "DAV:");
+
+            do
+            {
+                davChanges = (await Program.DavClient.GetChangesAsync(new Uri(RemoteStoragePath), propNames, changes.NewSyncToken, true)).WebDavResponse;
+                changes.NewSyncToken = davChanges.NewSyncToken;
+
+                foreach (Client.IChangedItem remoteStorageItem in davChanges)
+                {
+                    IChangedItem itemInfo = (IChangedItem)Mapping.GetUserFileSystemItemMetadata(remoteStorageItem); 
+                    // Changed, created, moved and deleted item.
+                    itemInfo.ChangeType = remoteStorageItem.ChangeType == Client.Change.Changed ? Change.Changed : Change.Deleted;
+
+                    changes.Add(itemInfo);
+                }
+            }
+            while (davChanges.MoreResults);
+
+            // Returns changes to the Engine. Engine applies changes to the user file system.
+            return changes;
         }
     }
 }

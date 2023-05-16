@@ -7,7 +7,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>FileProviderExtension</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.userfilesystem.vfs.app.extension</string>
+	<string>com.filesystem.vfs.app.extension</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -21,32 +21,17 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>10.15</string>
+	<string>10.14</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSExtension</key>
 	<dict>
-		<key>NSExtensionAttributes</key>
-		<dict/>
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.fileprovider-nonui</string>
 		<key>NSExtensionPrincipalClass</key>
 		<string>VirtualEngine</string>
 		<key>NSExtensionFileProviderSupportsEnumeration</key>
 		<true/>
-		<key>NSExtensionFileProviderActions</key>
-		<array>
-			<dict>
-				<key>NSExtensionFileProviderActionIdentifier</key>
-				<string>28d0e0cb-5df7-432c-a06f-297c06b5ec5d</string>
-				<key>NSExtensionFileProviderActionName</key>
-				<string>Action 1</string>
-				<key>NSExtensionFileProviderActionActivationRule</key>
-				<string>TRUEPREDICATE</string>
-			</dict>
-		</array>
 	</dict>
-	<key>NSPrincipalClass</key>
-	<string>NSApplication</string>
 </dict>
 </plist>

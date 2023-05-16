@@ -9,7 +9,6 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Synchronization;
 
 using System.Text;
-using ITHit.FileSystem.Mac.Synchronization;
 
 namespace WebDAVFileProviderExtension
 {
@@ -40,7 +39,7 @@ namespace WebDAVFileProviderExtension
 
             // Update remote storage file content.
             // Get the ETag returned by the server, if any.
-            string eTag = await Session.UploadAsync(newFileUri, async (outputStream) => {
+            Client.IWebDavResponse<string> response = await Session.UploadAsync(newFileUri, async (outputStream) => {
                 if (content != null)
                 {
                     // Setting position to 0 is required in case of retry.
@@ -49,9 +48,8 @@ namespace WebDAVFileProviderExtension
                 }
             }, null, contentLength, 0, -1, null, null, null, cancellationToken);
 
-            // WebDAV does not use any item IDs, returning null.
-            VirtualFile newFile = new VirtualFile(newFileUri.AbsoluteUri, Session, Logger);
-            return (await newFile.GetMetadataAsync()).RemoteStorageItemId;
+
+            return Encoding.UTF8.GetBytes(response.Headers.GetValues("resource-id").FirstOrDefault() ?? string.Empty);
         }
 
         /// <inheritdoc/>
@@ -87,7 +85,7 @@ namespace WebDAVFileProviderExtension
 
             do
             {
-                davChanges = await Session.GetChangesAsync(new Uri(RemoteStorageID), propNames, changes.NewSyncToken, true);
+                davChanges = (await Session.GetChangesAsync(new Uri(RemoteStorageID), propNames, changes.NewSyncToken, true)).WebDavResponse;
                 changes.NewSyncToken = davChanges.NewSyncToken;
 
                 foreach (Client.IChangedItem remoteStorageItem in davChanges)
@@ -112,7 +110,7 @@ namespace WebDAVFileProviderExtension
             propNames[0] = new Client.PropertyName("resource-id", "DAV:");
             propNames[1] = new Client.PropertyName("parent-resource-id", "DAV:");
 
-            Client.IHierarchyItem[] remoteStorageChildren = await Session.GetChildrenAsync(new Uri(RemoteStorageID), false, propNames, null, cancellationToken);
+            IList<Client.IHierarchyItem> remoteStorageChildren = (await Session.GetChildrenAsync(new Uri(RemoteStorageID), false, propNames, null, cancellationToken)).WebDavResponse;
 
             List<IFileSystemItemMetadata> userFileSystemChildren = new List<IFileSystemItemMetadata>();
             foreach (Client.IHierarchyItem remoteStorageItem in remoteStorageChildren)

@@ -94,10 +94,12 @@ namespace WebDAVFileProviderExtension
             try
             {
                 // Return IFileMetadata for a file, IFolderMetadata for a folder.
-                item = await Session.GetItemAsync(new Uri(RemoteStorageID), propNames);
+                item = (await Session.GetItemAsync(new Uri(RemoteStorageID), propNames)).WebDavResponse;
             }
-            catch(ITHit.WebDAV.Client.Exceptions.NotFoundException)
+            catch(ITHit.WebDAV.Client.Exceptions.NotFoundException e)
             {
+                Logger.LogError($"{nameof(IFileSystemItem)}.{nameof(GetMetadataAsync)}()", RemoteStorageID, ex: e);
+
                 item = null;
             }
 
@@ -110,7 +112,7 @@ namespace WebDAVFileProviderExtension
         /// </summary>
         public async Task<Uri> GetItemHrefAsync()
         {
-            return (await Session.GetItemAsync(new Uri(RemoteStorageID))).Href;
+            return (await Session.GetItemAsync(new Uri(RemoteStorageID))).WebDavResponse.Href;
         }
 
         /// <summary>
@@ -140,7 +142,7 @@ namespace WebDAVFileProviderExtension
 
                 try
                 {
-                    using (IWebResponse response = await Session.DownloadAsync(new Uri(filePathRemote)))
+                    using (IDownloadResponse response = await Session.DownloadAsync(new Uri(filePathRemote)))
                     {
                         using (Stream stream = await response.GetResponseStreamAsync())
                         {

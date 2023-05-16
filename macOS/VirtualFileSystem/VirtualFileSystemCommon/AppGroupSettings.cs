@@ -8,7 +8,7 @@ namespace VirtualFilesystemCommon
 {
     public static class AppGroupSettings
     {
-        private const string AppGroupId = "${TeamIdentificator}.group.com.userfilesystem.vfs";
+        private const string AppGroupId = "65S3A9JQ36.group.com.filesystem.vfs"; //TODO change this to correct group id
         public const string LocalPathId = "RemoteStorageRootPath";
         public const string LicenseId = "License";
 
