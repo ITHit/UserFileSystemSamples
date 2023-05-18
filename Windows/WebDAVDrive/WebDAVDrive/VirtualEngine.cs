@@ -29,11 +29,6 @@ namespace WebDAVDrive
         public readonly RemoteStorageMonitor RemoteStorageMonitor;
 
         /// <summary>
-        /// Performs complete remote storage scan for changes by comparing every item eTag.
-        /// </summary>
-        public readonly IncomingFullSync IncomingFullSync;
-
-        /// <summary>
         /// Credentials used to connect to the server. 
         /// Used for challenge-responce auth (Basic, Digest, NTLM or Kerberos).
         /// </summary>
@@ -78,9 +73,7 @@ namespace WebDAVDrive
             : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, logFormatter)
         {
             RemoteStorageMonitor = new RemoteStorageMonitor(webSocketServerUrl, this);
-            IncomingFullSync = new IncomingFullSync(this);
 
-            this.SyncService.BeforeStateChanged += SyncService_BeforeStateChanged;
             this.autoLockTimoutMs = autoLockTimoutMs;
             this.manualLockTimoutMs = manualLockTimoutMs;
         }
@@ -95,14 +88,6 @@ namespace WebDAVDrive
             else
             {
                 return new VirtualFolder(userFileSystemPath, this, autoLockTimoutMs, manualLockTimoutMs, logger);
-            }
-        }
-
-        private async void SyncService_BeforeStateChanged(object sender, SynchEventArgs synchEventArgs)
-        {
-            if (synchEventArgs.NewState == SynchronizationState.Idle)
-            {
-                await IncomingFullSync.TrySyncronizeAsync();
             }
         }
 
@@ -130,14 +115,12 @@ namespace WebDAVDrive
         {
             await base.StartAsync(processModified, cancellationToken);
             await RemoteStorageMonitor.StartAsync();
-            await IncomingFullSync.StartAsync();
         }
 
         public override async Task StopAsync()
         {
             await base.StopAsync();
             await RemoteStorageMonitor.StopAsync();
-            await IncomingFullSync.StopAsync();
         }
 
         private bool disposedValue;

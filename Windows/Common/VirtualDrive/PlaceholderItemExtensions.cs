@@ -5,8 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 
 using ITHit.FileSystem.Windows;
-using ITHit.FileSystem.Windows.Properties;
-
 
 namespace ITHit.FileSystem.Samples.Common.Windows
 {

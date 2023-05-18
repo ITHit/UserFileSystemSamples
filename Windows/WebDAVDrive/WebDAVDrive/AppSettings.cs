@@ -45,11 +45,6 @@ namespace WebDAVDrive
         public double SyncIntervalMs { get; set; }
 
         /// <summary>
-        /// Full incoming synchronization interval in milliseconds.
-        /// </summary>
-        public double IncomingFullSyncIntervalMs { get; set; }
-
-        /// <summary>
         /// Throttling max of create/update/read concurrent requests.
         /// </summary>
         public int? MaxTransferConcurrentRequests { get; set; }

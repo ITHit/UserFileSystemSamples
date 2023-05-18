@@ -86,18 +86,27 @@ namespace WebDAVDrive
 
             Logger.LogMessage("Started", webSocketServerUrl);
 
+            // sync items before getting websocket messages.
+            await ProcessAsync(new WebSocketMessage
+            {
+                EventType = "start monitoring."
+            }, true);
+
             var rcvBuffer = new ArraySegment<byte>(new byte[2048]);
             while (true)
             {
                 WebSocketReceiveResult rcvResult = await clientWebSocket.ReceiveAsync(rcvBuffer, cancellationTokenSource.Token);
                 byte[] msgBytes = rcvBuffer.Skip(rcvBuffer.Offset).Take(rcvResult.Count).ToArray();
                 string rcvMsg = Encoding.UTF8.GetString(msgBytes);
-                await ProcessAsync(rcvMsg);
+                await ProcessAsync(JsonSerializer.Deserialize<WebSocketMessage>(rcvMsg, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                }));
             }
         }
 
         /// <summary>
-        /// Starts websockets to monitor changes in remote storage.
+        /// Starts WebSockets to monitor changes in the remote storage.
         /// </summary>
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
@@ -114,13 +123,13 @@ namespace WebDAVDrive
                       }
                       catch (Exception e) when (e is WebSocketException || e is AggregateException)
                       {
-                          // Start socket after first success WebDAV PROPFIND. Restart socket when it disconnects.
+                          // Start socket after first successeful WebDAV PROPFIND. Restart socket if disconnected.
                           if (clientWebSocket != null && clientWebSocket?.State != WebSocketState.Closed)
                           {
                               Logger.LogError(e.Message, webSocketServerUrl);
                           }
 
-                          // Delay websocket connect to not overload it on network disappear.
+                          // Delay WebSocket connection to avoid overload on network disconnections.
                           await Task.Delay(TimeSpan.FromSeconds(2));
                           repeat = true;
                       };
@@ -153,33 +162,31 @@ namespace WebDAVDrive
         /// <summary>
         /// Processes notification received from server via WebSockets. Triggers reading all changes from the server. 
         /// </summary>
-        internal async Task ProcessAsync(string jsonString)
+        /// <param name="webSocketMessage">Web Socket message.</param>
+        /// <param name="forceSync">force sync items.</param>
+        internal async Task ProcessAsync(WebSocketMessage webSocketMessage, bool forceSync = false)
         {
-            WebSocketMessage jsonMessage = JsonSerializer.Deserialize<WebSocketMessage>(jsonString, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-            string remoteStoragePath = Mapping.GetAbsoluteUri(jsonMessage.ItemPath);
+            string remoteStoragePath = Mapping.GetAbsoluteUri(webSocketMessage.ItemPath);
 
             // Check if remote URL starts with WebDAVServerUrl.
-            if (remoteStoragePath.StartsWith(Program.Settings.WebDAVServerUrl, StringComparison.InvariantCultureIgnoreCase))
+            if (remoteStoragePath.StartsWith(Program.Settings.WebDAVServerUrl, StringComparison.InvariantCultureIgnoreCase) || forceSync)
             {
-                Logger.LogDebug($"EventType: {jsonMessage.EventType}", jsonMessage.ItemPath, jsonMessage.TargetPath);
+                Logger.LogDebug($"EventType: {webSocketMessage.EventType}", webSocketMessage.ItemPath, webSocketMessage.TargetPath);
                 try
                 {
-                    // triggers ISynchronizationCollection.GetChangesAsync call to get all changes from server.                    
-                    await (Engine.ServerNotifications(Engine.Path, Logger) as IServerCollectionNotifications)
-                        .ProcessChangesAsync(async (metadata, userFileSystemPath) => 
+                    // Triggers ISynchronizationCollection.GetChangesAsync() call to get all changes from the remote storage.                    
+                    await Engine.ServerNotifications(Engine.Path, Logger)
+                        .ProcessChangesAsync(async (metadata, userFileSystemPath) =>
                         await Engine.Placeholders.GetItem(userFileSystemPath).SavePropertiesAsync(metadata as FileSystemItemMetadataExt, Logger));
 
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
-                    Logger.LogError(nameof(ProcessAsync), Engine.Path, null, ex);
+                    Logger.LogError("Failed to process changes", Engine.Path, null, ex);
                 }
             }
         }
-        
+
         private bool disposedValue = false; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)

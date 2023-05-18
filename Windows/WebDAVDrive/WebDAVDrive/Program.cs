@@ -181,7 +181,6 @@ namespace WebDAVDrive
                 commands.RemoteStorageMonitor = Engine.RemoteStorageMonitor;
 
                 Engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
-                Engine.IncomingFullSync.SyncIntervalMs = Settings.IncomingFullSyncIntervalMs;
                 Engine.AutoLock = Settings.AutoLock;
                 Engine.MaxTransferConcurrentRequests = Settings.MaxTransferConcurrentRequests.Value;
                 Engine.MaxOperationsConcurrentRequests = Settings.MaxOperationsConcurrentRequests.Value;
