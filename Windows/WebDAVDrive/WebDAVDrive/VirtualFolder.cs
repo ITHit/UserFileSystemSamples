@@ -144,7 +144,7 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task<IChanges> GetChangesAsync(string syncToken)
+        public async Task<IChanges> GetChangesAsync(string syncToken, bool deep, long? limit, CancellationToken cancellationToken)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChangesAsync)}({syncToken})", UserFileSystemPath);
 
@@ -159,7 +159,13 @@ namespace WebDAVDrive
 
             do
             {
-                davChanges = (await Program.DavClient.GetChangesAsync(new Uri(RemoteStoragePath), propNames, changes.NewSyncToken, true)).WebDavResponse;
+                davChanges = (await Program.DavClient.GetChangesAsync(
+                    new Uri(RemoteStoragePath), 
+                    propNames, 
+                    changes.NewSyncToken,
+                    deep,
+                    limit,
+                    cancellationToken: cancellationToken)).WebDavResponse;
                 changes.NewSyncToken = davChanges.NewSyncToken;
 
                 foreach (Client.IChangedItem remoteStorageItem in davChanges)
@@ -173,7 +179,7 @@ namespace WebDAVDrive
             }
             while (davChanges.MoreResults);
 
-            // Returns changes to the Engine. Engine applies changes to the user file system.
+            // Returns changes to the Engine. Engine applies changes to the user file system and stores the new sync-token.
             return changes;
         }
     }

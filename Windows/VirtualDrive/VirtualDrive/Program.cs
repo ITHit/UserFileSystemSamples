@@ -71,13 +71,14 @@ namespace VirtualDrive
             Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
 
             logFormatter = new LogFormatter(log, Settings.AppID, Settings.RemoteStorageRootPath);
+            commands = new Commands(log, Settings.RemoteStorageRootPath);
+            commands.ConfigureConsole();
 
             // Log environment description.
             logFormatter.PrintEnvironmentDescription();
 
             registrar = new SparsePackageRegistrar(SyncRootId, Settings.UserFileSystemRootPath, log, ShellExtension.ShellExtensions.Handlers);
 
-            commands = new Commands(log, Settings.RemoteStorageRootPath);
             consoleProcessor = new ConsoleProcessor(registrar, logFormatter, commands);
 
             switch (args.FirstOrDefault())

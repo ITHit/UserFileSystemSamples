@@ -140,7 +140,7 @@ namespace VirtualDrive
             // To signal that the children enumeration is completed 
             // always call ReturnChildren(), even if the folder is empty.
             await resultContext.ReturnChildrenAsync(remoteStorageChildren.ToArray(), totalCount);
-            Engine.LogDebug($"Listed {totalCount} item(s). Took: {watch.Elapsed.ToString(@"hh\:mm\:ss\.ff")}", UserFileSystemPath);
+            Logger.LogDebug($"Listed {totalCount} item(s). Took: {watch.Elapsed.ToString(@"hh\:mm\:ss\.ff")}", UserFileSystemPath);
 
             // Save data that you wish to display in custom columns here.
             //foreach (FileSystemItemMetadataExt itemMetadata in userFileSystemChildren)

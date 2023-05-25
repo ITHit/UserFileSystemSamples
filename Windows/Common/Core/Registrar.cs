@@ -120,9 +120,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
             try
             {
-                if (engine != null)
+                if (engine != null && !string.IsNullOrWhiteSpace(engine.DataPath))
                 {
-                    await engine.UninstallCleanupAsync();
+                    Directory.Delete(engine.DataPath, true);
                 }
             }
             catch (Exception ex)

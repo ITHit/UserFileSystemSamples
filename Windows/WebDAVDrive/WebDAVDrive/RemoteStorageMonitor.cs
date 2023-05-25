@@ -70,71 +70,96 @@ namespace WebDAVDrive
         }
 
         /// <summary>
-        /// Starts monitoring changes in the remote storage.
+        /// Monitors and processes WebSockets notifications from the remote storage.
         /// </summary>
-        private async Task StartMonitoringAsync(NetworkCredential credentials, CookieCollection cookies, Guid thisInstanceId)
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <remarks>
+        /// Listens to server notifications, gets all changes from the remote storage on every notification.
+        /// </remarks>
+        private async Task RunWebSocketsAsync(CancellationToken cancellationToken)
         {
-            cancellationTokenSource = new CancellationTokenSource();
-            clientWebSocket = new ClientWebSocket();
-            clientWebSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(10);
-            clientWebSocket.Options.Credentials = credentials;
-            clientWebSocket.Options.Cookies = new CookieContainer();
-            clientWebSocket.Options.Cookies.Add(cookies);
-            clientWebSocket.Options.SetRequestHeader("InstanceId", thisInstanceId.ToString());
-
-            await clientWebSocket.ConnectAsync(new Uri(webSocketServerUrl), CancellationToken.None);
-
-            Logger.LogMessage("Started", webSocketServerUrl);
-
-            // sync items before getting websocket messages.
-            await ProcessAsync(new WebSocketMessage
-            {
-                EventType = "start monitoring."
-            }, true);
-
             var rcvBuffer = new ArraySegment<byte>(new byte[2048]);
             while (true)
             {
-                WebSocketReceiveResult rcvResult = await clientWebSocket.ReceiveAsync(rcvBuffer, cancellationTokenSource.Token);
+                WebSocketReceiveResult rcvResult = await clientWebSocket.ReceiveAsync(rcvBuffer, cancellationToken);
                 byte[] msgBytes = rcvBuffer.Skip(rcvBuffer.Offset).Take(rcvResult.Count).ToArray();
                 string rcvMsg = Encoding.UTF8.GetString(msgBytes);
-                await ProcessAsync(JsonSerializer.Deserialize<WebSocketMessage>(rcvMsg, new JsonSerializerOptions
+
+                WebSocketMessage webSocketMessage = JsonSerializer.Deserialize<WebSocketMessage>(rcvMsg, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
-                }));
+                });
+
+                string remoteStoragePath = Mapping.GetAbsoluteUri(webSocketMessage.ItemPath);
+
+                // Just in case there is more than one WebSockets server/virtual folder that
+                // is sending notifications (like with webdavserver.net, webdavserver.com),
+                // here we filter notifications that come from a different server/virtual folder.
+                if (remoteStoragePath.StartsWith(Program.Settings.WebDAVServerUrl, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    Logger.LogDebug($"EventType: {webSocketMessage.EventType}", webSocketMessage.ItemPath, webSocketMessage.TargetPath);
+                    await ProcessAsync();
+                }
             }
         }
 
         /// <summary>
-        /// Starts WebSockets to monitor changes in the remote storage.
+        /// Starts monitoring changes in the remote storage.
         /// </summary>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
             await Task.Factory.StartNew(
               async () =>
               {
-                  bool repeat = false;
-                  do
+                  using (cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
                   {
-                      try
+                      bool repeat = false;
+                      do
                       {
-                          repeat = false;
-                          await StartMonitoringAsync(Engine.Credentials, Engine.Cookies, Engine.InstanceId);
-                      }
-                      catch (Exception e) when (e is WebSocketException || e is AggregateException)
-                      {
-                          // Start socket after first successeful WebDAV PROPFIND. Restart socket if disconnected.
-                          if (clientWebSocket != null && clientWebSocket?.State != WebSocketState.Closed)
+                          using (clientWebSocket = new ClientWebSocket())
                           {
-                              Logger.LogError(e.Message, webSocketServerUrl);
-                          }
+                              try
+                              {
+                                  repeat = false;
 
-                          // Delay WebSocket connection to avoid overload on network disconnections.
-                          await Task.Delay(TimeSpan.FromSeconds(2));
-                          repeat = true;
-                      };
-                  } while (repeat);
-              }, new CancellationTokenSource().Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                                  Logger.LogDebug("Starting", webSocketServerUrl);
+
+                                  // Configure web sockets and connect to the server.
+                                  clientWebSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(10);
+                                  clientWebSocket.Options.Credentials = Engine.Credentials;
+                                  clientWebSocket.Options.Cookies = new CookieContainer();
+                                  clientWebSocket.Options.Cookies.Add(Engine.Cookies);
+                                  clientWebSocket.Options.SetRequestHeader("InstanceId", Engine.InstanceId.ToString());
+                                  await clientWebSocket.ConnectAsync(new Uri(webSocketServerUrl), cancellationToken);
+                                  Logger.LogDebug("Connected", webSocketServerUrl);
+
+                                  // After esteblishing connection with a server we must get all changes from the remote storage.
+                                  // This is required on Engine start, server recovery, network recovery, etc.
+                                  Logger.LogDebug("Getting all changes from server", webSocketServerUrl);
+                                  await ProcessAsync();
+
+                                  Logger.LogMessage("Started", webSocketServerUrl);
+
+                                  await RunWebSocketsAsync(cancellationTokenSource.Token);
+                              }
+                              catch (Exception e) when (e is WebSocketException || e is AggregateException)
+                              {
+                                  // Start socket after first successeful WebDAV PROPFIND. Restart socket if disconnected.
+                                  if (clientWebSocket != null && clientWebSocket?.State != WebSocketState.Closed)
+                                  {
+                                      Logger.LogError(e.Message, webSocketServerUrl, null, e);
+                                  }
+
+                                  // Here we delay WebSocket connection to avoid overload on
+                                  // network disconnections or server failure.
+                                  await Task.Delay(TimeSpan.FromSeconds(2), cancellationTokenSource.Token);
+                                  repeat = true;
+                              };
+                          }
+                      } while (repeat);
+                  }
+              }, cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
         /// <summary>
@@ -160,30 +185,25 @@ namespace WebDAVDrive
         }
 
         /// <summary>
-        /// Processes notification received from server via WebSockets. Triggers reading all changes from the server. 
+        /// Triggers <see cref="ISynchronizationCollection.GetChangesAsync"/> call to get 
+        /// and process all changes from the remote storage.
         /// </summary>
-        /// <param name="webSocketMessage">Web Socket message.</param>
-        /// <param name="forceSync">force sync items.</param>
-        internal async Task ProcessAsync(WebSocketMessage webSocketMessage, bool forceSync = false)
+        /// <remarks>
+        /// We do not pass WebSockets cancellation token to this method because stopping 
+        /// web sockets should not stop processing changes. 
+        /// To stop processing changes that are already received the Engine must be stopped.
+        /// </remarks>
+        private async Task ProcessAsync()
         {
-            string remoteStoragePath = Mapping.GetAbsoluteUri(webSocketMessage.ItemPath);
-
-            // Check if remote URL starts with WebDAVServerUrl.
-            if (remoteStoragePath.StartsWith(Program.Settings.WebDAVServerUrl, StringComparison.InvariantCultureIgnoreCase) || forceSync)
+            try
             {
-                Logger.LogDebug($"EventType: {webSocketMessage.EventType}", webSocketMessage.ItemPath, webSocketMessage.TargetPath);
-                try
-                {
-                    // Triggers ISynchronizationCollection.GetChangesAsync() call to get all changes from the remote storage.                    
-                    await Engine.ServerNotifications(Engine.Path, Logger)
-                        .ProcessChangesAsync(async (metadata, userFileSystemPath) =>
-                        await Engine.Placeholders.GetItem(userFileSystemPath).SavePropertiesAsync(metadata as FileSystemItemMetadataExt, Logger));
-
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError("Failed to process changes", Engine.Path, null, ex);
-                }
+                await Engine.ServerNotifications(Engine.Path, Logger)
+                    .ProcessChangesAsync(async (metadata, userFileSystemPath) =>
+                    await Engine.Placeholders.GetItem(userFileSystemPath).SavePropertiesAsync(metadata as FileSystemItemMetadataExt, Logger));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to process changes", Engine.Path, null, ex);
             }
         }
 
@@ -196,6 +216,7 @@ namespace WebDAVDrive
                 if (disposing)
                 {
                     clientWebSocket?.Dispose();
+                    cancellationTokenSource?.Dispose();
                     Logger.LogMessage($"Disposed");
                 }
 

@@ -60,13 +60,14 @@ namespace VirtualFileSystem
             Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
 
             logFormatter = new LogFormatter(log, Settings.AppID, Settings.RemoteStorageRootPath);
+            commands = new Commands(log, Settings.RemoteStorageRootPath);
+            commands.ConfigureConsole();
 
             // Log environment description.
             logFormatter.PrintEnvironmentDescription();
 
             registrar = new Registrar(SyncRootId, Settings.UserFileSystemRootPath, log);
 
-            commands = new Commands(log, Settings.RemoteStorageRootPath);
             consoleProcessor = new ConsoleProcessor(registrar, logFormatter, commands);
 
             try

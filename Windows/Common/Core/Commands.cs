@@ -159,6 +159,18 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
 #if DEBUG
+
+        /// <summary>
+        /// Sets console output defaults.
+        /// </summary>
+        public void ConfigureConsole()
+        {
+            // Enable UTF8 for Console Window and set width.
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight / 3);
+            //Console.SetBufferSize(Console.LargestWindowWidth * 2, short.MaxValue / 2);
+        }
+
         /// <summary>
         /// Opens Windows File Manager with both remote storage and user file system for testing.
         /// </summary>
@@ -166,11 +178,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <remarks>This method is provided solely for the development and testing convenience.</remarks>
         public void ShowTestEnvironment(bool openRemoteStorage = true)
         {
-            // Enable UTF8 for Console Window and set width.
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
-            Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight / 3);
-            Console.SetBufferSize(Console.LargestWindowWidth * 2, short.MaxValue / 2);
-
             // Open Windows File Manager with user file system.
             Commands.Open(Engine.Path);
 

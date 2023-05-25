@@ -114,7 +114,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="e">Contains new and old Engine state.</param>
         private void Engine_StateChanged(Engine engine, EngineWindows.StateChangeEventArgs e)
         {
-            engine.LogMessage($"{e.NewState}");
+            engine.Logger.LogMessage($"{e.NewState}");
         }
 
         /// <summary>

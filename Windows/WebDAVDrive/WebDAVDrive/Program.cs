@@ -16,12 +16,10 @@ using ITHit.FileSystem.Windows.Package;
 
 using ITHit.WebDAV.Client;
 using ITHit.WebDAV.Client.Exceptions;
-using System.Net.Http;
 
 using WebDAVDrive.UI;
 using WebDAVDrive.UI.ViewModels;
-using ITHit.FileSystem.Windows;
-using Windows.Media.Protection.PlayReady;
+
 
 namespace WebDAVDrive
 {
@@ -98,13 +96,14 @@ namespace WebDAVDrive
             Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
 
             logFormatter = new LogFormatter(log, Settings.AppID, Settings.WebDAVServerUrl);
+            commands = new Commands(log, Settings.WebDAVServerUrl);
+            commands.ConfigureConsole();
 
             // Log environment description.
             logFormatter.PrintEnvironmentDescription();
 
             registrar = new SparsePackageRegistrar(SyncRootId, Settings.UserFileSystemRootPath, log, ShellExtension.ShellExtensions.Handlers);
 
-            commands = new Commands(log, Settings.WebDAVServerUrl);
             consoleProcessor = new ConsoleProcessor(registrar, logFormatter, commands);
 
             switch (args.FirstOrDefault())
@@ -240,7 +239,7 @@ namespace WebDAVDrive
         /// <param name="engineInstanceId">Engine instance ID to be sent with every request to the remote storage.</param>
         private static WebDavSession CreateWebDavSession(Guid engineInstanceId)
         {
-            HttpClientHandler handler = new HttpClientHandler()
+            System.Net.Http.HttpClientHandler handler = new System.Net.Http.HttpClientHandler()
             {
                 AllowAutoRedirect = false,
 
