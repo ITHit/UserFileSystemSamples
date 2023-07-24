@@ -62,37 +62,38 @@ namespace WebDAVDrive
         /// <param name="webSocketServerUrl">Web sockets server that sends notifications about changes on the server.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
         public VirtualEngine(
-            string license, 
-            string userFileSystemRootPath, 
-            string remoteStorageRootPath, 
-            string webSocketServerUrl, 
+            string license,
+            string userFileSystemRootPath,
+            string remoteStorageRootPath,
+            string webSocketServerUrl,
             string iconsFolderPath,
-            double autoLockTimoutMs, 
+            double autoLockTimoutMs,
             double manualLockTimoutMs,
             LogFormatter logFormatter)
             : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, logFormatter)
         {
-            RemoteStorageMonitor = new RemoteStorageMonitor(webSocketServerUrl, this);
+            RemoteStorageMonitor = new RemoteStorageMonitor(webSocketServerUrl, this.Logger);
 
             this.autoLockTimoutMs = autoLockTimoutMs;
             this.manualLockTimoutMs = manualLockTimoutMs;
         }
 
         /// <inheritdoc/>
-        public override async Task<IFileSystemItem> GetFileSystemItemAsync(string userFileSystemPath, FileSystemItemType itemType, byte[] itemId, ILogger logger = null)
+        public override async Task<IFileSystemItem> GetFileSystemItemAsync(byte[] remoteStorageId, FileSystemItemType itemType, IContext context, ILogger logger = null)
         {
+            string userFileSystemPath = (context as IContextWindows).Path;
             if (itemType == FileSystemItemType.File)
             {
-                return new VirtualFile(userFileSystemPath, this, autoLockTimoutMs, manualLockTimoutMs, logger);
+                return new VirtualFile(remoteStorageId, userFileSystemPath, this, autoLockTimoutMs, manualLockTimoutMs, logger);
             }
             else
             {
-                return new VirtualFolder(userFileSystemPath, this, autoLockTimoutMs, manualLockTimoutMs, logger);
+                return new VirtualFolder(remoteStorageId, userFileSystemPath, this, autoLockTimoutMs, manualLockTimoutMs, logger);
             }
         }
 
         /// <inheritdoc/>
-        public override async Task<IMenuCommand> GetMenuCommandAsync(Guid menuGuid)
+        public override async Task<IMenuCommand> GetMenuCommandAsync(Guid menuGuid, IOperationContext operationContext = null)
         {
             // For this method to be called you need to register a menu command handler.
             // See method description for more details.
@@ -114,6 +115,12 @@ namespace WebDAVDrive
         public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
         {
             await base.StartAsync(processModified, cancellationToken);
+
+            RemoteStorageMonitor.Credentials = this.Credentials;
+            RemoteStorageMonitor.Cookies = this.Cookies;
+            RemoteStorageMonitor.InstanceId = this.InstanceId;
+            RemoteStorageMonitor.ServerNotifications = this.ServerNotifications(this.Path, RemoteStorageMonitor.Logger);
+            RemoteStorageMonitor.SavePropertiesAction = SavePropertiesAsync;
             await RemoteStorageMonitor.StartAsync();
         }
 
@@ -121,6 +128,19 @@ namespace WebDAVDrive
         {
             await base.StopAsync();
             await RemoteStorageMonitor.StopAsync();
+        }
+
+        /// <summary>
+        /// Called to save item properties.
+        /// </summary>
+        /// <param name="metadata"></param>
+        /// <param name="userFileSystemPath"></param>
+        private async Task SavePropertiesAsync(IFileSystemItemMetadata metadata, string userFileSystemPath)
+        {
+            if (this.Placeholders.TryGetItem(userFileSystemPath, out PlaceholderItem placeholderItem))
+            {
+                await placeholderItem.SavePropertiesAsync(metadata as ITHit.FileSystem.Samples.Common.FileSystemItemMetadataExt);
+            }
         }
 
         private bool disposedValue;

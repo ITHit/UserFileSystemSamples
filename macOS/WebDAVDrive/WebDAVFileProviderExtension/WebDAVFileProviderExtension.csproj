@@ -57,6 +57,18 @@
     <AOTMode>None</AOTMode>
     <LangVersion>10.0</LangVersion>
     <UseHardenedRuntime>true</UseHardenedRuntime>
+    <CustomCommands>
+      <CustomCommands>
+        <Command>
+          <type>AfterBuild</type>
+          <command>bash ${ProjectDir}/sign_release.sh ${TargetDir}</command>
+        </Command>
+        <Command>
+          <type>AfterBuild</type>
+          <command>codesign --force --sign "Mac Developer" -o runtime --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der ${TargetDir}/WebDAVFileProviderExtension.appex</command>
+        </Command>
+      </CustomCommands>
+    </CustomCommands>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Core\Common.Core.csproj" />
@@ -64,10 +76,13 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ITHitWebDAVClient" Version="7.0.4627-Beta" />
-    <PackageReference Include="ITHit.FileSystem.Mac" Version="7.0.22091-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="7.1.23216-Beta" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Security.Permissions" Version="7.0.0" />
     <PackageReference Include="System.Threading.AccessControl" Version="7.0.1" />
+  </ItemGroup>
+   <ItemGroup>
+      <Content Include="..\WebDAVMacApp\Resources\appsettings.json" Link="Resources\appsettings.json" />
   </ItemGroup>
 </Project>

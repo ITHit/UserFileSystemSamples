@@ -58,5 +58,30 @@ This sample implements a virtual file system for macOS that displays documents f
 </p>
 </a>
 </li>
+<li>
+<a class="link-header" href="https://www.userfilesystem.com/examples/mac_troubleshooting/">
+<h2>File Provider Extension Troubleshooting on macOS</h2>
+</a>
+
+<a href="https://www.userfilesystem.com/examples/mac_troubleshooting/">
+<p>
+If you experience issues on application start it may be caused by an incorrect app configuration. You can find what may be wrong using a macOS Console:
+
+If your application started successfully but you experience issues with the file system you may n                                            <span>...</span>
+</p>
+</a>
+</li>
+<li>
+<a class="link-header" href="https://www.userfilesystem.com/examples/apple_deployment/">
+<h2>macOS File Provider Extension Projects Deployment </h2>
+</a>
+
+<a href="https://www.userfilesystem.com/examples/apple_deployment/">
+<p>
+To deploy macOS project in a production environment you will need to create&nbsp;Group ID, App Identifies and Provisioning Profiles.
+Note that these steps are NOT required for development. Sample project provided with the library run out of the box in the                                            <span>...</span>
+</p>
+</a>
+</li>
 </ul>
 

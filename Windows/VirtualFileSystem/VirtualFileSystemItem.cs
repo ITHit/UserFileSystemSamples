@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common.Windows;
-
+using ITHit.FileSystem.Windows;
 
 namespace VirtualFileSystem
 {
     ///<inheritdoc>
-    public abstract class VirtualFileSystemItem : IFileSystemItem
+    public abstract class VirtualFileSystemItem : IFileSystemItemWindows
     {
         /// <summary>
         /// File or folder path in the user file system.
@@ -148,7 +148,7 @@ namespace VirtualFileSystem
         
 
         ///<inheritdoc/>
-        public Task<byte[]> GetThumbnailAsync(uint size)
+        public Task<byte[]> GetThumbnailAsync(uint size, IOperationContext operationContext = null)
         {
             // For this method to be called you need to register a thumbnail handler.
             // See method description for more details.
@@ -157,18 +157,11 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync()
+        public async Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync(IOperationContext operationContext = null)
         {
             // For this method to be called you need to register a properties handler.
             // See method description for more details.
 
-            throw new NotImplementedException();
-        }
-
-        ///<inheritdoc/>
-        public Task<IFileSystemItemMetadata> GetMetadataAsync()
-        {
-            // Return IFileMetadata for a file, IFolderMetadata for a folder.
             throw new NotImplementedException();
         }
     }

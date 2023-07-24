@@ -13,7 +13,7 @@ using ITHit.FileSystem.Windows;
 namespace VirtualDrive
 {
     ///<inheritdoc>
-    public abstract class VirtualFileSystemItem : IFileSystemItem, ILock
+    public abstract class VirtualFileSystemItem : IFileSystemItemWindows, ILock
     {
         /// <summary>
         /// File or folder path in the user file system.
@@ -152,7 +152,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> GetThumbnailAsync(uint size)
+        public async Task<byte[]> GetThumbnailAsync(uint size, IOperationContext operationContext = null)
         {
             // For this method to be called you need to register a thumbnail handler.
             // See method description for more details.
@@ -169,7 +169,7 @@ namespace VirtualDrive
 
         
         /// <inheritdoc/>
-        public async Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync()
+        public async Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync(IOperationContext operationContext = null)
         {
             // For this method to be called you need to register a properties handler.
             // See method description for more details.
@@ -226,13 +226,6 @@ namespace VirtualDrive
             return props;
         }
         
-
-        ///<inheritdoc>
-        public Task<IFileSystemItemMetadata> GetMetadataAsync()
-        {
-            // Return IFileMetadata for a file, IFolderMetadata for a folder.
-            throw new NotImplementedException();
-        }
 
         ///<inheritdoc>
         public async Task LockAsync(LockMode lockMode, IOperationContext operationContext = null, CancellationToken cancellationToken = default)

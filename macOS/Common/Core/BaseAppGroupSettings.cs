@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using FileProvider;
 using Foundation;
 
@@ -7,53 +10,32 @@ namespace Common.Core
 {
     public static class BaseAppGroupSettings
     {
-        private const string InternalSettingFile = "data.out";
+        private static ConcurrentDictionary<string, string> appSettings = new ConcurrentDictionary<string, string>();
 
-        public static NSDictionary SaveSharedSettings(string resourceName, string appGroupId)
+
+        public static string GetSettingValue(string key)
         {
-            NSDictionary sharedData = ReadContainerSettingsFile(resourceName);
-            NSUrl userDataPath = GetSharedContainerUrl(appGroupId);
-            if (!sharedData.WriteToFile(Path.Combine(userDataPath.Path, InternalSettingFile), true))
+            if (!appSettings.ContainsKey(key))
             {
-                throw new Exception("Failed to save server setting");
-            }
+                string pathToSettings = NSBundle.MainBundle.PathForResource("appsettings", "json");
 
-            return sharedData;
+                // read all settings.
+                foreach (KeyValuePair<string, string> setting in ReadAppSettingsFile(pathToSettings))
+                {
+                    appSettings.TryAdd(setting.Key, setting.Value);
+                }
+            }
+            return appSettings[key];
         }
 
-        public static string GetSettingValue(string key, string appGroupId)
+        private static Dictionary<string, string> ReadAppSettingsFile(string path)
         {
-            NSUrl userDataPath = GetSharedContainerUrl(appGroupId);
-            NSDictionary userData = NSDictionary.FromFile(Path.Combine(userDataPath.Path, InternalSettingFile));
-            if (userData is null)
+            JsonSerializerOptions options = new JsonSerializerOptions
             {
-                return null;
-            }
+                ReadCommentHandling = JsonCommentHandling.Skip
+            };         
 
-            return userData.ValueForKey((NSString)key).ToString();
-        }
-
-        private static NSDictionary ReadContainerSettingsFile(string resourceName)
-        {
-            string filename = Path.GetFileNameWithoutExtension(resourceName);
-            string fileExtension = Path.GetExtension(resourceName)?.Replace(".", "");
-
-            string pathToSettings = NSBundle.MainBundle.PathForResource(filename, fileExtension);
-            NSData settingsData = NSData.FromUrl(NSUrl.FromFilename(pathToSettings));
-
-            NSError error;
-            NSDictionary jsonObject = (NSDictionary)NSJsonSerialization.Deserialize(settingsData, NSJsonReadingOptions.MutableLeaves, out error);
-            if (error is not null)
-            {
-                throw new Exception(error.ToString());
-            }
-
-            return jsonObject;
-        }
-
-        private static NSUrl GetSharedContainerUrl(string appGroupId)
-        {
-            return NSFileManager.DefaultManager.GetContainerUrl(appGroupId);
+            return JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path), options);
         }
     }
 }

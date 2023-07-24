@@ -13,33 +13,17 @@ namespace FileProviderExtension
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
-        /// <param name="path">File path in the user file system.</param>
+        /// <param name="remoteStoragePath">File or folder path in the remote system.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFile(string path, ILogger logger) : base(path, logger)
+        public VirtualFile(string remoteStoragePath, ILogger logger) : base(remoteStoragePath, logger)
         {
 
-        }
-
-        /// <inheritdoc/>
-        public async Task OpenAsync(IOperationContext operationContext, IResultContext context)
-        {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(OpenAsync)}()", UserFileSystemPath);
-        }
-
-        
-        /// <inheritdoc/>
-        public async Task CloseAsync(IOperationContext operationContext, IResultContext context)
-        {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(CloseAsync)}()", UserFileSystemPath);
-        }
+        }        
      
         /// <inheritdoc/>
         public async Task ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {
-
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath);
-
-            SimulateNetworkDelay(length, resultContext);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", RemoteStoragePath);
 
             await using (FileStream stream = System.IO.File.OpenRead(RemoteStoragePath))
             {
@@ -48,19 +32,11 @@ namespace FileProviderExtension
                 await stream.CopyToAsync(output, bufferSize, length);
             }
         }
-        
-
-        /// <inheritdoc/>
-        public async Task ValidateDataAsync(long offset, long length, IValidateDataOperationContext operationContext, IValidateDataResultContext resultContext)
-        {
-
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", UserFileSystemPath);
-        }
 
         /// <inheritdoc/>
         public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", RemoteStoragePath);
 
             FileInfo remoteStorageItem = new FileInfo(RemoteStoragePath);
 

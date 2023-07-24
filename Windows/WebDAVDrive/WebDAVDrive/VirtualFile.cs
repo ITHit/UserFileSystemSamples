@@ -20,13 +20,14 @@ namespace WebDAVDrive
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
-        /// <param name="path">File path in the user file system.</param>
+        /// <param name="remoteStorageId">Remote storage item ID.</param>
+        /// <param name="userFileSystemPath">User file system path. This paramater is available on Windows platform only. On macOS and iOS this parameter is always null</param>
         /// <param name="engine">Engine instance.</param>
         /// <param name="autoLockTimoutMs">Automatic lock timout in milliseconds.</param>
         /// <param name="manualLockTimoutMs">Manual lock timout in milliseconds.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFile(string path, VirtualEngine engine, double autoLockTimoutMs, double manualLockTimoutMs, ILogger logger) 
-            : base(path, engine, autoLockTimoutMs, manualLockTimoutMs, logger)
+        public VirtualFile(byte[] remoteStorageId, string userFileSystemPath, VirtualEngine engine, double autoLockTimoutMs, double manualLockTimoutMs, ILogger logger) 
+            : base(remoteStorageId, userFileSystemPath, engine, autoLockTimoutMs, manualLockTimoutMs, logger)
         {
 
         }

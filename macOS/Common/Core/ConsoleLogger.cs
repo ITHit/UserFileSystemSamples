@@ -35,6 +35,25 @@ namespace Common.Core
             this.ComponentName = componentName;
         }
 
+        public void LogError(IEngine sender, EngineErrorEventArgs e)
+        {
+            LogError(e.Message, sourcePath: e.SourcePath, targetPath: e.TargetPath, ex: e.Exception, operationContext: e.OperationContext, callerLineNumber: e.CallerLineNumber,
+               callerMemberName: e.CallerMemberName, callerFilePath: e.CallerFilePath);
+            //WriteLog(sender, e, log4net.Core.Level.Error);
+        }
+
+        public void LogMessage(IEngine sender, EngineMessageEventArgs e)
+        {
+            LogMessage(e.Message, sourcePath: e.SourcePath, targetPath: e.TargetPath, operationContext: e.OperationContext, callerLineNumber: e.CallerLineNumber,
+                callerMemberName: e.CallerMemberName, callerFilePath: e.CallerFilePath);
+        }
+
+        public void LogDebug(IEngine sender, EngineMessageEventArgs e)
+        {
+            LogDebug(e.Message, sourcePath: e.SourcePath, targetPath: e.TargetPath, operationContext: e.OperationContext, callerLineNumber: e.CallerLineNumber,
+                callerMemberName: e.CallerMemberName, callerFilePath: e.CallerFilePath);
+        }
+
         public void LogError(string message, string sourcePath = null, string targetPath = null, Exception ex = null, IOperationContext operationContext = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
         {
             LogError($"\n{DateTimeOffset.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {ComponentName,-26}{message,-45} {sourcePath,-80}", ex);
@@ -42,7 +61,7 @@ namespace Common.Core
 
         public void LogMessage(string message, string sourcePath = null, string targetPath = null, IOperationContext operationContext = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
         {
-            LogDebug($"\n{DateTimeOffset.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {ComponentName,-26}{message,-45} {sourcePath,-80} {targetPath}");
+            LogWithLevel(string.Empty, $"\n{DateTimeOffset.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {ComponentName,-26}{message,-45} {sourcePath,-80} {targetPath}");
         }
 
         private void LogError(string str, Exception ex)
@@ -57,7 +76,7 @@ namespace Common.Core
 
         private void LogWithLevel(string logLevelStr, string str)
         {
-            NSLogHelper.NSLog(logLevelStr + " " + appName + " " + str);
+            NSLogHelper.NSLog((!string.IsNullOrEmpty(logLevelStr) ? (logLevelStr + " ") : string.Empty) + appName + " " + str);
         }
 
         public ILogger CreateLogger(string componentName)

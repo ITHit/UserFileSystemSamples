@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using System.Text;
 using ITHit.FileSystem;
 using VirtualFilesystemCommon;
 
@@ -11,31 +13,23 @@ namespace FileProviderExtension
     internal static class Mapping
     {
         /// <summary>
-        /// Returns a remote storage URI that corresponds to the user file system path.
+        /// Encodes remote file/folder path to array of bytes.
         /// </summary>
-        /// <param name="userFileSystemPath">Full path in the user file system.</param>
-        /// <returns>Remote storage URI that corresponds to the <paramref name="userFileSystemPath"/>.</returns>
-        public static string MapPath(string userFileSystemPath)
+        /// <param name="remoteStoragePath">Full path in the remote file system.</param>
+        /// <returns>Array of bytes.</returns>
+        public static byte[] EncodePath(string remoteStoragePath)
         {
-            // Get path relative to the virtual root.
-            string relativePath = userFileSystemPath.TrimEnd(Path.DirectorySeparatorChar).Substring(
-                AppGroupSettings.GetUserRootPath().TrimEnd(Path.DirectorySeparatorChar).Length);
-
-            return $"{AppGroupSettings.GetRemoteRootPath().TrimEnd(Path.DirectorySeparatorChar)}{relativePath}";
+            return Encoding.UTF8.GetBytes(remoteStoragePath);
         }
 
         /// <summary>
-        /// Returns a user file system path that corresponds to the remote storage URI.
+        /// Decodes array of bytes to remote file/folder path.
         /// </summary>
-        /// <param name="remoteStorageUri">Remote storage URI.</param>
-        /// <returns>Path in the user file system that corresponds to the <paramref name="remoteStorageUri"/>.</returns>
-        public static string ReverseMapPath(string remoteStorageUri)
+        /// <param name="remoteStorageItemId">Remote storage Item Id.</param>
+        /// <returns>Remote storage path.</returns>
+        public static string DecodePath(byte[] remoteStorageItemId)
         {
-            // Get path relative to the virtual root.
-            string relativePath = remoteStorageUri.TrimEnd(Path.DirectorySeparatorChar).Substring(
-                AppGroupSettings.GetRemoteRootPath().TrimEnd(Path.DirectorySeparatorChar).Length);
-
-            return $"{AppGroupSettings.GetUserRootPath().TrimEnd(Path.DirectorySeparatorChar)}{relativePath}";
+            return Encoding.UTF8.GetString(remoteStorageItemId);
         }
 
         /// <summary>
@@ -63,6 +57,8 @@ namespace FileProviderExtension
             userFileSystemItem.LastWriteTime = remoteStorageItem.LastWriteTime;
             userFileSystemItem.LastAccessTime = remoteStorageItem.LastAccessTime;
             userFileSystemItem.ChangeTime = remoteStorageItem.LastWriteTime;
+            userFileSystemItem.RemoteStorageItemId = Mapping.EncodePath(remoteStorageItem.FullName);
+            userFileSystemItem.RemoteStorageParentItemId = Mapping.EncodePath(Directory.GetParent(remoteStorageItem.FullName).FullName);
 
             return userFileSystemItem;
         }

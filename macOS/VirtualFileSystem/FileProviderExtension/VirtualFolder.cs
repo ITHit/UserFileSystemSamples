@@ -6,6 +6,7 @@ using ITHit.FileSystem;
 using VirtualFilesystemCommon;
 using ITHit.FileSystem.Mac;
 using System.Threading;
+using System.Text;
 
 namespace FileProviderExtension
 {
@@ -17,9 +18,9 @@ namespace FileProviderExtension
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
-        /// <param name="path">Folder path in the user file system.</param>
+        /// <param name="remoteStoragePath">File or folder path in the remote system.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFolder(string path, ILogger logger) : base(path, logger)
+        public VirtualFolder(string remoteStoragePath, ILogger logger) : base(remoteStoragePath, logger)
         {
 
         }
@@ -27,7 +28,7 @@ namespace FileProviderExtension
         /// <inheritdoc/>
         public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", Path.Combine(UserFileSystemPath, fileMetadata.Name));
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", Path.Combine(RemoteStoragePath, fileMetadata.Name));
 
             FileInfo remoteStorageItem = new FileInfo(Path.Combine(RemoteStoragePath, fileMetadata.Name));
 
@@ -48,13 +49,13 @@ namespace FileProviderExtension
             remoteStorageItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
 
-            return null;
+            return Mapping.EncodePath(remoteStorageItem.FullName);
         }
 
         /// <inheritdoc/>
         public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", Path.Combine(UserFileSystemPath, folderMetadata.Name));
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", Path.Combine(RemoteStoragePath, folderMetadata.Name));
 
             DirectoryInfo remoteStorageItem = new DirectoryInfo(Path.Combine(RemoteStoragePath, folderMetadata.Name));
             remoteStorageItem.Create();
@@ -66,13 +67,13 @@ namespace FileProviderExtension
             remoteStorageItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
             remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
 
-            return null;
+            return Mapping.EncodePath(remoteStorageItem.FullName);
         }
 
         /// <inheritdoc/>
         public async Task GetChildrenAsync(string pattern, IOperationContext operationContext, IFolderListingResultContext resultContext, CancellationToken cancellationToken)
         {
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", RemoteStoragePath);
 
             IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(RemoteStoragePath).EnumerateFileSystemInfos(pattern);
 
@@ -92,7 +93,7 @@ namespace FileProviderExtension
         /// <inheritdoc/>
         public async Task WriteAsync(IFolderMetadata folderMetadata, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", RemoteStoragePath);
 
             DirectoryInfo remoteStorageItem = new DirectoryInfo(RemoteStoragePath);
 

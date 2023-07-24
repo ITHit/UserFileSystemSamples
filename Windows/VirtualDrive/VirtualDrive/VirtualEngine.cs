@@ -4,7 +4,7 @@ using System.Threading;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common.Windows;
-
+using ITHit.FileSystem.Windows;
 
 namespace VirtualDrive
 {
@@ -30,10 +30,10 @@ namespace VirtualDrive
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
         /// <param name="logFormatter">Logger.</param>
         public VirtualEngine(
-            string license, 
-            string userFileSystemRootPath, 
-            string remoteStorageRootPath, 
-            string iconsFolderPath, 
+            string license,
+            string userFileSystemRootPath,
+            string remoteStorageRootPath,
+            string iconsFolderPath,
             LogFormatter logFormatter)
             : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, logFormatter)
         {
@@ -41,8 +41,9 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public override async Task<IFileSystemItem> GetFileSystemItemAsync(string userFileSystemPath, FileSystemItemType itemType, byte[] remoteStorageItemId, ILogger logger = null)
+        public override async Task<IFileSystemItem> GetFileSystemItemAsync(byte[] remoteStorageItemId, FileSystemItemType itemType, IContext context, ILogger logger = null)
         {
+            string userFileSystemPath = (context as IContextWindows).Path;
             if (itemType == FileSystemItemType.File)
             {
                 return new VirtualFile(userFileSystemPath, remoteStorageItemId, this, logger);
@@ -55,7 +56,7 @@ namespace VirtualDrive
 
         
         /// <inheritdoc/>
-        public override async Task<IMenuCommand> GetMenuCommandAsync(Guid menuGuid)
+        public override async Task<IMenuCommand> GetMenuCommandAsync(Guid menuGuid, IOperationContext operationContext = null)
         {
             // For this method to be called you need to register a menu command handler.
             // See method description for more details.

@@ -21,13 +21,14 @@ namespace WebDAVDrive
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
-        /// <param name="path">Folder path in the user file system.</param>
+        /// <param name="remoteStorageId">Remote storage item ID.</param>
+        /// <param name="userFileSystemPath">User file system path. This paramater is available on Windows platform only. On macOS and iOS this parameter is always null</param>
         /// <param name="engine">Engine instance.</param>
         /// <param name="autoLockTimoutMs">Automatic lock timout in milliseconds.</param>
         /// <param name="manualLockTimoutMs">Manual lock timout in milliseconds.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFolder(string path, VirtualEngine engine, double autoLockTimoutMs, double manualLockTimoutMs, ILogger logger)
-            : base(path, engine, autoLockTimoutMs, manualLockTimoutMs, logger)
+        public VirtualFolder(byte[] remoteStorageId, string userFileSystemPath, VirtualEngine engine, double autoLockTimoutMs, double manualLockTimoutMs, ILogger logger)
+            : base(remoteStorageId, userFileSystemPath, engine, autoLockTimoutMs, manualLockTimoutMs, logger)
         {
 
         }
@@ -43,7 +44,7 @@ namespace WebDAVDrive
 
             long contentLength = content != null ? content.Length : 0;
 
-            // Update remote storage file content.
+            // Send content to remote storage.
             // Get the ETag returned by the server, if any.
             Client.IWebDavResponse<string> response = (await Program.DavClient.UploadAsync(newFileUri, async (outputStream) =>
             {
@@ -58,8 +59,10 @@ namespace WebDAVDrive
             // Store ETag in persistent placeholder properties untill the next update.
             Engine.Placeholders.GetItem(userFileSystemNewItemPath).SetETag(response.WebDavResponse);
 
-            // WebDAV does not use any item IDs, returning null.
-            return Encoding.UTF8.GetBytes(response.Headers.GetValues("resource-id").FirstOrDefault());
+            // Return newly created item remote storage item ID,
+            // it will be passed to GetFileSystemItem() during next calls.
+            string remoteStorageId = response.Headers.GetValues("resource-id").FirstOrDefault();
+            return Encoding.UTF8.GetBytes(remoteStorageId);
         }
 
         /// <inheritdoc/>
@@ -75,7 +78,10 @@ namespace WebDAVDrive
             // WebDAV server typically does not provide eTags for folders.
             // Engine.Placeholders.GetItem(userFileSystemNewItemPath).SetETag(eTag);
 
-            return Encoding.UTF8.GetBytes(response.Headers.GetValues("resource-id").FirstOrDefault());
+            // Return newly created item remote storage item ID,
+            // it will be passed to GetFileSystemItem() during next calls.
+            string remoteStorageId = response.Headers.GetValues("resource-id").FirstOrDefault();
+            return Encoding.UTF8.GetBytes(remoteStorageId);
         }
 
         /// <inheritdoc/>
@@ -107,8 +113,8 @@ namespace WebDAVDrive
             // always call ReturnChildren(), even if the folder is empty.
             await resultContext.ReturnChildrenAsync(userFileSystemChildren.ToArray(), userFileSystemChildren.Count());
 
-            // Save data that will be displayes in custom columns in file manager
-            // as well as any additional custom data required by the client.
+            // Save data that will be displayed in custom columns in file manager.
+            // Also save any additional custom data required by the client.
             foreach (FileSystemItemMetadataExt itemMetadata in userFileSystemChildren)
             {
                 string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemMetadata.Name);

@@ -26,12 +26,29 @@
 	<true/>
 	<key>NSExtension</key>
 	<dict>
+		<key>NSExtensionAttributes</key>
+		<dict/>
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.fileprovider-nonui</string>
 		<key>NSExtensionPrincipalClass</key>
 		<string>VirtualEngine</string>
 		<key>NSExtensionFileProviderSupportsEnumeration</key>
 		<true/>
+		<key>NSExtensionFileProviderActions</key>
+		<array>
+			<dict>
+				<key>NSExtensionFileProviderActionIdentifier</key>
+				<string>28d0e0cb-5df7-432c-a06f-297c06b5ec5d</string>
+				<key>NSExtensionFileProviderActionName</key>
+				<string>Action 1</string>
+				<key>NSExtensionFileProviderActionActivationRule</key>
+				<string>TRUEPREDICATE</string>
+			</dict>
+		</array>
+		<key>NSExtensionFileProviderDocumentGroup</key>
+		<string>65S3A9JQ36.group.com.filesystem.vfs</string>
 	</dict>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
 </dict>
 </plist>

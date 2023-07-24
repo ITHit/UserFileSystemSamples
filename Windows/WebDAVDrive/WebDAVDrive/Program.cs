@@ -197,21 +197,10 @@ namespace WebDAVDrive
 #endif
                 using (DavClient = CreateWebDavSession(Engine.InstanceId))
                 {
-                    // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
+                    // Set the remote storage item ID for the root folder. It will be passed to the IEngine.GetFileSystemItemAsync()
                     // method as a remoteStorageItemId parameter when a root folder is requested.
-                    PropertyName[] propNames = new PropertyName[2];
-                    propNames[0] = new PropertyName("resource-id", "DAV:");
-                    propNames[1] = new PropertyName("parent-resource-id", "DAV:");
-                    byte[] remoteStorageItemId = Mapping.GetUserFileSystemItemMetadata((await DavClient.GetItemAsync(new Uri(Settings.WebDAVServerUrl), propNames)).WebDavResponse).RemoteStorageItemId;
-
-                    if (remoteStorageItemId != null)
-                    {
-                        Engine.SetRemoteStorageRootItemId(remoteStorageItemId);
-                    }
-                    else
-                    {
-                        log.Error("remote-id or parent-resource-id is not found. Your WebDAV server does not support collection synchronization. Upgrade your .NET WebDAV server to v13.2 or Java WebDAV server to v6.2 or later version.");
-                    }
+                    byte[] remoteStorageItemId = await GetRootRemoteStorageItemId();                    
+                    Engine.SetRemoteStorageRootItemId(remoteStorageItemId);
 
                     // Start processing OS file system calls.
                     await Engine.StartAsync();
@@ -226,6 +215,30 @@ namespace WebDAVDrive
                     Task.WaitAny(console, tray);
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets remote storage item ID for the foor folder.
+        /// </summary>
+        private static async Task<byte[]> GetRootRemoteStorageItemId()
+        {
+            // Specifying properties to get from the WebDAV server.
+            PropertyName[] propNames = new PropertyName[2];
+            propNames[0] = new PropertyName("resource-id", "DAV:");
+            propNames[1] = new PropertyName("parent-resource-id", "DAV:");
+
+            // Sending request to the server.
+            IHierarchyItem rootFolder = (await DavClient.GetItemAsync(new Uri(Settings.WebDAVServerUrl), propNames)).WebDavResponse;
+
+            byte[] remoteStorageItemId = Mapping.GetUserFileSystemItemMetadata(rootFolder).RemoteStorageItemId;
+
+            // This sample requires synchronization support, verifying that the ID was returned.
+            if (remoteStorageItemId == null)
+            {
+                throw new WebDavException("remote-id or parent-resource-id is not found. Your WebDAV server does not support collection synchronization. Upgrade your .NET WebDAV server to v13.2 or Java WebDAV server to v6.2 or later version.");
+            }
+
+            return remoteStorageItemId;
         }
 
         private static async Task StartConsoleReadKeyAsync()

@@ -17,6 +17,18 @@ namespace WebDAVFileProviderExtension
     /// <remarks>You will change methods of this class to map the user file system path to your remote storage path.</remarks>
     internal static class Mapping
     {
+        /// <summary>
+        /// Returns Uri by storage item Id.
+        /// </summary>
+        /// <param name="remoteStorageUriById">Id uri on the WebDav server.</param>
+        /// <returns>Uri on Webdav server.</returns>
+        public static Uri GetUriById(byte[] remoteStorageItemId)
+        {
+            string remoteStorageIdStr = Encoding.UTF8.GetString(remoteStorageItemId);
+
+            return Uri.IsWellFormedUriString(remoteStorageIdStr, UriKind.Absolute) ? new Uri(remoteStorageIdStr) :
+                new Uri(AppGroupSettings.GetWebDAVServerUrl().TrimEnd('/') + "/" + remoteStorageIdStr.TrimStart('/'));
+        }
 
         /// <summary>
         /// Gets a user file system item info from the remote storage data.

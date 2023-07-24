@@ -17,12 +17,17 @@ using ITHit.WebDAV.Client.Exceptions;
 namespace WebDAVDrive
 {
     ///<inheritdoc>
-    public abstract class VirtualFileSystemItem : IFileSystemItem, ILock
+    public abstract class VirtualFileSystemItem : IFileSystemItemWindows, ILock
     {
         /// <summary>
         /// File or folder path in the user file system.
         /// </summary>
         protected readonly string UserFileSystemPath;
+
+        /// <summary>
+        /// File or folder item ID in the remote storage.
+        /// </summary>
+        protected readonly byte[] RemoteStorageItemId;
 
         /// <summary>
         /// Path of this file or folder in the remote storage.
@@ -52,12 +57,13 @@ namespace WebDAVDrive
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
-        /// <param name="userFileSystemPath">File or folder path in the user file system.</param>
+        /// <param name="remoteStorageId">Remote storage item ID.</param>
+        /// <param name="userFileSystemPath">User file system path. This paramater is available on Windows platform only. On macOS and iOS this parameter is always null.</param>
         /// <param name="engine">Engine instance.</param>
         /// <param name="autoLockTimoutMs">Automatic lock timout in milliseconds.</param>
         /// <param name="manualLockTimoutMs">Manual lock timout in milliseconds.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFileSystemItem(string userFileSystemPath, VirtualEngine engine, double autoLockTimoutMs, double manualLockTimoutMs, ILogger logger)
+        public VirtualFileSystemItem(byte[] remoteStorageId, string userFileSystemPath, VirtualEngine engine, double autoLockTimoutMs, double manualLockTimoutMs, ILogger logger)
         {
             if (string.IsNullOrEmpty(userFileSystemPath))
             {
@@ -67,6 +73,7 @@ namespace WebDAVDrive
             Engine = engine ?? throw new ArgumentNullException(nameof(engine));
 
             UserFileSystemPath = userFileSystemPath;
+            RemoteStorageItemId = remoteStorageId;
             RemoteStoragePath = Mapping.MapPath(userFileSystemPath);
 
             this.autoLockTimoutMs = autoLockTimoutMs;
@@ -138,7 +145,7 @@ namespace WebDAVDrive
         }
 
         
-        public async Task<byte[]> GetThumbnailAsync(uint size)
+        public async Task<byte[]> GetThumbnailAsync(uint size, IOperationContext operationContext = null)
         {
             byte[] thumbnail = null;
 
@@ -187,7 +194,7 @@ namespace WebDAVDrive
         
 
         /// <inheritdoc/>
-        public async Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync()
+        public async Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync(IOperationContext operationContext = null)
         {
             // For this method to be called you need to register a properties handler.
             // See method description for more details.
@@ -255,14 +262,7 @@ namespace WebDAVDrive
             }
 
             return props;
-        }
-
-        ///<inheritdoc>
-        public Task<IFileSystemItemMetadata> GetMetadataAsync()
-        {
-            // Return IFileMetadata for a file, IFolderMetadata for a folder.
-            throw new System.NotImplementedException();
-        }       
+        }   
 
         
         ///<inheritdoc>

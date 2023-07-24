@@ -74,28 +74,28 @@ namespace FileProviderExtension
         {
             logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
 
-            engine.ServerNotifications(Mapping.ReverseMapPath(e.OldFullPath)).MoveToAsync(e.FullPath);
+            engine.ServerNotifications(e.OldFullPath).MoveToAsync(e.FullPath);
         }
 
         private void DeletedAsync(object sender, FileSystemEventArgs e)
         {
             logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
 
-            engine.ServerNotifications(Mapping.ReverseMapPath(e.FullPath)).DeleteAsync();
+            engine.ServerNotifications(e.FullPath).DeleteAsync();
         }
 
         private void CreatedAsync(object sender, FileSystemEventArgs e)
         {
             logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
 
-            engine.ServerNotifications(Mapping.ReverseMapPath(e.FullPath)).CreateAsync(null);
+            engine.ServerNotifications(e.FullPath).CreateAsync(null);
         }
 
         private void ChangedAsync(object sender, FileSystemEventArgs e)
         {
             logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
 
-            engine.ServerNotifications(Mapping.ReverseMapPath(e.FullPath)).UpdateAsync(null);
+            engine.ServerNotifications(e.FullPath).UpdateAsync(null);
         }
 
         private void Error(object sender, ErrorEventArgs e)

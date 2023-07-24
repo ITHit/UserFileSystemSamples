@@ -1,14 +1,9 @@
-using AppKit;
-using Foundation;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Security.Policy;
-using System.Text;
-using System.Threading.Tasks;
+using AppKit;
+using Common.Core;
+using FileProvider;
+using ITHit.FileSystem;
+using ITHit.FileSystem.Mac;
 using WebDAVCommon;
 
 namespace WebDAVMacApp
@@ -16,7 +11,12 @@ namespace WebDAVMacApp
     [Register("AppDelegate")]
     public class AppDelegate : NSApplicationDelegate
     {
-        private ExtensionManager LocalExtensionManager;
+        private ILogger Logger = new ConsoleLogger("WebDavFileProviderHostApp");
+        private RemoteStorageMonitor RemoteStorageMonitor = new RemoteStorageMonitor(AppGroupSettings.GetWebSocketServerUrl(), new ConsoleLogger(typeof(RemoteStorageMonitor).Name));
+        private string ExtensionIdentifier = "com.webdav.vfs.app";
+        private string ExtensionDisplayName = "IT Hit WebDAV Drive";
+        private NSMenuItem InstallMenuItem = new NSMenuItem("Install WebDAV FS Extension");
+        private NSMenuItem UninstallMenuItem = new NSMenuItem("Uninstall WebDAV FS Extension");
         private NSStatusItem StatusItem;
 
         public AppDelegate()
@@ -25,20 +25,23 @@ namespace WebDAVMacApp
 
         public override void DidFinishLaunching(NSNotification notification)
         {
-            LocalExtensionManager = new ExtensionManager("com.webdav.vfs.app", "ITHitWebDAVFS");
-
             NSMenu menu = new NSMenu();
-
-            NSMenuItem installMenuItem = new NSMenuItem("Install WebDAV FS Extension", (a, b) =>
+       
+            Task<bool> taskIsExtensionRegistered = Task.Run<bool>(async () => await Common.Core.Registrar.IsRegisteredAsync(ExtensionIdentifier));
+            bool isExtensionRegistered = taskIsExtensionRegistered.Result;
+            if (isExtensionRegistered)
+            {              
+                UninstallMenuItem.Activated += Uninstall;
+            }
+            else
             {
-                Process.Start("open", AppGroupSettings.GetWebDAVServerUrl());
-                LocalExtensionManager.InstallExtension();
-            });
-            NSMenuItem uninstallMenuItem = new NSMenuItem("Uninstall WebDAV FS Extension", (a, b) => { LocalExtensionManager.UninstallExtension(); });
-            NSMenuItem exitMenuItem = new NSMenuItem("Quit", (a, b) => { NSApplication.SharedApplication.Terminate(this); });
+                InstallMenuItem.Activated += Install;
+            }
 
-            menu.AddItem(installMenuItem);
-            menu.AddItem(uninstallMenuItem);
+            NSMenuItem exitMenuItem = new NSMenuItem("Quit", (a, b) => { NSApplication.SharedApplication.Terminate(this); });
+         
+            menu.AddItem(InstallMenuItem);
+            menu.AddItem(UninstallMenuItem);
             menu.AddItem(exitMenuItem);
 
             StatusItem = NSStatusBar.SystemStatusBar.CreateStatusItem(30);
@@ -46,36 +49,47 @@ namespace WebDAVMacApp
             StatusItem.Image = NSImage.ImageNamed("TrayIcon.png");
             StatusItem.HighlightMode = true;
 
-            NSDictionary userData = AppGroupSettings.SaveSharedSettings("appsettings.json");
-            if (string.IsNullOrEmpty(userData[AppGroupSettings.WebDAVServerUrlId] as NSString))
+            //AppGroupSettings.SaveSharedSettings("appsettings.json");
+            if (string.IsNullOrEmpty(AppGroupSettings.GetWebDAVServerUrl()))
             {
                 NSAlert alert = NSAlert.WithMessage("WebDAV Server not found.", null, null, null, "");
                 alert.RunModal();
 
                 NSApplication.SharedApplication.Terminate(this);
             }
-
         }
 
-        public static string MapPath(string userFileSystemPath)
+        private void Install(object? sender, EventArgs e)
         {
-            // Get path relative to the virtual root.
-            string relativePath = userFileSystemPath.TrimEnd(Path.DirectorySeparatorChar).Substring(
-                AppGroupSettings.GetUserRootPath().TrimEnd(Path.DirectorySeparatorChar).Length);
-            relativePath = relativePath.TrimStart(Path.DirectorySeparatorChar);
+            Process.Start("open", AppGroupSettings.GetWebDAVServerUrl());
+            Task.Run(async () =>
+            {
+                NSFileProviderDomain domain = await Common.Core.Registrar.RegisterAsync(ExtensionIdentifier, ExtensionDisplayName, Logger);
+                RemoteStorageMonitor.ServerNotifications = new ServerNotifications(NSFileProviderManager.FromDomain(domain), RemoteStorageMonitor.Logger);
+                await RemoteStorageMonitor.StartAsync();
+            }).Wait();
 
-            string[] segments = relativePath.Split('/');
+            InstallMenuItem.Activated -= Install;
+            InstallMenuItem.Action = null;
+            UninstallMenuItem.Activated += Uninstall;
+        }
 
-            IEnumerable<string> encodedSegments = segments.Select(x => Uri.EscapeDataString(x));
-            relativePath = string.Join('/', encodedSegments);
+        private void Uninstall(object? sender, EventArgs e)
+        {
+            Task.Run(async () =>
+            {
+                await RemoteStorageMonitor.StopAsync();
+                await Common.Core.Registrar.UnregisterAsync(ExtensionIdentifier, Logger);
+            }).Wait();
 
-            string path = $"{AppGroupSettings.GetWebDAVServerUrl()}{relativePath}";
-
-            return path;
+            InstallMenuItem.Activated += Install;
+            UninstallMenuItem.Activated -= Uninstall;
+            UninstallMenuItem.Action = null;
         }
 
         public override void WillTerminate(NSNotification notification)
         {
+            RemoteStorageMonitor.Dispose();
         }
     }
 }

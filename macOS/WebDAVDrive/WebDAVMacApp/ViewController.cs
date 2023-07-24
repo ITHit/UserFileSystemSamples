@@ -1,8 +1,3 @@
-using System;
-
-using AppKit;
-using Foundation;
-
 namespace WebDAVMacApp
 {
     public partial class ViewController : NSViewController

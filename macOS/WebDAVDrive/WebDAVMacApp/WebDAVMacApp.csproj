@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net7.0-macos</TargetFramework>
+    <RuntimeIdentifier>osx-x64</RuntimeIdentifier>
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>true</ImplicitUsings>
@@ -17,15 +18,15 @@
       <CustomCommands>
         <Command>
           <type>AfterBuild</type>
+          <command>bash ${ProjectDir}/sign.sh ${TargetDir}</command>
+        </Command>
+        <Command>
+          <type>AfterBuild</type>
           <command>mkdir -p "${TargetDir}/WebDAV Drive.app/Contents/PlugIns"</command>
         </Command>
         <Command>
           <type>AfterBuild</type>
           <command>cp -rf "${ProjectDir}/../WebDAVFileProviderExtension/bin/Debug/WebDAVFileProviderExtension.appex" "${TargetDir}/WebDAV Drive.app/Contents/PlugIns"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>bash ${ProjectDir}/sign.sh ${TargetDir}</command>
         </Command>
         <Command>
           <type>AfterBuild</type>
@@ -56,11 +57,19 @@
       <CustomCommands>
         <Command>
           <type>AfterBuild</type>
-          <command>mkdir -p "${TargetDir}/WebDAV Filesystem.app/Contents/PlugIns"</command>
+          <command>bash ${ProjectDir}/sign_release.sh ${TargetDir}</command>
         </Command>
         <Command>
           <type>AfterBuild</type>
-          <command>cp -R "${ProjectDir}/../WebDAVFileProviderExtension/bin/Release/WebDAVFileProviderExtension.appex" "${TargetDir}/WebDAV Filesystem.app/Contents/PlugIns"</command>
+          <command>mkdir -p "${TargetDir}/WebDAV Drive.app/Contents/PlugIns"</command>
+        </Command>
+        <Command>
+          <type>AfterBuild</type>
+          <command>cp -rf "${ProjectDir}/../WebDAVFileProviderExtension/bin/Release/WebDAVFileProviderExtension.appex" "${TargetDir}/WebDAV Drive.app/Contents/PlugIns"</command>
+        </Command>
+        <Command>
+          <type>AfterBuild</type>
+          <command>codesign --force --sign "Mac Developer" --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der "${TargetDir}/WebDAV Drive.app"</command>
         </Command>
       </CustomCommands>
     </CustomCommands>
@@ -124,7 +133,7 @@
     </BundleResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem" Version="7.0.22091-Beta" />
+    <PackageReference Include="ITHit.FileSystem" Version="7.1.23216-Beta" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WebDAVCommon\WebDAVCommon.csproj" />

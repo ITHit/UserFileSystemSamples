@@ -21,12 +21,37 @@ namespace WebDAVDrive
     /// If any file or folder is created, updated, delated, moved, locked or unlocked in the remote storage, 
     /// triggers an event with information about changes being made.
     /// </summary>
-    public class RemoteStorageMonitor : IncomingServerNotifications, ISyncService, IDisposable
+    public class RemoteStorageMonitor: ISyncService, IDisposable
     {
         /// <summary>
-        /// Virtual drive.
+        /// Credentials to authenticate web sockets.
         /// </summary>
-        private new readonly VirtualEngine Engine;
+        public NetworkCredential Credentials;
+
+        /// <summary>
+        /// Cookies to add to web sockets requests.
+        /// </summary>
+        public CookieCollection Cookies;
+
+        /// <summary>
+        /// Engine instance ID, to avoid sending notifications back to originating client. 
+        /// </summary>
+        public Guid InstanceId = Guid.Empty;
+
+        /// <summary>
+        /// Server notifications will be sent to this object.
+        /// </summary>
+        public IServerCollectionNotifications ServerNotifications;
+
+        /// <summary>
+        /// Called to save item properties.
+        /// </summary>
+        public SavePropertiesAction SavePropertiesAction = null;
+
+        /// <summary>
+        /// Logger.
+        /// </summary>
+        public readonly ILogger Logger;
 
         /// <summary>
         /// Current synchronization state.
@@ -58,14 +83,23 @@ namespace WebDAVDrive
         private CancellationTokenSource cancellationTokenSource;
 
         /// <summary>
+        /// Changes are being processed.
+        /// </summary>
+        private bool processing = false;
+
+        /// <summary>
+        /// More changes arrived while chenges are still processing.
+        /// </summary>
+        private bool moreChangesToProcess = false;
+
+        /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="webSocketServerUrl">WebSocket server url.</param>
-        /// <param name="engine">Engine to send notifications about changes in the remote storage.</param>
-        internal RemoteStorageMonitor(string webSocketServerUrl, VirtualEngine engine)
-            : base(engine, engine.Logger.CreateLogger("Remote Storage Monitor"))
+        /// <param name="logger">Logger.</param>
+        internal RemoteStorageMonitor(string webSocketServerUrl, ILogger logger)
         {
-            this.Engine = engine;
+            this.Logger = logger.CreateLogger("Remote Storage Monitor");
             this.webSocketServerUrl = webSocketServerUrl;
         }
 
@@ -79,7 +113,7 @@ namespace WebDAVDrive
         private async Task RunWebSocketsAsync(CancellationToken cancellationToken)
         {
             var rcvBuffer = new ArraySegment<byte>(new byte[2048]);
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 WebSocketReceiveResult rcvResult = await clientWebSocket.ReceiveAsync(rcvBuffer, cancellationToken);
                 byte[] msgBytes = rcvBuffer.Skip(rcvBuffer.Offset).Take(rcvResult.Count).ToArray();
@@ -92,7 +126,7 @@ namespace WebDAVDrive
 
                 // Because of the on-demand loading, item or its parent may not exists or be offline.
                 // We can ignore notifiction in this case and avoid many requests to the remote storage.
-                if (ShouldUpdate(webSocketMessage))
+                if (!Filter(webSocketMessage))
                 {
                     await ProcessAsync();
                 }
@@ -100,11 +134,12 @@ namespace WebDAVDrive
         }
 
         /// <summary>
-        /// Verifies that the item exists in the user file system and should be updated.
+        /// Verifies that the WebSockets message is for the item that exists 
+        /// in the user file system and should be updated.
         /// </summary>
         /// <param name="webSocketMessage">Information about change in the remote storage.</param>
         /// <returns>True if the item exists and should be updated. False otherwise.</returns>
-        private bool ShouldUpdate(WebSocketMessage webSocketMessage)
+        protected virtual bool Filter(WebSocketMessage webSocketMessage)
         {
             string remoteStoragePath = Mapping.GetAbsoluteUri(webSocketMessage.ItemPath);
 
@@ -122,41 +157,44 @@ namespace WebDAVDrive
                     case "deleted":
                         // Verify that parent folder exists and is not offline.
                         string userFileSystemParentPath = Path.GetDirectoryName(userFileSystemPath);
-                        return Directory.Exists(userFileSystemParentPath)
-                            && !new DirectoryInfo(userFileSystemParentPath).Attributes.HasFlag(FileAttributes.Offline);
+                        return !Directory.Exists(userFileSystemParentPath)
+                            || new DirectoryInfo(userFileSystemParentPath).Attributes.HasFlag(FileAttributes.Offline);
 
                     case "moved":
                         // Verify that source exists OR target folder exists and is not offline.
                         if (File.Exists(userFileSystemPath))
                         {
-                            return true;
+                            return false;
                         }
                         else
                         {
                             string remoteStorageNewPath = Mapping.GetAbsoluteUri(webSocketMessage.TargetPath);
                             string userFileSystemNewPath = Mapping.ReverseMapPath(remoteStorageNewPath);
                             string userFileSystemNewParentPath = Path.GetDirectoryName(userFileSystemNewPath);
-                            return Directory.Exists(userFileSystemNewParentPath)
-                                && !new DirectoryInfo(userFileSystemNewParentPath).Attributes.HasFlag(FileAttributes.Offline);
+                            return !Directory.Exists(userFileSystemNewParentPath)
+                                || new DirectoryInfo(userFileSystemNewParentPath).Attributes.HasFlag(FileAttributes.Offline);
                         }
 
                     case "updated":
                     default:
                         // Any other notifications.
-                        return File.Exists(userFileSystemPath);
+                        return !File.Exists(userFileSystemPath);
                 }
             }
 
-            return false;
+            return true;
         }
 
         /// <summary>
         /// Starts monitoring changes in the remote storage.
         /// </summary>
+        /// <param name="cookies">Cookies to add to web sockets requests.</param>
+
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
             Logger.LogDebug("Starting", webSocketServerUrl);
+
             await Task.Factory.StartNew(
               async () =>
               {
@@ -173,17 +211,26 @@ namespace WebDAVDrive
 
                                   // Configure web sockets and connect to the server.
                                   clientWebSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(10);
-                                  clientWebSocket.Options.Credentials = Engine.Credentials;
-                                  clientWebSocket.Options.Cookies = new CookieContainer();
-                                  clientWebSocket.Options.Cookies.Add(Engine.Cookies);
-                                  clientWebSocket.Options.SetRequestHeader("InstanceId", Engine.InstanceId.ToString());
+                                  if (Credentials != null)
+                                  {
+                                      clientWebSocket.Options.Credentials = Credentials;
+                                  }
+                                  if (Cookies != null)
+                                  {
+                                      clientWebSocket.Options.Cookies = new CookieContainer();
+                                      clientWebSocket.Options.Cookies.Add(Cookies);
+                                  }
+                                  if (InstanceId != Guid.Empty)
+                                  { 
+                                      clientWebSocket.Options.SetRequestHeader("InstanceId", InstanceId.ToString());
+                                  }
                                   await clientWebSocket.ConnectAsync(new Uri(webSocketServerUrl), cancellationToken);
                                   Logger.LogMessage("Connected", webSocketServerUrl);
 
                                   // After esteblishing connection with a server we must get all changes from the remote storage.
                                   // This is required on Engine start, server recovery, network recovery, etc.
                                   Logger.LogDebug("Getting all changes from server", webSocketServerUrl);
-                                  await ProcessAsync(Logger);
+                                  await ProcessAsync();
 
                                   Logger.LogMessage("Started", webSocketServerUrl);
 
@@ -239,26 +286,42 @@ namespace WebDAVDrive
         /// web sockets should not stop processing changes. 
         /// To stop processing changes that are already received the Engine must be stopped.
         /// </remarks>
-        private async Task ProcessAsync(ILogger logger = null)
+        private async Task ProcessAsync()
         {
+            // This code reduces number of requests to the remote storage, creating 1 item queue.
+            // If ProcessChangesAsync() takes 5 sec to execute and 8 notifications
+            // arrive from remote storage during execution only the last one will be processed.
+            lock (this)
+            {
+                if(processing)
+                {
+                    // We do not want to execute multiple requests concurrently.
+                    // All changes will be returned in the last request.
+                    moreChangesToProcess = true;
+                    return; 
+                }
+
+                processing = true;
+            }
+
             try
             {
-                await Engine.ServerNotifications(Engine.Path, logger).ProcessChangesAsync(SavePropertiesAsync);
+                await ServerNotifications.ProcessChangesAsync(SavePropertiesAction);
             }
             catch (Exception ex)
             {
-                Logger.LogError("Failed to process changes", Engine.Path, null, ex);
+                Logger.LogError("Failed to process changes", null, null, ex);
             }
-        }
 
-        private async Task SavePropertiesAsync(IFileSystemItemMetadata metadata, string userFileSystemPath)
-        {
-            if(Engine.Placeholders.TryGetItem(userFileSystemPath, out PlaceholderItem placeholderItem))
+            processing = false;
+
+            if(moreChangesToProcess)
             {
-                await placeholderItem.SavePropertiesAsync(metadata as FileSystemItemMetadataExt);
+                // More changes has arrived while ProcessChangesAsync() was executing, read those changes.
+                moreChangesToProcess = false;
+                await ProcessAsync();
             }
         }
-
 
         private bool disposedValue = false; // To detect redundant calls
 
@@ -300,7 +363,7 @@ namespace WebDAVDrive
     /// <summary>
     /// Represents information about changes on the server.
     /// </summary>
-    internal class WebSocketMessage
+    public class WebSocketMessage
     {
         /// <summary>
         /// Operation type: "created", "updated", "moved", "deleted", "locked", "unlocked".

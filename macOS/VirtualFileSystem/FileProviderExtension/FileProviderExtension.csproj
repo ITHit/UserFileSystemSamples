@@ -46,9 +46,8 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <EnableCodeSigning>False</EnableCodeSigning>
-    <CreatePackage>true</CreatePackage>
+    <CreatePackage>False</CreatePackage>
     <EnablePackageSigning>false</EnablePackageSigning>
-    <IncludeMonoRuntime>true</IncludeMonoRuntime>
     <UseSGen>true</UseSGen>
     <UseRefCounting>true</UseRefCounting>
     <CodeSignEntitlements>Entitlements.plist</CodeSignEntitlements>
@@ -57,6 +56,18 @@
     <AOTMode>None</AOTMode>
     <LangVersion>10.0</LangVersion>
     <UseHardenedRuntime>true</UseHardenedRuntime>
+    <CustomCommands>
+      <CustomCommands>
+        <Command>
+          <type>AfterBuild</type>
+          <command>bash ${ProjectDir}/sign_release.sh ${TargetDir}</command>
+        </Command>
+        <Command>
+          <type>AfterBuild</type>
+          <command>codesign --force --sign "Mac Developer" -o runtime --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der ${TargetDir}/FileProviderExtension.appex</command>
+        </Command>
+      </CustomCommands>
+    </CustomCommands>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\VirtualFileSystemCommon\VirtualFileSystemCommon.csproj" />
@@ -65,6 +76,9 @@
   <ItemGroup>
     <PackageReference Include="System.Security.Permissions" Version="7.0.0" />
     <PackageReference Include="System.Threading.AccessControl" Version="7.0.1" />
-    <PackageReference Include="ITHit.FileSystem.Mac" Version="7.0.22091-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="7.1.23216-Beta" />
+  </ItemGroup>
+   <ItemGroup>
+      <Content Include="..\VirtualFileSystemMacApp\Resources\appsettings.json" Link="Resources\appsettings.json" />
   </ItemGroup>
 </Project>

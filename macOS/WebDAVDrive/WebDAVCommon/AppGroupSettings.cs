@@ -8,8 +8,7 @@ namespace WebDAVCommon
 {
     public static class AppGroupSettings
     {
-        private const string AppGroupId = "65S3A9JQ35.group.com.webdav.vfs"; //TODO change this to correct group id;
-        public const string LicenseId = "License";
+        public const string UserFileSystemLicenseId = "UserFileSystemLicense";
         public const string WebDAVClientLicenseId = "WebDAVClientLicense";
         public const string WebDAVServerUrlId = "WebDAVServerUrl";
         public const string ThumbnailGeneratorUrlId = "ThumbnailGeneratorUrl";
@@ -17,19 +16,11 @@ namespace WebDAVCommon
         public const string WebSocketServerUrlId = "WebSocketServerUrl";
 
         /// <summary>
-        /// Returns remote root path.
-        /// </summary>
-        public static string GetUserRootPath()
-        {
-            return NSFileProviderItemIdentifier.RootContainer;
-        }
-
-        /// <summary>
         /// Returns license.
         /// </summary>
         public static string GetLicense()
         {
-            return BaseAppGroupSettings.GetSettingValue(LicenseId, AppGroupId);
+            return BaseAppGroupSettings.GetSettingValue(UserFileSystemLicenseId);
         }
 
         /// <summary>
@@ -37,7 +28,7 @@ namespace WebDAVCommon
         /// </summary>
         public static string GetWebDAVClientLicense()
         {
-            return BaseAppGroupSettings.GetSettingValue(WebDAVClientLicenseId, AppGroupId);
+            return BaseAppGroupSettings.GetSettingValue(WebDAVClientLicenseId);
         }
 
         /// <summary>
@@ -45,7 +36,7 @@ namespace WebDAVCommon
         /// </summary>
         public static string GetWebSocketServerUrl()
         {
-            return BaseAppGroupSettings.GetSettingValue(WebSocketServerUrlId, AppGroupId);
+            return BaseAppGroupSettings.GetSettingValue(WebSocketServerUrlId);
         }
 
         /// <summary>
@@ -53,7 +44,7 @@ namespace WebDAVCommon
         /// </summary>
         public static string GetWebDAVServerUrl()
         {
-            return BaseAppGroupSettings.GetSettingValue(WebDAVServerUrlId, AppGroupId);
+            return BaseAppGroupSettings.GetSettingValue(WebDAVServerUrlId);
         }
 
         /// <summary>
@@ -61,7 +52,7 @@ namespace WebDAVCommon
         /// </summary>
         public static string GetThumbnailGeneratorUrl()
         {
-            return BaseAppGroupSettings.GetSettingValue(ThumbnailGeneratorUrlId, AppGroupId);
+            return BaseAppGroupSettings.GetSettingValue(ThumbnailGeneratorUrlId);
         }
 
         /// <summary>
@@ -69,15 +60,7 @@ namespace WebDAVCommon
         /// </summary>
         public static string GetRequestThumbnailsFor()
         {
-            return BaseAppGroupSettings.GetSettingValue(RequestThumbnailsForId, AppGroupId);
-        }
-
-        /// <summary>
-        /// Saves shares settings.
-        /// </summary>
-        public static NSDictionary SaveSharedSettings(string resourceName)
-        {
-            return BaseAppGroupSettings.SaveSharedSettings(resourceName, AppGroupId);
+            return BaseAppGroupSettings.GetSettingValue(RequestThumbnailsForId);
         }
     }
 }
