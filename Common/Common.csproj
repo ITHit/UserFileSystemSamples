@@ -10,7 +10,7 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="7.1.23216.0-Beta" />
-    <PackageReference Include="ITHit.FileSystem" Version="7.1.23216.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="7.1.23321.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem" Version="7.1.23321.0-Beta" />
   </ItemGroup>
 </Project>

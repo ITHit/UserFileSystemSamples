@@ -26,7 +26,7 @@ namespace WebDAVDrive
         /// <summary>
         /// Monitors changes in the remote storage, notifies the client and updates the user file system.
         /// </summary>
-        public readonly RemoteStorageMonitor RemoteStorageMonitor;
+        public readonly RemoteStorageMonitorBase RemoteStorageMonitor;
 
         /// <summary>
         /// Credentials used to connect to the server. 
@@ -72,7 +72,7 @@ namespace WebDAVDrive
             LogFormatter logFormatter)
             : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, logFormatter)
         {
-            RemoteStorageMonitor = new RemoteStorageMonitor(webSocketServerUrl, this.Logger);
+            RemoteStorageMonitor = new RemoteStorageMonitor(webSocketServerUrl, this);
 
             this.autoLockTimoutMs = autoLockTimoutMs;
             this.manualLockTimoutMs = manualLockTimoutMs;
@@ -81,7 +81,7 @@ namespace WebDAVDrive
         /// <inheritdoc/>
         public override async Task<IFileSystemItem> GetFileSystemItemAsync(byte[] remoteStorageId, FileSystemItemType itemType, IContext context, ILogger logger = null)
         {
-            string userFileSystemPath = (context as IContextWindows).Path;
+            string userFileSystemPath = context.FileNameHint;
             if (itemType == FileSystemItemType.File)
             {
                 return new VirtualFile(remoteStorageId, userFileSystemPath, this, autoLockTimoutMs, manualLockTimoutMs, logger);
@@ -120,7 +120,6 @@ namespace WebDAVDrive
             RemoteStorageMonitor.Cookies = this.Cookies;
             RemoteStorageMonitor.InstanceId = this.InstanceId;
             RemoteStorageMonitor.ServerNotifications = this.ServerNotifications(this.Path, RemoteStorageMonitor.Logger);
-            RemoteStorageMonitor.SavePropertiesAction = SavePropertiesAsync;
             await RemoteStorageMonitor.StartAsync();
         }
 
@@ -128,19 +127,6 @@ namespace WebDAVDrive
         {
             await base.StopAsync();
             await RemoteStorageMonitor.StopAsync();
-        }
-
-        /// <summary>
-        /// Called to save item properties.
-        /// </summary>
-        /// <param name="metadata"></param>
-        /// <param name="userFileSystemPath"></param>
-        private async Task SavePropertiesAsync(IFileSystemItemMetadata metadata, string userFileSystemPath)
-        {
-            if (this.Placeholders.TryGetItem(userFileSystemPath, out PlaceholderItem placeholderItem))
-            {
-                await placeholderItem.SavePropertiesAsync(metadata as ITHit.FileSystem.Samples.Common.FileSystemItemMetadataExt);
-            }
         }
 
         private bool disposedValue;

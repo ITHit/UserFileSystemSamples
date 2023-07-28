@@ -41,8 +41,6 @@ namespace WebDAVFileProviderExtension
         /// <inheritdoc/>
         public override async Task<IFileSystemItem> GetFileSystemItemAsync(byte[] remoteStorageItemId, FileSystemItemType itemType, IContext context, ILogger logger = null)
         {
-            Logger.LogMessage($"{nameof(IEngine)}.{nameof(GetFileSystemItemAsync)}()", Mapping.GetUriById(remoteStorageItemId).AbsoluteUri);
-
             if (itemType == FileSystemItemType.File)
             {
                 return new VirtualFile(remoteStorageItemId, webDavSession, Logger);

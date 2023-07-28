@@ -32,6 +32,13 @@ namespace WebDAVMacApp
             if (isExtensionRegistered)
             {              
                 UninstallMenuItem.Activated += Uninstall;
+                Task.Run(async () =>
+                {
+                    RemoteStorageMonitor.ServerNotifications = new ServerNotifications(
+                        NSFileProviderManager.FromDomain(new NSFileProviderDomain(ExtensionIdentifier, ExtensionDisplayName)),
+                        RemoteStorageMonitor.Logger);
+                    await RemoteStorageMonitor.StartAsync();
+                }).Wait();
             }
             else
             {

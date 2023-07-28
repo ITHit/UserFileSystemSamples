@@ -43,7 +43,7 @@ namespace VirtualDrive
         /// <inheritdoc/>
         public override async Task<IFileSystemItem> GetFileSystemItemAsync(byte[] remoteStorageItemId, FileSystemItemType itemType, IContext context, ILogger logger = null)
         {
-            string userFileSystemPath = (context as IContextWindows).Path;
+            string userFileSystemPath = context.FileNameHint;
             if (itemType == FileSystemItemType.File)
             {
                 return new VirtualFile(userFileSystemPath, remoteStorageItemId, this, logger);
