@@ -12,6 +12,7 @@ using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Samples.Common;
 using Client = ITHit.WebDAV.Client;
 using ITHit.FileSystem.Synchronization;
+using Grpc.Core;
 
 namespace WebDAVDrive
 {
@@ -72,7 +73,7 @@ namespace WebDAVDrive
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
 
             Uri newFolderUri = new Uri(new Uri(RemoteStoragePath), folderMetadata.Name);
-            Client.IResponse response =  await Program.DavClient.CreateFolderAsync(newFolderUri, null, null, cancellationToken);
+            Client.IResponse response = await Program.DavClient.CreateFolderAsync(newFolderUri, null, null, cancellationToken);
 
             // Store ETag (if any) unlil the next update here.
             // WebDAV server typically does not provide eTags for folders.
@@ -159,27 +160,49 @@ namespace WebDAVDrive
             changes.NewSyncToken = syncToken;
 
             // In this sample we use sync id algoritm for synchronization.
-            Client.PropertyName[] propNames = new Client.PropertyName[2];
+            Client.PropertyName[] propNames = new Client.PropertyName[3];
             propNames[0] = new Client.PropertyName("resource-id", "DAV:");
             propNames[1] = new Client.PropertyName("parent-resource-id", "DAV:");
+            propNames[2] = new Client.PropertyName("Etag", "DAV:");
 
             do
             {
                 davChanges = (await Program.DavClient.GetChangesAsync(
-                    new Uri(RemoteStoragePath), 
-                    propNames, 
+                    new Uri(RemoteStoragePath),
+                    propNames,
                     changes.NewSyncToken,
                     deep,
                     limit,
                     cancellationToken: cancellationToken)).WebDavResponse;
                 changes.NewSyncToken = davChanges.NewSyncToken;
 
-                foreach (Client.IChangedItem remoteStorageItem in davChanges)
+                // Ordering results to make sure parents are created before children.
+                IOrderedEnumerable<Client.IChangedItem> sortedChanges = davChanges.OrderBy(p => p.Href.AbsoluteUri.Length);
+
+                foreach (Client.IChangedItem remoteStorageItem in sortedChanges)
                 {
-                    IChangedItem itemInfo = (IChangedItem)Mapping.GetUserFileSystemItemMetadata(remoteStorageItem); 
+                    IChangedItem itemInfo = (IChangedItem)Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
                     // Changed, created, moved and deleted item.
                     itemInfo.ChangeType = remoteStorageItem.ChangeType == Client.Change.Changed ? Change.Changed : Change.Deleted;
 
+                    if (itemInfo.ChangeType == Change.Changed)
+                    {
+                        itemInfo.AfterAction = async () =>
+                        {
+                            if (Engine.Placeholders.TryGetItem(Mapping.ReverseMapPath(remoteStorageItem.Href.AbsoluteUri), out PlaceholderItem placeholderItem))
+                            {
+                                await placeholderItem.SavePropertiesAsync(itemInfo as FileSystemItemMetadataExt);
+                            }
+                        };
+
+                        if (Engine.Placeholders.TryGetItem(Mapping.ReverseMapPath(remoteStorageItem.Href.AbsoluteUri), out PlaceholderItem placeholderItem))
+                        {
+                            if ((placeholderItem.TryGetETag(out string eTag) && !eTag.Equals((itemInfo as FileSystemItemMetadataExt).ETag)))
+                            {
+                                itemInfo.ChangeType = Change.MetadataAndContent;
+                            }                            
+                        }
+                    }
                     changes.Add(itemInfo);
                 }
             }

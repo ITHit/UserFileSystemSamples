@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace ITHit.FileSystem.Samples.Common
 {
@@ -53,9 +54,13 @@ namespace ITHit.FileSystem.Samples.Common
         /// </summary>
         public IEnumerable<FileSystemItemPropertyData> CustomProperties { get; set; } = new FileSystemItemPropertyData[] { };
 
-        /// <summary>
-        /// Type of change.
-        /// </summary>
+        ///<inheritdoc/>
         public Change ChangeType { get; set; }
+
+        ///<inheritdoc/>
+        public Func<Task> BeforeAction { get; set; }
+
+        ///<inheritdoc/>
+        public Func<Task> AfterAction { get; set; }
     }
 }

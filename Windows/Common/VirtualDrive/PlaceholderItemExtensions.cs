@@ -35,7 +35,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// as well as any additional custom data required by the client.
         /// </summary>
         /// <param name="placeholder">User file system placeholder item.</param>
-        /// <param name="remoteStorageItem">Remote storage item metadata.</param>
+        /// <param name="metadata">Remote storage item metadata.</param>
         /// <returns>A task object that can be awaited.</returns>
         public static async Task SavePropertiesAsync(this PlaceholderItem placeholder, FileSystemItemMetadataExt metadata)
         {
@@ -50,7 +50,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
 
             // Save eTag.
-            if (metadata.ETag != null)
+            // Update eTag only for offline files. For online files eTag is updated in IFile.ReadAsync.
+            if (metadata.ETag != null && System.IO.File.GetAttributes(placeholder.Path).HasFlag(System.IO.FileAttributes.Offline))
             {
                 placeholder.SetETag(metadata.ETag);
             }

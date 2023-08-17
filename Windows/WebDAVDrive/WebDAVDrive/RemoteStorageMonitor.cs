@@ -40,17 +40,22 @@ namespace WebDAVDrive
                 Logger.LogDebug($"EventType: {webSocketMessage.EventType}", webSocketMessage.ItemPath, webSocketMessage.TargetPath);
 
                 string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
+                string userFileSystemParentPath = Path.GetDirectoryName(userFileSystemPath);
                 switch (webSocketMessage.EventType)
                 {
                     case "created":
+                        // Verify that parent folder exists and is not offline.
+
+                        return !((Directory.Exists(userFileSystemParentPath) && !new DirectoryInfo(userFileSystemParentPath).Attributes.HasFlag(FileAttributes.Offline)) ||
+                                  engine.Placeholders.IsPinned(userFileSystemParentPath));
                     case "deleted":
                         // Verify that parent folder exists and is not offline.
-                        string userFileSystemParentPath = Path.GetDirectoryName(userFileSystemPath);
                         return !Directory.Exists(userFileSystemParentPath)
                             || new DirectoryInfo(userFileSystemParentPath).Attributes.HasFlag(FileAttributes.Offline);
 
                     case "moved":
                         // Verify that source exists OR target folder exists and is not offline.
+                        // TODO: incorrect condition
                         if (File.Exists(userFileSystemPath))
                         {
                             return false;
@@ -61,7 +66,7 @@ namespace WebDAVDrive
                             string userFileSystemNewPath = Mapping.ReverseMapPath(remoteStorageNewPath);
                             string userFileSystemNewParentPath = Path.GetDirectoryName(userFileSystemNewPath);
                             return !Directory.Exists(userFileSystemNewParentPath)
-                                || new DirectoryInfo(userFileSystemNewParentPath).Attributes.HasFlag(FileAttributes.Offline);
+                                || (new DirectoryInfo(userFileSystemNewParentPath).Attributes.HasFlag(FileAttributes.Offline) && (((int)new DirectoryInfo(userFileSystemNewParentPath).Attributes & (int)FileAttributesExt.Pinned) == 0));
                         }
 
                     case "updated":
@@ -72,14 +77,6 @@ namespace WebDAVDrive
             }
 
             return true;
-        }
-
-        public override async Task SavePropertiesAsync(IFileSystemItemMetadata metadata, string userFileSystemPath)
-        {
-            if (engine.Placeholders.TryGetItem(userFileSystemPath, out PlaceholderItem placeholderItem))
-            {
-                await placeholderItem.SavePropertiesAsync(metadata as ITHit.FileSystem.Samples.Common.FileSystemItemMetadataExt);
-            }
         }
     }
 }
