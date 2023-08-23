@@ -11,6 +11,17 @@
 <li>Xcode 14.3+</li>
 <li>Visual Studio Community 2022 for Mac, Stable Channel.</li>
 </ul>
+<h2>Server Requirements</h2>
+<p>This sample requires WebDAV server with collections synchronization support. The following samples support collections synchronization:</p>
+<ul>
+<li><a href="https://github.com/ITHit/WebDAVServerSamples/tree/master/CS/WebDAVServer.FileSystemSynchronization.AspNetCore">FileSystemSynchronization</a>&nbsp;sample supplied with IT Hit WebDAV Server Engine for .NET.</li>
+<li><a href="https://github.com/ITHit/WebDAVServerSamplesJava/tree/master/Java/javax/collectionsync">collectionsync</a>&nbsp;sample supplied with IT Hit WebDAV Server Library for Java.</li>
+</ul>
+<p>You can also test this sample with IT Hit demo servers:</p>
+<ul>
+<li>https://webdavserver.net</li>
+<li>https://webdavserver.com</li>
+</ul>
 <h2>Solution Structure</h2>
 <p>The macOS sample solution consists of 3 projects: container application, an extension project, and a common code.</p>
 <p>The container application provides a Menu Bar icon to install/uninstall the file system extension.&nbsp;</p>

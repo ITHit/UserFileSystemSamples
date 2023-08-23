@@ -12,6 +12,17 @@
 <li>The sample supports WebDAV servers with cookies authentication, Basic, Digest, NTLM, and Kerberos authentication.</li>
 <li>To connect to WebDAV servers with cookies authentication Microsoft Edge&nbsp;is required.&nbsp;</li>
 </ul>
+<h2>Server Requirements</h2>
+<p>This sample requires WebDAV server with collections synchronization support. The following samples support collections synchronization:</p>
+<ul>
+<li><a href="https://github.com/ITHit/WebDAVServerSamples/tree/master/CS/WebDAVServer.FileSystemSynchronization.AspNetCore">FileSystemSynchronization</a> sample supplied with IT Hit WebDAV Server Engine for .NET.</li>
+<li><a href="https://github.com/ITHit/WebDAVServerSamplesJava/tree/master/Java/javax/collectionsync">collectionsync</a> sample supplied with IT Hit WebDAV Server Library for Java.</li>
+</ul>
+<p>You can also test this sample with IT Hit demo servers:</p>
+<ul>
+<li>https://webdavserver.net</li>
+<li>https://webdavserver.com</li>
+</ul>
 <h2>Setting License</h2>
 <p><span class="warn">Note that to use the sample you need both the IT Hit WebDAV Client Library license and IT Hit User File System license.</span></p>
 <p>To run the example, you will need both IT Hit WebDAV Client Library for .NET license and IT Hit User File System Engine for .NET License. You can download <span>a trial license in the&nbsp;<a title="Download" href="https://www.webdavsystem.com/client/download/">IT Hit WebDAV Client Library product download area</a>&nbsp;and in the&nbsp;<a title="Download" href="https://www.userfilesystem.com/download/">IT Hit User File System&nbsp;</a></span><a title="Download" href="https://www.userfilesystem.com/download/">product download area</a>.&nbsp;Note that this sample is fully functional with a trial license and does not have any limitations. The trial licenses are valid for one month will stop working after this. You can check the expiration date inside the license file.&nbsp;Download the licenses file and specify license strings in the&nbsp;<span><code class="code">WebDAVClientLicense</code> and&nbsp;<code class="code">UserFileSystemLicense</code></span>&nbsp;fields respectively in&nbsp;<code class="code">appsettings.json</code>&nbsp;file.&nbsp;Set the license content directly as a value (NOT as a path to the license file). Do not forget to escape quotes: \":</p>
