@@ -45,24 +45,24 @@ namespace WebDAVFileProviderExtension
             Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             RemoteStorageId = remoteStorageId;
-            RemoteStorageUriById = Mapping.GetUriById(remoteStorageId);         
+            RemoteStorageUriById = Mapping.GetUriById(remoteStorageId);
 
             Session = session;
         }
 
-        
+
         ///<inheritdoc>
         public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", RemoteStorageUriById.AbsoluteUri, targetUserFileSystemPath);
-            Uri targetFolderUri = await new VirtualFolder(targetFolderRemoteStorageItemId, Session,Logger).GetItemHrefAsync();
+            Uri targetFolderUri = await new VirtualFolder(targetFolderRemoteStorageItemId, Session, Logger).GetItemHrefAsync();
             string targetItemName = targetUserFileSystemPath.Split(Path.DirectorySeparatorChar).Last();
             Uri targetItemUri = new Uri(targetFolderUri, targetItemName);
 
             await Session.MoveToAsync(await GetItemHrefAsync(), targetItemUri, true);
             Logger.LogMessage("Moved item in remote storage succesefully", RemoteStorageUriById.AbsoluteUri, targetItemUri.AbsoluteUri);
-        }        
-       
+        }
+
         ///<inheritdoc>
         public async Task DeleteAsync(IOperationContext operationContext = null, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
@@ -84,7 +84,7 @@ namespace WebDAVFileProviderExtension
                 // Return IFileMetadata for a file, IFolderMetadata for a folder.
                 item = (await Session.GetItemAsync(RemoteStorageUriById, propNames)).WebDavResponse;
             }
-            catch(ITHit.WebDAV.Client.Exceptions.NotFoundException e)
+            catch (ITHit.WebDAV.Client.Exceptions.NotFoundException e)
             {
                 Logger.LogError($"{nameof(IFileSystemItem)}.{nameof(GetMetadataAsync)}()", RemoteStorageUriById.AbsoluteUri, ex: e);
 
@@ -99,7 +99,7 @@ namespace WebDAVFileProviderExtension
         /// </summary>
         public async Task<Uri> GetItemHrefAsync()
         {
-            return (await Session.GetItemAsync(RemoteStorageUriById)).WebDavResponse.Href;
+            return (await Session.GetItemAsync(RemoteStorageUriById, propNames: null)).WebDavResponse.Href;
         }
 
 
@@ -109,14 +109,15 @@ namespace WebDAVFileProviderExtension
             byte[]? thumbnail = null;
 
             string[] exts = AppGroupSettings.GetRequestThumbnailsFor().Trim().Split("|");
-            string ext = System.IO.Path.GetExtension(RemoteStorageUriById.AbsoluteUri).TrimStart('.');
+            Uri itemUri = await GetItemHrefAsync();
+            string ext = System.IO.Path.GetExtension(itemUri.AbsoluteUri).TrimStart('.');
 
             if (exts.Any(ext.Equals) || exts.Any("*".Equals))
             {
                 string ThumbnailGeneratorUrl = AppGroupSettings.GetThumbnailGeneratorUrl()
-                    .Replace("{thumbnail width}", "" + size)
-                    .Replace("{thumbnail height}", "" + size);
-                string filePathRemote = ThumbnailGeneratorUrl.Replace("{path to file}", RemoteStorageUriById.AbsoluteUri);
+                    .Replace("{thumbnail width}", size.ToString())
+                    .Replace("{thumbnail height}", size.ToString());
+                string filePathRemote = ThumbnailGeneratorUrl.Replace("{path to file}", itemUri.AbsoluteUri);
 
                 try
                 {

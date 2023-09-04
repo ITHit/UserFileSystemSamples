@@ -102,11 +102,6 @@ namespace WebDAVMacApp
         }
 
         /// <summary>
-        /// Called to save item properties.
-        /// </summary>
-        public abstract Task SavePropertiesAsync(IFileSystemItemMetadata metadata, string userFileSystemPath);
-
-        /// <summary>
         /// Verifies that the WebSockets message is for the item that exists 
         /// in the user file system and should be updated.
         /// </summary>
@@ -253,7 +248,7 @@ namespace WebDAVMacApp
         {
             try
             {
-                await ServerNotifications.ProcessChangesAsync(SavePropertiesAsync);
+                await ServerNotifications.ProcessChangesAsync();
             }
             catch (Exception ex)
             {

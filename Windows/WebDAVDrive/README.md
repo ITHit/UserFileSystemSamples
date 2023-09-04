@@ -16,12 +16,12 @@
 <p>This sample requires WebDAV server with collections synchronization support. The following samples support collections synchronization:</p>
 <ul>
 <li><a href="https://github.com/ITHit/WebDAVServerSamples/tree/master/CS/WebDAVServer.FileSystemSynchronization.AspNetCore">FileSystemSynchronization</a> sample supplied with IT Hit WebDAV Server Engine for .NET.</li>
-<li><a href="https://github.com/ITHit/WebDAVServerSamplesJava/tree/master/Java/javax/collectionsync">collectionsync</a> sample supplied with IT Hit WebDAV Server Library for Java.</li>
+<li><a href="https://github.com/ITHit/WebDAVServerSamplesJava/tree/master/Java/jakarta/collectionsync">collectionsync</a> sample supplied with IT Hit WebDAV Server Library for Java.</li>
 </ul>
 <p>You can also test this sample with IT Hit demo servers:</p>
 <ul>
-<li>https://webdavserver.net</li>
-<li>https://webdavserver.com</li>
+<li><a href="https://webdavserver.net">https://webdavserver.net</a></li>
+<li><a href="https://webdavserver.com">https://webdavserver.com</a></li>
 </ul>
 <h2>Setting License</h2>
 <p><span class="warn">Note that to use the sample you need both the IT Hit WebDAV Client Library license and IT Hit User File System license.</span></p>
@@ -90,7 +90,7 @@
 <h2>See Also:</h2>
 <ul>
 <li><a title="Quick Start" href="https://www.userfilesystem.com/programming/creating_virtual_file_system/">Creating Virtual File System in .NET - Quick Start Guide</a></li>
-<li><a title="Creating Virtual Drive in .NET" href="https://www.userfilesystem.com/programming/creating_virtual_drive/">Creating Virtual Drive in .NET - Advanced Features Implementation Guide</a><a title="Locking" href="https://www.userfilesystem.com/programming/previous_versions/virtual_file_system_v2/locking/"><br></a></li>
+<li><a title="Creating Virtual Drive in .NET" href="https://www.userfilesystem.com/programming/win/creating_virtual_drive/">Creating Virtual Drive in .NET - Advanced Features Implementation Guide</a><a title="Locking" href="https://www.userfilesystem.com/programming/previous_versions/v2/locking/"><br></a></li>
 </ul>
 <h3 class="para d-inline next-article-heading">Next Article:</h3>
 <a title="WebDAV Drive Sample for macOS" href="https://www.userfilesystem.com/examples/webdav_drive_mac/">WebDAV Drive Sample for macOS in .NET, C#</a>

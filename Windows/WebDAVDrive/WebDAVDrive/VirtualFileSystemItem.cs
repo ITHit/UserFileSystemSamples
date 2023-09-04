@@ -154,7 +154,7 @@ namespace WebDAVDrive
 
             if (exts.Any(ext.Equals) || exts.Any("*".Equals))
             {
-                string ThumbnailGeneratorUrl = Program.Settings.ThumbnailGeneratorUrl.Replace("{thumbnail width}", "" + size).Replace("{thumbnail height}", "" + size);
+                string ThumbnailGeneratorUrl = Program.Settings.ThumbnailGeneratorUrl.Replace("{thumbnail width}", size.ToString()).Replace("{thumbnail height}", size.ToString());
                 string filePathRemote = ThumbnailGeneratorUrl.Replace("{path to file}", WebDAVDrive.Mapping.MapPath(UserFileSystemPath));
 
                 try

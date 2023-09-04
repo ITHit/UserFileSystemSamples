@@ -26,22 +26,22 @@
 <p>This sample provides thumbnails handler, context menu handler and custom states and properties handler.&nbsp;<span>All handlers are registered as an application extension by the packing project provided with the sample or as a sparse package manifest of the main application. To register handlers you will simply run either VirtualDrive project directly or the VirtualDrive.Package project. You do NOT need to register the handlers using regsrv32 or any using any other COM registration technique.</span></p>
 <p><span>The COM handlers are automatically unregistered on package uninstall, you do not need to unregister them manually.</span></p>
 <h3>Thumbnails Support</h3>
-<p><span>The Virtual Drive sample provides <a title="Creating Thumbnails Provider" href="https://www.userfilesystem.com/programming/creating_thumbnails_provider/">thumbnail provider shell extension implementation</a> in the COM object. It loads thumbnails from files located in the remote storage simulation folder and displays them in Windows Explorer. You will adapt the code to load thumbnails from your real remote storage.</span></p>
+<p><span>The Virtual Drive sample provides <a title="Creating Thumbnails Provider" href="https://www.userfilesystem.com/programming/previous_versions/v6/creating_thumbnails_provider/">thumbnail provider shell extension implementation</a> in the COM object. It loads thumbnails from files located in the remote storage simulation folder and displays them in Windows Explorer. You will adapt the code to load thumbnails from your real remote storage.</span></p>
 <p><img id="__mcenew" alt="Virtual Drive thumbnails support in Windows Explorer" src="https://www.userfilesystem.com/media/2147/windowsexplorerthumbnailsmode.png" rel="123092"></p>
 <h3>Context Menu Support</h3>
 <p>This sample provides a context menu provider that implements manual locking and unlocking:</p>
 <p><img id="__mcenew" alt="Virtual drive context menu handler provider" src="https://www.userfilesystem.com/media/2182/virtualdrivecustomcontextmenuhandler.png" rel="123964"></p>
 <p><span class="warn">Note that context menu support on Window 11 requires application or package identity. The sample is provided with a test developer certificate for this purpose. You must replace the certificate with your own certificate prior to deployment.</span></p>
-<p>See more details on on implementing and registering context menu in the&nbsp;<a title="Creating Context Menu" href="https://www.userfilesystem.com/programming/creating_context_menu/">Creating Custom Windows Explorer Context Menu Shell Extension</a> article.</p>
+<p>See more details on on implementing and registering context menu in the&nbsp;<a title="Creating Context Menu" href="https://www.userfilesystem.com/programming/win/creating_context_menu/">Creating Custom Windows Explorer Context Menu Shell Extension</a> article.</p>
 <h3>Window File Manger Custom States &amp; Columns Support</h3>
 <p><span>This sample registers and displays custom states &amp; columns in Windows File Manager. For demo purposes the Registrar class adds ETag column as well as columns that show information about the lock: Lock Owner, Lock Scope, Lock Expires:</span></p>
 <p><span>&nbsp;&nbsp;<img id="__mcenew" alt="Virtual Drive custom columns being displayed in Windows File Manger" src="https://www.userfilesystem.com/media/2132/customcolumnswindowsfilemanager.png" rel="122440"></span></p>
-<p>See more information about how to program and register the custom states and columns handler in&nbsp;<a title="Creating States &amp; Columns Provider" href="https://www.userfilesystem.com/programming/creating_custom_states_columns_provider/">Creating Custom States and Columns Provider Shell Extension for Virtual Drive</a><span>&nbsp;</span>article.</p>
+<p>See more information about how to program and register the custom states and columns handler in&nbsp;<a title="Creating States &amp; Columns Provider" href="https://www.userfilesystem.com/programming/win/creating_custom_states_columns_provider/">Creating Custom States and Columns Provider Shell Extension for Virtual Drive</a><span>&nbsp;</span>article.</p>
 <h2>Automatic Locking of Microsoft Office and AutoCAD Files</h2>
 <p><span>This sample automatically locks the Microsoft Office and AutoCAD documents in the remote storage when a document is being opened for editing and automatically unlocks the document when the file is closed. When the document is opened you will see the lock icon&nbsp;<img id="__mcenew" alt="Lock icon" src="https://www.userfilesystem.com/media/2071/locked.png" rel="120785"> in the Status column in Windows File Manager:</span></p>
 <p><span><img id="__mcenew" alt="Virtual Drive sample shows lock icon for Microsoft Office documents" src="https://www.userfilesystem.com/media/2133/virtualdrivemsoffice.png" rel="122441"></span></p>
 <p><span>The information about the lock (lock-token, etc.) is being saved on the client machine when the document is locked.</span>&nbsp;When a document is modified on the client,&nbsp;all changes are sent to the remote storage, together with the lock-token and eTag.&nbsp;</p>
-<p>You can find more more about locking programming <a title="Creating Virtual Drive in .NET" href="https://www.userfilesystem.com/programming/creating_virtual_drive/#nav_locking">in this section</a>.&nbsp;</p>
+<p>You can find more more about locking programming <a title="Creating Virtual Drive in .NET" href="https://www.userfilesystem.com/programming/win/creating_virtual_drive/#nav_locking">in this section</a>.&nbsp;</p>
 <h2>Packaging Project</h2>
 <p><span class="warn">Starting with IT Hit User File System v5 Beta, the VirtualDrive project supports identity and provides&nbsp;the same functionality as VirtualDrive.Packaging project. Starting VirtualDrive project directly registers thumbnails handler shell extension, context menu handler and custom states &amp; columns handler.</span></p>
 <p>This sample provides a Windows Application Packaging Project which allows deployment of your application to the Windows Store. The&nbsp;package can be also used for direct&nbsp;deployment to users in a corporate environment or consumer environment. Start reading about various deployment scenarios in <a href="https://learn.microsoft.com/en-us/windows/msix/desktop/managing-your-msix-deployment-targetdevices">this article</a>.</p>
@@ -54,9 +54,9 @@
 <p>The packaging project will perform an automatic cleanup on uninstall. Your sync root registration will be automatically unregistered, folders created by the application will be deleted as well as all COM components unregistered.&nbsp;</p>
 <h2>See also:</h2>
 <ul>
-<li><a title="Creating Thumbnails Provider" href="https://www.userfilesystem.com/programming/creating_thumbnails_provider/">Creating Thumbnails Provider Shell Extension</a></li>
-<li><a title="Creating Context Menu" href="https://www.userfilesystem.com/programming/creating_context_menu/">Creating Custom Windows Explorer Context Menu Shell Extension</a></li>
-<li><a title="Creating States &amp; Columns Provider" href="https://www.userfilesystem.com/programming/creating_custom_states_columns_provider/">Creating Custom States and Columns Provider Shell Extension</a></li>
+<li><a title="Creating Thumbnails Provider" href="https://www.userfilesystem.com/programming/previous_versions/v6/creating_thumbnails_provider/">Creating Thumbnails Provider Shell Extension</a></li>
+<li><a title="Creating Context Menu" href="https://www.userfilesystem.com/programming/win/creating_context_menu/">Creating Custom Windows Explorer Context Menu Shell Extension</a></li>
+<li><a title="Creating States &amp; Columns Provider" href="https://www.userfilesystem.com/programming/win/creating_custom_states_columns_provider/">Creating Custom States and Columns Provider Shell Extension</a></li>
 </ul>
 <p>&nbsp;</p>
 <h3 class="para d-inline next-article-heading">Next Article:</h3>

@@ -33,9 +33,5 @@ namespace WebDAVMacApp
 
             return true;
         }
-
-        public override async Task SavePropertiesAsync(IFileSystemItemMetadata metadata, string userFileSystemPath)
-        {           
-        }
     }
 }
