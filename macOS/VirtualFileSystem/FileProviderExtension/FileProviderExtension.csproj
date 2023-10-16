@@ -76,7 +76,7 @@
   <ItemGroup>
     <PackageReference Include="System.Security.Permissions" Version="7.0.0" />
     <PackageReference Include="System.Threading.AccessControl" Version="7.0.1" />
-    <PackageReference Include="ITHit.FileSystem.Mac" Version="7.1.23701" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="7.2.23868" />
   </ItemGroup>
    <ItemGroup>
       <Content Include="..\VirtualFileSystemMacApp\Resources\appsettings.json" Link="Resources\appsettings.json" />

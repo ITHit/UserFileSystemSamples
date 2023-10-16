@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using Common.Core;
 using ITHit.FileSystem;
-using VirtualFilesystemCommon;
 
 namespace FileProviderExtension
 {

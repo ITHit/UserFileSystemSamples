@@ -62,5 +62,8 @@ namespace ITHit.FileSystem.Samples.Common
 
         ///<inheritdoc/>
         public Func<Task> AfterAction { get; set; }
+
+        ///<inheritdoc/>
+        public ICustomData Properties { get; set; }
     }
 }

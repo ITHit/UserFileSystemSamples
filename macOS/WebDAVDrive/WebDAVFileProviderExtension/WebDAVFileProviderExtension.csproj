@@ -76,7 +76,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ITHitWebDAVClient" Version="7.0.4672" />
-    <PackageReference Include="ITHit.FileSystem.Mac" Version="7.1.23701" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="7.2.23868" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Security.Permissions" Version="7.0.0" />

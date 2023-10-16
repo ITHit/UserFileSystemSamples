@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using ITHit.FileSystem;
-using VirtualFilesystemCommon;
 using ITHit.FileSystem.Mac;
 using System.Threading;
 using System.Text;

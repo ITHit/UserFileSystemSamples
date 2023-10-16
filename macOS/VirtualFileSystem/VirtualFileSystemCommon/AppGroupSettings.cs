@@ -4,29 +4,13 @@ using Common.Core;
 using FileProvider;
 using Foundation;
 
-namespace VirtualFilesystemCommon
+namespace VirtualFileSystemCommon
 {
     public static class AppGroupSettings
     {
-        public const string RemoteStorageRootPathId = "RemoteStorageRootPath";
-        public const string UserFileSystemLicenseId = "UserFileSystemLicense";
-
-
-        /// <summary>
-        /// Returns remote root path.
-        /// </summary>
-
-        public static string GetRemoteRootPath()
+        public static Lazy<AppSettings> Settings = new Lazy<AppSettings>(() =>
         {
-            return BaseAppGroupSettings.GetSettingValue(RemoteStorageRootPathId);
-        }
-
-        /// <summary>
-        /// Returns license.
-        /// </summary>
-        public static string GetLicense()
-        {
-            return BaseAppGroupSettings.GetSettingValue(UserFileSystemLicenseId);
-        }
+            return BaseAppGroupSettings.ReadAppSettingsFile<AppSettings>(NSBundle.MainBundle.PathForResource("appsettings", "json"));
+        });
     }
 }

@@ -1,6 +1,6 @@
+using Common.Core;
 using ITHit.FileSystem;
 using WebDAVCommon;
-using WebDAVFileProviderExtension;
 
 namespace WebDAVMacApp
 {
@@ -9,6 +9,7 @@ namespace WebDAVMacApp
 
         internal RemoteStorageMonitor(string webSocketServerUrl, ILogger logger) : base(webSocketServerUrl, logger)
         {
+            this.InstanceId = Environment.MachineName;
         }
 
         /// <summary>
@@ -24,7 +25,7 @@ namespace WebDAVMacApp
             // Just in case there is more than one WebSockets server/virtual folder that
             // is sending notifications (like with webdavserver.net, webdavserver.com),
             // here we filter notifications that come from a different server/virtual folder.
-            if (remoteStoragePath.StartsWith(AppGroupSettings.GetWebDAVServerUrl(), StringComparison.InvariantCultureIgnoreCase))
+            if (remoteStoragePath.StartsWith(AppGroupSettings.Settings.Value.WebDAVServerUrl, StringComparison.InvariantCultureIgnoreCase))
             {
                 Logger.LogDebug($"EventType: {webSocketMessage.EventType}", webSocketMessage.ItemPath, webSocketMessage.TargetPath);
 

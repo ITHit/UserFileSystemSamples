@@ -16,21 +16,48 @@ namespace WebDAVFileProviderExtension
     [Register(nameof(VirtualEngine))]
     public class VirtualEngine : EngineMac
     {
-        private WebDavSession webDavSession;
+        /// <summary>
+        /// WebDAV session.
+        /// </summary>
+        public WebDavSession WebDavSession;
+
+        /// <summary>
+        /// Automatic lock timout in milliseconds.
+        /// </summary>
+        public readonly double AutoLockTimoutMs;
+
+        /// <summary>
+        /// Manual lock timout in milliseconds.
+        /// </summary>
+        public readonly double ManualLockTimoutMs;
+
+        /// <summary>
+        /// Currently loged-in user name or user ID. 
+        /// </summary>
+        /// <remarks>
+        /// Used to set lock Owner name as well as to distinguish locks applied
+        /// by the currently loged-in user from locks applied by other users, across multiple devices.
+        /// The default value of the Environment.UserName is used for demo purposes only.
+        /// </remarks>
+        public string CurrentUserPrincipal { get; set; } = Environment.UserName;
 
         [Export("initWithDomain:")]
         public VirtualEngine(NSFileProviderDomain domain)
             : base(domain)
         {
-            License = AppGroupSettings.GetLicense();
+            License = AppGroupSettings.Settings.Value.UserFileSystemLicense;
             ConsoleLogger consolelogger = new ConsoleLogger(GetType().Name);
    
             Error += consolelogger.LogError;
             Message += consolelogger.LogMessage;
             Debug += consolelogger.LogDebug;
            
-            webDavSession = new WebDavSession(AppGroupSettings.GetWebDAVClientLicense());
-            webDavSession.CustomHeaders.Add("InstanceId", Environment.MachineName);
+            WebDavSession = new WebDavSession(AppGroupSettings.Settings.Value.WebDAVClientLicense);
+            WebDavSession.CustomHeaders.Add("InstanceId", Environment.MachineName);
+
+            AutoLock = AppGroupSettings.Settings.Value.AutoLock;
+            AutoLockTimoutMs = AppGroupSettings.Settings.Value.AutoLockTimoutMs;
+            ManualLockTimoutMs = AppGroupSettings.Settings.Value.ManualLockTimoutMs;
 
             // set remote root storage item id.
             SetRemoteStorageRootItemId(GetRootStorageItemIdAsync().Result);
@@ -43,11 +70,11 @@ namespace WebDAVFileProviderExtension
         {
             if (itemType == FileSystemItemType.File)
             {
-                return new VirtualFile(remoteStorageItemId, webDavSession, Logger);
+                return new VirtualFile(remoteStorageItemId, this, Logger);
             }
             else
             {
-                return new VirtualFolder(remoteStorageItemId, webDavSession, Logger);
+                return new VirtualFolder(remoteStorageItemId, this, Logger);
             }
         }
 
@@ -59,12 +86,12 @@ namespace WebDAVFileProviderExtension
             // See method description for more details.
 
             Logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString());
+            Dictionary<Guid, IMenuCommand> menuCommands = new Dictionary<Guid, IMenuCommand>() {
+                { typeof(UnLockMenuCommand).GUID, new UnLockMenuCommand(this, Logger) }, { typeof(LockMenuCommand).GUID, new LockMenuCommand(this, Logger) } };
 
-            Guid actionCommandGuid = typeof(ActionMenuCommand).GUID;
-
-            if (menuGuid == actionCommandGuid)
+            if(menuCommands.ContainsKey(menuGuid))
             {
-                return new ActionMenuCommand(this, Logger);
+                return menuCommands[menuGuid];
             }
 
             Logger.LogError($"Menu not found", menuGuid.ToString());
@@ -78,7 +105,7 @@ namespace WebDAVFileProviderExtension
         /// <returns></returns>
         public async Task<byte[]> GetRootStorageItemIdAsync()
         {
-            return (await new VirtualFolder(Encoding.UTF8.GetBytes(AppGroupSettings.GetWebDAVServerUrl()), webDavSession, Logger).GetMetadataAsync()).RemoteStorageItemId;
+            return (await new VirtualFolder(Encoding.UTF8.GetBytes(AppGroupSettings.Settings.Value.WebDAVServerUrl), this, Logger).GetMetadataAsync()).RemoteStorageItemId;
         }
 
                 
@@ -86,7 +113,7 @@ namespace WebDAVFileProviderExtension
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            webDavSession.Dispose();
+            WebDavSession.Dispose();
         }
 
         protected override void Stop()

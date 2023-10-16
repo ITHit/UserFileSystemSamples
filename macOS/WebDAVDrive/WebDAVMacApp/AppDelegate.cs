@@ -12,7 +12,7 @@ namespace WebDAVMacApp
     public class AppDelegate : NSApplicationDelegate
     {
         private ILogger Logger = new ConsoleLogger("WebDavFileProviderHostApp");
-        private RemoteStorageMonitor RemoteStorageMonitor = new RemoteStorageMonitor(AppGroupSettings.GetWebSocketServerUrl(), new ConsoleLogger(typeof(RemoteStorageMonitor).Name));
+        private RemoteStorageMonitor RemoteStorageMonitor = new RemoteStorageMonitor(AppGroupSettings.Settings.Value.WebSocketServerUrl, new ConsoleLogger(typeof(RemoteStorageMonitor).Name));
         private string ExtensionIdentifier = "com.webdav.vfs.app";
         private string ExtensionDisplayName = "IT Hit WebDAV Drive";
         private NSMenuItem InstallMenuItem = new NSMenuItem("Install WebDAV FS Extension");
@@ -57,7 +57,7 @@ namespace WebDAVMacApp
             StatusItem.HighlightMode = true;
 
             //AppGroupSettings.SaveSharedSettings("appsettings.json");
-            if (string.IsNullOrEmpty(AppGroupSettings.GetWebDAVServerUrl()))
+            if (string.IsNullOrEmpty(AppGroupSettings.Settings.Value.WebDAVServerUrl))
             {
                 NSAlert alert = NSAlert.WithMessage("WebDAV Server not found.", null, null, null, "");
                 alert.RunModal();
@@ -68,7 +68,7 @@ namespace WebDAVMacApp
 
         private void Install(object? sender, EventArgs e)
         {
-            Process.Start("open", AppGroupSettings.GetWebDAVServerUrl());
+            Process.Start("open", AppGroupSettings.Settings.Value.WebDAVServerUrl);
             Task.Run(async () =>
             {
                 NSFileProviderDomain domain = await Common.Core.Registrar.RegisterAsync(ExtensionIdentifier, ExtensionDisplayName, Logger);

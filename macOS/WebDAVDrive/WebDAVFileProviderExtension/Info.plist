@@ -38,15 +38,36 @@
 		<array>
 			<dict>
 				<key>NSExtensionFileProviderActionIdentifier</key>
-				<string>28d0e0cb-5df7-432c-a06f-297c06b5ec5d</string>
+				<string>18d0e0cb-5df7-432c-a06f-297c06b5ec5d</string>
 				<key>NSExtensionFileProviderActionName</key>
-				<string>Action 1</string>
+				<string>Lock</string>
 				<key>NSExtensionFileProviderActionActivationRule</key>
-				<string>TRUEPREDICATE</string>
+				<string>SUBQUERY ( fileproviderItems, $item, $item.userInfo.locked == nil &amp;&amp; !($item.contentType.identifier UTI-CONFORMS-TO &quot;public.folder&quot;) ).@count &gt; 0</string>
+			</dict>
+			<dict>
+				<key>NSExtensionFileProviderActionIdentifier</key>
+				<string>28d0e0cb-5df7-432c-a06f-297c06b5ec4d</string>
+				<key>NSExtensionFileProviderActionName</key>
+				<string>Unlock</string>
+				<key>NSExtensionFileProviderActionActivationRule</key>
+				<string>SUBQUERY ( fileproviderItems, $item, $item.userInfo.locked CONTAINS &quot;1&quot; ).@count &gt; 0</string>
 			</dict>
 		</array>
 		<key>NSExtensionFileProviderDocumentGroup</key>
 		<string>65S3A9JQ35.group.com.webdav.vfs</string>
+		<key>NSFileProviderDecorations</key>
+		<array>
+			<dict>
+				<key>BadgeImageType</key>
+				<string>com.apple.icon-decoration.badge.locked-by-user</string>
+				<key>Category</key>
+				<string>Badge</string>
+				<key>Identifier</key>
+				<string>com.webdav.vfs.app.extension.decorating.locked</string>
+				<key>Label</key>
+				<string>Locked item</string>
+			</dict>
+		</array>
 	</dict>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>

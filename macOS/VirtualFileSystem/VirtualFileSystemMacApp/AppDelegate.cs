@@ -1,9 +1,7 @@
 using System.Diagnostics;
 using Common.Core;
-using FileProvider;
 using ITHit.FileSystem;
-using ITHit.FileSystem.Mac;
-using VirtualFilesystemCommon;
+using VirtualFileSystemCommon;
 
 namespace VirtualFilesystemMacApp
 {
@@ -47,7 +45,7 @@ namespace VirtualFilesystemMacApp
             StatusItem.Image = NSImage.ImageNamed("TrayIcon.png");
             StatusItem.HighlightMode = true;
 
-            if (!Directory.Exists(AppGroupSettings.GetRemoteRootPath()))
+            if (!Directory.Exists(AppGroupSettings.Settings.Value.RemoteStorageRootPath))
             {
                 NSAlert alert = NSAlert.WithMessage("Path is not found", null, null, null, "");
                 alert.RunModal();
@@ -58,7 +56,7 @@ namespace VirtualFilesystemMacApp
 
         private void Install(object? sender, EventArgs e)
         {
-            Process.Start("open", AppGroupSettings.GetRemoteRootPath());
+            Process.Start("open", AppGroupSettings.Settings.Value.RemoteStorageRootPath);
             Task.Run(async () =>
             {
                 await Common.Core.Registrar.RegisterAsync(ExtensionIdentifier, ExtensionDisplayName, Logger);

@@ -12,7 +12,7 @@ namespace WebDAVMacApp
         /// <returns>Full remote URI with domain that corresponds to the <paramref name="relativePath"/>.</returns>
         public static string GetAbsoluteUri(string relativePath)
         {
-            Uri webDavServerUri = new Uri(AppGroupSettings.GetWebDAVServerUrl());
+            Uri webDavServerUri = new Uri(AppGroupSettings.Settings.Value.WebDAVServerUrl);
             string host = webDavServerUri.GetLeftPart(UriPartial.Authority);
 
             string path = $"{host}/{relativePath}";

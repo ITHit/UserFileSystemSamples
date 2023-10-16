@@ -43,7 +43,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <EnableCodeSigning>false</EnableCodeSigning>
-    <CreatePackage>true</CreatePackage>
+    <CreatePackage>false</CreatePackage>
     <EnablePackageSigning>false</EnablePackageSigning>
     <IncludeMonoRuntime>true</IncludeMonoRuntime>
     <UseSGen>true</UseSGen>
@@ -70,6 +70,10 @@
         <Command>
           <type>AfterBuild</type>
           <command>codesign --force --sign "Mac Developer" --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der "${TargetDir}/WebDAV Drive.app"</command>
+        </Command>
+        <Command>
+          <type>AfterBuild</type>
+          <command>bash ${ProjectDir}/pkg.sh ${TargetDir}</command>
         </Command>
       </CustomCommands>
     </CustomCommands>
@@ -133,7 +137,7 @@
     </BundleResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem" Version="7.1.23701" />
+    <PackageReference Include="ITHit.FileSystem" Version="7.2.23868" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WebDAVCommon\WebDAVCommon.csproj" />

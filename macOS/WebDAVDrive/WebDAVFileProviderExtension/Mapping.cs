@@ -8,6 +8,8 @@ using Client = ITHit.WebDAV.Client;
 using ITHit.FileSystem;
 using WebDAVCommon;
 using Common.Core;
+using ITHit.FileSystem.Mac;
+using ITHit.WebDAV.Client;
 
 namespace WebDAVFileProviderExtension
 {
@@ -27,7 +29,7 @@ namespace WebDAVFileProviderExtension
             string remoteStorageIdStr = Encoding.UTF8.GetString(remoteStorageItemId);
 
             return Uri.IsWellFormedUriString(remoteStorageIdStr, UriKind.Absolute) ? new Uri(remoteStorageIdStr) :
-                new Uri(AppGroupSettings.GetWebDAVServerUrl().TrimEnd('/') + "/" + remoteStorageIdStr.TrimStart('/'));
+                new Uri(AppGroupSettings.Settings.Value.WebDAVServerUrl.TrimEnd('/') + "/" + remoteStorageIdStr.TrimStart('/'));
         }
 
         /// <summary>
@@ -42,14 +44,16 @@ namespace WebDAVFileProviderExtension
             if (remoteStorageItem is Client.IFile)
             {
                 Client.IFile remoteStorageFile = (Client.IFile)remoteStorageItem;
-                userFileSystemItem = new FileMetadata();
-                ((FileMetadata)userFileSystemItem).Length = remoteStorageFile.ContentLength;
-                //userFileSystemItem.ETag = remoteStorageFile.Etag;
+                userFileSystemItem = new FileMetadataMac();
+                ((FileMetadataMac)userFileSystemItem).Length = remoteStorageFile.ContentLength;
                 userFileSystemItem.Attributes = FileAttributes.Normal;
+
+                // Set etag.
+                userFileSystemItem.Properties.AddOrUpdate("eTag", remoteStorageFile.Etag);
             }
             else
             {
-                userFileSystemItem = new FolderMetadata();
+                userFileSystemItem = new FolderMetadataMac();
                 userFileSystemItem.Attributes = FileAttributes.Normal | FileAttributes.Directory;
             }
 
@@ -58,32 +62,33 @@ namespace WebDAVFileProviderExtension
             userFileSystemItem.RemoteStorageParentItemId = GetPropertyValue(remoteStorageItem, "parent-resource-id", null);
 
             if (DateTime.MinValue != remoteStorageItem.CreationDate)
-            {
+            { 
+                DateTimeOffset lastModifiedDate = remoteStorageItem.LastModified;
                 userFileSystemItem.CreationTime = remoteStorageItem.CreationDate;
-                userFileSystemItem.LastWriteTime = remoteStorageItem.LastModified;
+                userFileSystemItem.LastWriteTime = lastModifiedDate;
                 userFileSystemItem.LastAccessTime = remoteStorageItem.LastModified;
-                userFileSystemItem.ChangeTime = remoteStorageItem.LastModified;
+                userFileSystemItem.ChangeTime = lastModifiedDate;
             }
 
-            // Set information about third-party lock, if any.
+            // Set information about third-party lock, if any.            
             Client.LockInfo lockInfo = remoteStorageItem.ActiveLocks.FirstOrDefault();
             if (lockInfo != null)
             {
-                /*userFileSystemItem.Lock = new ServerLockInfo()
+                IFileSystemItemMetadataMac userFileSystemItemMac = userFileSystemItem as IFileSystemItemMetadataMac;
+                userFileSystemItem.Properties.AddOrUpdate("LockToken", new ServerLockInfo()
                 {
                     LockToken = lockInfo.LockToken.LockToken,
                     Owner = lockInfo.Owner,
                     Exclusive = lockInfo.LockScope == Client.LockScope.Exclusive,
                     LockExpirationDateUtc = DateTimeOffset.Now.Add(lockInfo.TimeOut)
-                };*/
-            }
+                });
 
-            /*
-            // Set custom columns to be displayed in file manager.
-            // We create property definitions when registering the sync root with corresponding IDs.
-            // The columns are rendered in IVirtualEngine.GetItemPropertiesAsync() call.
-            userFileSystemItem.CustomProperties = ;
-            */
+                // Display system lock icon for the file.
+                userFileSystemItemMac.Decorations.Add("com.webdav.vfs.app.extension.decorating.locked");
+
+                // Add Unclock context menu for the item in macOS finder.
+                userFileSystemItemMac.UserInfo.AddOrUpdate("locked", "1");
+            }       
 
             return userFileSystemItem;
         }

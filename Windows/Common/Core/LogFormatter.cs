@@ -12,6 +12,7 @@ using log4net.Appender;
 
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Windows.Package;
+using Windows.Storage.Search;
 
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
@@ -103,11 +104,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             {
                 log.Info($"\n{"Sparse package location:",indent} {sparsePackagePath}");
                 var cert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(sparsePackagePath);
-                log.Info($"\n{"Sparse package cert:", indent} Subject: {cert.Subject}, Issued by: {cert.Issuer}");
+                log.Info($"\n{"Sparse package cert:",indent} Subject: {cert.Subject}, Issued by: {cert.Issuer}");
             }
             else
             {
-                log.Info($"\n{"Sparse package:", indent} Not found");
+                log.Info($"\n{"Sparse package:",indent} Not found");
             }
         }
 
@@ -147,7 +148,13 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         private async Task PrintIndexingStateAsync(string path)
         {
             StorageFolder userFileSystemRootFolder = await StorageFolder.GetFolderFromPathAsync(path);
-            log.Info($"\n{"Indexed state:",indent} {await userFileSystemRootFolder.GetIndexedStateAsync()}");
+            IndexedState indexedState = await userFileSystemRootFolder.GetIndexedStateAsync();
+            log.Info($"\n{"Indexed state:",indent} {indexedState}");
+
+            if (indexedState != IndexedState.FullyIndexed)
+            {
+                log.ErrorFormat($"\nIndexing is disabled. Indexing must be enabled for {path}");
+            }
         }
 
         public void LogMessage(string message)
@@ -195,7 +202,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             string sourcePath = e.SourcePath?.FitString(sourcePathWidth, 6);
             string targetPath = e.TargetPath?.FitString(sourcePathWidth, 6);
 
-            string message = Format(DateTimeOffset.Now.ToString("hh:mm:ss.fff"), process, priorityHint?.ToString(), fileId, "", e.ComponentName, e.CallerLineNumber.ToString(), e.CallerMemberName, e.CallerFilePath, e.Message,  sourcePath, att, targetPath);
+            string message = Format(DateTimeOffset.Now.ToString("hh:mm:ss.fff"), process, priorityHint?.ToString(), fileId, "", e.ComponentName, e.CallerLineNumber.ToString(), e.CallerMemberName, e.CallerFilePath, e.Message, sourcePath, att, targetPath);
 
             if (level == log4net.Core.Level.Error)
             {
@@ -214,13 +221,13 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             {
                 log.Debug(message);
             }
-            
+
         }
 
         private static string Format(string date, string process, string priorityHint, string fileId, string remoteStorageId, string componentName, string callerLineNumber, string callerMemberName, string callerFilePath, string message, string sourcePath, string attributes, string targetPath)
         {
             // {fileId,-18} | {remoteStorageId,-remoteStorageIdWidth}
-            return $"{Environment.NewLine}|{date, -12}| {process,-25}| {priorityHint,-5}| {componentName,-26}| {callerLineNumber, 4} | {message,-45}| {sourcePath,-sourcePathWidth} | {attributes, 10 } | {targetPath}";
+            return $"{Environment.NewLine}|{date,-12}| {process,-25}| {priorityHint,-5}| {componentName,-26}| {callerLineNumber,4} | {message,-45}| {sourcePath,-sourcePathWidth} | {attributes,10} | {targetPath}";
         }
 
         /// <summary>

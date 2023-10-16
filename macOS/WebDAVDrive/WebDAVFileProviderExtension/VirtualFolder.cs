@@ -21,9 +21,9 @@ namespace WebDAVFileProviderExtension
         /// Creates instance of this class.
         /// </summary>
         /// <param name="remoteStorageId">Id uri on the WebDav server.</param>
-        /// <param name="session">WebDAV session.</param>
+        /// <param name="engine">Engine.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFolder(byte[] remoteStorageId, Client.WebDavSession session, ILogger logger) : base(remoteStorageId, session, logger)
+        public VirtualFolder(byte[] remoteStorageId, VirtualEngine engine, ILogger logger) : base(remoteStorageId, engine, logger)
         {
 
         }
@@ -37,7 +37,7 @@ namespace WebDAVFileProviderExtension
             // Create a new file in the remote storage.
             long contentLength = content != null ? content.Length : 0;
 
-            Client.IWebDavResponse<string> response = await Session.UploadAsync(newFileUri, async (outputStream) => {
+            Client.IWebDavResponse<string> response = await Engine.WebDavSession.UploadAsync(newFileUri, async (outputStream) => {
                 if (content != null)
                 {
                     // Setting position to 0 is required in case of retry.
@@ -57,7 +57,7 @@ namespace WebDAVFileProviderExtension
             Uri newFolderUri = new Uri(await GetItemHrefAsync(), folderMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", newFolderUri.AbsoluteUri);
 
-            Client.IResponse response = await Session.CreateFolderAsync(newFolderUri, null, null, cancellationToken);
+            Client.IResponse response = await Engine.WebDavSession.CreateFolderAsync(newFolderUri, null, null, cancellationToken);
 
             // Return new item remove storage id to the Engine.
             // It will be past to GetFileSystemItemAsync during next call.
@@ -73,13 +73,13 @@ namespace WebDAVFileProviderExtension
             propNames[0] = new Client.PropertyName("resource-id", "DAV:");
             propNames[1] = new Client.PropertyName("parent-resource-id", "DAV:");
 
-            IList<Client.IHierarchyItem> remoteStorageChildren = (await Session.GetChildrenAsync(RemoteStorageUriById, false, propNames, null, cancellationToken)).WebDavResponse;
+            IList<Client.IHierarchyItem> remoteStorageChildren = (await Engine.WebDavSession.GetChildrenAsync(RemoteStorageUriById, false, propNames, null, cancellationToken)).WebDavResponse;
 
             List<IFileSystemItemMetadata> userFileSystemChildren = new List<IFileSystemItemMetadata>();
             foreach (Client.IHierarchyItem remoteStorageItem in remoteStorageChildren)
             {
                 IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
-                userFileSystemChildren.Add(itemInfo);
+                userFileSystemChildren.Add(itemInfo);                             
             }
 
             // To signal that the children enumeration is completed 
@@ -110,7 +110,7 @@ namespace WebDAVFileProviderExtension
 
             do
             {
-                davChanges = (await Session.GetChangesAsync(RemoteStorageUriById, propNames, changes.NewSyncToken, deep, limit, cancellationToken: cancellationToken)).WebDavResponse;
+                davChanges = (await Engine.WebDavSession.GetChangesAsync(RemoteStorageUriById, propNames, changes.NewSyncToken, deep, limit, cancellationToken: cancellationToken)).WebDavResponse;
                 changes.NewSyncToken = davChanges.NewSyncToken;
 
                 foreach (Client.IChangedItem remoteStorageItem in davChanges)

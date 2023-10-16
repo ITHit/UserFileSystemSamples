@@ -48,14 +48,12 @@ namespace FileProviderExtension
                     await content.CopyToAsync(remoteStorageStream);
                     remoteStorageStream.SetLength(content.Length);
                 }
+
+                remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
             }
 
-            // Update remote storage file metadata.
-            remoteStorageItem.Attributes = fileMetadata.Attributes;
-            remoteStorageItem.CreationTimeUtc = fileMetadata.CreationTime.UtcDateTime;
-            remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
-            remoteStorageItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
-            remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
+            // Update remote storage file metadata.           
+            remoteStorageItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;            
         }
     }
 }

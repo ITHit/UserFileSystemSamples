@@ -10,32 +10,14 @@ namespace Common.Core
 {
     public static class BaseAppGroupSettings
     {
-        private static ConcurrentDictionary<string, string> appSettings = new ConcurrentDictionary<string, string>();
-
-
-        public static string GetSettingValue(string key)
-        {
-            if (!appSettings.ContainsKey(key))
-            {
-                string pathToSettings = NSBundle.MainBundle.PathForResource("appsettings", "json");
-
-                // read all settings.
-                foreach (KeyValuePair<string, string> setting in ReadAppSettingsFile(pathToSettings))
-                {
-                    appSettings.TryAdd(setting.Key, setting.Value);
-                }
-            }
-            return appSettings[key];
-        }
-
-        private static Dictionary<string, string> ReadAppSettingsFile(string path)
+       public static T ReadAppSettingsFile<T>(string path) where T : new()
         {
             JsonSerializerOptions options = new JsonSerializerOptions
             {
                 ReadCommentHandling = JsonCommentHandling.Skip
             };         
 
-            return JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path), options);
+            return JsonSerializer.Deserialize<T>(File.ReadAllText(path), options);
         }
     }
 }

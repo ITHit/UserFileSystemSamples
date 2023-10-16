@@ -9,8 +9,8 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Mac;
 
 using Common.Core;
-using VirtualFilesystemCommon;
 using System.Text;
+using VirtualFileSystemCommon;
 
 namespace FileProviderExtension
 {
@@ -23,15 +23,18 @@ namespace FileProviderExtension
         public VirtualEngine(NSFileProviderDomain domain)
             : base(domain)
         {
-            License = AppGroupSettings.GetLicense();
+            License = AppGroupSettings.Settings.Value.UserFileSystemLicense;
             ConsoleLogger consolelogger = new ConsoleLogger(GetType().Name);
             Error += consolelogger.LogError;
             Message += consolelogger.LogMessage;
             Debug += consolelogger.LogDebug;
-            // set remote root storage item id.
-            SetRemoteStorageRootItemId(Mapping.EncodePath(AppGroupSettings.GetRemoteRootPath()));
 
-            remoteStorageMonitor = new RemoteStorageMonitor(AppGroupSettings.GetRemoteRootPath(), this);
+            AutoLock = AppGroupSettings.Settings.Value.AutoLock;
+
+            // set remote root storage item id.
+            SetRemoteStorageRootItemId(Mapping.EncodePath(AppGroupSettings.Settings.Value.RemoteStorageRootPath));
+
+            remoteStorageMonitor = new RemoteStorageMonitor(AppGroupSettings.Settings.Value.RemoteStorageRootPath, this);
             remoteStorageMonitor.Start();
 
             Logger.LogMessage($"Engine started.");

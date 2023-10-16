@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using FileProviderExtension.Extensions;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Mac;
@@ -16,9 +12,9 @@ namespace WebDAVFileProviderExtension
         /// Creates instance of this class.
         /// </summary>
         /// <param name="remoteStorageId">Id uri on the WebDav server.</param>
-        /// <param name="session">WebDAV session.</param>
+        /// <param name="engine">Engine.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFile(byte[] remoteStorageId, Client.WebDavSession session, ILogger logger) : base(remoteStorageId, session, logger)
+        public VirtualFile(byte[] remoteStorageId, VirtualEngine engine, ILogger logger) : base(remoteStorageId, engine, logger)
         {
 
         }
@@ -30,7 +26,7 @@ namespace WebDAVFileProviderExtension
 
             // Buffer size must be multiple of 4096 bytes for optimal performance.
             const int bufferSize = 0x500000; // 5Mb.
-            using (Client.IDownloadResponse response = await Session.DownloadAsync(new Uri(RemoteStorageUriById.AbsoluteUri), offset, length, null, cancellationToken))
+            using (Client.IDownloadResponse response = await Engine.WebDavSession.DownloadAsync(new Uri(RemoteStorageUriById.AbsoluteUri), offset, length, null, cancellationToken))
             {
                 using (Stream stream = await response.GetResponseStreamAsync())
                 {
@@ -56,19 +52,42 @@ namespace WebDAVFileProviderExtension
 
             if (content != null)
             {
+                string? eTag = null;
+                if (operationContext.Properties.TryGetValue("eTag", out IDataItem eTagData))
+                {
+                    eTagData.TryGetValue<string>(out eTag);
+                }
+
+                Client.LockUriTokenPair[] lockTokens = null;
+                if (operationContext.Properties.TryGetValue("LockToken", out IDataItem lockInfoData))
+                {                   
+                    if (lockInfoData.TryGetValue<ServerLockInfo>(out ServerLockInfo lockInfo) && lockInfo.Owner == Engine.CurrentUserPrincipal)
+                    {                       
+                        lockTokens = new Client.LockUriTokenPair[] { new Client.LockUriTokenPair(RemoteStorageUriById, lockInfo.LockToken) };
+                    }
+                }
+
                 try
                 {
                     // Update remote storage file content.
-                    await Session.UploadAsync(RemoteStorageUriById, async (outputStream) =>
+                    await Engine.WebDavSession.UploadAsync(RemoteStorageUriById, async (outputStream) =>
                     {
                         content.Position = 0; // Setting position to 0 is required in case of retry.
                         await content.CopyToAsync(outputStream);
-                    }, null, content.Length, 0, -1, null, null, null, cancellationToken);
+                    }, null, content.Length, 0, -1, lockTokens, eTag, null, cancellationToken);
                 }
                 catch (Client.Exceptions.PreconditionFailedException)
                 {
                     Logger.LogMessage($"Conflict. The item is modified.", RemoteStorageUriById.AbsoluteUri, default, operationContext);
                 }
+
+                // macOS requires last modification date on the server to match the client. If date does not match, the file will be redownloaded.
+                // Here we use property name indetical to Microsoft Windows Explorer for max interability.
+                Client.IFile file = (await Engine.WebDavSession.GetFileAsync(RemoteStorageUriById.AbsoluteUri, null, cancellationToken)).WebDavResponse;
+                Client.Property[] propsToAddAndUpdate = new Client.Property[1];
+                propsToAddAndUpdate[0] = new Client.Property(new Client.PropertyName("Win32LastModifiedTime", "urn:schemas-microsoft-com:"), fileMetadata.LastWriteTime.ToString());
+
+                await file.UpdatePropertiesAsync(propsToAddAndUpdate, null, lockTokens?.FirstOrDefault()?.LockToken);
             }
         }
     }

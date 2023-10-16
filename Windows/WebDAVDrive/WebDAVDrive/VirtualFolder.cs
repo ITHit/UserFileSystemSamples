@@ -188,21 +188,21 @@ namespace WebDAVDrive
                     if (itemInfo.ChangeType == Change.Changed)
                     {
                         itemInfo.AfterAction = async () =>
-                        {                            
+                        {
                             if (Engine.Placeholders.TryFindByRemoteStorageId(itemInfo.RemoteStorageItemId, out PlaceholderItem placeholderItem))
                             {
                                 await placeholderItem.SavePropertiesAsync(itemInfo as FileSystemItemMetadataExt);
                             }
                         };
-                       
+
                         if (Engine.Placeholders.TryFindByRemoteStorageId(itemInfo.RemoteStorageItemId, out PlaceholderItem placeholderItem))
                         {
-                            if (placeholderItem.TryGetETag(out string eTag) && !eTag.Equals((itemInfo as FileSystemItemMetadataExt).ETag))
+                            if (placeholderItem.TryGetETag(out string eTag) && !(eTag?.Equals((itemInfo as FileSystemItemMetadataExt).ETag) ?? false))
                             {
                                 itemInfo.ChangeType = Change.MetadataAndContent;
                             }
                         }
-                    }                 
+                    }
                     changes.Add(itemInfo);
                 }
             }

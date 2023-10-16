@@ -33,7 +33,7 @@ namespace WebDAVMacApp
         /// <summary>
         /// Engine instance ID, to avoid sending notifications back to originating client. 
         /// </summary>
-        public Guid InstanceId = Guid.Empty;
+        public string InstanceId = string.Empty;
 
         /// <summary>
         /// Server notifications will be sent to this object.
@@ -176,9 +176,9 @@ namespace WebDAVMacApp
                                       clientWebSocket.Options.Cookies = new CookieContainer();
                                       clientWebSocket.Options.Cookies.Add(Cookies);
                                   }
-                                  if (InstanceId != Guid.Empty)
+                                  if (!string.IsNullOrEmpty(InstanceId))
                                   {
-                                      clientWebSocket.Options.SetRequestHeader("InstanceId", InstanceId.ToString());
+                                      clientWebSocket.Options.SetRequestHeader("InstanceId", InstanceId);
                                   }
                                   await clientWebSocket.ConnectAsync(new Uri(webSocketServerUrl), cancellationToken);
                                   Logger.LogMessage("Connected", webSocketServerUrl);
