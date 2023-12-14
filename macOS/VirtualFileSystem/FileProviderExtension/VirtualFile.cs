@@ -34,7 +34,7 @@ namespace FileProviderExtension
         }
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFileMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", RemoteStoragePath);
 
@@ -49,11 +49,29 @@ namespace FileProviderExtension
                     remoteStorageStream.SetLength(content.Length);
                 }
 
-                remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
+                if (fileBasicInfo.LastWriteTime != null)
+                {
+                    remoteStorageItem.LastWriteTimeUtc = fileBasicInfo.LastWriteTime.Value.UtcDateTime;                    
+                }
             }
 
-            // Update remote storage file metadata.           
-            remoteStorageItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;            
+            // Update remote storage file metadata.
+            if (fileBasicInfo.Attributes != null)
+            {
+                remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value;
+            }
+
+            if (fileBasicInfo.CreationTime != null)
+            {
+                remoteStorageItem.CreationTimeUtc = fileBasicInfo.CreationTime.Value.UtcDateTime;
+            }        
+
+            if (fileBasicInfo.LastAccessTime != null)
+            {
+                remoteStorageItem.LastAccessTimeUtc = fileBasicInfo.LastAccessTime.Value.UtcDateTime;
+            }
+
+            return await GetMetadataAsync() as IFileMetadata;
         }
     }
 }

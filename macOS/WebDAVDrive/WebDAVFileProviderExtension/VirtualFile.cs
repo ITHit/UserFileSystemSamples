@@ -1,6 +1,7 @@
 using FileProviderExtension.Extensions;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Mac;
+using WebDAVCommon;
 using Client = ITHit.WebDAV.Client;
 
 namespace WebDAVFileProviderExtension
@@ -40,13 +41,17 @@ namespace WebDAVFileProviderExtension
                         // Operation was canceled.
                         Logger.LogMessage($"{nameof(ReadAsync)}({offset}, {length}) canceled", RemoteStorageUriById.AbsoluteUri, default);
                     }
+                    catch (Client.Exceptions.WebDavHttpException httpException)
+                    {
+                        HandleWebExceptions(httpException, resultContext);
+                    }
                 }
             }
         }
         
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFileMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", RemoteStorageUriById.AbsoluteUri, default, operationContext);
 
@@ -75,20 +80,26 @@ namespace WebDAVFileProviderExtension
                         content.Position = 0; // Setting position to 0 is required in case of retry.
                         await content.CopyToAsync(outputStream);
                     }, null, content.Length, 0, -1, lockTokens, eTag, null, cancellationToken);
+
+
+                    // macOS requires last modification date on the server to match the client. If date does not match, the file will be redownloaded.
+                    // Here we use property name indetical to Microsoft Windows Explorer for max interability.
+                    if (fileBasicInfo.LastWriteTime.HasValue)
+                    {
+                        Client.IFile file = (await Engine.WebDavSession.GetFileAsync(RemoteStorageUriById.AbsoluteUri, null, cancellationToken)).WebDavResponse;
+                        Client.Property[] propsToAddAndUpdate = new Client.Property[1];
+                        propsToAddAndUpdate[0] = new Client.Property(new Client.PropertyName("Win32LastModifiedTime", "urn:schemas-microsoft-com:"), fileBasicInfo.LastWriteTime.ToString());
+
+                        await file.UpdatePropertiesAsync(propsToAddAndUpdate, null, lockTokens?.FirstOrDefault()?.LockToken);
+                    }
                 }
                 catch (Client.Exceptions.PreconditionFailedException)
                 {
                     Logger.LogMessage($"Conflict. The item is modified.", RemoteStorageUriById.AbsoluteUri, default, operationContext);
-                }
-
-                // macOS requires last modification date on the server to match the client. If date does not match, the file will be redownloaded.
-                // Here we use property name indetical to Microsoft Windows Explorer for max interability.
-                Client.IFile file = (await Engine.WebDavSession.GetFileAsync(RemoteStorageUriById.AbsoluteUri, null, cancellationToken)).WebDavResponse;
-                Client.Property[] propsToAddAndUpdate = new Client.Property[1];
-                propsToAddAndUpdate[0] = new Client.Property(new Client.PropertyName("Win32LastModifiedTime", "urn:schemas-microsoft-com:"), fileMetadata.LastWriteTime.ToString());
-
-                await file.UpdatePropertiesAsync(propsToAddAndUpdate, null, lockTokens?.FirstOrDefault()?.LockToken);
+                }           
             }
+
+            return await GetMetadataAsync() as IFileMetadata;
         }
     }
 }

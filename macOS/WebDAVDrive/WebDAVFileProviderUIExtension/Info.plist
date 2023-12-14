@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>WebDAVFileProviderUIExtension</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.webdav.vfs.app.extension.ui</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>WebDAVFileProviderUIExtension</string>
+	<key>CFBundlePackageType</key>
+	<string>XPC!</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>10.14</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+	<key>NSExtension</key>
+	<dict>
+		<key>NSExtensionFileProviderActions</key>
+		<array>
+			<dict>
+				<key>NSExtensionFileProviderActionActivationRule</key>
+				<string>TRUEPREDICATE</string>
+				<key>NSExtensionFileProviderActionIdentifier</key>
+				<string>18d0e0cb-5df7-432c-a06f-297c06b5ec6d</string>
+				<key>NSExtensionFileProviderActionName</key>
+				<string>Action UI</string>
+			</dict>
+		</array>
+		<key>NSExtensionPointIdentifier</key>
+		<string>com.apple.fileprovider-actionsui</string>
+		<key>NSExtensionPrincipalClass</key>
+		<string>FPUIActionExtension</string>
+		<key>NSExtensionFileProviderDocumentGroup</key>
+		<string>65S3A9JQ35.group.com.webdav.vfs</string>
+	</dict>
+</dict>
+</plist>

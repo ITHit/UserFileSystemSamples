@@ -90,18 +90,34 @@ namespace FileProviderExtension
 
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFolderMetadata folderMetadata, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFolderMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", RemoteStoragePath);
 
             DirectoryInfo remoteStorageItem = new DirectoryInfo(RemoteStoragePath);
 
             // Update remote storage folder metadata.
-            remoteStorageItem.Attributes = folderMetadata.Attributes;
-            remoteStorageItem.CreationTimeUtc = folderMetadata.CreationTime.UtcDateTime;
-            remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
-            remoteStorageItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
-            remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
+            if (fileBasicInfo.Attributes != null)
+            {
+                remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value;
+            }
+
+            if (fileBasicInfo.CreationTime != null)
+            {
+                remoteStorageItem.CreationTimeUtc = fileBasicInfo.CreationTime.Value.UtcDateTime;
+            }
+
+            if (fileBasicInfo.LastWriteTime != null)
+            {
+                remoteStorageItem.LastWriteTimeUtc = fileBasicInfo.LastWriteTime.Value.UtcDateTime;
+            }
+
+            if (fileBasicInfo.LastAccessTime != null)
+            {
+                remoteStorageItem.LastAccessTimeUtc = fileBasicInfo.LastAccessTime.Value.UtcDateTime;
+            }          
+
+            return await GetMetadataAsync() as IFolderMetadata;
         }
     }
     

@@ -1,13 +1,17 @@
 using System;
 using System.IO;
+using System.Net;
+using System.Net.Mail;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using AuthenticationServices;
 using Common.Core;
 using FileProvider;
 using Foundation;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Mac;
+using ITHit.FileSystem.Mac.Contexts;
 using ITHit.WebDAV.Client;
 using WebDAVCommon;
 
@@ -20,6 +24,11 @@ namespace WebDAVFileProviderExtension
         /// WebDAV session.
         /// </summary>
         public WebDavSession WebDavSession;
+
+        /// <summary>
+        /// Secure Storage.
+        /// </summary>
+        public SecureStorage SecureStorage;
 
         /// <summary>
         /// Automatic lock timout in milliseconds.
@@ -51,9 +60,10 @@ namespace WebDAVFileProviderExtension
             Error += consolelogger.LogError;
             Message += consolelogger.LogMessage;
             Debug += consolelogger.LogDebug;
-           
-            WebDavSession = new WebDavSession(AppGroupSettings.Settings.Value.WebDAVClientLicense);
-            WebDavSession.CustomHeaders.Add("InstanceId", Environment.MachineName);
+
+            SecureStorage = new SecureStorage();
+
+            InitWebDavSession();
 
             AutoLock = AppGroupSettings.Settings.Value.AutoLock;
             AutoLockTimoutMs = AppGroupSettings.Settings.Value.AutoLockTimoutMs;
@@ -63,6 +73,25 @@ namespace WebDAVFileProviderExtension
             SetRemoteStorageRootItemId(GetRootStorageItemIdAsync().Result);
           
             Logger.LogMessage("Engine started.");
+        }
+
+        /// <summary>
+        /// Initializes WebDAV session.
+        /// </summary>
+        internal void InitWebDavSession()
+        {
+            if(WebDavSession != null)
+            {
+                WebDavSession.Dispose();
+            }
+            WebDavSession = new WebDavSession(AppGroupSettings.Settings.Value.WebDAVClientLicense);
+            WebDavSession.CustomHeaders.Add("InstanceId", Environment.MachineName);
+
+            string loginType = SecureStorage.GetAsync("LoginType").Result;
+            if (!string.IsNullOrEmpty(loginType) && loginType.Equals("UserNamePassword"))
+            {
+                WebDavSession.Credentials = new NetworkCredential(SecureStorage.GetAsync("UserName").Result, SecureStorage.GetAsync("Password").Result);
+            }
         }
 
         /// <inheritdoc/>
@@ -105,7 +134,29 @@ namespace WebDAVFileProviderExtension
         /// <returns></returns>
         public async Task<byte[]> GetRootStorageItemIdAsync()
         {
-            return (await new VirtualFolder(Encoding.UTF8.GetBytes(AppGroupSettings.Settings.Value.WebDAVServerUrl), this, Logger).GetMetadataAsync()).RemoteStorageItemId;
+            Logger.LogMessage($"{nameof(VirtualEngine)}.{nameof(GetRootStorageItemIdAsync)}()");
+            try
+            {                
+                return (await new VirtualFolder(Encoding.UTF8.GetBytes(AppGroupSettings.Settings.Value.WebDAVServerUrl), this, Logger).GetMetadataAsync())?.RemoteStorageItemId;
+            }
+            catch (ITHit.WebDAV.Client.Exceptions.WebDavHttpException httpException)
+            {
+                Logger.LogError($"{nameof(VirtualEngine)}.{nameof(GetRootStorageItemIdAsync)}()", ex: httpException);
+                switch (httpException.Status.Code)
+                {
+                    // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
+                    case 401:
+                        // Set login type to display sing in button in Finder.
+                        await SecureStorage.RequireAuthenticationAsync();
+                        return null;
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"{nameof(VirtualEngine)}.{nameof(GetRootStorageItemIdAsync)}()", ex: ex);
+                return null;
+            }
         }
 
                 
@@ -119,6 +170,13 @@ namespace WebDAVFileProviderExtension
         protected override void Stop()
         {
             Logger.LogMessage($"{nameof(IEngine)}.{nameof(Stop)}()");
+        }
+
+        public override async Task<bool> IsAuthenticatedAsync()
+        {
+            Logger.LogMessage($"{nameof(IEngine)}.{nameof(IsAuthenticatedAsync)}()");
+            string loginType = await SecureStorage.GetAsync("LoginType");
+            return string.IsNullOrEmpty(loginType) || loginType != "RequireAuthentication";
         }
     }
 }

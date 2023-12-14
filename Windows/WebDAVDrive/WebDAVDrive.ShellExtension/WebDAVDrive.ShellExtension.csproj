@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net6.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework>net7.0-windows10.0.19041.0</TargetFramework>
     <EnableComHosting>True</EnableComHosting>
     <Platforms>x64</Platforms>
     <ApplicationIcon />
@@ -12,7 +12,7 @@
     <Copyright>IT HIT LTD.</Copyright>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.ShellExtension" Version="7.2.23868.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows.ShellExtension" Version="7.3.24116.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="log4net.config">

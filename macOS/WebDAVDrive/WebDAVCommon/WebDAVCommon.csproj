@@ -45,4 +45,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Core\Common.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="7.3.24116" />
+  </ItemGroup>
 </Project>

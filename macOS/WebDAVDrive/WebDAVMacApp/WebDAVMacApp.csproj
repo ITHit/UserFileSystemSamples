@@ -30,6 +30,10 @@
         </Command>
         <Command>
           <type>AfterBuild</type>
+          <command>cp -rf "${ProjectDir}/../WebDAVFileProviderUIExtension/bin/Debug/WebDAVFileProviderUIExtension.appex" "${TargetDir}/WebDAV Drive.app/Contents/PlugIns"</command>
+        </Command>
+        <Command>
+          <type>AfterBuild</type>
           <command>codesign --force --sign - --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der "${TargetDir}/WebDAV Drive.app"</command>
         </Command>
       </CustomCommands>
@@ -137,15 +141,16 @@
     </BundleResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem" Version="7.2.23868" />
+    <PackageReference Include="ITHit.FileSystem" Version="7.3.24116" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WebDAVCommon\WebDAVCommon.csproj" />
     <ProjectReference Include="..\..\Common\Core\Common.Core.csproj" />
-    <ProjectReference Include="..\WebDAVFileProviderExtension\WebDAVFileProviderExtension.csproj" />
+    <ProjectReference Include="..\WebDAVFileProviderExtension\WebDAVFileProviderExtension.csproj" />  
+    <ProjectReference Include="..\WebDAVFileProviderUIExtension\WebDAVFileProviderUIExtension.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Security.Permissions" Version="7.0.0" />
-    <PackageReference Include="System.Threading.AccessControl" Version="7.0.1" />
+    <PackageReference Include="System.Security.Permissions" Version="8.0.0" />
+    <PackageReference Include="System.Threading.AccessControl" Version="8.0.0" />
   </ItemGroup>
 </Project>

@@ -39,7 +39,6 @@ namespace Common.Core
         {
             LogError(e.Message, sourcePath: e.SourcePath, targetPath: e.TargetPath, ex: e.Exception, operationContext: e.OperationContext, callerLineNumber: e.CallerLineNumber,
                callerMemberName: e.CallerMemberName, callerFilePath: e.CallerFilePath);
-            //WriteLog(sender, e, log4net.Core.Level.Error);
         }
 
         public void LogMessage(IEngine sender, EngineMessageEventArgs e)
@@ -61,7 +60,7 @@ namespace Common.Core
 
         public void LogMessage(string message, string sourcePath = null, string targetPath = null, IOperationContext operationContext = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
         {
-            LogWithLevel(string.Empty, $"\n{DateTimeOffset.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {ComponentName,-26}{message,-45} {sourcePath,-80} {targetPath}");
+            LogWithLevel(string.Empty, $"\n{ComponentName,-26}{message,-45} {sourcePath,-80} {targetPath}");
         }
 
         private void LogError(string str, Exception ex)
@@ -86,7 +85,7 @@ namespace Common.Core
 
         public void LogDebug(string message, string sourcePath = null, string targetPath = null, IOperationContext operationContext = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
         {
-            LogDebug($"\n{DateTimeOffset.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {ComponentName,-26}{message,-45} {sourcePath,-80} {targetPath}");
+            LogDebug($"\n{ComponentName,-26}{message,-45} {sourcePath,-80} {targetPath}");
         }
 
 

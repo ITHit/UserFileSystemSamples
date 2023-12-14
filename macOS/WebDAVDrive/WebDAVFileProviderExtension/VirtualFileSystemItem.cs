@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Mail;
 using System.Text;
 using System.Threading;
 using ITHit.FileSystem;
@@ -73,7 +75,7 @@ namespace WebDAVFileProviderExtension
         }
 
         ///<inheritdoc>
-        public async Task<IFileSystemItemMetadata?> GetMetadataAsync()
+        public async Task<IFileSystemItemMetadata?> GetMetadataAsync(IResultContext resultContext = null)
         {
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(GetMetadataAsync)}()", RemoteStorageUriById.AbsoluteUri);
 
@@ -87,11 +89,15 @@ namespace WebDAVFileProviderExtension
                 // Return IFileMetadata for a file, IFolderMetadata for a folder.
                 item = (await Engine.WebDavSession.GetItemAsync(RemoteStorageUriById, propNames)).WebDavResponse;
             }
-            catch (ITHit.WebDAV.Client.Exceptions.NotFoundException e)
+            catch (Client.Exceptions.NotFoundException e)
             {
                 Logger.LogError($"{nameof(IFileSystemItem)}.{nameof(GetMetadataAsync)}()", RemoteStorageUriById.AbsoluteUri, ex: e);
 
                 item = null;
+            }
+            catch (Client.Exceptions.WebDavHttpException httpException)
+            {
+                HandleWebExceptions(httpException, resultContext);                
             }
 
             return item != null ? Mapping.GetUserFileSystemItemMetadata(item) : null;
@@ -163,12 +169,37 @@ namespace WebDAVFileProviderExtension
             throw new NotImplementedException();
         }
 
+        protected async void HandleWebExceptions(Client.Exceptions.WebDavHttpException webDavHttpException, IResultContext resultContext)
+        {
+            switch (webDavHttpException.Status.Code)
+            {
+                // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
+                case 401:
+                    
+                    if (Engine.WebDavSession.Credentials == null || !(Engine.WebDavSession.Credentials is NetworkCredential) ||
+                        (Engine.WebDavSession.Credentials as NetworkCredential).UserName != await Engine.SecureStorage.GetAsync("UserName"))
+                    {
+                        // Set login type to display sing in button in Finder.
+                        await Engine.SecureStorage.RequireAuthenticationAsync();
+                        if (resultContext != null)
+                        {
+                            resultContext.ReportStatus(CloudFileStatus.STATUS_CLOUD_FILE_AUTHENTICATION_FAILED);
+                        }
+                    }
+                    else
+                    {
+                        // Reset WebDavSession.
+                        Engine.InitWebDavSession();
+                    }
+                    break;
+            }    
+        }
+
         public async Task LockAsync(LockMode lockMode, IOperationContext operationContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(LockAsync)}()", RemoteStorageUriById.AbsoluteUri, default, operationContext);
 
             // Call your remote storage here to lock the item.
-            // Save the lock token and other lock info received from the remote storage on the client.
             // Supply the lock-token as part of each remote storage update in IFile.WriteAsync() method.
             // Note that the actual lock timout applied by the server may be different from the one requested.
 

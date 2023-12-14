@@ -168,19 +168,40 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFolderMetadata folderMetadata, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFolderMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
-            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return;
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return null;
             DirectoryInfo remoteStorageItem = new DirectoryInfo(remoteStoragePath);
 
             // Update remote storage folder metadata.
-            remoteStorageItem.Attributes = folderMetadata.Attributes & ~FileAttributes.ReadOnly;
-            remoteStorageItem.CreationTimeUtc = folderMetadata.CreationTime.UtcDateTime;
-            remoteStorageItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
-            remoteStorageItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
-            remoteStorageItem.Attributes = folderMetadata.Attributes;
+            if (fileBasicInfo.Attributes.HasValue)
+            {
+                remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value & ~FileAttributes.ReadOnly;
+            }
+
+            if (fileBasicInfo.CreationTime.HasValue)
+            {
+                remoteStorageItem.CreationTimeUtc = fileBasicInfo.CreationTime.Value.UtcDateTime;
+            }
+
+            if (fileBasicInfo.LastWriteTime.HasValue)
+            {
+                remoteStorageItem.LastWriteTimeUtc = fileBasicInfo.LastWriteTime.Value.UtcDateTime;
+            }
+
+            if (fileBasicInfo.LastAccessTime.HasValue)
+            {
+                remoteStorageItem.LastAccessTimeUtc = fileBasicInfo.LastAccessTime.Value.UtcDateTime;
+            }
+
+            if (fileBasicInfo.Attributes.HasValue)
+            {
+                remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value;
+            }
+
+            return null;
         }
 
         

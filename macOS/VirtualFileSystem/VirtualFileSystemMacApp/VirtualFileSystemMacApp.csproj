@@ -135,7 +135,7 @@
     </BundleResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Security.Permissions" Version="7.0.0" />
-    <PackageReference Include="System.Threading.AccessControl" Version="7.0.1" />
+    <PackageReference Include="System.Security.Permissions" Version="8.0.0" />
+    <PackageReference Include="System.Threading.AccessControl" Version="8.0.0" />
   </ItemGroup>
 </Project>

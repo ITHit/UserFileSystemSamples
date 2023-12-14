@@ -317,7 +317,7 @@ namespace VirtualFileSystem
             FileInfo fiUserFileSystem = new FileInfo(userFileSystemPath);
             FileInfo fiRemoteStorage = new FileInfo(remoteStoragePath);
 
-            // This check is to prevent circular calls. In you real app you wouuld not send notifications to the client that generated the event.
+            // This check is to prevent circular calls. In your real app you would not send notifications to the client that generated the event.
             if (fiUserFileSystem.LastWriteTimeUtc >= fiRemoteStorage.LastWriteTimeUtc)
             {
                 return false;
@@ -328,7 +328,7 @@ namespace VirtualFileSystem
                 if (fiUserFileSystem.Length == fiRemoteStorage.Length)
                 {
                     // Verify that the file is not offline,
-                    // therwise the file will be hydrated when the file stream is opened.
+                    // otherwise the file will be hydrated when the file stream is opened.
                     if (fiUserFileSystem.Attributes.HasFlag(System.IO.FileAttributes.Offline)
                         || fiUserFileSystem.Attributes.HasFlag(System.IO.FileAttributes.Offline))
                     {

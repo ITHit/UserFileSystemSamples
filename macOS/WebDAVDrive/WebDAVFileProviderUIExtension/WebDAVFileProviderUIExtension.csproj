@@ -23,7 +23,7 @@
     <UseSGen>true</UseSGen>
     <UseRefCounting>true</UseRefCounting>
     <HttpClientHandler></HttpClientHandler>
-    <LinkMode>None</LinkMode>
+    <LinkMode>Full</LinkMode>
     <AOTMode>None</AOTMode>
     <CustomCommands>
       <CustomCommands>
@@ -33,7 +33,7 @@
         </Command>
         <Command>
           <type>AfterBuild</type>
-          <command>codesign --force --sign - -o runtime --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der ${TargetDir}/FileProviderExtension.appex</command>
+          <command>codesign --force --sign - -o runtime --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der ${TargetDir}/WebDAVFileProviderUIExtension.appex</command>
         </Command>
       </CustomCommands>
     </CustomCommands>
@@ -46,8 +46,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <EnableCodeSigning>False</EnableCodeSigning>
-    <CreatePackage>False</CreatePackage>
+    <CreatePackage>true</CreatePackage>
     <EnablePackageSigning>false</EnablePackageSigning>
+    <IncludeMonoRuntime>true</IncludeMonoRuntime>
     <UseSGen>true</UseSGen>
     <UseRefCounting>true</UseRefCounting>
     <CodeSignEntitlements>Entitlements.plist</CodeSignEntitlements>
@@ -64,21 +65,31 @@
         </Command>
         <Command>
           <type>AfterBuild</type>
-          <command>codesign --force --sign "Mac Developer" -o runtime --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der ${TargetDir}/FileProviderExtension.appex</command>
+          <command>codesign --force --sign "Mac Developer" -o runtime --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der ${TargetDir}/WebDAVFileProviderUIExtension.appex</command>
         </Command>
       </CustomCommands>
     </CustomCommands>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\VirtualFileSystemCommon\VirtualFileSystemCommon.csproj" />
-    <ProjectReference Include="..\..\Common\Core\Common.Core.csproj" />
+    <None Remove="ViewControllers\" />
+    <None Remove="Extension\" />
+    <None Remove="Resources\" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Security.Permissions" Version="8.0.0" />
-    <PackageReference Include="System.Threading.AccessControl" Version="8.0.0" />
-    <PackageReference Include="ITHit.FileSystem.Mac" Version="7.3.24116" />
+    <None Update="Entitlements.plist">
+      <Link>$([MSBuild]::MakeRelative ('$(MSBuildProjectDirectory)', '%(Identity)'))</Link>
+    </None>
+    <None Update="Info.plist">
+      <Link>$([MSBuild]::MakeRelative ('$(MSBuildProjectDirectory)', '%(Identity)'))</Link>
+    </None>
   </ItemGroup>
-   <ItemGroup>
-      <Content Include="..\VirtualFileSystemMacApp\Resources\appsettings.json" Link="Resources\appsettings.json" />
+  <ItemGroup>
+    <Folder Include="ViewControllers\" />
+    <Folder Include="Extension\" />
+    <Folder Include="Resources\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\Core\Common.Core.csproj" />
+    <ProjectReference Include="..\WebDAVCommon\WebDAVCommon.csproj" />
   </ItemGroup>
 </Project>

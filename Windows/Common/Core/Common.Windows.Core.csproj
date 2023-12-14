@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net6.0-windows10.0.19041.0;net48</TargetFrameworks>
+    <TargetFrameworks>net7.0-windows10.0.19041.0;net48</TargetFrameworks>
     <Description>Contains functionality common for all Windows Virtual Drive samples.</Description>
     <Authors>IT Hit LTD.</Authors>
     <Product>IT Hit User File System</Product>
@@ -20,8 +20,8 @@
     <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.19041.1" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="7.2.23868.0" />
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="7.2.23868.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="7.3.24116.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="7.3.24116.0" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
   </ItemGroup>
 </Project>

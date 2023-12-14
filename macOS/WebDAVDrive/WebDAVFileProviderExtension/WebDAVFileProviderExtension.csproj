@@ -76,11 +76,11 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ITHitWebDAVClient" Version="7.0.4672" />
-    <PackageReference Include="ITHit.FileSystem.Mac" Version="7.2.23868" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="7.3.24116" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Security.Permissions" Version="7.0.0" />
-    <PackageReference Include="System.Threading.AccessControl" Version="7.0.1" />
+    <PackageReference Include="System.Security.Permissions" Version="8.0.0" />
+    <PackageReference Include="System.Threading.AccessControl" Version="8.0.0" />
   </ItemGroup>
    <ItemGroup>
       <Content Include="..\WebDAVMacApp\Resources\appsettings.json" Link="Resources\appsettings.json" />

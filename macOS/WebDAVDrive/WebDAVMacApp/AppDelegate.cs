@@ -13,8 +13,6 @@ namespace WebDAVMacApp
     {
         private ILogger Logger = new ConsoleLogger("WebDavFileProviderHostApp");
         private RemoteStorageMonitor RemoteStorageMonitor = new RemoteStorageMonitor(AppGroupSettings.Settings.Value.WebSocketServerUrl, new ConsoleLogger(typeof(RemoteStorageMonitor).Name));
-        private string ExtensionIdentifier = "com.webdav.vfs.app";
-        private string ExtensionDisplayName = "IT Hit WebDAV Drive";
         private NSMenuItem InstallMenuItem = new NSMenuItem("Install WebDAV FS Extension");
         private NSMenuItem UninstallMenuItem = new NSMenuItem("Uninstall WebDAV FS Extension");
         private NSStatusItem StatusItem;
@@ -27,7 +25,7 @@ namespace WebDAVMacApp
         {
             NSMenu menu = new NSMenu();
        
-            Task<bool> taskIsExtensionRegistered = Task.Run<bool>(async () => await Common.Core.Registrar.IsRegisteredAsync(ExtensionIdentifier));
+            Task<bool> taskIsExtensionRegistered = Task.Run<bool>(async () => await Common.Core.Registrar.IsRegisteredAsync(SecureStorage.ExtensionIdentifier));
             bool isExtensionRegistered = taskIsExtensionRegistered.Result;
             if (isExtensionRegistered)
             {              
@@ -35,7 +33,7 @@ namespace WebDAVMacApp
                 Task.Run(async () =>
                 {
                     RemoteStorageMonitor.ServerNotifications = new ServerNotifications(
-                        NSFileProviderManager.FromDomain(new NSFileProviderDomain(ExtensionIdentifier, ExtensionDisplayName)),
+                        NSFileProviderManager.FromDomain(new NSFileProviderDomain(SecureStorage.ExtensionIdentifier, SecureStorage.ExtensionDisplayName)),
                         RemoteStorageMonitor.Logger);
                     await RemoteStorageMonitor.StartAsync();
                 }).Wait();
@@ -45,6 +43,7 @@ namespace WebDAVMacApp
                 InstallMenuItem.Activated += Install;
             }
 
+            NSMenuItem logoutMenuItem = new NSMenuItem("Log out", (_, _) => { });
             NSMenuItem exitMenuItem = new NSMenuItem("Quit", (a, b) => { NSApplication.SharedApplication.Terminate(this); });
          
             menu.AddItem(InstallMenuItem);
@@ -71,7 +70,7 @@ namespace WebDAVMacApp
             Process.Start("open", AppGroupSettings.Settings.Value.WebDAVServerUrl);
             Task.Run(async () =>
             {
-                NSFileProviderDomain domain = await Common.Core.Registrar.RegisterAsync(ExtensionIdentifier, ExtensionDisplayName, Logger);
+                NSFileProviderDomain domain = await Common.Core.Registrar.RegisterAsync(SecureStorage.ExtensionIdentifier, SecureStorage.ExtensionDisplayName, Logger);
                 RemoteStorageMonitor.ServerNotifications = new ServerNotifications(NSFileProviderManager.FromDomain(domain), RemoteStorageMonitor.Logger);
                 await RemoteStorageMonitor.StartAsync();
             }).Wait();
@@ -86,7 +85,7 @@ namespace WebDAVMacApp
             Task.Run(async () =>
             {
                 await RemoteStorageMonitor.StopAsync();
-                await Common.Core.Registrar.UnregisterAsync(ExtensionIdentifier, Logger);
+                await Common.Core.Registrar.UnregisterAsync(SecureStorage.ExtensionIdentifier, Logger);
             }).Wait();
 
             InstallMenuItem.Activated += Install;

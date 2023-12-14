@@ -90,11 +90,11 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFileMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
-            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return;
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return null;
 
             // Send the ETag to the server as part of the update to ensure
             // the file in the remote storge is not modified since last read.
@@ -129,15 +129,36 @@ namespace VirtualDrive
             }
 
             // Update remote storage file metadata.
-            remoteStorageItem.Attributes = fileMetadata.Attributes & ~FileAttributes.ReadOnly;
-            remoteStorageItem.CreationTimeUtc = fileMetadata.CreationTime.UtcDateTime;
-            remoteStorageItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
-            remoteStorageItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
-            remoteStorageItem.Attributes = fileMetadata.Attributes;
+            if (fileBasicInfo.Attributes.HasValue)
+            {
+                remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value & ~FileAttributes.ReadOnly;
+            }
+
+            if (fileBasicInfo.CreationTime.HasValue)
+            {
+                remoteStorageItem.CreationTimeUtc = fileBasicInfo.CreationTime.Value.UtcDateTime;
+            }
+
+            if (fileBasicInfo.LastWriteTime.HasValue)
+            {
+                remoteStorageItem.LastWriteTimeUtc = fileBasicInfo.LastWriteTime.Value.UtcDateTime;
+            }
+
+            if (fileBasicInfo.LastAccessTime.HasValue)
+            {
+                remoteStorageItem.LastAccessTimeUtc = fileBasicInfo.LastAccessTime.Value.UtcDateTime;
+            }
+
+            if (fileBasicInfo.Attributes.HasValue)
+            {
+                remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value;
+            }
 
             // Save ETag received from your remote storage in persistent placeholder properties.
             // string newEtag = ...
             // placeholder.SetETag(newEtag);
+
+            return null;
         }
     }
 }

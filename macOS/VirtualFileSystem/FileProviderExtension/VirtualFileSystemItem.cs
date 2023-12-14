@@ -74,7 +74,7 @@ namespace FileProviderExtension
         }
 
         ///<inheritdoc>
-        public async Task<IFileSystemItemMetadata> GetMetadataAsync()
+        public async Task<IFileSystemItemMetadata> GetMetadataAsync(IResultContext resultContext = null)
         {
             // Return IFileMetadata for a file, IFolderMetadata for a folder.
 
