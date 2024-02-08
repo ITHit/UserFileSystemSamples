@@ -10,6 +10,7 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 
+
 namespace VirtualFileSystem
 {
     
@@ -19,28 +20,21 @@ namespace VirtualFileSystem
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
+        /// <param name="mapping">Maps a the remote storage path and data to the user file system path and data.</param>
         /// <param name="path">Folder path in the user file system.</param>
-        /// <param name="remoteStorageItemId">Remote storage item ID.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFolder(string path, byte[] remoteStorageItemId, ILogger logger) : base(path, remoteStorageItemId, logger)
+        public VirtualFolder(IMapping mapping, string path, ILogger logger) : base(mapping, path, logger)
         {
 
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
 
-            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath))
-            {
-                // Possibly parent is deleted in the remote storage.
-                Logger.LogMessage($"Can't create. Parent not found", userFileSystemNewItemPath, BitConverter.ToString(RemoteStorageItemId).Replace("-", ""));
-                inSyncResultContext.SetInSync = false;
-                return null;
-            }
-            FileInfo remoteStorageNewItem = new FileInfo(Path.Combine(remoteStoragePath, fileMetadata.Name));
+            FileInfo remoteStorageNewItem = new FileInfo(Path.Combine(RemoteStoragePath, fileMetadata.Name));
 
             // Create remote storage file.
             using (FileStream remoteStorageStream = remoteStorageNewItem.Open(FileMode.CreateNew, FileAccess.Write, FileShare.Delete))
@@ -68,25 +62,19 @@ namespace VirtualFileSystem
             remoteStorageNewItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
             remoteStorageNewItem.Attributes = fileMetadata.Attributes;
 
-            // Return remote storage item ID. It will be passed later into IEngine.GetFileSystemItemAsync() method.
-            return WindowsFileSystemItem.GetItemIdByPath(remoteStorageNewItem.FullName); 
+            // Typically you must return a remote storage item ID.
+            // It will be passed later into IEngine.GetFileSystemItemAsync() method.
+            // However, becuse we can not read the ID for the network path we return null.
+            return null; 
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, folderMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
 
-            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath))
-            {
-                // Possibly parent is deleted in the remote storage.
-                Logger.LogMessage($"Can't create. Parent not found", userFileSystemNewItemPath, BitConverter.ToString(RemoteStorageItemId).Replace("-", ""));
-                inSyncResultContext.SetInSync = false;
-                return null;
-            }
-
-            DirectoryInfo remoteStorageNewItem = new DirectoryInfo(Path.Combine(remoteStoragePath, folderMetadata.Name));
+            DirectoryInfo remoteStorageNewItem = new DirectoryInfo(Path.Combine(RemoteStoragePath, folderMetadata.Name));
             remoteStorageNewItem.Create();
 
             // Update remote storage folder metadata.
@@ -96,8 +84,10 @@ namespace VirtualFileSystem
             remoteStorageNewItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
             remoteStorageNewItem.Attributes = folderMetadata.Attributes;
 
-            // Return the remote storage item ID. It will be passed later into the IEngine.GetFileSystemItemAsync() method.
-            return WindowsFileSystemItem.GetItemIdByPath(remoteStorageNewItem.FullName);
+            // Typically you must return a remote storage item ID.
+            // It will be passed later into IEngine.GetFileSystemItemAsync() method.
+            // However, becuse we can not read the ID for the network path we return null.
+            return null;
         }
 
         /// <inheritdoc/>
@@ -111,28 +101,12 @@ namespace VirtualFileSystem
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath, default, operationContext);
 
             List<IFileSystemItemMetadata> userFileSystemChildren = new List<IFileSystemItemMetadata>();
-            if (Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath))
+            IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(RemoteStoragePath).EnumerateFileSystemInfos(pattern);
+
+            foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
             {
-                IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(remoteStoragePath).EnumerateFileSystemInfos(pattern);
-
-                foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
-                {
-                    IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
-
-                    string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemInfo.Name);
-
-                    // Filtering existing files/folders. This is only required to avoid extra errors in the log.
-                    if (!FsPath.Exists(userFileSystemItemPath))
-                    {
-                        Logger.LogMessage("Creating", userFileSystemItemPath, null, operationContext);
-                        userFileSystemChildren.Add(itemInfo);
-                    }
-                }
-            }
-            else
-            {
-                // Possibly folder was deleted in the remote storage.
-                Logger.LogError($"Listing failed. Folder not found", UserFileSystemPath, default, null, operationContext); 
+                IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                userFileSystemChildren.Add(itemInfo);
             }
 
             // To signal that the children enumeration is completed 
@@ -141,12 +115,11 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task<IFolderMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFolderMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
-            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return null;
-            DirectoryInfo remoteStorageItem = new DirectoryInfo(remoteStoragePath);
+            DirectoryInfo remoteStorageItem = new DirectoryInfo(RemoteStoragePath);
 
             // Update remote storage folder metadata.
             if (fileBasicInfo.Attributes.HasValue)

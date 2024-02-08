@@ -1,11 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
-using System.Threading.Tasks;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
+
 
 namespace VirtualFileSystem
 {
@@ -15,7 +13,7 @@ namespace VirtualFileSystem
     /// <remarks>
     /// You will change methods of this class to map to your own remote storage.
     /// </remarks>
-    public class Mapping
+    public class Mapping : IMapping
     {
         /// <summary>
         /// Remote storage root path.
@@ -30,12 +28,26 @@ namespace VirtualFileSystem
         /// <summary>
         /// Creates an instance of this class.
         /// </summary>
-        /// <param name="userFileSystemRootPath">Remote storage path.</param>
-        /// <param name="remoteStorageRootPath">User file system path.</param>
+        /// <param name="userFileSystemRootPath">User file system path.</param>
+        /// <param name="remoteStorageRootPath">Remote storage path.</param>
         public Mapping(string userFileSystemRootPath, string remoteStorageRootPath)
         {
             this.userFileSystemRootPath = userFileSystemRootPath;
             this.remoteStorageRootPath = remoteStorageRootPath;
+        }
+
+        /// <summary>
+        /// Returns a remote storage URI that corresponds to the user file system path.
+        /// </summary>
+        /// <param name="userFileSystemPath">Full path in the user file system.</param>
+        /// <returns>Remote storage URI that corresponds to the <paramref name="userFileSystemPath"/>.</returns>
+        public string MapPath(string userFileSystemPath)
+        {
+            // Get path relative to the virtual root.
+            string relativePath = userFileSystemPath.TrimEnd(Path.DirectorySeparatorChar).Substring(
+                (userFileSystemRootPath.TrimEnd(Path.DirectorySeparatorChar)).Length);
+            string path = $"{remoteStorageRootPath.TrimEnd(Path.DirectorySeparatorChar)}{relativePath}";
+            return path;
         }
 
         /// <summary>
@@ -51,55 +63,6 @@ namespace VirtualFileSystem
 
             string path = $"{userFileSystemRootPath.TrimEnd(Path.DirectorySeparatorChar)}{relativePath}";
             return path;
-        }
-
-        /// <summary>
-        /// Gets remote storage path by remote storage item ID.
-        /// </summary>
-        /// <remarks>
-        /// As soon as System.IO .NET classes require path as an input parameter, 
-        /// this function maps remote storage ID to the remote storge path.
-        /// In your real-life file system you will typically request your remote storage 
-        /// items by ID instead of using this method.
-        /// </remarks>
-        /// <returns>Path in the remote storage.</returns>
-        public static string GetRemoteStoragePathById(byte[] remoteStorageId)
-        {
-            return WindowsFileSystemItem.GetPathByItemId(remoteStorageId);
-        }
-
-        /// <summary>
-        /// Tries to get remote storage path by remote storage item ID.
-        /// </summary>
-        /// <remarks>
-        /// The item may be already deleted or moved at the time of request, 
-        /// so we use the try-method to reduce number of exceptions in the log and improve performance.
-        /// </remarks>
-        /// <param name="remoteStorageId">Remote storage ID.</param>
-        /// <param name="remoteStoragePath">Remote storage path.</param>
-        /// <returns>True if the method completed successfully, false - otherwise.</returns>
-        public static bool TryGetRemoteStoragePathById(byte[] remoteStorageId, out string remoteStoragePath)
-        {
-            if (WindowsFileSystemItem.TryGetPathByItemId(remoteStorageId, out remoteStoragePath))
-            {
-                // Extra check to avoid errors in the log if the item was deleted while the Engine was still processing it.
-                if (!IsRecycleBin(remoteStoragePath))
-                {
-                    return true;
-                }
-            }
-
-            remoteStoragePath = null;
-            return false;
-        }
-
-        /// <summary>
-        /// Returns true if the path points to a recycle bin folder.
-        /// </summary>
-        /// <param name="path">Path to the file or folder.</param>
-        private static bool IsRecycleBin(string path)
-        {
-            return path.IndexOf("\\$Recycle.Bin", StringComparison.InvariantCultureIgnoreCase) != -1;
         }
 
         /// <summary>
@@ -125,9 +88,10 @@ namespace VirtualFileSystem
                 userFileSystemItem = new FolderMetadata();
             }
 
-            // Store your remote storage item ID in this property.
+            // Typically you store your remote storage item ID in this property.
             // It will be passed to the IEngine.GetFileSystemItemAsync() method during every operation.
-            userFileSystemItem.RemoteStorageItemId = WindowsFileSystemItem.GetItemIdByPath(remoteStorageItem.FullName);
+            // However in this sample, as soon as network path does not provide the ID, we do not set it.
+            //userFileSystemItem.RemoteStorageItemId = ...;
 
             userFileSystemItem.Name = remoteStorageItem.Name;
             userFileSystemItem.Attributes = remoteStorageItem.Attributes;

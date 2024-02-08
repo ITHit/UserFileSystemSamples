@@ -174,6 +174,7 @@ namespace WebDAVDrive
                 Settings.IconsFolderPath,
                 Settings.AutoLockTimoutMs,
                 Settings.ManualLockTimoutMs,
+                Settings.SetLockReadOnly,
                 logFormatter))
             {
                 commands.Engine = Engine;

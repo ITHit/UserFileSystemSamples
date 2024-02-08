@@ -52,6 +52,15 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <inheritdoc/>
         public async Task<MenuState> GetStateAsync(IEnumerable<string> filesPath)
         {
+            // This sample can not lock folders.
+            // Hide menu if any folders are selected.
+            foreach (string userFileSystemPath in filesPath)
+            {
+                FileAttributes attr = File.GetAttributes(userFileSystemPath);
+                if ((attr & FileAttributes.Directory) == FileAttributes.Directory)
+                    return MenuState.Hidden;
+            }
+
             bool? isLocked = await IsLockedAsync(filesPath);
             return isLocked.HasValue ? MenuState.Enabled : MenuState.Hidden;
         }
@@ -112,16 +121,15 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                     bool isLocked = false;
                     if (engine.Placeholders.TryGetItem(userFileSystemPath, out PlaceholderItem placeholder))
                     {
-                        if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
+                        if (placeholder.Properties.TryGetLockInfo(out ServerLockInfo lockInfo))
                         {
                             // Detect if locked by this user.
-                            bool thisUser = engine.CurrentUserPrincipal.Equals(lockInfo.Owner, StringComparison.InvariantCultureIgnoreCase);
-                            if (!thisUser)
+                            if (!engine.IsCurrentUser(lockInfo.Owner))
                             {
-                                // Typically we can not unlock items locked by other users. We must hide or disable the menu in tis case.
+                                // Typically we can not unlock items locked by other users.
+                                // We must hide or disable menu in this case.
                                 return null;
                             }
-
                             isLocked = true;
                         }
                     }

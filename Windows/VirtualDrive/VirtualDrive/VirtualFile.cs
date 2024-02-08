@@ -10,6 +10,7 @@ using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
 
+
 namespace VirtualDrive
 {
     /// <inheritdoc cref="IFile"/>
@@ -73,14 +74,15 @@ namespace VirtualDrive
 
             // Save ETag received from your remote storage in persistent placeholder properties.
             // string eTag = ...
-            // Engine.Placeholders.GetItem(UserFileSystemPath).SetETag(eTag);
+            // operationContext.Properties.SetETag(eTag);
         }
 
         /// <inheritdoc/>
         public async Task ValidateDataAsync(long offset, long length, IValidateDataOperationContext operationContext, IValidateDataResultContext resultContext)
         {
             // This method has a 60 sec timeout. 
-            // To process longer requests and reset the timout timer call the ReturnValidationResult() method or IContextWindows.ReportProgress() method.
+            // To process longer requests and reset the timout timer call the ReturnValidationResult()
+            // method or IResultContext.ReportProgress() method.
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
@@ -98,23 +100,11 @@ namespace VirtualDrive
 
             // Send the ETag to the server as part of the update to ensure
             // the file in the remote storge is not modified since last read.
-            // placeholder.TryGetETag(out string oldEtag);
+            // operationContext.Properties.TryGetETag(out string oldEtag);
 
             // Send the lock-token to the server as part of the update.
             // Here we read the lock-token for demo purposes only.
-            string lockToken;
-            if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
-            {
-                if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
-                {
-                    // Send the lock-token only in case the item is locked by this user.
-                    bool thisUser = Engine.CurrentUserPrincipal.Equals(lockInfo.Owner, StringComparison.InvariantCultureIgnoreCase);
-                    if (thisUser)
-                    {
-                        lockToken = lockInfo.LockToken;
-                    }
-                }
-            }
+            operationContext.Properties.TryGetCurrentUserLockToken(out string lockToken);
 
             FileInfo remoteStorageItem = new FileInfo(remoteStoragePath);
 
@@ -123,7 +113,7 @@ namespace VirtualDrive
                 // Upload file content to the remote storage.
                 using (FileStream remoteStorageStream = remoteStorageItem.Open(FileMode.Open, FileAccess.Write, FileShare.Delete))
                 {
-                    await content.CopyToAsync(remoteStorageStream);
+                    await content.CopyToAsync(remoteStorageStream, cancellationToken);
                     remoteStorageStream.SetLength(content.Length);
                 }
             }
@@ -156,7 +146,7 @@ namespace VirtualDrive
 
             // Save ETag received from your remote storage in persistent placeholder properties.
             // string newEtag = ...
-            // placeholder.SetETag(newEtag);
+            // operationContext.Properties.SetETag(newEtag);
 
             return null;
         }

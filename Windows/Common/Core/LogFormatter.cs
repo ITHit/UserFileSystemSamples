@@ -185,7 +185,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="level">Log level.</param>
         private void WriteLog(IEngine sender, EngineMessageEventArgs e, log4net.Core.Level level)
         {
-            string att = GetAttString(e.TargetPath ?? e.SourcePath);
+            string attSource = GetAttString(e.SourcePath);
+            string attTarget = GetAttString(e.TargetPath);
+            
             string process = null;
             byte? priorityHint = null;
             string fileId = null;
@@ -193,16 +195,25 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
             if (e.OperationContext != null)
             {
-                process = System.IO.Path.GetFileName(e.OperationContext.ProcessInfo?.ImagePath);
-                priorityHint = e.OperationContext.PriorityHint;
-                fileId = (e.OperationContext as IWindowsOperationContext).FileId.ToString();
-                size = FormatBytes((e.OperationContext as IWindowsOperationContext).FileSize);
+                process = System.IO.Path.GetFileName(e.OperationContext?.ProcessInfo?.ImagePath);
+                priorityHint = e.OperationContext?.PriorityHint;
+                IWindowsOperationContext ocWin = e.OperationContext as IWindowsOperationContext;
+                if (ocWin != null)
+                {
+                    fileId = ocWin.FileId.ToString();
+                    size = FormatBytes((e.OperationContext as IWindowsOperationContext).FileSize);
+                }
             }
 
             string sourcePath = e.SourcePath?.FitString(sourcePathWidth, 6);
             string targetPath = e.TargetPath?.FitString(sourcePathWidth, 6);
 
-            string message = Format(DateTimeOffset.Now.ToString("hh:mm:ss.fff"), process, priorityHint?.ToString(), fileId, "", e.ComponentName, e.CallerLineNumber.ToString(), e.CallerMemberName, e.CallerFilePath, e.Message, sourcePath, att, targetPath);
+            string message = Format(DateTimeOffset.Now.ToString("hh:mm:ss.fff"), process, priorityHint?.ToString(), fileId, "", e.ComponentName, e.CallerLineNumber.ToString(), e.CallerMemberName, e.CallerFilePath, e.Message, sourcePath, attSource);
+            if (targetPath!=null)
+            {
+                // For move operation output target path in the next line.
+                message += Format(null, null, null, null, null, null, null, null, null, null, targetPath, attTarget);
+            }
 
             if (level == log4net.Core.Level.Error)
             {
@@ -224,10 +235,10 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
         }
 
-        private static string Format(string date, string process, string priorityHint, string fileId, string remoteStorageId, string componentName, string callerLineNumber, string callerMemberName, string callerFilePath, string message, string sourcePath, string attributes, string targetPath)
+        private static string Format(string date, string process, string priorityHint, string fileId, string remoteStorageId, string componentName, string callerLineNumber, string callerMemberName, string callerFilePath, string message, string path, string attributes)
         {
             // {fileId,-18} | {remoteStorageId,-remoteStorageIdWidth}
-            return $"{Environment.NewLine}|{date,-12}| {process,-25}| {priorityHint,-5}| {componentName,-26}| {callerLineNumber,4} | {message,-45}| {sourcePath,-sourcePathWidth} | {attributes,10} | {targetPath}";
+            return $"{Environment.NewLine}|{date,-12}| {process,-25}| {componentName,-26}| {message,-45}| {path,-sourcePathWidth} | {attributes,10}";
         }
 
         /// <summary>
@@ -236,8 +247,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         private void PrintHeader()
         {
             log.Info("\n");
-            log.Info(Format("Time", "Process Name", "Prty", "FS ID", "RS ID", "Component", "Line", "Caller Member Name", "Caller File Path", "Message", "Source Path", "Attributes", "Target Path"));
-            log.Info(Format("----", "------------", "----", "_____", "_____", "---------", "____", "------------------", "----------------", "-------", "-----------", "----------", "-----------"));
+            log.Info(Format("Time", "Process Name", "Prty", "FS ID", "RS ID", "Component", "Line", "Caller Member Name", "Caller File Path", "Message", "Path", "Attributes"));
+            log.Info(Format("----", "------------", "----", "_____", "_____", "---------", "____", "------------------", "----------------", "-------", "----", "----------"));
         }
 
         /// <summary>
@@ -247,14 +258,15 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <returns>String that represents file or folder attributes or null if the file/folder is not found.</returns>
         public static string GetAttString(string path)
         {
+            if (path == null)
+                return null;
+
             if (WindowsFileSystemItem.TryGetAttributes(path, out System.IO.FileAttributes? attributes))
             {
                 return WindowsFileSystemItem.GetFileAttributesString(attributes.Value);
             }
-            else
-            {
-                return null;
-            }
+            
+            return null;
         }
 
         /// <summary>

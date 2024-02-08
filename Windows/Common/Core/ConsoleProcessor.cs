@@ -61,6 +61,10 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
                 switch (keyInfo.Key)
                 {
+                    case ConsoleKey.X:
+                        commands.Test();
+                        break;
+
                     case ConsoleKey.F1:
                     case ConsoleKey.H:
                         // Print help info.

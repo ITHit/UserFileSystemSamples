@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
+using ITHit.FileSystem.Samples.Common;
 
 
 namespace VirtualFileSystem
@@ -19,6 +20,11 @@ namespace VirtualFileSystem
         internal RemoteStorageMonitor RemoteStorageMonitor;
 
         /// <summary>
+        /// Maps remote storage path to the user file system path and vice versa. 
+        /// </summary>
+        internal readonly Mapping Mapping;
+
+        /// <summary>
         /// Creates a vitual file system Engine.
         /// </summary>
         /// <param name="license">A license string.</param>
@@ -31,12 +37,14 @@ namespace VirtualFileSystem
         public VirtualEngine(string license, string userFileSystemRootPath, string remoteStorageRootPath, LogFormatter logFormatter) :
             base(license, userFileSystemRootPath)
         {
+            Mapping = new Mapping(Path, remoteStorageRootPath);
 
             // We want our file system to run regardless of any errors.
             // If any request to file system fails in user code or in Engine itself we continue processing.
             ThrowExceptions = false;
 
             StateChanged += Engine_StateChanged;
+            ItemsChanged += Engine_ItemsChanged;
             SyncService.StateChanged += SyncService_StateChanged;
             Error += logFormatter.LogError;
             Message += logFormatter.LogMessage;
@@ -45,31 +53,80 @@ namespace VirtualFileSystem
             RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, this.Logger);
         }
 
+        /// <summary>
+        /// Fired for each file or folder change.
+        /// </summary>
+        private void Engine_ItemsChanged(Engine sender, ItemsChangeEventArgs e)
+        {
+            var logger = Logger.CreateLogger(e.ComponentName);
+            foreach (ChangeEventItem item in e.Items)
+            {
+
+                // If incoming update failed becase a file is in use,
+                // try to show merge dialog (for MS Office, etc.).
+                if (e.Direction == SyncDirection.Incoming
+                    && e.OperationType == OperationType.Update)
+                {
+                    switch (e.Result.Status)
+                    {
+                        case OperationStatus.FileInUse:
+                            ITHit.FileSystem.Windows.AppHelper.MergeHelper.TryNotifyUpdateAvailable(item.Path, e.Result.ShadowFilePath);
+                            break;
+                    }
+                }
+
+
+                // Log info about the opertion.
+                switch (e.Result.Status)
+                {
+                    case OperationStatus.Success:
+                        switch (e.Direction)
+                        {
+                            case SyncDirection.Incoming:
+                                logger.LogMessage($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
+                                break;
+                            case SyncDirection.Outgoing:
+                                logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
+                                break;
+                        }
+                        break;
+                    case OperationStatus.Conflict:
+                        logger.LogMessage($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
+                        break;
+                    case OperationStatus.Exception:
+                        logger.LogError($"{e.Direction} {e.OperationType}", item.Path, item.NewPath, e.Result.Exception);
+                        break;
+                    case OperationStatus.Filtered:
+                        logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status} by {e.Result.FilteredBy.GetType().Name}", item.Path, item.NewPath, e.OperationContext);
+                        break;
+                    default:
+                        logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status}. {e.Result.Message}", item.Path, item.NewPath, e.OperationContext);
+                        break;
+                }
+            }
+        }
+
         /// <inheritdoc/>
-        public override async Task<bool> FilterAsync(SyncDirection direction, OperationType operationType, string path, FileSystemItemType itemType, string newPath = null, IOperationContext operationContext = null)
+        public override async Task<bool> FilterAsync(SyncDirection direction, OperationType operationType, string path, FileSystemItemType itemType, string newPath, IOperationContext operationContext)
         {
 
-            if (await new ZipFilter().FilterAsync(direction, operationType, path, itemType, newPath))
+            if (await new ZipFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             {
-                Logger.LogDebug($"{nameof(ZipFilter)} filtered {operationType}", path, newPath, operationContext);
                 return true;
             }
 
-            if (await new MsOfficeFilter().FilterAsync(direction, operationType, path, itemType, newPath))
+            if (await new MsOfficeFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             {
-                Logger.LogDebug($"{nameof(MsOfficeFilter)} filtered {operationType}", path, newPath, operationContext);
                 return true;
             }
 
-            if (await new AutoCadFilter().FilterAsync(direction, operationType, path, itemType, newPath))
+            if (await new AutoCadFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             {
-                Logger.LogDebug($"{nameof(AutoCadFilter)} filtered {operationType}", path, newPath, operationContext);
                 return true;
             }
 
-            if (await new ErrorStatusFilter().FilterAsync(direction, operationType, path, itemType, newPath))
+            if (await new ErrorStatusFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             {
-                Logger.LogDebug($"{nameof(ErrorStatusFilter)} filtered {operationType}", path, newPath, operationContext);
                 return true;
             }
 
@@ -77,16 +134,16 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public override async Task<IFileSystemItem> GetFileSystemItemAsync(byte[] remoteStorageItemId, FileSystemItemType itemType,  IContext context, ILogger logger = null)
+        public override async Task<IFileSystemItem> GetFileSystemItemAsync(byte[] remoteStorageItemId, FileSystemItemType itemType, IContext context, ILogger logger = null)
         {
             string userFileSystemPath = context.FileNameHint;
             if (itemType == FileSystemItemType.File)
             {
-                return new VirtualFile(userFileSystemPath, remoteStorageItemId, logger);
+                return new VirtualFile(Mapping, userFileSystemPath, logger);
             }
             else
             {
-                return new VirtualFolder(userFileSystemPath, remoteStorageItemId, logger);
+                return new VirtualFolder(Mapping, userFileSystemPath, logger);
             }
         }
 

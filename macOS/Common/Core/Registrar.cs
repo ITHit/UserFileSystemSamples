@@ -40,7 +40,7 @@ namespace Common.Core
             return domain != null;
         }
 
-        private static async Task<NSFileProviderDomain> GetDomainAsync(string extensionIdentifier)
+        public static async Task<NSFileProviderDomain> GetDomainAsync(string extensionIdentifier)
         {
             NSFileProviderDomain[] domains = await NSFileProviderManager.GetDomainsAsync();
             foreach (NSFileProviderDomain domain in domains)

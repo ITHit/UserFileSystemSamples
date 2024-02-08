@@ -31,7 +31,7 @@ namespace WebDAVFileProviderExtension
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream? content = null, IInSyncResultContext? inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream? content = null, IOperationContext operationContext = null, IInSyncResultContext? inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Uri newFileUri = new Uri(await GetItemHrefAsync(), fileMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", newFileUri.AbsoluteUri);
@@ -55,7 +55,7 @@ namespace WebDAVFileProviderExtension
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Uri newFolderUri = new Uri(await GetItemHrefAsync(), folderMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", newFolderUri.AbsoluteUri);
@@ -127,9 +127,8 @@ namespace WebDAVFileProviderExtension
 
                 foreach (Client.IChangedItem remoteStorageItem in davChanges)
                 {
-                    IChangedItem itemInfo = (IChangedItem)Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
-                    // Changed, created, moved and deleted item.
-                    itemInfo.ChangeType = remoteStorageItem.ChangeType == Client.Change.Changed ? Change.Changed : Change.Deleted;
+                    ChangedItem itemInfo = new ChangedItem(remoteStorageItem.ChangeType == Client.Change.Changed ? Change.Changed : Change.Deleted,
+                        Mapping.GetUserFileSystemItemMetadata(remoteStorageItem));
 
                     changes.Add(itemInfo);
                 }

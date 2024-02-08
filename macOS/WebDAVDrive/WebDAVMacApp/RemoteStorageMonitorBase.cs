@@ -247,7 +247,7 @@ namespace WebDAVMacApp
         private async Task ProcessAsync()
         {
             try
-            {
+            {                
                 await ServerNotifications.ProcessChangesAsync();
             }
             catch (Exception ex)

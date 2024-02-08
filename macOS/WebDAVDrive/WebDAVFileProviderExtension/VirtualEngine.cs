@@ -31,6 +31,11 @@ namespace WebDAVFileProviderExtension
         public SecureStorage SecureStorage;
 
         /// <summary>
+        /// WebDAV server root url.
+        /// </summary>
+        public readonly string WebDAVServerUrl;
+
+        /// <summary>
         /// Automatic lock timout in milliseconds.
         /// </summary>
         public readonly double AutoLockTimoutMs;
@@ -62,6 +67,13 @@ namespace WebDAVFileProviderExtension
             Debug += consolelogger.LogDebug;
 
             SecureStorage = new SecureStorage();
+
+            WebDAVServerUrl = AppGroupSettings.Settings.Value.WebDAVServerUrl;
+            DomainSettings domainSettings = SecureStorage.GetAsync<DomainSettings>(domain.Identifier).Result;
+            if (domainSettings != null && !string.IsNullOrEmpty(domainSettings.WebDAVServerUrl))
+            {
+                WebDAVServerUrl = domainSettings.WebDAVServerUrl;
+            }
 
             InitWebDavSession();
 
@@ -137,7 +149,7 @@ namespace WebDAVFileProviderExtension
             Logger.LogMessage($"{nameof(VirtualEngine)}.{nameof(GetRootStorageItemIdAsync)}()");
             try
             {                
-                return (await new VirtualFolder(Encoding.UTF8.GetBytes(AppGroupSettings.Settings.Value.WebDAVServerUrl), this, Logger).GetMetadataAsync())?.RemoteStorageItemId;
+                return (await new VirtualFolder(Encoding.UTF8.GetBytes(WebDAVServerUrl), this, Logger).GetMetadataAsync())?.RemoteStorageItemId;
             }
             catch (ITHit.WebDAV.Client.Exceptions.WebDavHttpException httpException)
             {

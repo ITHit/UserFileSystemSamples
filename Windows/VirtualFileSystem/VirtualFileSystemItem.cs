@@ -9,6 +9,7 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Windows;
 
+
 namespace VirtualFileSystem
 {
     ///<inheritdoc>
@@ -20,9 +21,9 @@ namespace VirtualFileSystem
         protected readonly string UserFileSystemPath;
 
         /// <summary>
-        /// File or folder item ID in the remote storage.
+        /// File or folder path in the remote storage.
         /// </summary>
-        protected readonly byte[] RemoteStorageItemId;
+        protected readonly string RemoteStoragePath;
 
         /// <summary>
         /// Logger.
@@ -30,43 +31,46 @@ namespace VirtualFileSystem
         protected readonly ILogger Logger;
 
         /// <summary>
+        /// Maps remote storage path to the user file system path and vice versa. 
+        /// </summary>
+        private readonly IMapping mapping;
+
+        /// <summary>
         /// Creates instance of this class.
         /// </summary>
+        /// <param name="mapping">Maps a the remote storage path and data to the user file system path and data.</param>
         /// <param name="userFileSystemPath">File or folder path in the user file system.</param>
-        /// <param name="remoteStorageItemId">Remote storage item ID.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFileSystemItem(string userFileSystemPath, byte[] remoteStorageItemId, ILogger logger)
+        public VirtualFileSystemItem(IMapping mapping, string userFileSystemPath, ILogger logger)
         {
+            this.mapping = mapping;
             UserFileSystemPath = string.IsNullOrEmpty(userFileSystemPath) ? throw new ArgumentNullException(nameof(userFileSystemPath)) : userFileSystemPath;
-            RemoteStorageItemId = remoteStorageItemId ?? throw new ArgumentNullException(nameof(remoteStorageItemId));
+            RemoteStoragePath = mapping.MapPath(userFileSystemPath);
             Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         
         ///<inheritdoc/>
-        public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
+        public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IOperationContext operationContext, IConfirmationResultContext resultContext, CancellationToken cancellationToken = default)
         {
-            string userFileSystemNewPath = targetUserFileSystemPath;
+            IWindowsMoveContext moveContext = operationContext as IWindowsMoveContext;
+            string userFileSystemNewPath = moveContext.TargetPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
-            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
+            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(MoveToAsync)}()", userFileSystemOldPath, userFileSystemNewPath, moveContext);
         }
 
         /// <inheritdoc/>
-        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IInSyncStatusResultContext resultContext = null, CancellationToken cancellationToken = default)
+        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IWindowsMoveContext moveContext, IInSyncStatusResultContext resultContext, CancellationToken cancellationToken = default)
         {
-            string userFileSystemNewPath = targetUserFileSystemPath; 
+            string userFileSystemNewPath = moveContext.TargetPath; 
             string userFileSystemOldPath = this.UserFileSystemPath;
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath, operationContext);
+            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(MoveToCompletionAsync)}()", userFileSystemOldPath, userFileSystemNewPath, moveContext);
 
-            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStorageOldPath)) return;
-            if (!Mapping.TryGetRemoteStoragePathById(targetFolderRemoteStorageItemId, out string remoteStorageNewParentPath)) return;
-
-            FileSystemInfo remoteStorageOldItem = FsPath.GetFileSystemItem(remoteStorageOldPath);
+            FileSystemInfo remoteStorageOldItem = FsPath.GetFileSystemItem(RemoteStoragePath);
 
             if (remoteStorageOldItem != null)
             {
-                string remoteStorageNewPath = Path.Combine(remoteStorageNewParentPath, Path.GetFileName(targetUserFileSystemPath));
-
+                string remoteStorageNewPath = mapping.MapPath(userFileSystemNewPath);
                 if (remoteStorageOldItem is FileInfo)
                 {
                     if (File.Exists(remoteStorageNewPath))
@@ -80,14 +84,14 @@ namespace VirtualFileSystem
                     (remoteStorageOldItem as DirectoryInfo).MoveTo(remoteStorageNewPath);
                 }
 
-                Logger.LogDebug("Moved in the remote storage successfully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
+                Logger.LogDebug("Moved in the remote storage successfully", userFileSystemOldPath, userFileSystemNewPath, moveContext);
             }
         }
         
 
         
         ///<inheritdoc/>
-        public async Task DeleteAsync(IOperationContext operationContext = null, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
+        public async Task DeleteAsync(IOperationContext operationContext, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(DeleteAsync)}()", this.UserFileSystemPath, default, operationContext);
 
@@ -103,7 +107,7 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task DeleteCompletionAsync(IOperationContext operationContext = null, IInSyncStatusResultContext resultContext = null, CancellationToken cancellationToken = default)
+        public async Task DeleteCompletionAsync(IOperationContext operationContext, IInSyncStatusResultContext resultContext, CancellationToken cancellationToken = default)
         {
             // On Windows, for rename with overwrite to function properly for folders, 
             // the deletion of the folder in the remote storage must be done in DeleteCompletionAsync()
@@ -111,11 +115,9 @@ namespace VirtualFileSystem
 
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(DeleteCompletionAsync)}()", UserFileSystemPath, default, operationContext);
 
-            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return;
-
             try
             {
-                FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
+                FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(RemoteStoragePath);
                 if (remoteStorageItem != null)
                 {
                     if (remoteStorageItem is FileInfo)
@@ -148,7 +150,7 @@ namespace VirtualFileSystem
         
 
         ///<inheritdoc/>
-        public Task<byte[]> GetThumbnailAsync(uint size, IOperationContext operationContext = null)
+        public Task<byte[]> GetThumbnailAsync(uint size, IOperationContext operationContext)
         {
             // For this method to be called you need to register a thumbnail handler.
             // See method description for more details.
@@ -157,7 +159,7 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync(IOperationContext operationContext = null)
+        public async Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync(IOperationContext operationContext)
         {
             // For this method to be called you need to register a properties handler.
             // See method description for more details.

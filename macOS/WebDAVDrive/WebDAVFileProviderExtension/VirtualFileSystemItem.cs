@@ -48,7 +48,7 @@ namespace WebDAVFileProviderExtension
             Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             RemoteStorageId = remoteStorageId;
-            RemoteStorageUriById = Mapping.GetUriById(remoteStorageId);
+            RemoteStorageUriById = Mapping.GetUriById(remoteStorageId, engine.WebDAVServerUrl);
 
             Engine = engine;
         }
@@ -207,7 +207,7 @@ namespace WebDAVFileProviderExtension
             double timOutMs = lockMode == LockMode.Auto ? Engine.AutoLockTimoutMs : Engine.ManualLockTimoutMs;
             TimeSpan timeOut = timOutMs == -1 ? TimeSpan.MaxValue : TimeSpan.FromMilliseconds(timOutMs);
 
-            LockInfo lockInfo = (await Engine.WebDavSession.LockAsync(Mapping.GetUriById(RemoteStorageId), LockScope.Exclusive, false, lockOwner, timeOut, null, cancellationToken)).WebDavResponse;
+            LockInfo lockInfo = (await Engine.WebDavSession.LockAsync(Mapping.GetUriById(RemoteStorageId, Engine.WebDAVServerUrl), LockScope.Exclusive, false, lockOwner, timeOut, null, cancellationToken)).WebDavResponse;
 
             // Save lock-token and lock-mode. Start the timer to refresh the lock.
             await SaveLockAsync(lockInfo, lockMode, cancellationToken);
@@ -265,7 +265,7 @@ namespace WebDAVFileProviderExtension
                 await SaveLockAsync(lockInfo, lockMode, cancellationToken);
 
             }
-            catch (TaskCanceledException ex)
+            catch (TaskCanceledException)
             {
                 Logger.LogDebug("Lock refresh canceled", RemoteStorageUriById.AbsoluteUri);
             }

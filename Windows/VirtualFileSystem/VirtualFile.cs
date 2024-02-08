@@ -19,10 +19,10 @@ namespace VirtualFileSystem
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
+        /// <param name="mapping">Maps a the remote storage path and data to the user file system path and data.</param>
         /// <param name="path">File path in the user file system.</param>
-        /// <param name="remoteStorageItemId">Remote storage item ID.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFile(string path, byte[] remoteStorageItemId, ILogger logger) : base(path, remoteStorageItemId, logger)
+        public VirtualFile(IMapping mapping, string path, ILogger logger) : base(mapping, path, logger)
         {
 
         }
@@ -50,9 +50,7 @@ namespace VirtualFileSystem
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
-            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return;
-
-            using (FileStream stream = new FileInfo(remoteStoragePath).Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            using (FileStream stream = new FileInfo(RemoteStoragePath).Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
             {
                 stream.Seek(offset, SeekOrigin.Begin);
                 const int bufferSize = 0x500000; // 5Mb. Buffer size must be multiple of 4096 bytes for optimal performance.
@@ -73,7 +71,8 @@ namespace VirtualFileSystem
         public async Task ValidateDataAsync(long offset, long length, IValidateDataOperationContext operationContext, IValidateDataResultContext resultContext)
         {
             // This method has a 60 sec timeout. 
-            // To process longer requests and reset the timout timer call IContextWindows.ReportProgress() method.
+            // To process longer requests and reset the timout timer call the ReturnValidationResult()
+            // method or IResultContext.ReportProgress() method.
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
@@ -87,16 +86,14 @@ namespace VirtualFileSystem
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
-            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return null;
-
-            FileInfo remoteStorageItem = new FileInfo(remoteStoragePath);
+            FileInfo remoteStorageItem = new FileInfo(RemoteStoragePath);
 
             if (content != null)
             {
                 // Upload remote storage file content.
                 using (FileStream remoteStorageStream = remoteStorageItem.Open(FileMode.Open, FileAccess.Write, FileShare.Delete))
                 {
-                    await content.CopyToAsync(remoteStorageStream);
+                    await content.CopyToAsync(remoteStorageStream, cancellationToken);
                     remoteStorageStream.SetLength(content.Length);
                 }
             }
@@ -127,6 +124,8 @@ namespace VirtualFileSystem
                 remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value;
             }
 
+            // On macOS you must return updated file info.
+            // On Windows you can return null.
             return null;
         }
     }

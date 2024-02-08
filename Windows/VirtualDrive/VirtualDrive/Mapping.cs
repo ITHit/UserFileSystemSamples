@@ -18,7 +18,7 @@ namespace VirtualDrive
     /// <remarks>
     /// You will change methods of this class to map to your own remote storage.
     /// </remarks>
-    public class Mapping
+    public class Mapping : IMapping
     {
         /// <summary>
         /// Remote storage root path.
@@ -33,12 +33,22 @@ namespace VirtualDrive
         /// <summary>
         /// Creates an instance of this class.
         /// </summary>
-        /// <param name="userFileSystemRootPath">Remote storage root path.</param>
-        /// <param name="remoteStorageRootPath">User file system root path.</param>
+        /// <param name="userFileSystemRootPath">User file system path.</param>
+        /// <param name="remoteStorageRootPath">Remote storage path.</param>
         public Mapping(string userFileSystemRootPath, string remoteStorageRootPath)
         {
             this.userFileSystemRootPath = userFileSystemRootPath;
             this.remoteStorageRootPath = remoteStorageRootPath;
+        }
+
+        /// <summary>
+        /// Returns a remote storage URI that corresponds to the user file system path.
+        /// </summary>
+        /// <param name="userFileSystemPath">Full path in the user file system.</param>
+        /// <returns>Remote storage URI that corresponds to the <paramref name="userFileSystemPath"/>.</returns>
+        public string MapPath(string userFileSystemPath)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>

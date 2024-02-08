@@ -1,19 +1,16 @@
+using System;
+using System.IO;
+
 using ITHit.FileSystem;
 using ITHit.FileSystem.Synchronization;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace ITHit.FileSystem.Samples.Common
 {
     /// <summary>
     /// Represents a basic information about the file or the folder in the user file system.
-    /// In addition to properties provided by <see cref="IFileSystemItem"/> this class contains 
-    /// <see cref="ETag"/> and <see cref="Lock"/> properties.
     /// </summary>
-    public class FileSystemItemMetadataExt : IFileSystemItemMetadata, IChangedItem
+    public class FileSystemItemMetadataExt : IFileSystemItemMetadata
     {
         /// <inheritdoc/>
         public byte[] RemoteStorageItemId { get; set; }
@@ -52,16 +49,7 @@ namespace ITHit.FileSystem.Samples.Common
         /// <summary>
         /// Custom columns data to be displayed in the file manager.
         /// </summary>
-        public IEnumerable<FileSystemItemPropertyData> CustomProperties { get; set; } = new FileSystemItemPropertyData[] { };
-
-        ///<inheritdoc/>
-        public Change ChangeType { get; set; }
-
-        ///<inheritdoc/>
-        public Func<Task> BeforeAction { get; set; }
-
-        ///<inheritdoc/>
-        public Func<Task> AfterAction { get; set; }
+        //public IEnumerable<FileSystemItemPropertyData> CustomProperties { get; set; } = new FileSystemItemPropertyData[] { };
 
         ///<inheritdoc/>
         public ICustomData Properties { get; set; }

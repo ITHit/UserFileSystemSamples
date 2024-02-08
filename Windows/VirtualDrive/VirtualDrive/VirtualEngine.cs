@@ -6,6 +6,7 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Windows;
 
+
 namespace VirtualDrive
 {
     /// <inheritdoc />
@@ -15,8 +16,6 @@ namespace VirtualDrive
         /// Monitors changes in the remote storage, notifies the client and updates the user file system.
         /// </summary>
         public readonly RemoteStorageMonitor RemoteStorageMonitor;
-
-        //public override IMapping Mapping { get { return new Mapping(this); } }
 
         /// <summary>
         /// Creates a vitual file system Engine.
@@ -35,7 +34,7 @@ namespace VirtualDrive
             string remoteStorageRootPath,
             string iconsFolderPath,
             LogFormatter logFormatter)
-            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, logFormatter)
+            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, false, logFormatter)
         {
             RemoteStorageMonitor = new RemoteStorageMonitor(remoteStorageRootPath, this, this.Logger);
         }

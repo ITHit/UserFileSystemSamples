@@ -86,8 +86,8 @@ namespace VirtualFileSystem
 
                     // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
                     // method as a remoteStorageItemId parameter when a root folder is requested. 
-                    byte[] itemId = WindowsFileSystemItem.GetItemIdByPath(Settings.RemoteStorageRootPath);
-                    Engine.SetRemoteStorageRootItemId(itemId);
+                    // In this sample we do not set the ID becuse in case of a network path the ID is not available.
+                    //Engine.SetRemoteStorageRootItemId(rootItemId);
 
                     // Print console commands.
                     consoleProcessor.PrintHelp();

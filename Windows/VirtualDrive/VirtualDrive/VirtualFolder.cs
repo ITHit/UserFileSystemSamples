@@ -9,14 +9,14 @@ using System.Threading.Tasks;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
-using ITHit.FileSystem.Windows.Interop;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
+
 
 namespace VirtualDrive
 {
     /// <inheritdoc cref="IFolderWindows"/>
-    public class VirtualFolder : VirtualFileSystemItem, IFolderWindows
+    public class VirtualFolder : VirtualFileSystemItem, IFolder
     {
         /// <summary>
         /// Creates instance of this class.
@@ -31,7 +31,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
@@ -75,7 +75,7 @@ namespace VirtualDrive
             // Save Etag received from your remote storage in
             // persistent placeholder properties unlil the next update.
             // string eTag = ...
-            // Engine.Placeholders.GetItem(userFileSystemNewItemPath).SetETag(eTag);
+            // operationContext.Properties.SetETag(eTag);
 
             // Return remote storage item ID. It will be passed later
             // into IEngine.GetFileSystemItemAsync() method on every call.
@@ -83,7 +83,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, folderMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
@@ -108,7 +108,7 @@ namespace VirtualDrive
 
             // Save ETag received from your remote storage in persistent placeholder properties.
             // string eTag = ...
-            // Engine.Placeholders.GetItem(userFileSystemNewItemPath).SetETag(eTag);
+            // operationContext.Properties.SetETag(eTag);
 
             // Return remote storage item ID. It will be passed later
             // into IEngine.GetFileSystemItemAsync() method on every call.
@@ -130,25 +130,9 @@ namespace VirtualDrive
             var watch = System.Diagnostics.Stopwatch.StartNew();
             IEnumerable<FileSystemItemMetadataExt> remoteStorageChildren = await EnumerateChildrenAsync(pattern, operationContext, cancellationToken);
 
-            foreach(FileSystemItemMetadataExt child in remoteStorageChildren)
-            {
-                Logger.LogDebug("Creating", child.Name);
-            }
-
-            long totalCount = remoteStorageChildren.Count();
-
             // To signal that the children enumeration is completed 
             // always call ReturnChildren(), even if the folder is empty.
-            await resultContext.ReturnChildrenAsync(remoteStorageChildren.ToArray(), totalCount);
-            Logger.LogDebug($"Listed {totalCount} item(s). Took: {watch.Elapsed.ToString(@"hh\:mm\:ss\.ff")}", UserFileSystemPath);
-
-            // Save data that you wish to display in custom columns here.
-            //foreach (FileSystemItemMetadataExt itemMetadata in userFileSystemChildren)
-            //{
-            //    string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemMetadata.Name);
-            //    PlaceholderItem placeholder = Engine.Placeholders.GetItem(userFileSystemItemPath);
-            //    await placeholder.Properties.AddOrUpdateAsync("SomeData", someData);
-            //}
+            await resultContext.ReturnChildrenAsync(remoteStorageChildren.ToArray(), remoteStorageChildren.Count());
         }
 
         public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern, IOperationContext operationContext, CancellationToken cancellationToken)
@@ -168,7 +152,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task<IFolderMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFolderMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
@@ -203,57 +187,5 @@ namespace VirtualDrive
 
             return null;
         }
-
-        
-        /// <inheritdoc/>
-        public async Task<FolderOperationControl> GetFolderOperationControlAsync(FolderOperation fileOperation, string targetUserFileSystemPath, IntPtr parentWindow, FolderControlFlags flags, FileAttributes sourceAttributes, FileAttributes targetAttributes)
-        {
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetFolderOperationControlAsync)}()", UserFileSystemPath, targetUserFileSystemPath, default);
-
-            if (UserFileSystemPath?.IndexOf("LimitedOperationsFolder", StringComparison.OrdinalIgnoreCase) != -1)
-            {
-                return ConfirmOperation(fileOperation, targetUserFileSystemPath, parentWindow, flags, sourceAttributes, targetAttributes);
-            }
-
-            return FolderOperationControl.AllowOperation;
-        }
-
-        /// <summary>
-        /// User confirmation method to allow or cancel the operation.
-        /// </summary>
-        /// <param name="fileOperation">
-        /// The operation to perform.
-        /// </param>
-        /// <param name="targetUserFileSystemPath">
-        /// Name of the destination folder.
-        /// </param>
-        /// <returns>
-        /// Value that indicates whether the Shell should perform the operation.
-        /// </returns>
-        private FolderOperationControl ConfirmOperation(FolderOperation fileOperation, string targetUserFileSystemPath, IntPtr parentWindow, FolderControlFlags flags, FileAttributes sourceAttributes, FileAttributes destinationAttributes)
-        {
-            string message = $"Operation: {fileOperation}\n" +
-                $"Source path: {UserFileSystemPath}\n" +
-                $"Target path: {targetUserFileSystemPath}\n\n" +
-                "Continue?";
-
-            int result = WinApi.MessageBox(parentWindow, message, "Confirmation", 0x00000003);
-
-            switch (result)
-            {
-                case 6: // IDYES
-                    return FolderOperationControl.AllowOperation;
-
-                case 7: // IDNO
-                    return FolderOperationControl.PreventOperation;
-
-                case 2: // IDCANCEL
-                    return FolderOperationControl.CancelOperation;
-
-                default:
-                    return FolderOperationControl.AllowOperation;
-            }
-        }
-        
     }
 }

@@ -78,6 +78,13 @@ namespace WebDAVDrive
         /// Is RPC server enabled
         /// </summary>
         public bool ShellExtensionsComServerRpcEnabled { get; set; }
+
+        /// <summary>
+        // Mark documents locked by other users as read-only for this user and vice versa.
+        // A read-only MS Office document opens in a view-only mode preventing document collisions.
+        /// </summary>
+        public bool SetLockReadOnly { get; set; }
+
     }
 
     /// <summary>

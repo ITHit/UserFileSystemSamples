@@ -12,7 +12,7 @@ using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Samples.Common;
 using Client = ITHit.WebDAV.Client;
 using ITHit.FileSystem.Synchronization;
-using Grpc.Core;
+
 
 namespace WebDAVDrive
 {
@@ -35,7 +35,7 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
@@ -57,8 +57,17 @@ namespace WebDAVDrive
                 }
             }, null, contentLength, 0, -1, null, null, null, cancellationToken));
 
+            //switch (response.Status.Code)
+            //{
+            //    case 201: // Client.HttpStatus.Created:
+            //        break;
+            //    case 200: // Client.HttpStatus.OK: The file already exists and eTags matched.
+            //        break;
+            //}
+
+
             // Store ETag in persistent placeholder properties untill the next update.
-            Engine.Placeholders.GetItem(userFileSystemNewItemPath).SetETag(response.WebDavResponse);
+            operationContext.Properties.SetETag(response.WebDavResponse);
 
             // Return newly created item remote storage item ID,
             // it will be passed to GetFileSystemItem() during next calls.
@@ -67,7 +76,7 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, folderMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
@@ -100,27 +109,12 @@ namespace WebDAVDrive
             List<FileSystemItemMetadataExt> userFileSystemChildren = new List<FileSystemItemMetadataExt>();
             foreach (FileSystemItemMetadataExt itemMetadata in remoteStorageChildren)
             {
-                string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemMetadata.Name);
-
-                // Filtering existing files/folders. This is only required to avoid extra errors in the log.
-                if (!FsPath.Exists(userFileSystemItemPath))
-                {
-                    Logger.LogDebug("Creating", userFileSystemItemPath, null, operationContext);
-                    userFileSystemChildren.Add(itemMetadata);
-                }
+                userFileSystemChildren.Add(itemMetadata);
             }
 
             // To signal that the children enumeration is completed 
             // always call ReturnChildren(), even if the folder is empty.
             await resultContext.ReturnChildrenAsync(userFileSystemChildren.ToArray(), userFileSystemChildren.Count());
-
-            // Save data that will be displayed in custom columns in file manager.
-            // Also save any additional custom data required by the client.
-            foreach (FileSystemItemMetadataExt itemMetadata in userFileSystemChildren)
-            {
-                string userFileSystemItemPath = Path.Combine(UserFileSystemPath, itemMetadata.Name);
-                await Engine.Placeholders.GetItem(userFileSystemItemPath).SavePropertiesAsync(itemMetadata);
-            }
         }
 
         public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern, CancellationToken cancellationToken = default)
@@ -144,7 +138,7 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task<IFolderMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFolderMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
         {
             // Typically we can not change any folder metadata on a WebDAV server, just logging the call.
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
@@ -182,29 +176,25 @@ namespace WebDAVDrive
 
                 foreach (Client.IChangedItem remoteStorageItem in sortedChanges)
                 {
-                    IChangedItem itemInfo = (IChangedItem)Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
+                    IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
                     // Changed, created, moved and deleted item.
-                    itemInfo.ChangeType = remoteStorageItem.ChangeType == Client.Change.Changed ? Change.Changed : Change.Deleted;
+                    Change changeType = remoteStorageItem.ChangeType == Client.Change.Changed ? Change.Changed : Change.Deleted;
 
-                    if (itemInfo.ChangeType == Change.Changed)
+                    ChangedItem changedItem = new ChangedItem(changeType, itemInfo);
+
+                    if (changeType == Change.Changed)
                     {
-                        itemInfo.AfterAction = async () =>
-                        {
-                            if (Engine.Placeholders.TryFindByRemoteStorageId(itemInfo.RemoteStorageItemId, out PlaceholderItem placeholderItem))
-                            {
-                                await placeholderItem.SavePropertiesAsync(itemInfo as FileSystemItemMetadataExt);
-                            }
-                        };
-
+                        // If remote storage Etag does not match client Etag the file content
+                        // is modified in the remote storage and must be downloaded (for hydrated items).
                         if (Engine.Placeholders.TryFindByRemoteStorageId(itemInfo.RemoteStorageItemId, out PlaceholderItem placeholderItem))
                         {
-                            if (placeholderItem.TryGetETag(out string eTag) && !(eTag?.Equals((itemInfo as FileSystemItemMetadataExt).ETag) ?? false))
+                            if(await placeholderItem.IsModifiedAsync(itemInfo as FileSystemItemMetadataExt))
                             {
-                                itemInfo.ChangeType = Change.MetadataAndContent;
+                                changedItem.ChangeType = Change.MetadataAndContent;
                             }
                         }
                     }
-                    changes.Add(itemInfo);
+                    changes.Add(changedItem);
                 }
             }
             while (davChanges.MoreResults);

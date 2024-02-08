@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using log4net;
 using ITHit.FileSystem.Windows;
+using System.IO;
 
 
 namespace ITHit.FileSystem.Samples.Common.Windows
@@ -188,5 +189,18 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
         }
 #endif
+        public void Test()
+        {
+            string name = "General.docx";
+            var n = Engine.ServerNotifications(Path.Combine(Engine.Path, name));
+            IFileSystemItemMetadata metadata = new FileMetadataExt();
+            metadata.Attributes = FileAttributes.Normal;
+            metadata.CreationTime = DateTimeOffset.Now;
+            metadata.LastWriteTime = DateTimeOffset.Now;
+            metadata.ChangeTime = DateTimeOffset.Now;
+            metadata.LastAccessTime = DateTimeOffset.Now;
+            metadata.Name = name;
+            n.UpdateAsync(metadata);
+        }
     }
 }

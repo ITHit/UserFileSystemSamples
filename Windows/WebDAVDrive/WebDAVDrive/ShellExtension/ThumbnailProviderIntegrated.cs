@@ -1,5 +1,7 @@
-using ITHit.FileSystem.Windows.ShellExtension;
 using System.Runtime.InteropServices;
+
+using ITHit.FileSystem.Windows.ShellExtension;
+
 
 namespace WebDAVDrive.ShellExtension
 {

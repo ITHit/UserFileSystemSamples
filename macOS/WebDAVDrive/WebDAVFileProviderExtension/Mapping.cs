@@ -24,12 +24,11 @@ namespace WebDAVFileProviderExtension
         /// </summary>
         /// <param name="remoteStorageUriById">Id uri on the WebDav server.</param>
         /// <returns>Uri on Webdav server.</returns>
-        public static Uri GetUriById(byte[] remoteStorageItemId)
+        public static Uri GetUriById(byte[] remoteStorageItemId, string webDAVServerRootUrl)
         {
             string remoteStorageIdStr = Encoding.UTF8.GetString(remoteStorageItemId);
-
             return Uri.IsWellFormedUriString(remoteStorageIdStr, UriKind.Absolute) ? new Uri(remoteStorageIdStr) :
-                new Uri(AppGroupSettings.Settings.Value.WebDAVServerUrl.TrimEnd('/') + "/" + remoteStorageIdStr.TrimStart('/'));
+                new Uri(webDAVServerRootUrl.TrimEnd('/') + "/" + remoteStorageIdStr.TrimStart('/'));
         }
 
         /// <summary>

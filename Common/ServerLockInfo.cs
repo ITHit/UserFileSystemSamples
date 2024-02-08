@@ -1,7 +1,5 @@
-using ITHit.FileSystem.Windows;
 using System;
-using System.Collections.Generic;
-using System.Text;
+
 
 namespace ITHit.FileSystem.Samples.Common
 {
@@ -35,7 +33,7 @@ namespace ITHit.FileSystem.Samples.Common
         /// </summary>
         /// <remarks>
         /// If the item is locked by this user on this machine the value of this property indicates automatic or manual lock.
-        /// If the item is locked by other user or locked by this user on other machine contains <see cref="LockMode.None"/> value.
+        /// If the item is locked by other user or locked by this user on other machine, it contains <see cref="LockMode.None"/> value.
         /// </remarks>
         public LockMode Mode { get; set; } = LockMode.None;
     }

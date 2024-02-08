@@ -17,8 +17,6 @@ namespace FileProviderExtension
     [Register(nameof(VirtualEngine))]
     public class VirtualEngine : EngineMac
     {
-        private RemoteStorageMonitor remoteStorageMonitor;
-
         [Export("initWithDomain:")]
         public VirtualEngine(NSFileProviderDomain domain)
             : base(domain)
@@ -31,11 +29,18 @@ namespace FileProviderExtension
 
             AutoLock = AppGroupSettings.Settings.Value.AutoLock;
 
-            // set remote root storage item id.
-            SetRemoteStorageRootItemId(Mapping.EncodePath(AppGroupSettings.Settings.Value.RemoteStorageRootPath));
+            SecureStorage secureStorage = new SecureStorage();
 
-            remoteStorageMonitor = new RemoteStorageMonitor(AppGroupSettings.Settings.Value.RemoteStorageRootPath, this);
-            remoteStorageMonitor.Start();
+            DomainSettings domainSettings = secureStorage.GetAsync<DomainSettings>(domain.Identifier).Result;
+            string remoteStorageRootPath = AppGroupSettings.Settings.Value.RemoteStorageRootPath;
+
+            if (domainSettings != null && !string.IsNullOrEmpty(domainSettings.RemoteStorageRootPath))
+            {
+                remoteStorageRootPath = domainSettings.RemoteStorageRootPath;
+            }
+
+            // set remote root storage item id.
+            SetRemoteStorageRootItemId(Mapping.EncodePath(remoteStorageRootPath));
 
             Logger.LogMessage($"Engine started.");
         }
@@ -79,7 +84,7 @@ namespace FileProviderExtension
             throw new NotImplementedException();
         }
         
-        
+
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
@@ -87,7 +92,6 @@ namespace FileProviderExtension
 
         protected override void Stop()
         {
-            remoteStorageMonitor.Stop();
         }
     }
 }

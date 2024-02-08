@@ -1,8 +1,10 @@
-using ITHit.FileSystem.Windows.Package;
-using ITHit.FileSystem.Windows.ShellExtension;
 using System;
 using System.Collections.Generic;
 using Windows.Storage.Provider;
+
+using ITHit.FileSystem.Windows.Package;
+using ITHit.FileSystem.Windows.ShellExtension;
+
 
 namespace WebDAVDrive.ShellExtension
 {
@@ -24,7 +26,8 @@ namespace WebDAVDrive.ShellExtension
         internal static readonly List<(string Name, Guid Guid, bool AlwaysRegister)> Handlers = new List<(string, Guid, bool)>
         {
             ("ThumbnailProvider", typeof(ThumbnailProviderIntegrated).GUID, false),
-            ("MenuVerbHandler_0", typeof(ContextMenuVerbIntegrated).GUID, false),
+            ("MenuVerbHandler_0", typeof(ContextMenuVerbIntegratedLock).GUID, false),
+            ("MenuVerbHandler_1", typeof(ContextMenuVerbIntegratedCompare).GUID, false),
             ("CustomStateHandler", typeof(CustomStateProviderIntegrated).GUID, false),
             //("UriHandler", typeof(ShellExtension.UriSourceIntegrated).GUID, false)
         };
@@ -47,7 +50,8 @@ namespace WebDAVDrive.ShellExtension
             LocalServer server = new LocalServer();
 
             server.RegisterClass<ThumbnailProviderIntegrated>();
-            server.RegisterClass<ContextMenuVerbIntegrated>();
+            server.RegisterClass<ContextMenuVerbIntegratedLock>();
+            server.RegisterClass<ContextMenuVerbIntegratedCompare>();
             server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProviderIntegrated>();
             //server.RegisterWinRTClass<IStorageProviderUriSource, ShellExtension.UriSourceIntegrated>();
 

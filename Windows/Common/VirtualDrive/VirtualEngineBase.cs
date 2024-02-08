@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,6 +24,16 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         public string CurrentUserPrincipal { get; set; } = Environment.UserName;
 
         /// <summary>
+        /// Determins if a provied user name is a currently loged-in user.
+        /// </summary>
+        /// <param name="userName">User name.</param>
+        /// <returns>True if user name matches currently loged-in user. False - otherwise.</returns>
+        public bool IsCurrentUser(string userName) 
+        { 
+            return CurrentUserPrincipal.Equals(userName, StringComparison.InvariantCultureIgnoreCase); 
+        }
+
+        /// <summary>
         /// Path to the icons folder.
         /// </summary>
         private readonly string iconsFolderPath;
@@ -31,6 +42,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Folder that contains images displayed in Status column, context menu, etc. 
         /// </summary>
         public string IconsFolderPath => iconsFolderPath;
+
+        /// <summary>
+        /// Mark documents locked by other users as read-only for this user and vice versa.
+        /// </summary>
+        public readonly bool SetLockReadOnly;
 
         /// <summary>
         /// Creates a vitual file system Engine.
@@ -42,12 +58,14 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </param>
         /// <param name="remoteStorageRootPath">Path to the remote storage root.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
-        /// <param name="logFormatter">Logger.</param>
+        /// <param name="setLockReadOnly">Mark documents locked by other users as read-only for this user and vice versa.</param>
+        /// <param name="logFormatter">Formats log output.</param>
         public VirtualEngineBase(
             string license, 
             string userFileSystemRootPath, 
             string remoteStorageRootPath, 
-            string iconsFolderPath, 
+            string iconsFolderPath,
+            bool setLockReadOnly,
             LogFormatter logFormatter) 
             : base(license, userFileSystemRootPath)
         {
@@ -57,41 +75,110 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             // We want our file system to run regardless of any errors.
             // If any request to file system fails in user code or in Engine itself we continue processing.
             ThrowExceptions = false;
+            
+            SetLockReadOnly = setLockReadOnly;
 
             StateChanged += Engine_StateChanged;
+            ItemsChanged += Engine_ItemsChanged;
             SyncService.StateChanged += SyncService_StateChanged;
             Error += logFormatter.LogError;
             Message += logFormatter.LogMessage;
             Debug += logFormatter.LogDebug;
         }
 
+        /// <summary>
+        /// Fired for each file or folder change.
+        /// </summary>
+        private void Engine_ItemsChanged(Engine sender, ItemsChangeEventArgs e)
+        {
+            var logger = Logger.CreateLogger(e.ComponentName);
+            foreach (ChangeEventItem item in e.Items)
+            {
+                // Save custom properties received from the remote storage
+                // that will be displayed in Windows Explorer columns.
+                if (e.Direction == SyncDirection.Incoming && e.Result.Status == OperationStatus.Success)
+                {
+                    switch (e.OperationType)
+                    {
+                        case OperationType.Create:
+                        //case OperationType.CreateCompletion:
+                        case OperationType.Populate:
+                        case OperationType.Update:
+                            if (item.Metadata != null)
+                            {
+                                item.Properties.SaveProperties(item.Metadata as FileSystemItemMetadataExt);
+                            }
+                            break;
+                    }
+                }
+
+                // If incoming update failed becase a file is in use,
+                // try to show merge dialog (for MS Office, etc.).
+                if (e.Direction == SyncDirection.Incoming
+                    && e.OperationType == OperationType.Update)
+                {
+                    switch (e.Result.Status)
+                    {
+                        case OperationStatus.FileInUse:
+                            ITHit.FileSystem.Windows.AppHelper.MergeHelper.TryNotifyUpdateAvailable(item.Path, e.Result.ShadowFilePath);
+                            break;
+                    }
+                }
+
+
+                // Log info about the opertion.
+                switch (e.Result.Status)
+                {
+                    case OperationStatus.Success:
+                        switch (e.Direction)
+                        {
+                            case SyncDirection.Incoming:
+                                logger.LogMessage($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
+                                break;
+                            case SyncDirection.Outgoing:
+                                logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
+                                break;
+                        }
+                        break;
+                    case OperationStatus.Conflict:
+                        logger.LogMessage($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
+                        break;
+                    case OperationStatus.Exception:
+                        logger.LogError($"{e.Direction} {e.OperationType}", item.Path, item.NewPath, e.Result.Exception);
+                        break;
+                    case OperationStatus.Filtered:
+                        logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status} by {e.Result.FilteredBy.GetType().Name}", item.Path, item.NewPath, e.OperationContext);
+                        break;
+                    default:
+                        logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status}. {e.Result.Message}", item.Path, item.NewPath, e.OperationContext);
+                        break;
+                }
+            }
+        }
+
         /// <inheritdoc/>
-        public override async Task<bool> FilterAsync(SyncDirection direction, OperationType operationType, string path, FileSystemItemType itemType, string newPath = null, IOperationContext operationContext = null)
+        public override async Task<bool> FilterAsync(SyncDirection direction, OperationType operationType, string path, FileSystemItemType itemType, string newPath, IOperationContext operationContext)
         {
 
-            if (await new ZipFilter().FilterAsync(direction, operationType, path, itemType, newPath))
+            if (await new ZipFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             {
-                Logger.LogDebug($"{nameof(ZipFilter)} filtered {operationType}", path, newPath, operationContext);
                 return true;
             }
 
-            if (await new MsOfficeFilter().FilterAsync(direction, operationType, path, itemType, newPath))
+            if (await new MsOfficeFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             {
-                Logger.LogDebug($"{nameof(MsOfficeFilter)} filtered {operationType}", path, newPath, operationContext);
                 return true;
             }
 
-            if (await new AutoCadFilter().FilterAsync(direction, operationType, path, itemType, newPath))
+            if (await new AutoCadFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             {
-                Logger.LogDebug($"{nameof(AutoCadFilter)} filtered {operationType}", path, newPath, operationContext);
                 return true;
             }
 
-            if (await new ErrorStatusFilter().FilterAsync(direction, operationType, path, itemType, newPath))
-            {
-                Logger.LogDebug($"{nameof(ErrorStatusFilter)} filtered {operationType}", path, newPath, operationContext);
-                return true;
-            }
+            //if (await new ErrorStatusFilter(true).FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
+            //{
+            //    return true;
+            //}
 
             return false;
         }

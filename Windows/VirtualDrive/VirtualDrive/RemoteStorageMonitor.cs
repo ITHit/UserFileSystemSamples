@@ -1,13 +1,12 @@
 using System;
 using System.IO;
 using System.Linq;
-
-using ITHit.FileSystem;
-using ITHit.FileSystem.Windows;
-using ITHit.FileSystem.Samples.Common.Windows;
 using System.Threading.Tasks;
 using System.Threading;
-using ITHit.FileSystem.Samples.Common;
+
+using ITHit.FileSystem;
+using ITHit.FileSystem.Samples.Common.Windows;
+
 
 namespace VirtualDrive
 {
@@ -18,10 +17,10 @@ namespace VirtualDrive
     /// </summary>
     /// <remarks>
     /// Here, for demo purposes we simulate server by monitoring source file path using FileWatchWrapper.
-    /// In your application, instead, you will connect to your remote storage using web sockets 
-    /// or use any other technology to get notifications about changes in your remote storage.
+    /// In your application, instead of using FileWatchWrapper, you will connect to your remote storage using web sockets 
+    /// or any other technology.
     /// </remarks>
-    public class RemoteStorageMonitor : IncomingServerNotifications, ISyncService, IDisposable
+    public class RemoteStorageMonitor : ISyncService, IDisposable
     {
         /// <summary>
         /// Current synchronization state.
@@ -35,10 +34,24 @@ namespace VirtualDrive
         }
 
         /// <summary>
+        /// Engine instance. We will call <see cref="Engine"/> methods 
+        /// to update user file system when any data is changed in the remote storage.
+        /// </summary>
+        private readonly Engine engine;
+
+        /// <summary>
+        /// Logger.
+        /// </summary>
+        private readonly ILogger logger;
+
+        /// <summary>
         /// Watches for changes in the remote storage file system.
         /// </summary>
         private readonly FileSystemWatcherQueued watcher = new FileSystemWatcherQueued();
 
+        /// <summary>
+        /// Maps a the remote storage path and data to the user file system path and data.  
+        /// </summary>
         private readonly Mapping mapping;
 
         /// <summary>
@@ -47,9 +60,10 @@ namespace VirtualDrive
         /// <param name="remoteStorageRootPath">Remote storage path. Folder that contains source files to monitor changes.</param>
         /// <param name="engine">Virtual drive to send notifications about changes in the remote storage.</param>
         /// <param name="logger">Logger.</param>
-        internal RemoteStorageMonitor(string remoteStorageRootPath, EngineWindows engine, ILogger logger)
-            : base(engine, engine.Logger.CreateLogger("Remote Storage Monitor"))
+        internal RemoteStorageMonitor(string remoteStorageRootPath, VirtualEngineBase engine, ILogger logger)
         {
+            this.engine = engine;
+            this.logger = logger.CreateLogger("Remote Storage Monitor");
             mapping = new Mapping(engine.Path, remoteStorageRootPath);
 
             watcher.IncludeSubdirectories = true;
@@ -70,7 +84,7 @@ namespace VirtualDrive
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
             watcher.EnableRaisingEvents = true;
-            Logger.LogMessage($"Started", watcher.Path);
+            logger.LogMessage($"Started", watcher.Path);
         }
 
         /// <summary>
@@ -79,7 +93,7 @@ namespace VirtualDrive
         public async Task StopAsync()
         {
             watcher.EnableRaisingEvents = false;
-            Logger.LogMessage($"Stopped", watcher.Path);
+            logger.LogMessage($"Stopped", watcher.Path);
         }
 
         /// <summary>
@@ -88,34 +102,17 @@ namespace VirtualDrive
         /// <remarks>In this method we create a new file/folder in the user file system.</remarks>
         private async void CreatedAsync(object sender, FileSystemEventArgs e)
         {
-            Logger.LogDebug($"Operation: {e.ChangeType}", e.FullPath);
+            logger.LogDebug($"Operation: {e.ChangeType}", e.FullPath);
             string remoteStoragePath = e.FullPath;
 
-            try
-            {
-                string userFileSystemPath = mapping.ReverseMapPath(remoteStoragePath);
+            string userFileSystemPath = mapping.ReverseMapPath(remoteStoragePath);
+            string userFileSystemParentPath = Path.GetDirectoryName(userFileSystemPath);
 
-                // This check is only required because we can not prevent circular calls because of the simplicity of this example.
-                // In your real-life application you will not send updates from server back to client that issued the update.
-                if (!FsPath.Exists(userFileSystemPath))
-                {
-                    string userFileSystemParentPath = Path.GetDirectoryName(userFileSystemPath);
-
-                    FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
-                    if (remoteStorageItem != null)
-                    {
-                        FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
-                        await IncomingCreatedAsync(userFileSystemParentPath, itemMetadata);
-                    }
-                }
-                else
-                {
-                    ChangedAsync(sender, e);
-                }
-            }
-            catch (Exception ex)
+            FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
+            if (remoteStorageItem != null)
             {
-                Logger.LogError($"{e.ChangeType} failed", remoteStoragePath, null, ex);
+                IFileSystemItemMetadata itemMetadata = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                await engine.ServerNotifications(userFileSystemParentPath, logger).CreateAsync(new[] { itemMetadata });
             }
         }
 
@@ -128,31 +125,23 @@ namespace VirtualDrive
         /// </remarks>
         private async void ChangedAsync(object sender, FileSystemEventArgs e)
         {
-            Logger.LogDebug($"Operation: {e.ChangeType}", e.FullPath);
+            logger.LogDebug($"Operation: {e.ChangeType}", e.FullPath);
             string remoteStoragePath = e.FullPath;
             string userFileSystemPath = null;
-            try
-            {
-                userFileSystemPath = mapping.ReverseMapPath(remoteStoragePath);
+                
+            userFileSystemPath = mapping.ReverseMapPath(remoteStoragePath);
 
-                // This check is only required because we can not prevent circular calls because of the simplicity of this example.
-                // In your real-life application you will not send updates from server back to client that issued the update.
-                if (FsPath.Exists(userFileSystemPath)
-                    && IsModified(userFileSystemPath, remoteStoragePath))
-                {
-                    FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
-                    if (remoteStorageItem != null)
-                    {
-                        FileSystemItemMetadataExt itemMetadata = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
-                        await IncomingChangedAsync(userFileSystemPath, itemMetadata);
-                    }
-                }
-            }
-            catch (Exception ex)
+            // This check is only required because we can not prevent circular calls because of the simplicity of this example.
+            // In your real-life application you will not send updates from server back to client that issued the update.
+            if (FsPath.Exists(userFileSystemPath)
+                && IsModified(userFileSystemPath, remoteStoragePath))
             {
-                // The file is blocked in the user file system, the item is not a pleceholder, etc.
-                // Typically this is a normal behaviour.
-                Logger.LogDebug($"{e.ChangeType}. {ex.Message}", remoteStoragePath);
+                FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
+                if (remoteStorageItem != null)
+                {
+                    IFileSystemItemMetadata itemMetadata = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                    await engine.ServerNotifications(userFileSystemPath, logger).UpdateAsync(itemMetadata);
+                }
             }
         }
 
@@ -162,36 +151,10 @@ namespace VirtualDrive
         /// <remarks>In this method we delete corresponding file/folder in the user file system.</remarks>
         private async void DeletedAsync(object sender, FileSystemEventArgs e)
         {
-            Logger.LogDebug($"Operation: {e.ChangeType}", e.FullPath);
-
-            // Run sync operation asynchronously, because we need some delay to avoid
-            // circular calls wich leads to slow operation execution.
-            _ = Task.Run(() => ProcessDeletedAsync(e));
-        }
-
-        private async Task ProcessDeletedAsync(FileSystemEventArgs e)
-        {
+            logger.LogDebug($"Operation: {e.ChangeType}", e.FullPath);
             string remoteStoragePath = e.FullPath;
-            try
-            {
-                string userFileSystemPath = mapping.ReverseMapPath(remoteStoragePath);
-
-                // This check and delay is only required because we can not prevent circular calls because of the simplicity of this example.
-                // In your real-life application you will not send updates from server back to client that issued the update.
-                System.Threading.Thread.Sleep(1000);
-                if (FsPath.Exists(userFileSystemPath))
-                {
-                    await IncomingDeletedAsync(userFileSystemPath);
-                }
-            }
-            catch (UnauthorizedAccessException)
-            {
-                Logger.LogError($"{e.ChangeType} failed. The item is blocked", remoteStoragePath, null);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"{e.ChangeType} failed", remoteStoragePath, null, ex);
-            }
+            string userFileSystemPath = mapping.ReverseMapPath(remoteStoragePath);
+            await engine.ServerNotifications(userFileSystemPath, logger).DeleteAsync();
         }
 
         /// <summary>
@@ -200,40 +163,24 @@ namespace VirtualDrive
         /// <remarks>In this method we rename corresponding file/folder in user file system.</remarks>
         private async void RenamedAsync(object sender, RenamedEventArgs e)
         {
-            Logger.LogDebug($"Operation: {e.ChangeType}", e.OldFullPath, e.FullPath);
+            logger.LogDebug($"Operation: {e.ChangeType}", e.OldFullPath, e.FullPath);
             string remoteStorageOldPath = e.OldFullPath;
             string remoteStorageNewPath = e.FullPath;
-            try
-            {
-                string userFileSystemOldPath = mapping.ReverseMapPath(remoteStorageOldPath);
-                string userFileSystemNewPath = mapping.ReverseMapPath(remoteStorageNewPath);
 
-                // This check is only required because we can not prevent circular calls because of the simplicity of this example.
-                // In your real-life application you will not send updates from server back to client that issued the update.
-                if (FsPath.Exists(userFileSystemOldPath))
-                {
-                    if (await Engine.ServerNotifications(userFileSystemOldPath, Logger).MoveToAsync(userFileSystemNewPath))
-                    {
-                        // Because of the on-demand population the file or folder placeholder may not exist in the user file system.
-                        // In this case the IServerNotifications.MoveToAsync() call is ignored.
-                        Logger.LogMessage("Renamed successfully", userFileSystemOldPath, userFileSystemNewPath);
-                    }
-                }
+            string userFileSystemOldPath = mapping.ReverseMapPath(remoteStorageOldPath);
+            string userFileSystemNewPath = mapping.ReverseMapPath(remoteStorageNewPath);
 
-                // Possibly the item was filtered by MS Office filter because of the transactional save.
-                // The target item should be updated in this case.
-                // This call, is onlly required to support MS Office/AutoCAD editing in the folder simulating remote storage.
-                ChangedAsync(sender, e);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"{e.ChangeType} failed", remoteStorageOldPath, remoteStorageNewPath, ex);
-            }
+            await engine.ServerNotifications(userFileSystemOldPath, logger).MoveToAsync(userFileSystemNewPath);
+
+            // Possibly the item was filtered by MS Office filter because of the transactional save.
+            // The target item should be updated in this case.
+            // This call, is onlly required to support MS Office editing in the folder simulating remote storage.
+            ChangedAsync(sender, e);
         }
 
         private void Error(object sender, ErrorEventArgs e)
         {
-            Logger.LogError(null, null, null, e.GetException());
+            logger.LogError(null, null, null, e.GetException());
         }
 
 
@@ -246,7 +193,7 @@ namespace VirtualDrive
                 if (disposing)
                 {
                     watcher.Dispose();
-                    Logger.LogMessage($"Disposed");
+                    logger.LogMessage($"Disposed");
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.

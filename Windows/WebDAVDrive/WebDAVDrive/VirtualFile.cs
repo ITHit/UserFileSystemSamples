@@ -11,6 +11,7 @@ using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
 using Client = ITHit.WebDAV.Client;
 
+
 namespace WebDAVDrive
 {
     /// <inheritdoc cref="IFile"/>
@@ -80,14 +81,15 @@ namespace WebDAVDrive
             }
 
             // Store ETag here.
-            Engine.Placeholders.GetItem(UserFileSystemPath).SetETag(eTag);
+            operationContext.Properties.SetETag(eTag);
         }
 
         /// <inheritdoc/>
         public async Task ValidateDataAsync(long offset, long length, IValidateDataOperationContext operationContext, IValidateDataResultContext resultContext)
         {
             // This method has a 60 sec timeout. 
-            // To process longer requests and reset the timout timer call the ReturnValidationResult() method or IContextWindows.ReportProgress() method.
+            // To process longer requests and reset the timout timer call the ReturnValidationResult()
+            // method or IResultContext.ReportProgress() method.
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
 
@@ -105,21 +107,14 @@ namespace WebDAVDrive
             {
                 // Send the ETag to the server as part of the update to ensure
                 // the file in the remote storge is not modified since last read.
-                PlaceholderItem placeholder = Engine.Placeholders.GetItem(UserFileSystemPath);
-                
-                placeholder.TryGetETag(out string oldEtag);
+                operationContext.Properties.TryGetETag(out string oldEtag);
 
-                // Read the lock-token and send it to the server as part of the update.
                 Client.LockUriTokenPair[] lockTokens = null;
-                if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
+                // Read the lock-token and send it to the server as part of the update.
+                // Send the lock-token only in case the item is locked by this user.
+                if (operationContext.Properties.TryGetCurrentUserLockToken(out string lockToken))
                 {
-                    // Send the lock-token only in case the item is locked by this user.
-                    bool thisUser = Engine.CurrentUserPrincipal.Equals(lockInfo.Owner, StringComparison.InvariantCultureIgnoreCase);
-                    if (thisUser)
-                    {
-                        string lockToken = lockInfo.LockToken;
-                        lockTokens = new Client.LockUriTokenPair[] { new Client.LockUriTokenPair(new Uri(RemoteStoragePath), lockToken) };
-                    }
+                    lockTokens = new Client.LockUriTokenPair[] { new Client.LockUriTokenPair(new Uri(RemoteStoragePath), lockToken) };
                 }
 
                 try
@@ -128,19 +123,36 @@ namespace WebDAVDrive
                     Client.IWebDavResponse<string> response = await Program.DavClient.UploadAsync(new Uri(RemoteStoragePath), async (outputStream) =>
                     {
                         content.Position = 0; // Setting position to 0 is required in case of retry.
-                        await content.CopyToAsync(outputStream);
+                        await content.CopyToAsync(outputStream, cancellationToken);
                     }, null, content.Length, 0, -1, lockTokens, oldEtag, null, cancellationToken);
 
                     // Save a new ETag returned by the server, if any.
-                    placeholder.SetETag(response.WebDavResponse);
+                    string newEtag = response.WebDavResponse;
+
+                    if (string.IsNullOrEmpty(newEtag))
+                    {
+                        Logger.LogError("The server did not return ETag after update.", UserFileSystemPath, null, null, operationContext);
+                    }
+                    operationContext.Properties.SetETag(newEtag);
+                }
+                catch (Client.Exceptions.LockedException)
+                {
+                    // The item is locked on the server and the client did not provide a lock token.
+                    // We do not set the conflict status.
+                    // This item may be uploaded later automatically, when server item is unlocked.
+                    //placeholder.SetConflictStatus(true);
+
+                    Logger.LogMessage($"Upload failed. The item is locked", UserFileSystemPath, default, operationContext);
+                    inSyncResultContext.SetInSync = false;
                 }
                 catch (Client.Exceptions.PreconditionFailedException)
                 {
                     // Server and client ETags do not match.
                     // Set conflict status in Windows Explorer.
+                    // This item can not be uploaded automatically, conflict needs to be resolved first.
 
-                    Logger.LogMessage($"Conflict. The item is modified.", UserFileSystemPath, default, operationContext);
-                    placeholder.SetErrorStatus(true);
+                    Logger.LogMessage($"Conflict. The item is modified", UserFileSystemPath, default, operationContext);
+                    Engine.Placeholders.GetItem(UserFileSystemPath).SetConflictStatus(true);
                     inSyncResultContext.SetInSync = false;
                 }
             }

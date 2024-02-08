@@ -10,6 +10,7 @@ using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Windows;
 
+
 namespace VirtualDrive
 {
     ///<inheritdoc>
@@ -51,7 +52,7 @@ namespace VirtualDrive
         }
 
         ///<inheritdoc>
-        public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetParentItemId, IOperationContext operationContext = null, IConfirmationResultContext resultContext = null, CancellationToken cancellationToken = default)
+        public async Task MoveToAsync(string targetUserFileSystemPath, byte[] targetParentItemId, IOperationContext operationContext, IConfirmationResultContext resultContext, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
@@ -59,7 +60,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IMoveCompletionContext operationContext = null, IInSyncStatusResultContext resultContext = null, CancellationToken cancellationToken = default)
+        public async Task MoveToCompletionAsync(string targetUserFileSystemPath, byte[] targetFolderRemoteStorageItemId, IWindowsMoveContext operationContext, IInSyncStatusResultContext resultContext, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewPath = targetUserFileSystemPath;
             string userFileSystemOldPath = this.UserFileSystemPath;
@@ -86,8 +87,6 @@ namespace VirtualDrive
                 {
                     (remoteStorageOldItem as DirectoryInfo).MoveTo(remoteStorageNewPath);
                 }
-
-                Logger.LogDebug("Moved in the remote storage successfully", userFileSystemOldPath, targetUserFileSystemPath, operationContext);
             }
         }
 
@@ -131,7 +130,6 @@ namespace VirtualDrive
                     {
                         (remoteStorageItem as DirectoryInfo).Delete(true);
                     }
-                    Logger.LogDebug("Deleted in the remote storage successfully", UserFileSystemPath, default, operationContext);
                 }
             }
             catch (UnauthorizedAccessException)
@@ -152,7 +150,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> GetThumbnailAsync(uint size, IOperationContext operationContext = null)
+        public async Task<byte[]> GetThumbnailAsync(uint size, IOperationContext operationContext)
         {
             // For this method to be called you need to register a thumbnail handler.
             // See method description for more details.
@@ -169,7 +167,7 @@ namespace VirtualDrive
 
         
         /// <inheritdoc/>
-        public async Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync(IOperationContext operationContext = null)
+        public async Task<IEnumerable<FileSystemItemPropertyData>> GetPropertiesAsync(IOperationContext operationContext)
         {
             // For this method to be called you need to register a properties handler.
             // See method description for more details.
@@ -178,49 +176,45 @@ namespace VirtualDrive
 
             IList<FileSystemItemPropertyData> props = new List<FileSystemItemPropertyData>();
 
-            if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
+            // Read LockInfo and choose the lock icon.
+            if (operationContext.Properties.TryGetLockInfo(out ServerLockInfo lockInfo))
             {
+                // Determine if the item is locked by this user or thirt-party user.
+                bool thisUser = Engine.IsCurrentUser(lockInfo.Owner);
+                string lockIconName = thisUser ? "Locked" : "LockedByAnotherUser";
 
-                // Read LockInfo and choose the lock icon.
-                if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
+                // Get Lock Mode.
+                if (thisUser && (lockInfo.Mode == LockMode.Auto))
                 {
-                    // Determine if the item is locked by this user or thirt-party user.
-                    bool thisUser = Engine.CurrentUserPrincipal.Equals(lockInfo.Owner, StringComparison.InvariantCultureIgnoreCase);
-                    string lockIconName = thisUser ? "Locked" : "LockedByAnotherUser";
-
-                    // Get Lock Mode.
-                    if (thisUser && (lockInfo.Mode == LockMode.Auto))
-                    {
-                        lockIconName += "Auto";
-                    }
-
-                    // Set Lock Owner.
-                    FileSystemItemPropertyData propertyLockOwner = new FileSystemItemPropertyData()
-                    {
-                        Id = (int)CustomColumnIds.LockOwnerIcon,
-                        Value = lockInfo.Owner,
-                        IconResource = Path.Combine(Engine.IconsFolderPath, lockIconName + ".ico")
-                    };
-                    props.Add(propertyLockOwner);
-
-                    // Set Lock Expires.
-                    FileSystemItemPropertyData propertyLockExpires = new FileSystemItemPropertyData()
-                    {
-                        Id = (int)CustomColumnIds.LockExpirationDate,
-                        Value = lockInfo.LockExpirationDateUtc.ToString(),
-                        IconResource = Path.Combine(Engine.IconsFolderPath, "Empty.ico")
-                    };
-                    props.Add(propertyLockExpires);
-
-                    // Set Lock Scope
-                    FileSystemItemPropertyData propertyLockScope = new FileSystemItemPropertyData()
-                    {
-                        Id = (int)CustomColumnIds.LockScope,
-                        Value = lockInfo.Exclusive ? "Exclusive" : "Shared",
-                        IconResource = Path.Combine(Engine.IconsFolderPath, "Empty.ico")
-                    };
-                    props.Add(propertyLockScope);
+                    lockIconName += "Auto";
                 }
+
+                // Set Lock Owner.
+                FileSystemItemPropertyData propertyLockOwner = new FileSystemItemPropertyData()
+                {
+                    Id = (int)CustomColumnIds.LockOwnerIcon,
+                    Value = lockInfo.Owner,
+                    IconResource = Path.Combine(Engine.IconsFolderPath, lockIconName + ".ico")
+                };
+                props.Add(propertyLockOwner);
+
+                // Set Lock Expires.
+                FileSystemItemPropertyData propertyLockExpires = new FileSystemItemPropertyData()
+                {
+                    Id = (int)CustomColumnIds.LockExpirationDate,
+                    Value = lockInfo.LockExpirationDateUtc.ToString(),
+                    IconResource = Path.Combine(Engine.IconsFolderPath, "Empty.ico")
+                };
+                props.Add(propertyLockExpires);
+
+                // Set Lock Scope
+                FileSystemItemPropertyData propertyLockScope = new FileSystemItemPropertyData()
+                {
+                    Id = (int)CustomColumnIds.LockScope,
+                    Value = lockInfo.Exclusive ? "Exclusive" : "Shared",
+                    IconResource = Path.Combine(Engine.IconsFolderPath, "Empty.ico")
+                };
+                props.Add(propertyLockScope);
             }
 
             return props;
@@ -228,7 +222,7 @@ namespace VirtualDrive
         
 
         ///<inheritdoc>
-        public async Task LockAsync(LockMode lockMode, IOperationContext operationContext = null, CancellationToken cancellationToken = default)
+        public async Task LockAsync(LockMode lockMode, IOperationContext operationContext, CancellationToken cancellationToken)
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(LockAsync)}()", UserFileSystemPath, default, operationContext);
 
@@ -246,47 +240,32 @@ namespace VirtualDrive
             };
 
             // Save lock-token and lock-mode.
-            if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
-            {
-                placeholder.SetLockInfo(serverLockInfo);
-                placeholder.UpdateUI();
-
-                Logger.LogDebug("Locked in the remote storage successfully", UserFileSystemPath, default, operationContext);
-            }
+            operationContext.Properties.SetLockInfo(serverLockInfo);
         }
 
         ///<inheritdoc>
-        public async Task<LockMode> GetLockModeAsync(IOperationContext operationContext = null, CancellationToken cancellationToken = default)
+        public async Task<LockMode> GetLockModeAsync(IOperationContext operationContext, CancellationToken cancellationToken)
         {
-            if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
+            if (operationContext.Properties.TryGetLockInfo(out ServerLockInfo lockInfo))
             {
-                if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
-                {
-                    return lockInfo.Mode;
-                }
+                return lockInfo.Mode;
             }
 
             return LockMode.None;
         }
 
         ///<inheritdoc>
-        public async Task UnlockAsync(IOperationContext operationContext = null, CancellationToken cancellationToken = default)
+        public async Task UnlockAsync(IOperationContext operationContext, CancellationToken cancellationToken)
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(UnlockAsync)}()", UserFileSystemPath, default, operationContext);
             
-            if (Engine.Placeholders.TryGetItem(UserFileSystemPath, out PlaceholderItem placeholder))
+            // Read the lock-token.
+            if (operationContext.Properties.TryGetLockInfo(out ServerLockInfo lockInfo))
             {
-                // Read the lock-token.
-                if (placeholder.TryGetLockInfo(out ServerLockInfo lockInfo))
-                {
-                    // Unlock the item in the remote storage here.
-                }
-                // Delete lock-mode and lock-token info.
-                placeholder.TryDeleteLockInfo();
-                placeholder.UpdateUI();
-
-                Logger.LogDebug("Unlocked in the remote storage successfully", UserFileSystemPath, default, operationContext);
+                // Unlock the item in the remote storage here.
             }
+            // Delete lock-mode and lock-token info.
+            operationContext.Properties.TryDeleteLockInfo();
         }
     }
 }

@@ -12,7 +12,7 @@
     <Copyright>IT HIT LTD.</Copyright>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.ShellExtension" Version="7.3.24116.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows.ShellExtension" Version="8.0.26019.0-Beta" />
   </ItemGroup>
   <ItemGroup>
     <None Update="log4net.config">

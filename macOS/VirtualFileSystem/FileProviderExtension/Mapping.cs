@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 using ITHit.FileSystem;
+using ITHit.FileSystem.Mac;
 
 namespace FileProviderExtension
 {
@@ -42,12 +43,12 @@ namespace FileProviderExtension
 
             if (remoteStorageItem is FileInfo)
             {
-                userFileSystemItem = new FileMetadata();
-                ((FileMetadata)userFileSystemItem).Length = ((FileInfo)remoteStorageItem).Length;
+                userFileSystemItem = new FileMetadataMac();
+                ((FileMetadataMac)userFileSystemItem).Length = ((FileInfo)remoteStorageItem).Length;
             }
             else
             {
-                userFileSystemItem = new FolderMetadata();
+                userFileSystemItem = new FolderMetadataMac();
             }
 
             userFileSystemItem.Name = remoteStorageItem.Name;

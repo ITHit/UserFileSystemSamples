@@ -6,10 +6,15 @@ namespace WebDAVMacApp
 {
     internal class RemoteStorageMonitor : RemoteStorageMonitorBase
     {
+        /// <summary>
+        /// WebDAV server root url.
+        /// </summary>
+        public readonly string WebDAVServerUrl;
 
-        internal RemoteStorageMonitor(string webSocketServerUrl, ILogger logger) : base(webSocketServerUrl, logger)
+        internal RemoteStorageMonitor(string webDAVServerUrl, string webSocketServerUrl, ILogger logger) : base(webSocketServerUrl, logger)
         {
             this.InstanceId = Environment.MachineName;
+            this.WebDAVServerUrl = webDAVServerUrl;
         }
 
         /// <summary>
@@ -20,12 +25,12 @@ namespace WebDAVMacApp
         /// <returns>True if the item exists and should be updated. False otherwise.</returns>
         public override bool Filter(WebSocketMessage webSocketMessage)
         {
-            string remoteStoragePath = Mapping.GetAbsoluteUri(webSocketMessage.ItemPath);
+            string remoteStoragePath = Mapping.GetAbsoluteUri(webSocketMessage.ItemPath, WebDAVServerUrl);
 
             // Just in case there is more than one WebSockets server/virtual folder that
             // is sending notifications (like with webdavserver.net, webdavserver.com),
             // here we filter notifications that come from a different server/virtual folder.
-            if (remoteStoragePath.StartsWith(AppGroupSettings.Settings.Value.WebDAVServerUrl, StringComparison.InvariantCultureIgnoreCase))
+            if (remoteStoragePath.StartsWith(WebDAVServerUrl, StringComparison.InvariantCultureIgnoreCase))
             {
                 Logger.LogDebug($"EventType: {webSocketMessage.EventType}", webSocketMessage.ItemPath, webSocketMessage.TargetPath);
 

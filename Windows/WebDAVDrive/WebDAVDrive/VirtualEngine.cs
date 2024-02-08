@@ -29,6 +29,11 @@ namespace WebDAVDrive
         public readonly RemoteStorageMonitorBase RemoteStorageMonitor;
 
         /// <summary>
+        /// Maps remote storage path to the user file system path and vice versa. 
+        /// </summary>
+        public readonly Mapping Mapping;
+
+        /// <summary>
         /// Credentials used to connect to the server. 
         /// Used for challenge-responce auth (Basic, Digest, NTLM or Kerberos).
         /// </summary>
@@ -61,6 +66,10 @@ namespace WebDAVDrive
         /// <param name="remoteStorageRootPath">Path to the remote storage root.</param>
         /// <param name="webSocketServerUrl">Web sockets server that sends notifications about changes on the server.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
+        /// <param name="autoLockTimoutMs">Automatic lock timout in milliseconds.</param>
+        /// <param name="manualLockTimoutMs">Manual lock timout in milliseconds.</param>
+        /// <param name="setLockReadOnly">Mark documents locked by other users as read-only for this user and vice versa.</param>
+        /// <param name="logFormatter">Formats log output.</param>
         public VirtualEngine(
             string license,
             string userFileSystemRootPath,
@@ -69,9 +78,12 @@ namespace WebDAVDrive
             string iconsFolderPath,
             double autoLockTimoutMs,
             double manualLockTimoutMs,
+            bool setLockReadOnly,
             LogFormatter logFormatter)
-            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, logFormatter)
+            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, setLockReadOnly, logFormatter)
         {
+            Mapping = new Mapping(Path, remoteStorageRootPath);
+
             RemoteStorageMonitor = new RemoteStorageMonitor(webSocketServerUrl, this);
 
             this.autoLockTimoutMs = autoLockTimoutMs;
@@ -100,11 +112,13 @@ namespace WebDAVDrive
 
             Logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString());
 
-            Guid menuCommandLockGuid = typeof(WebDAVDrive.ShellExtension.ContextMenuVerbIntegrated).GUID;
-
-            if (menuGuid == menuCommandLockGuid)
+            if (menuGuid == typeof(ShellExtension.ContextMenuVerbIntegratedLock).GUID)
             {
                 return new MenuCommandLock(this, this.Logger);
+            }
+            if (menuGuid == typeof(ShellExtension.ContextMenuVerbIntegratedCompare).GUID)
+            {
+                return new MenuCommandCompare(this, this.Logger);
             }
 
             Logger.LogError($"Menu not found", menuGuid.ToString());

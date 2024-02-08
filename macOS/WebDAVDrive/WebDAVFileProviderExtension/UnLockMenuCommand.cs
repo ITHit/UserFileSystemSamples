@@ -34,7 +34,7 @@ namespace WebDAVFileProviderExtension
                 IFileSystemItem fileSystemItem = await engine.GetFileSystemItemAsync(remoteStorageItemId, FileSystemItemType.File, null);
                 if (fileSystemItem != null)
                 {
-                    await ((ILock)fileSystemItem).UnlockAsync();
+                    await ((ILock)fileSystemItem).UnlockAsync(null, default);
                 }                
             }
         }

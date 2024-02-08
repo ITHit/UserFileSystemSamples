@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Common.Core;
+using FileProvider;
 using ITHit.FileSystem;
+using ITHit.FileSystem.Mac;
 using VirtualFileSystemCommon;
 
 namespace VirtualFilesystemMacApp
@@ -9,11 +11,11 @@ namespace VirtualFilesystemMacApp
     public class AppDelegate : NSApplicationDelegate
     {
         private ILogger Logger = new ConsoleLogger("VirtualFileHostApp");
-        private string ExtensionIdentifier = "com.userfilesystem.vfs.app";
-        private string ExtensionDisplayName = "IT Hit File System";
+        private RemoteStorageMonitor RemoteStorageMonitor = new RemoteStorageMonitor(AppGroupSettings.Settings.Value.RemoteStorageRootPath, new ConsoleLogger(typeof(RemoteStorageMonitor).Name));
         private NSMenuItem InstallMenuItem = new NSMenuItem("Install FS Extension");
         private NSMenuItem UninstallMenuItem = new NSMenuItem("Uninstall FS Extension");
         private NSStatusItem StatusItem;
+        private SecureStorage secureStorage = new SecureStorage();
 
         public AppDelegate()
         {
@@ -23,11 +25,15 @@ namespace VirtualFilesystemMacApp
         {
             NSMenu menu = new NSMenu();
 
-            Task<bool> taskIsExtensionRegistered = Task.Run<bool>(async () => await Common.Core.Registrar.IsRegisteredAsync(ExtensionIdentifier));
+            Task<bool> taskIsExtensionRegistered = Task.Run<bool>(async () => await Common.Core.Registrar.IsRegisteredAsync(SecureStorage.BaseExtensionIdentifier));
             bool isExtensionRegistered = taskIsExtensionRegistered.Result;
             if (isExtensionRegistered)
             {
                 UninstallMenuItem.Activated += Uninstall;
+                RemoteStorageMonitor.ServerNotifications = new ServerNotifications(
+                        NSFileProviderManager.FromDomain(new NSFileProviderDomain(SecureStorage.BaseExtensionIdentifier, SecureStorage.BaseExtensionDisplayName)),
+                        RemoteStorageMonitor.Logger);
+                RemoteStorageMonitor.Start();
             }
             else
             {
@@ -51,15 +57,17 @@ namespace VirtualFilesystemMacApp
                 alert.RunModal();
 
                 NSApplication.SharedApplication.Terminate(this);
-            }
-        }
+            }           
+        }    
 
         private void Install(object? sender, EventArgs e)
         {
             Process.Start("open", AppGroupSettings.Settings.Value.RemoteStorageRootPath);
             Task.Run(async () =>
             {
-                await Common.Core.Registrar.RegisterAsync(ExtensionIdentifier, ExtensionDisplayName, Logger);
+                NSFileProviderDomain domain = await Common.Core.Registrar.RegisterAsync(SecureStorage.BaseExtensionIdentifier, SecureStorage.BaseExtensionDisplayName, Logger);
+                RemoteStorageMonitor.ServerNotifications = new ServerNotifications(NSFileProviderManager.FromDomain(domain), RemoteStorageMonitor.Logger);           
+                RemoteStorageMonitor.Start();
             }).Wait();
 
             InstallMenuItem.Activated -= Install;
@@ -71,7 +79,8 @@ namespace VirtualFilesystemMacApp
         {
             Task.Run(async () =>
             {
-                await Common.Core.Registrar.UnregisterAsync(ExtensionIdentifier, Logger);
+                RemoteStorageMonitor.Stop();
+                await Common.Core.Registrar.UnregisterAsync(SecureStorage.BaseExtensionIdentifier, Logger);
             }).Wait();
 
             InstallMenuItem.Activated += Install;
@@ -80,7 +89,8 @@ namespace VirtualFilesystemMacApp
         }
 
         public override void WillTerminate(NSNotification notification)
-        {           
+        {
+            RemoteStorageMonitor.Dispose();
         }
     }
 }

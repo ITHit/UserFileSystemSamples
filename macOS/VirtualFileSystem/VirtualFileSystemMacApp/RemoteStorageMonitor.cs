@@ -3,7 +3,7 @@ using System.IO;
 using Common.Core;
 using ITHit.FileSystem;
 
-namespace FileProviderExtension
+namespace VirtualFilesystemMacApp
 {
     /// <summary>
     /// Monitors changes in the remote storage, notifies the client and updates the user file system.
@@ -15,7 +15,7 @@ namespace FileProviderExtension
     /// In your application, instead of using FileSystemWatcher, you will connect to your remote storage using web sockets 
     /// or use any other technology to get notifications about changes in your remote storage.
     /// </remarks>
-    public class RemoteStorageMonitor
+    public class RemoteStorageMonitor: IDisposable
     {
         /// <summary>
         /// Remote storage path. Folder to monitor for changes.
@@ -23,22 +23,24 @@ namespace FileProviderExtension
         private string remoteStorageRootPath;
 
         /// <summary>
-        /// <see cref="ConsoleLogger"/> instance.
+        /// <see cref="ILogger"/> instance.
         /// </summary>
-        private readonly ConsoleLogger logger;
+        public readonly ILogger Logger;
 
         /// <summary>
         /// Watches for changes in the remote storage file system.
         /// </summary>
         private FileSystemWatcher watcher = new FileSystemWatcher();
 
-        private IEngine engine;
+        /// <summary>
+        /// Server notifications will be sent to this object.
+        /// </summary>
+        public IServerCollectionNotifications ServerNotifications;
 
-        public RemoteStorageMonitor(string remoteStorageRootPath, IEngine engine)
+        public RemoteStorageMonitor(string remoteStorageRootPath, ILogger logger)
         {
             this.remoteStorageRootPath = remoteStorageRootPath;
-            this.logger = new ConsoleLogger(GetType().Name);
-            this.engine = engine;
+            this.Logger = logger;
         }
 
         /// <summary>
@@ -57,7 +59,7 @@ namespace FileProviderExtension
             watcher.Renamed += RenamedAsync;
             watcher.EnableRaisingEvents = true;
 
-            logger.LogMessage($"Remote Storage Started", remoteStorageRootPath);
+            Logger.LogMessage($"Remote Storage Started", remoteStorageRootPath);
         }
 
         /// <summary>
@@ -66,40 +68,45 @@ namespace FileProviderExtension
         public void Stop()
         {
             watcher.EnableRaisingEvents = false;
-            logger.LogMessage($"Remote Storage Stoped", remoteStorageRootPath);
+            Logger.LogMessage($"Remote Storage Stoped", remoteStorageRootPath);
         }
 
         private void RenamedAsync(object sender, RenamedEventArgs e)
         {
-            logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
+            Logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
 
-            engine.ServerNotifications(e.OldFullPath).MoveToAsync(e.FullPath);
+            ServerNotifications.MoveToAsync(e.FullPath);
         }
 
         private void DeletedAsync(object sender, FileSystemEventArgs e)
         {
-            logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
+            Logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
 
-            engine.ServerNotifications(e.FullPath).DeleteAsync();
+            ServerNotifications.DeleteAsync();
         }
 
         private void CreatedAsync(object sender, FileSystemEventArgs e)
         {
-            logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
+            Logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
 
-            engine.ServerNotifications(e.FullPath).CreateAsync(null);
+            ServerNotifications.CreateAsync(null);
         }
 
         private void ChangedAsync(object sender, FileSystemEventArgs e)
         {
-            logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
+            Logger.LogMessage(e.ChangeType.ToString(), e.FullPath);
 
-            engine.ServerNotifications(e.FullPath).UpdateAsync(null);
+            ServerNotifications.UpdateAsync(null);
         }
 
         private void Error(object sender, ErrorEventArgs e)
         {
-            logger.LogError(null, ex: e.GetException());
+            Logger.LogError(null, ex: e.GetException());
+        }
+
+        public void Dispose()
+        {
+            watcher.Dispose();
         }
     }
 }

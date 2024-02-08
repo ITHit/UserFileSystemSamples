@@ -1,12 +1,14 @@
-using ITHit.FileSystem;
-using ITHit.FileSystem.Samples.Common.Windows;
-using ITHit.FileSystem.Windows;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
+using ITHit.FileSystem;
+using ITHit.FileSystem.Samples.Common.Windows;
+using ITHit.FileSystem.Windows;
+
 
 namespace WebDAVDrive
 {
@@ -17,7 +19,7 @@ namespace WebDAVDrive
         /// </summary>
         private readonly VirtualEngine engine;
 
-        internal RemoteStorageMonitor(string webSocketServerUrl, VirtualEngine engine) : base(webSocketServerUrl, engine.Logger.CreateLogger(typeof(RemoteStorageMonitor).Name))
+        internal RemoteStorageMonitor(string webSocketServerUrl, VirtualEngine engine) : base(webSocketServerUrl, engine.Logger)
         {
             this.engine = engine;
         }
@@ -30,7 +32,7 @@ namespace WebDAVDrive
         /// <returns>True if the item exists and should be updated. False otherwise.</returns>
         public override bool Filter(WebSocketMessage webSocketMessage)
         {
-            string remoteStoragePath = Mapping.GetAbsoluteUri(webSocketMessage.ItemPath);
+            string remoteStoragePath = engine.Mapping.GetAbsoluteUri(webSocketMessage.ItemPath);
 
             // Just in case there is more than one WebSockets server/virtual folder that
             // is sending notifications (like with webdavserver.net, webdavserver.com),
@@ -39,7 +41,7 @@ namespace WebDAVDrive
             {
                 Logger.LogDebug($"EventType: {webSocketMessage.EventType}", webSocketMessage.ItemPath, webSocketMessage.TargetPath);
 
-                string userFileSystemPath = Mapping.ReverseMapPath(remoteStoragePath);
+                string userFileSystemPath = engine.Mapping.ReverseMapPath(remoteStoragePath);
                 string userFileSystemParentPath = Path.GetDirectoryName(userFileSystemPath);
                 switch (webSocketMessage.EventType)
                 {
@@ -62,8 +64,8 @@ namespace WebDAVDrive
                         }
                         else
                         {
-                            string remoteStorageNewPath = Mapping.GetAbsoluteUri(webSocketMessage.TargetPath);
-                            string userFileSystemNewPath = Mapping.ReverseMapPath(remoteStorageNewPath);
+                            string remoteStorageNewPath = engine.Mapping.GetAbsoluteUri(webSocketMessage.TargetPath);
+                            string userFileSystemNewPath = engine.Mapping.ReverseMapPath(remoteStorageNewPath);
                             string userFileSystemNewParentPath = Path.GetDirectoryName(userFileSystemNewPath);
                             return !Directory.Exists(userFileSystemNewParentPath)
                                 || (new DirectoryInfo(userFileSystemNewParentPath).Attributes.HasFlag(FileAttributes.Offline) && (((int)new DirectoryInfo(userFileSystemNewParentPath).Attributes & (int)FileAttributesExt.Pinned) == 0));

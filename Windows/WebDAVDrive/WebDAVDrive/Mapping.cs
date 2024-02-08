@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text;
 
+using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
 using Client = ITHit.WebDAV.Client;
-using System.Text;
+
 
 namespace WebDAVDrive
 {
@@ -15,18 +17,39 @@ namespace WebDAVDrive
     /// Maps a user file system path to the remote storage path and back. 
     /// </summary>
     /// <remarks>You will change methods of this class to map the user file system path to your remote storage path.</remarks>
-    internal static class Mapping
+    public class Mapping : IMapping
     {
+        /// <summary>
+        /// Remote storage root path.
+        /// </summary>
+        private readonly string webDAVServerUrl;
+
+        /// <summary>
+        /// User file system root path. 
+        /// </summary>
+        private readonly string userFileSystemRootPath;
+
+        /// <summary>
+        /// Creates an instance of this class.
+        /// </summary>
+        /// <param name="userFileSystemRootPath">User file system path.</param>
+        /// <param name="remoteStorageRootPath">Remote storage path.</param>
+        public Mapping(string userFileSystemRootPath, string webDAVServerUrl)
+        {
+            this.userFileSystemRootPath = userFileSystemRootPath;
+            this.webDAVServerUrl = webDAVServerUrl;
+        }
+
         /// <summary>
         /// Returns a remote storage URI that corresponds to the user file system path.
         /// </summary>
         /// <param name="userFileSystemPath">Full path in the user file system.</param>
         /// <returns>Remote storage URI that corresponds to the <paramref name="userFileSystemPath"/>.</returns>
-        public static string MapPath(string userFileSystemPath)
+        public string MapPath(string userFileSystemPath)
         {
             // Get path relative to the virtual root.
             string relativePath = Path.TrimEndingDirectorySeparator(userFileSystemPath).Substring(
-                Path.TrimEndingDirectorySeparator(Program.Settings.UserFileSystemRootPath).Length);
+                Path.TrimEndingDirectorySeparator(userFileSystemRootPath).Length);
             relativePath = relativePath.TrimStart(Path.DirectorySeparatorChar);
 
             string[] segments = relativePath.Split('\\');
@@ -34,7 +57,7 @@ namespace WebDAVDrive
             IEnumerable<string> encodedSegments = segments.Select(x => Uri.EscapeDataString(x));
             relativePath = string.Join('/', encodedSegments);
 
-            string path = $"{Program.Settings.WebDAVServerUrl.Trim('/')}/{relativePath}";
+            string path = $"{webDAVServerUrl.Trim('/')}/{relativePath}";
 
             // Add trailing slash to folder URLs so Uri class concatenation works correctly.
             if (!path.EndsWith('/') && Directory.Exists(userFileSystemPath))
@@ -50,11 +73,11 @@ namespace WebDAVDrive
         /// </summary>
         /// <param name="remoteStorageUri">Remote storage URI.</param>
         /// <returns>Path in the user file system that corresponds to the <paramref name="remoteStorageUri"/>.</returns>
-        public static string ReverseMapPath(string remoteStorageUri)
+        public string ReverseMapPath(string remoteStorageUri)
         {
             // Remove the 'https://server:8080/' part.
             string rsPath = new UriBuilder(remoteStorageUri).Path;
-            string webDAVServerUrlPath = new UriBuilder(Program.Settings.WebDAVServerUrl).Path;
+            string webDAVServerUrlPath = new UriBuilder(webDAVServerUrl).Path;
 
             // Get path relative to the virtual root.
             string relativePath = rsPath.Substring(webDAVServerUrlPath.TrimEnd('/').Length);
@@ -65,7 +88,7 @@ namespace WebDAVDrive
             IEnumerable<string> decodedSegments = segments.Select(x => Uri.UnescapeDataString(x));
             relativePath = string.Join(Path.DirectorySeparatorChar, decodedSegments);
 
-            return Path.Combine(Program.Settings.UserFileSystemRootPath, relativePath);
+            return Path.Combine(userFileSystemRootPath, relativePath);
         }
 
         /// <summary>
@@ -73,9 +96,9 @@ namespace WebDAVDrive
         /// </summary>
         /// <param name="relativePath">Remote storage URI.</param>
         /// <returns>Full remote URI with domain that corresponds to the <paramref name="relativePath"/>.</returns>
-        public static string GetAbsoluteUri(string relativePath)
+        public string GetAbsoluteUri(string relativePath)
         {
-            Uri webDavServerUri = new Uri(Program.Settings.WebDAVServerUrl);
+            Uri webDavServerUri = new Uri(webDAVServerUrl);
             string host = webDavServerUri.GetLeftPart(UriPartial.Authority);
 
             string path = $"{host}/{relativePath}";
@@ -132,13 +155,6 @@ namespace WebDAVDrive
                     LockExpirationDateUtc = DateTimeOffset.Now.Add(lockInfo.TimeOut)
                 };
             }
-
-            /*
-            // Set custom columns to be displayed in file manager.
-            // We create property definitions when registering the sync root with corresponding IDs.
-            // The columns are rendered in IVirtualEngine.GetItemPropertiesAsync() call.
-            userFileSystemItem.CustomProperties = ;
-            */
 
             return userFileSystemItem;
         }

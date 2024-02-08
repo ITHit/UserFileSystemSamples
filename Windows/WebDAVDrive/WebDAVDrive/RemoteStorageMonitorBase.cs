@@ -10,12 +10,13 @@ using System.Threading.Tasks;
 
 using ITHit.FileSystem;
 
+
 namespace WebDAVDrive
 {
     /// <summary>
     /// Monitors changes in the remote storage, notifies the client and updates the user file system.
     /// If any file or folder is created, updated, delated, moved, locked or unlocked in the remote storage, 
-    /// triggers an event with information about changes being made.
+    /// calls <see cref="IServerCollectionNotifications.ProcessChangesAsync"/>.
     /// </summary>
     public abstract class RemoteStorageMonitorBase : ISyncService, IDisposable
     {
