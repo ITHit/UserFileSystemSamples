@@ -31,7 +31,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFileMetadata> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
@@ -72,18 +72,23 @@ namespace VirtualDrive
             remoteStorageNewItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
             remoteStorageNewItem.Attributes = fileMetadata.Attributes;
 
-            // Save Etag received from your remote storage in
-            // persistent placeholder properties unlil the next update.
-            // string eTag = ...
-            // operationContext.Properties.SetETag(eTag);
 
-            // Return remote storage item ID. It will be passed later
-            // into IEngine.GetFileSystemItemAsync() method on every call.
-            return WindowsFileSystemItem.GetItemIdByPath(remoteStorageNewItem.FullName);
+            // Return newly created item to the Engine.
+            // In the returned data set the following fields:
+            //  - Remote storage item ID. It will be passed to GetFileSystemItem() during next calls.
+            //  - Content eTag. The Engine will store it to determine if the file content should be updated.
+            //  - Medatdata eTag. The Engine will store it to determine if the item metadata should be updated.
+            byte[] remoteStorageId = WindowsFileSystemItem.GetItemIdByPath(remoteStorageNewItem.FullName);
+            return new FileMetadataExt()
+            {
+                RemoteStorageItemId = remoteStorageId,
+                // ContentETag = 
+                // MetadataETag =
+            };
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
+        public async Task<IFolderMetadata> CreateFolderAsync(IFolderMetadata folderMetadata, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, folderMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
@@ -106,13 +111,12 @@ namespace VirtualDrive
             remoteStorageNewItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
             remoteStorageNewItem.Attributes = folderMetadata.Attributes;
 
-            // Save ETag received from your remote storage in persistent placeholder properties.
-            // string eTag = ...
-            // operationContext.Properties.SetETag(eTag);
-
-            // Return remote storage item ID. It will be passed later
-            // into IEngine.GetFileSystemItemAsync() method on every call.
-            return WindowsFileSystemItem.GetItemIdByPath(remoteStorageNewItem.FullName);
+            byte[] remoteStorageId = WindowsFileSystemItem.GetItemIdByPath(remoteStorageNewItem.FullName);
+            return new FolderMetadataExt()
+            {
+                RemoteStorageItemId = remoteStorageId
+                // MetadataETag =
+            };
         }
 
         /// <inheritdoc/>
@@ -127,12 +131,21 @@ namespace VirtualDrive
 
             cancellationToken.Register(() => { Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern}) cancelled", UserFileSystemPath, default, operationContext); });
 
-            var watch = System.Diagnostics.Stopwatch.StartNew();
-            IEnumerable<FileSystemItemMetadataExt> remoteStorageChildren = await EnumerateChildrenAsync(pattern, operationContext, cancellationToken);
+            List<IFileSystemItemMetadata> children = new List<IFileSystemItemMetadata>();
+
+            if (Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath))
+            {
+                IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(remoteStoragePath).EnumerateFileSystemInfos(pattern);
+                foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
+                {
+                    IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                    children.Add(itemInfo);
+                }
+            }
 
             // To signal that the children enumeration is completed 
             // always call ReturnChildren(), even if the folder is empty.
-            await resultContext.ReturnChildrenAsync(remoteStorageChildren.ToArray(), remoteStorageChildren.Count());
+            await resultContext.ReturnChildrenAsync(children.ToArray(), children.Count(), true, cancellationToken);
         }
 
         public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern, IOperationContext operationContext, CancellationToken cancellationToken)

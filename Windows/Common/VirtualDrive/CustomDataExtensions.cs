@@ -50,46 +50,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                     }
                 }
             }
-
-            // Save eTag. This is for the demo purposes only.
-            // Update eTag only for offline files. 
-            // For hydrated files eTag must be updated in IFile.ReadAsync() only.
-            if (metadata.ETag != null && System.IO.File.GetAttributes(path).HasFlag(System.IO.FileAttributes.Offline))
-            {
-                properties.SetETag(metadata.ETag);
-            }
-
-            //foreach (FileSystemItemPropertyData prop in metadata.CustomProperties)
-            //{
-            //    string key = ((CustomColumnIds)prop.Id).ToString();
-            //    properties.AddOrUpdate(key, prop);
-            //}
-        }
-
-        /// <summary>
-        /// Tries to get eTag.
-        /// </summary>
-        /// <param name="properties">Custom data attached to the item.</param>
-        /// <param name="eTag">eTag.</param>
-        /// <returns>True if method succeeded. False - otherwise.</returns>
-        public static bool TryGetETag(this ICustomData properties, out string eTag)
-        {
-            if (properties.TryGetValue("ETag", out IDataItem propETag))
-            {
-                return propETag.TryGetValue<string>(out eTag);
-            }
-            eTag = null;
-            return false;
-        }
-
-        /// <summary>
-        /// Sets eTag.
-        /// </summary>
-        /// <param name="properties">Custom data attached to the item.</param>
-        /// <param name="eTag">eTag.</param>
-        public static void SetETag(this ICustomData properties, string eTag)
-        {
-            properties.AddOrUpdate("ETag", eTag);
         }
 
         /// <summary>
@@ -153,24 +113,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         public static bool TryDeleteLockInfo(this ICustomData properties)
         {
             return properties.Remove("LockInfo");
-        }
-
-        /// <summary>
-        /// Returns true if the remote item is modified. False - otherwise.
-        /// </summary>
-        /// <remarks>
-        /// This method compares client and server eTags and returns true if the 
-        /// content in the user file system must be updated with the data from the remote storage.
-        /// </remarks>
-        /// <param name="placeholder">Placeholder item.</param>
-        /// <param name="remoteStorageItem">Remote storage item metadata.</param>
-        /// <returns></returns>
-        public static async Task<bool> IsModifiedAsync(this PlaceholderItem placeholder, FileSystemItemMetadataExt remoteStorageItemMetadata)
-        {
-            //return placeholder.Properties.TryGetETag(out string eTag) && !(eTag?.Equals(remoteStorageItemMetadata.ETag) ?? false);
-
-            placeholder.Properties.TryGetETag(out string clientEtag);
-            return clientEtag != remoteStorageItemMetadata.ETag;
         }
 
         /// <summary>

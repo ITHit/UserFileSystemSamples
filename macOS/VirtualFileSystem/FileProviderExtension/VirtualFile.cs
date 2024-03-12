@@ -21,7 +21,7 @@ namespace FileProviderExtension
         }        
      
         /// <inheritdoc/>
-        public async Task ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
+        public async Task<IFileMetadata> ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", RemoteStoragePath);
 
@@ -31,6 +31,8 @@ namespace FileProviderExtension
                 const int bufferSize = 0x500000; // 5Mb. Buffer size must be multiple of 4096 bytes for optimal performance.
                 await stream.CopyToAsync(output, bufferSize, length);
             }
+
+            return null;
         }
 
         /// <inheritdoc/>

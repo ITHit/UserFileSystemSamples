@@ -1,5 +1,6 @@
 using ITHit.FileSystem.Windows;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,15 +13,16 @@ namespace ITHit.FileSystem.Samples.Common.Windows
     /// </summary>
     public class ConsoleProcessor
     {
+        public readonly ConcurrentDictionary<Guid, Commands> Commands = new ConcurrentDictionary<Guid, Commands>();
         private readonly Registrar registrar;
         private readonly LogFormatter logFormatter;
-        private readonly Commands commands;
+        private readonly string providerId;
 
-        public ConsoleProcessor(Registrar registrar, LogFormatter logFormatter, Commands commands)
+        public ConsoleProcessor(Registrar registrar, LogFormatter logFormatter, string providerId)
         {
             this.registrar = registrar;
             this.logFormatter = logFormatter;
-            this.commands = commands;
+            this.providerId = providerId;
         }
 
         /// <summary>
@@ -61,9 +63,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
                 switch (keyInfo.Key)
                 {
-                    case ConsoleKey.X:
-                        commands.Test();
-                        break;
+                    //case ConsoleKey.X:
+                    //    foreach (var keyValCommands in Commands)
+                    //    {
+                    //        keyValCommands.Value.Test();
+                    //    }
+                    //    break;
 
                     case ConsoleKey.F1:
                     case ConsoleKey.H:
@@ -73,12 +78,18 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
                     case ConsoleKey.E:
                         // Start/stop the Engine and all sync services.
-                        await commands.StartStopEngineAsync();
+                        foreach(var keyValCommands in Commands)
+                        {
+                            await keyValCommands.Value.StartStopEngineAsync();
+                        }
                         break;
 
                     case ConsoleKey.S:
                         // Start/stop synchronization.
-                        await commands.StartStopSynchronizationAsync();
+                        foreach (var keyValCommands in Commands)
+                        {
+                            await keyValCommands.Value.StartStopSynchronizationAsync();
+                        }
                         break;
 
                     case ConsoleKey.D:
@@ -88,30 +99,40 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
                     case ConsoleKey.M:
                         // Start/stop remote storage monitor.
-                        await commands.StartStopRemoteStorageMonitorAsync();
+                        foreach (var keyValCommands in Commands)
+                        {
+                            await keyValCommands.Value.StartStopRemoteStorageMonitorAsync();
+                        }
                         break;
 
                     case ConsoleKey.L:
                         // Open log file.
-                        Commands.Open(logFormatter.LogFilePath);
+                        Windows.Commands.Open(logFormatter.LogFilePath);
                         break;
 
                     case ConsoleKey.B:
                         // Submit support tickets, report bugs, suggest features.
-                        await commands.OpenSupportPortalAsync();
+                        await Windows.Commands.OpenSupportPortalAsync();
                         break;
 
                     case ConsoleKey.Escape:
                         // Simulate app uninstall.
-                        await commands.StopEngineAsync();
+                        foreach (var keyValCommands in Commands)
+                        {
+                            await keyValCommands.Value.StopEngineAsync();
+                        }
+
                         bool removeSparsePackage = FileSystem.Windows.Package.PackageRegistrar.IsRunningWithSparsePackageIdentity() ? 
                             keyInfo.Modifiers.HasFlag(ConsoleModifiers.Shift) : false;
-                        await registrar.UnregisterAsync(commands.Engine, removeSparsePackage);
+                        await registrar.UnregisterAllSyncRootsAsync(this.providerId, removeSparsePackage);
                         return;
 
                     case ConsoleKey.Spacebar:
                         // Simulate app restart or machine reboot.
-                        await commands.AppExitAsync();
+                        foreach (var keyValCommands in Commands)
+                        {
+                            await keyValCommands.Value.EngineExitAsync();
+                        }
                         return;
 
                     default:

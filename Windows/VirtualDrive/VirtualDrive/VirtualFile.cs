@@ -42,14 +42,14 @@ namespace VirtualDrive
         }
         
         /// <inheritdoc/>
-        public async Task ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
+        public async Task<IFileMetadata> ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {
             // On Windows this method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer write to the output stream or call the resultContext.ReportProgress() or resultContext.ReturnData() methods.
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
             
-            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return;
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return null;
 
             cancellationToken.Register(() => { Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length}) cancelled", UserFileSystemPath, default, operationContext); });
 
@@ -72,9 +72,11 @@ namespace VirtualDrive
                 }
             }
 
-            // Save ETag received from your remote storage in persistent placeholder properties.
-            // string eTag = ...
-            // operationContext.Properties.SetETag(eTag);
+            // Return an updated item to the Engine.
+            // In the returned data set the following fields:
+            //  - Content eTag. The Engine will store it to determine if the file content should be updated.
+            //  - Medatdata eTag. The Engine will store it to determine if the item metadata should be updated.
+            return null;
         }
 
         /// <inheritdoc/>

@@ -214,6 +214,15 @@ namespace WebDAVDrive.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Unmount.
+        /// </summary>
+        public static string Unmount {
+            get {
+                return ResourceManager.GetString("Unmount", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Please enter correct WebDAV server URL.
         /// </summary>
         public static string URLError {

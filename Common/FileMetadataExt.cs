@@ -10,5 +10,8 @@ namespace ITHit.FileSystem.Samples.Common
     {
         ///<inheritdoc/>
         public long Length { get; set; }
+
+        ///<inheritdoc/>
+        public string ContentETag { get; set; }
     }
 }

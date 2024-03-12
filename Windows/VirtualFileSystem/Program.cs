@@ -11,6 +11,7 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Samples.Common.Windows;
+using System.Threading;
 
 
 namespace VirtualFileSystem
@@ -59,21 +60,24 @@ namespace VirtualFileSystem
             // Load Settings.
             Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
 
-            logFormatter = new LogFormatter(log, Settings.AppID, Settings.RemoteStorageRootPath);
-            commands = new Commands(log, Settings.RemoteStorageRootPath);
-            commands.ConfigureConsole();
+            logFormatter = new LogFormatter(log, Settings.AppID);
+            WindowManager.ConfigureConsole();
 
             // Log environment description.
             logFormatter.PrintEnvironmentDescription();
 
-            registrar = new Registrar(SyncRootId, Settings.UserFileSystemRootPath, log);
-
-            consoleProcessor = new ConsoleProcessor(registrar, logFormatter, commands);
+            registrar = new Registrar(log);
+            consoleProcessor = new ConsoleProcessor(registrar, logFormatter, Settings.AppID);
 
             try
             {
                 // Register sync root and create app folders.
-                await registrar.RegisterSyncRootAsync(Settings.ProductName, Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
+                await registrar.RegisterSyncRootAsync(
+                    SyncRootId, 
+                    Settings.UserFileSystemRootPath, 
+                    Settings.RemoteStorageRootPath,
+                    Settings.ProductName, 
+                    Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
 
                 using (Engine = new VirtualEngine(
                     Settings.UserFileSystemLicense,
@@ -81,8 +85,12 @@ namespace VirtualFileSystem
                     Settings.RemoteStorageRootPath,
                     logFormatter))
                 {
-                    commands.Engine = Engine;
+                    commands = new Commands(Engine, Settings.RemoteStorageRootPath, log);
                     commands.RemoteStorageMonitor = Engine.RemoteStorageMonitor;
+                    consoleProcessor.Commands.TryAdd(Guid.Empty, commands);
+
+                    // Here we disable incoming sync. To get changes using pooling call IncomingPooling.ProcessAsync()
+                    Engine.SyncService.IncomingSyncMode = ITHit.FileSystem.Synchronization.IncomingSyncMode.Disabled;
 
                     // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
                     // method as a remoteStorageItemId parameter when a root folder is requested. 
@@ -93,13 +101,16 @@ namespace VirtualFileSystem
                     consoleProcessor.PrintHelp();
 
                     // Print Engine config, settings, logging headers.
-                    await logFormatter.PrintEngineStartInfoAsync(Engine);
+                    await logFormatter.PrintEngineStartInfoAsync(Engine, Settings.RemoteStorageRootPath);
 
                     // Start processing OS file system calls.
                     await Engine.StartAsync();
+
+                    // Sync all changes from remote storage one time for demo purposes.
+                    await Engine.SyncService.IncomingPooling.ProcessAsync();
 #if DEBUG
                     // Opens Windows File Manager with user file system folder and remote storage folder.
-                    commands.ShowTestEnvironment();
+                    commands.ShowTestEnvironment(Settings.ProductName);
 #endif
                     // Keep this application running and reading user input.
                     await consoleProcessor.ProcessUserInputAsync();

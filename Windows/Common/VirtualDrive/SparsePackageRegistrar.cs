@@ -32,11 +32,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// For applications with identity this list is ignored.
         /// </param>
         public SparsePackageRegistrar(
-            string syncRootId,
-            string userFileSystemRootPath,
             ILog log,
             IEnumerable<(string Name, Guid Guid, bool AlwaysRegister)> shellExtensionHandlers = null)
-            : base(syncRootId, userFileSystemRootPath, log, shellExtensionHandlers)
+            : base(log, shellExtensionHandlers)
         {
 
         }
@@ -63,7 +61,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 #if DEBUG
                 /// Registering sparse package requires a valid certificate.
                 /// In the development mode we use the below call to install the development certificate.
-                if (!EnsureDevelopmentCertificateInstalled())
+                if (!EnsureDevelopmentCertificateInstalled(Log))
                 {
                     return false;
                 }
@@ -87,7 +85,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
 #if DEBUG
             // Uninstall developer certificate.
-            EnsureDevelopmentCertificateUninstalled();
+            EnsureDevelopmentCertificateUninstalled(Log);
 
             // Uninstall conflicting packages if any
             await EnsureConflictingPackagesUninstalled();
@@ -99,14 +97,16 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <inheritdocs/>
-        public override async Task UnregisterAsync(EngineWindows engine, bool fullUnregistration = true)
+        public override async Task<bool> UnregisterAllSyncRootsAsync(string providerId, bool fullUnregistration = true)
         {
-            await base.UnregisterAsync(engine, fullUnregistration);
+            bool res = await base.UnregisterAllSyncRootsAsync(providerId, fullUnregistration);
 
             if (fullUnregistration)
             {
                 await UnregisterSparsePackageAsync();
             }
+
+            return res;
         }
 
 #if DEBUG
@@ -120,20 +120,20 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// should be omitted for packaged application.
         /// </remarks>
         /// <returns>True if the the certificate is installed, false - if the installation failed.</returns>
-        public bool EnsureDevelopmentCertificateInstalled()
+        public static bool EnsureDevelopmentCertificateInstalled(ILog log)
         {
             string sparsePackagePath = PackageRegistrar.GetSparsePackagePath();
             CertificateRegistrar certificateRegistrar = new CertificateRegistrar(sparsePackagePath);
             if (!certificateRegistrar.IsCertificateInstalled())
             {
-                Log.Info("\n\nInstalling developer certificate...");
+                log.Info("\n\nInstalling developer certificate...");
                 if (certificateRegistrar.TryInstallCertificate(true, out int errorCode))
                 {
-                    Log.Info("\nDeveloper certificate successfully installed.");
+                    log.Info("\nDeveloper certificate successfully installed.");
                 }
                 else
                 {
-                    Log.Error($"\nFailed to install the developer certificate. Error code: {errorCode}");
+                    log.Error($"\nFailed to install the developer certificate. Error code: {errorCode}");
                     return false;
                 }
             }
@@ -145,20 +145,20 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Uninstalls a development certificate.
         /// </summary>
         /// <returns>True if the the certificate is uninstalled, false - if the uninstallation failed.</returns>
-        public bool EnsureDevelopmentCertificateUninstalled()
+        public static bool EnsureDevelopmentCertificateUninstalled(ILog log)
         {
             string sparsePackagePath = PackageRegistrar.GetSparsePackagePath();
             CertificateRegistrar certRegistrar = new CertificateRegistrar(sparsePackagePath);
             if (certRegistrar.IsCertificateInstalled())
             {
-                Log.Info("\n\nUninstalling developer certificate...");
+                log.Info("\n\nUninstalling developer certificate...");
                 if (certRegistrar.TryUninstallCertificate(true, out int errorCode))
                 {
-                    Log.Info("\nDeveloper certificate successfully uninstalled.");
+                    log.Info("\nDeveloper certificate successfully uninstalled.");
                 }
                 else
                 {
-                    Log.Error($"\nFailed to uninstall the developer certificate. Error code: {errorCode}");
+                    log.Error($"\nFailed to uninstall the developer certificate. Error code: {errorCode}");
                     return false;
                 }
             }

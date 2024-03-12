@@ -6,19 +6,18 @@ using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Configuration;
 
 using log4net;
 
 using ITHit.FileSystem;
-using ITHit.FileSystem.Samples.Common.Windows;
+using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Windows.Package;
-
-using ITHit.WebDAV.Client;
-using ITHit.WebDAV.Client.Exceptions;
+using ITHit.FileSystem.Samples.Common.Windows;
 
 using WebDAVDrive.UI;
-using WebDAVDrive.UI.ViewModels;
 
 
 namespace WebDAVDrive
@@ -39,6 +38,14 @@ namespace WebDAVDrive
     class Program
     {
         /// <summary>
+        /// Engine instances. 
+        /// Each item contains Engine instance ID and engine itself.
+        /// Instance ID is used to delete the Engine from this list if file system is unmounted.
+        /// </summary>
+        
+        public static ConcurrentDictionary<Guid, EngineWindows> Engines = new ConcurrentDictionary<Guid, EngineWindows>();
+
+        /// <summary>
         /// Application settings.
         /// </summary>
         internal static AppSettings Settings;
@@ -46,13 +53,7 @@ namespace WebDAVDrive
         /// <summary>
         /// Log4Net logger.
         /// </summary>
-        private static readonly ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-
-        /// <summary>
-        /// Processes OS file system calls,
-        /// synchronizes user file system to remote storage.
-        /// </summary>
-        internal static VirtualEngine Engine;
+        internal static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         /// <summary>
         /// Outputs logging information.
@@ -65,58 +66,32 @@ namespace WebDAVDrive
         private static SparsePackageRegistrar registrar;
 
         /// <summary>
-        /// Application commands.
-        /// </summary>
-        private static Commands commands;
-
-        /// <summary>
         /// Processes console input.
         /// </summary>
         private static ConsoleProcessor consoleProcessor;
-
-        /// <summary>
-        /// WebDAV client for accessing the WebDAV server.
-        /// </summary>
-        internal static WebDavSession DavClient;
-
-        /// <summary>
-        /// Maximum number of login attempts.
-        /// </summary>
-        private static uint loginRetriesMax = 3;
-
-        /// <summary>
-        /// Current login attempt.
-        /// </summary>
-        private static uint loginRetriesCurrent = 0;
-
 
         static async Task Main(string[] args)
         {
             // Load Settings.
             Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
 
-            logFormatter = new LogFormatter(log, Settings.AppID, Settings.WebDAVServerUrl);
-            commands = new Commands(log, Settings.WebDAVServerUrl);
-            commands.ConfigureConsole();
+            logFormatter = new LogFormatter(Log, Settings.AppID);
+            WindowManager.ConfigureConsole();
 
             // Log environment description.
             logFormatter.PrintEnvironmentDescription();
-
-            registrar = new SparsePackageRegistrar(SyncRootId, Settings.UserFileSystemRootPath, log, ShellExtension.ShellExtensions.Handlers);
-
-            consoleProcessor = new ConsoleProcessor(registrar, logFormatter, commands);
 
             switch (args.FirstOrDefault())
             {
 #if DEBUG
                 case "-InstallDevCert":
                     /// Called by <see cref="CertificateRegistrar.TryInstallCertificate"/> in elevated mode.
-                    registrar.EnsureDevelopmentCertificateInstalled();
+                    SparsePackageRegistrar.EnsureDevelopmentCertificateInstalled(Log);
                     return;
 
                 case "-UninstallDevCert":
                     /// Called by <see cref="CertificateRegistrar.TryUninstallCertificate"/> in elevated mode.
-                    registrar.EnsureDevelopmentCertificateUninstalled();
+                    SparsePackageRegistrar.EnsureDevelopmentCertificateUninstalled(Log);
                     return;
 #endif
                 case "-Embedding":
@@ -125,6 +100,13 @@ namespace WebDAVDrive
                     return;
             }
 
+            registrar = new SparsePackageRegistrar(Log, ShellExtension.ShellExtensions.Handlers);
+            consoleProcessor = new ConsoleProcessor(registrar, logFormatter, Settings.AppID);
+
+            // Print console commands.
+            consoleProcessor.PrintHelp();
+
+            TrayUI trayUI = null;
             try
             {
                 ValidatePackagePrerequisites();
@@ -135,18 +117,109 @@ namespace WebDAVDrive
                     return; // Sparse package registered - restart the sample.
                 }
 
+                // Start console input processing.
+                Task taskConsole = StartConsoleReadKeyAsync();
+
+                // Start tray processing.
+                trayUI = new TrayUI();
+                Task taskTrayUI = trayUI.StartAsync();
+
                 // Register this app to process COM shell extensions calls.
                 using (ShellExtension.ShellExtensions.StartComServer(Settings.ShellExtensionsComServerRpcEnabled))
                 {
-                    // Run the User File System Engine.
-                    await RunEngineAsync();
+                    
+                    // Read mounted file systems.
+                    var syncRoots = await Registrar.GetMountedSyncRootsAsync(Settings.AppID, Log);
+                    if (!syncRoots.Any())
+                    {
+                        // This is first start. Mount file system roots from settings.
+                        await MountNewAsync(Settings.WebDAVServerURLs);
+                    }
+                    else
+                    {
+                        // Roots were lready mountied during previous runs. This is app restart or reboot.
+                        await RunExistingAsync(syncRoots);
+                    }
+
+                    // Wait for console or all tray apps exit.
+                    //System.Windows.Forms.Application.Run();
+
+                    Task.WaitAny(taskConsole, taskTrayUI);
                 }
             }
             catch (Exception ex)
             {
-                log.Error($"\n\n Press Shift-Esc to fully uninstall the app. Then start the app again.\n\n", ex);
+                Log.Error($"\n\n Press Shift-Esc to fully uninstall the app. Then start the app again.\n\n", ex);
                 await consoleProcessor.ProcessUserInputAsync();
             }
+            finally
+            {
+                trayUI?.Dispose();
+
+                foreach (var keyValue in Engines)
+                {
+                    keyValue.Value?.Dispose();
+                }
+            }
+        }
+
+        private static async Task RunExistingAsync(IEnumerable<Windows.Storage.Provider.StorageProviderSyncRootInfo> syncRoots)
+        {
+            foreach (var syncRoot in syncRoots)
+            {
+                string webDAVServerUrl = syncRoot.GetRemoteStoragePath();
+                // Run the User File System Engine.
+                await TryCreateEngineAsync(webDAVServerUrl, syncRoot.Path.Path);
+            }
+        }
+
+        private static async Task MountNewAsync(string[] webDAVServerURLs)
+        {
+            // Mount new file system for each URL, run Engine and tray app.
+            foreach (string webDAVServerUrl in webDAVServerURLs)
+            {
+                // Register sync root and run User File System Engine.
+                await TryMountNewAsync(webDAVServerUrl);
+            }
+        }
+
+        private static async Task<bool> TryMountNewAsync(string webDAVServerUrl)
+        {
+            string userFileSystemRootPath = null;
+            try
+            {
+                userFileSystemRootPath = GenerateRootPathForProtocolMounting();
+                string displayName = GetDisplayName(webDAVServerUrl);
+
+                // Register sync root and create app folders.
+                await registrar.RegisterSyncRootAsync(
+                    GetSyncRootId(webDAVServerUrl),
+                    userFileSystemRootPath,
+                    webDAVServerUrl,
+                    displayName,
+                    Path.Combine(Settings.IconsFolderPath, "Drive.ico"),
+                    Settings.ShellExtensionsComServerExePath);
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Failed to mount file system {webDAVServerUrl} {userFileSystemRootPath}", ex);
+                return false;
+            }
+            // Run the User File System Engine.
+            return await TryCreateEngineAsync(webDAVServerUrl, userFileSystemRootPath);
+        }
+
+        private static string GetDisplayName(string webDAVServerUrl)
+        {
+            return webDAVServerUrl.Remove(0, "https://".Length);
+        }
+
+        private static string GenerateRootPathForProtocolMounting()
+        {
+            string userProfilePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string randomName = Path.GetRandomFileName();
+            string folderName = Path.GetFileNameWithoutExtension(randomName);
+            return Path.Combine(userProfilePath, "DAV", folderName);            
         }
 
         /// <summary>
@@ -161,85 +234,58 @@ namespace WebDAVDrive
             }
         }
 
-        private static async Task RunEngineAsync()
+        private static async Task<bool> TryCreateEngineAsync(string webDAVServerUrl, string userFileSystemRootPath)
         {
-            // Register sync root and create app folders.
-            await registrar.RegisterSyncRootAsync(Settings.ProductName, Path.Combine(Settings.IconsFolderPath, "Drive.ico"), Settings.ShellExtensionsComServerExePath);
-
-            using (Engine = new VirtualEngine(
-                Settings.UserFileSystemLicense,
-                Settings.UserFileSystemRootPath,
-                Settings.WebDAVServerUrl,
-                Settings.WebSocketServerUrl,
-                Settings.IconsFolderPath,
-                Settings.AutoLockTimoutMs,
-                Settings.ManualLockTimoutMs,
-                Settings.SetLockReadOnly,
-                logFormatter))
+            try
             {
-                commands.Engine = Engine;
-                commands.RemoteStorageMonitor = Engine.RemoteStorageMonitor;
+                Uri webDAVServer = new Uri(webDAVServerUrl);
+                string webSocketsProtocol = webDAVServer.Scheme == "https" ? "wss" : "ws";
+                string webSocketServerUrl = $"{webSocketsProtocol}://{webDAVServer.Authority}/";
+                
+                VirtualEngine engine = new VirtualEngine(
+                    Settings.UserFileSystemLicense,
+                    userFileSystemRootPath,
+                    webDAVServerUrl,
+                    webSocketServerUrl,
+                    Settings.IconsFolderPath,
+                    Settings.AutoLockTimoutMs,
+                    Settings.ManualLockTimoutMs,
+                    Settings.SetLockReadOnly,
+                    logFormatter,
+                    Settings.ProductName);
 
-                Engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
-                Engine.AutoLock = Settings.AutoLock;
-                Engine.MaxTransferConcurrentRequests = Settings.MaxTransferConcurrentRequests.Value;
-                Engine.MaxOperationsConcurrentRequests = Settings.MaxOperationsConcurrentRequests.Value;
-                Engine.ShellExtensionsComServerRpcEnabled = Settings.ShellExtensionsComServerRpcEnabled; // Enable RPC in case RPC shaell extension handlers, hosted in separate process. 
+                Engines.TryAdd(engine.InstanceId, engine);
+                //engine.Tray.MenuExit.Click += async (object sender, EventArgs e) => { await RemoveEngineAsync(engine, false); };
+                //engine.Tray.MenuUnmount.Click += async (object sender, EventArgs e) => { await RemoveEngineAsync(engine, true); };
 
-                // Print console commands.
-                consoleProcessor.PrintHelp();
+                consoleProcessor.Commands.TryAdd(engine.InstanceId, engine.Commands);
+
+                engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
+                engine.SyncService.IncomingSyncMode = ITHit.FileSystem.Synchronization.IncomingSyncMode.SyncId;
+                engine.AutoLock = Settings.AutoLock;
+                engine.MaxTransferConcurrentRequests = Settings.MaxTransferConcurrentRequests.Value;
+                engine.MaxOperationsConcurrentRequests = Settings.MaxOperationsConcurrentRequests.Value;
+                engine.ShellExtensionsComServerRpcEnabled = Settings.ShellExtensionsComServerRpcEnabled; // Enable RPC in case RPC shaell extension handlers, hosted in separate process. 
 
                 // Print Engine config, settings, logging headers.
-                await logFormatter.PrintEngineStartInfoAsync(Engine);
+                await logFormatter.PrintEngineStartInfoAsync(engine, webDAVServerUrl);
 
 #if DEBUG
-                // Open remote storage.
-                Commands.Open(Settings.WebDAVServerUrl);
+                Commands.Open(webDAVServerUrl); // Open remote storage.
 #endif
-                using (DavClient = CreateWebDavSession(Engine.InstanceId))
-                {
-                    // Set the remote storage item ID for the root folder. It will be passed to the IEngine.GetFileSystemItemAsync()
-                    // method as a remoteStorageItemId parameter when a root folder is requested.
-                    byte[] remoteStorageItemId = await GetRootRemoteStorageItemId();                    
-                    Engine.SetRemoteStorageRootItemId(remoteStorageItemId);
-
-                    // Start processing OS file system calls.
-                    await Engine.StartAsync();
+                // Start processing OS file system calls.
+                await engine.StartAsync();
 #if DEBUG
-                    // Opens Windows File Manager with user file system folder and remote storage folder.
-                    commands.ShowTestEnvironment(false);
+                // Start Windows File Manager with user file system folder.
+                engine.Commands.ShowTestEnvironment(GetDisplayName(webDAVServerUrl), false);
 #endif
-                    // Keep this application running and reading user input
-                    // untill the tray app exits or an exit key in the console is selected.
-                    Task console = StartConsoleReadKeyAsync();
-                    Task tray = WindowsTrayInterface.StartTrayInterfaceAsync(Settings.ProductName, Settings.IconsFolderPath, commands, Engine);
-                    Task.WaitAny(console, tray);
-                }
+                return true;
             }
-        }
-
-        /// <summary>
-        /// Gets remote storage item ID for the foor folder.
-        /// </summary>
-        private static async Task<byte[]> GetRootRemoteStorageItemId()
-        {
-            // Specifying properties to get from the WebDAV server.
-            PropertyName[] propNames = new PropertyName[2];
-            propNames[0] = new PropertyName("resource-id", "DAV:");
-            propNames[1] = new PropertyName("parent-resource-id", "DAV:");
-
-            // Sending request to the server.
-            IHierarchyItem rootFolder = (await DavClient.GetItemAsync(new Uri(Settings.WebDAVServerUrl), propNames)).WebDavResponse;
-
-            byte[] remoteStorageItemId = Mapping.GetUserFileSystemItemMetadata(rootFolder).RemoteStorageItemId;
-
-            // This sample requires synchronization support, verifying that the ID was returned.
-            if (remoteStorageItemId == null)
+            catch (Exception ex)
             {
-                throw new WebDavException("remote-id or parent-resource-id is not found. Your WebDAV server does not support collection synchronization. Upgrade your .NET WebDAV server to v13.2 or Java WebDAV server to v6.2 or later version.");
+                Log.Error($"Failed to start Engine {webDAVServerUrl} {userFileSystemRootPath}", ex);
+                return false;
             }
-
-            return remoteStorageItemId;
         }
 
         private static async Task StartConsoleReadKeyAsync()
@@ -248,181 +294,56 @@ namespace WebDAVDrive
         }
 
         /// <summary>
-        /// Creates and configures WebDAV client to access the remote storage.
-        /// </summary>
-        /// <param name="engineInstanceId">Engine instance ID to be sent with every request to the remote storage.</param>
-        private static WebDavSession CreateWebDavSession(Guid engineInstanceId)
-        {
-            System.Net.Http.HttpClientHandler handler = new System.Net.Http.HttpClientHandler()
-            {
-                AllowAutoRedirect = false,
-
-                // To enable pre-authentication (to avoid double requests) uncomment the code below.
-                // This option improves performance but is less secure. 
-                // PreAuthenticate = true,
-            };
-            WebDavSession davClient = new WebDavSession(Program.Settings.WebDAVClientLicense);
-            davClient.WebDavError += DavClient_WebDavError;
-            davClient.WebDavMessage += DavClient_WebDAVMessage;
-            davClient.CustomHeaders.Add("InstanceId", engineInstanceId.ToString());
-            return davClient;
-        }
-
-        /// <summary>
-        /// Fired on every request to the WebDAV server. 
-        /// </summary>
-        /// <param name="sender">Request to the WebDAV client.</param>
-        /// <param name="e">WebDAV message details.</param>
-        private static void DavClient_WebDAVMessage(ISession client, WebDavMessageEventArgs e)
-        {
-            string msg = $"\n{e.Message}";
-
-            if (logFormatter.DebugLoggingEnabled)
-            {
-                log.Debug($"{msg}\n");
-            }
-        }
-
-        /// <summary>
-        /// Event handler to process WebDAV errors. 
-        /// If server returns 401 or 302 response here we show the login dialog.
-        /// </summary>
-        /// <param name="sender">WebDAV session.</param>
-        /// <param name="e">WebDAV error details.</param>
-        private static void DavClient_WebDavError(ISession sender, WebDavErrorEventArgs e)
-        {
-            WebDavHttpException httpException = e.Exception as WebDavHttpException;
-            if (httpException != null)
-            {
-                switch (httpException.Status.Code)
-                {
-                    // 302 redirect to login page.
-                    case 302:
-                        log.Debug($"\n{httpException?.Status.Code} {httpException?.Status.Description} {e.Exception.Message} ");
-
-                        // Show login dialog.
-
-                        // Azure AD can not navigate directly to login page - failed corelation.
-                        //string loginUrl = ((Redirect302Exception)e.Exception).Location;
-                        //Uri url = new System.Uri(loginUrl, System.UriKind.Absolute);
-
-                        Uri failedUri = (e.Exception as WebDavHttpException).Uri;
-
-                        WebBrowserLogin(failedUri);
-
-                        // Replay the request, so the listing or update can complete succesefully.
-                        // Unless this is LOCK - incorrect lock owner map be passed in this case.
-                        //bool isLock = httpException.HttpMethod.NotEquals("LOCK", StringComparison.InvariantCultureIgnoreCase);
-                        bool isLock = false;
-                        e.Result = isLock ? WebDavErrorEventResult.Fail : WebDavErrorEventResult.Repeat;
-
-                        break;
-
-                    // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
-                    case 401:
-                        log.Debug($"\n{httpException?.Status.Code} {httpException?.Status.Description} {e.Exception.Message} ");
-
-                        if (loginRetriesCurrent < loginRetriesMax)
-                        {
-                            failedUri = (e.Exception as WebDavHttpException).Uri;
-                            e.Result = ChallengeLoginLogin(failedUri);
-                        }
-                        break;
-                    default:
-                        ILogger logger = Engine.Logger.CreateLogger("WebDAV Session");
-                        logger.LogMessage($"{httpException.Status.Code} {e.Exception.Message}", httpException.Uri.ToString());
-                        break;
-                }
-            }
-        }
-
-        private static void WebBrowserLogin(Uri failedUri)
-        {
-            WebDAVDrive.UI.WebBrowserLogin webBrowserLogin = null;
-            Thread thread = new Thread(() =>
-            {
-                webBrowserLogin = new WebDAVDrive.UI.WebBrowserLogin(failedUri, log);
-                webBrowserLogin.Title = Settings.ProductName;
-                webBrowserLogin.ShowDialog();
-            });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
-            thread.Join();
-
-            // Request currenly loged-in user name or ID from server here and set it below. 
-            // In case of WebDAV current-user-principal can be used for this purpose.
-            // For demo purposes we just set "DemoUserX".
-            Engine.CurrentUserPrincipal = "DemoUserX";
-
-            // Set cookies collected from the web browser dialog.
-            DavClient.CookieContainer.Add(webBrowserLogin.Cookies);
-            Engine.Cookies = webBrowserLogin.Cookies;
-        }
-
-        private static WebDavErrorEventResult ChallengeLoginLogin(Uri failedUri)
-        {
-            Windows.Security.Credentials.PasswordCredential passwordCredential = CredentialManager.GetCredentials(Settings.ProductName, log);
-            if (passwordCredential != null)
-            {
-                passwordCredential.RetrievePassword();
-                NetworkCredential networkCredential = new NetworkCredential(passwordCredential.UserName, passwordCredential.Password);
-                DavClient.Credentials = networkCredential;
-                Engine.Credentials = networkCredential;
-                Engine.CurrentUserPrincipal = networkCredential.UserName;
-                return WebDavErrorEventResult.Repeat;
-            }
-            else
-            {
-                string login = null;
-                SecureString password = null;
-                bool dialogResult = false;
-                bool keepLogedin = false;
-
-                // Show login dialog
-                WebDAVDrive.UI.ChallengeLogin loginForm = null;
-                Thread thread = new Thread(() =>
-                {
-                    loginForm = new WebDAVDrive.UI.ChallengeLogin();
-                    ((ChallengeLoginViewModel)loginForm.DataContext).Url = failedUri.OriginalString;
-                    ((ChallengeLoginViewModel)loginForm.DataContext).WindowTitle = Settings.ProductName;
-                    loginForm.ShowDialog();
-
-                    login = ((ChallengeLoginViewModel)loginForm.DataContext).Login;
-                    password = ((ChallengeLoginViewModel)loginForm.DataContext).Password;
-                    keepLogedin = ((ChallengeLoginViewModel)loginForm.DataContext).KeepLogedIn;
-                    dialogResult = (bool)loginForm.DialogResult;
-                });
-                thread.SetApartmentState(ApartmentState.STA);
-                thread.Start();
-                thread.Join();
-
-                loginRetriesCurrent++;
-                if (dialogResult)
-                {
-                    if (keepLogedin)
-                    {
-                        CredentialManager.SaveCredentials(Settings.ProductName, login, password);
-                    }
-                    NetworkCredential newNetworkCredential = new NetworkCredential(login, password);
-                    DavClient.Credentials = newNetworkCredential;
-                    Engine.Credentials = newNetworkCredential;
-                    Engine.CurrentUserPrincipal = newNetworkCredential.UserName;
-                    return WebDavErrorEventResult.Repeat;
-                }
-            }
-
-            return WebDavErrorEventResult.Fail;
-        }
-
-        /// <summary>
         /// Gets automatically generated Sync Root ID.
         /// </summary>
         /// <remarks>An identifier in the form: [Storage Provider ID]![Windows SID]![Account ID]</remarks>
-        private static string SyncRootId
+        private static string GetSyncRootId(string remoteStoragePathRoot)
         {
-            get
+            return $"{Settings.AppID}!{System.Security.Principal.WindowsIdentity.GetCurrent().User}!{remoteStoragePathRoot}!User";
+        }
+
+        /// <summary>
+        /// Stops the Engine and removes it from the list of running engines, exits tray app, 
+        /// exit app if engine list is empty. Optionally unmount sync root.
+        /// </summary>
+        /// <param name="engine">Engine instance.</param>
+        /// <param name="unregisterSyncRoot">Pass true to unmount sync root.</param>
+        public static async Task RemoveEngineAsync(VirtualEngine engine, bool unregisterSyncRoot)
+        {
+            Log.Info($"\n\nRemoving {engine.RemoteStorageRootPath}");
+            if (!unregisterSyncRoot)
             {
-                return $"{Settings.AppID}!{System.Security.Principal.WindowsIdentity.GetCurrent().User}!User";
+                Log.Info("\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.");
+                Log.Info("\nYou can edit documents when the app is not running and than start the app to sync all changes to the remote storage.\n");
+            }
+            else
+            {
+                Log.Info("\nAll downloaded file / folder are deleted.");
+            }
+
+            // Stop Engine.
+            if (engine?.State == EngineState.Running)
+            {
+                await engine.StopAsync();
+            }
+
+            Engines.TryRemove(engine.InstanceId, out _);
+            consoleProcessor.Commands.TryRemove(engine.InstanceId, out _);
+
+            // Unmount sync root.
+            if (unregisterSyncRoot)
+            {
+                await Registrar.UnregisterSyncRootAsync(engine.Path, engine.DataPath, Program.Log);
+            }
+            engine.Dispose();
+
+            // Refresh Windows Explorer.
+            PlaceholderItem.UpdateUI(Path.GetDirectoryName(engine.Path));
+
+            // If no Engines are running exit the app.
+            if (!Engines.Any())
+            {
+                System.Windows.Forms.Application.Exit();
             }
         }
     }

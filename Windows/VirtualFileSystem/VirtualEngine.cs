@@ -65,44 +65,50 @@ namespace VirtualFileSystem
                 // If incoming update failed becase a file is in use,
                 // try to show merge dialog (for MS Office, etc.).
                 if (e.Direction == SyncDirection.Incoming
-                    && e.OperationType == OperationType.Update)
+                    && e.OperationType == OperationType.UpdateContent)
                 {
                     switch (e.Result.Status)
                     {
                         case OperationStatus.FileInUse:
-                            ITHit.FileSystem.Windows.AppHelper.MergeHelper.TryNotifyUpdateAvailable(item.Path, e.Result.ShadowFilePath);
+                            ITHit.FileSystem.Windows.AppHelper.Utilities.TryNotifyUpdateAvailable(item.Path, e.Result.ShadowFilePath);
                             break;
                     }
                 }
 
-
                 // Log info about the opertion.
-                switch (e.Result.Status)
-                {
-                    case OperationStatus.Success:
-                        switch (e.Direction)
-                        {
-                            case SyncDirection.Incoming:
-                                logger.LogMessage($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
-                                break;
-                            case SyncDirection.Outgoing:
-                                logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
-                                break;
-                        }
-                        break;
-                    case OperationStatus.Conflict:
-                        logger.LogMessage($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
-                        break;
-                    case OperationStatus.Exception:
-                        logger.LogError($"{e.Direction} {e.OperationType}", item.Path, item.NewPath, e.Result.Exception);
-                        break;
-                    case OperationStatus.Filtered:
-                        logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status} by {e.Result.FilteredBy.GetType().Name}", item.Path, item.NewPath, e.OperationContext);
-                        break;
-                    default:
-                        logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status}. {e.Result.Message}", item.Path, item.NewPath, e.OperationContext);
-                        break;
-                }
+                LogItemChange(e, item);
+            }
+        }
+
+        private void LogItemChange(ItemsChangeEventArgs e, ChangeEventItem item)
+        {
+            var logger = Logger.CreateLogger(e.ComponentName);
+
+            switch (e.Result.Status)
+            {
+                case OperationStatus.Success:
+                    switch (e.Direction)
+                    {
+                        case SyncDirection.Incoming:
+                            logger.LogMessage($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
+                            break;
+                        case SyncDirection.Outgoing:
+                            logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
+                            break;
+                    }
+                    break;
+                case OperationStatus.Conflict:
+                    logger.LogMessage($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
+                    break;
+                case OperationStatus.Exception:
+                    logger.LogError($"{e.Direction} {e.OperationType}", item.Path, item.NewPath, e.Result.Exception);
+                    break;
+                case OperationStatus.Filtered:
+                    logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status} by {e.Result.FilteredBy.GetType().Name}", item.Path, item.NewPath, e.OperationContext);
+                    break;
+                default:
+                    logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status}. {e.Result.Message}", item.Path, item.NewPath, e.OperationContext);
+                    break;
             }
         }
 

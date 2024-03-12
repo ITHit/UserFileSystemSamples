@@ -10,6 +10,8 @@ using WebDAVCommon;
 using Common.Core;
 using ITHit.FileSystem.Mac;
 using ITHit.WebDAV.Client;
+using System.Security.Policy;
+using FileProvider;
 
 namespace WebDAVFileProviderExtension
 {
@@ -38,7 +40,7 @@ namespace WebDAVFileProviderExtension
         /// <returns>User file system item info.</returns>
         public static IFileSystemItemMetadata GetUserFileSystemItemMetadata(Client.IHierarchyItem remoteStorageItem)
         {
-            IFileSystemItemMetadata userFileSystemItem;
+            IFileSystemItemMetadataMac userFileSystemItem;
 
             if (remoteStorageItem is Client.IFile)
             {
@@ -48,6 +50,7 @@ namespace WebDAVFileProviderExtension
                 userFileSystemItem.Attributes = FileAttributes.Normal;
 
                 // Set etag.
+                ((FileMetadataMac)userFileSystemItem).ContentETag = remoteStorageFile.Etag;
                 userFileSystemItem.Properties.AddOrUpdate("eTag", remoteStorageFile.Etag);
             }
             else
@@ -57,11 +60,21 @@ namespace WebDAVFileProviderExtension
             }
 
             userFileSystemItem.Name = remoteStorageItem.DisplayName;
-            userFileSystemItem.RemoteStorageItemId = GetPropertyValue(remoteStorageItem, "resource-id", remoteStorageItem.Href.AbsoluteUri);
-            userFileSystemItem.RemoteStorageParentItemId = GetPropertyValue(remoteStorageItem, "parent-resource-id", null);
+            userFileSystemItem.RemoteStorageItemId = Encoding.UTF8.GetBytes(GetPropertyValue(remoteStorageItem, "resource-id", remoteStorageItem.Href.AbsoluteUri));
+            userFileSystemItem.RemoteStorageParentItemId = Encoding.UTF8.GetBytes(GetPropertyValue(remoteStorageItem, "parent-resource-id",
+                remoteStorageItem.Href.AbsoluteUri.Remove(remoteStorageItem.Href.AbsoluteUri.Length - remoteStorageItem.Href.Segments.Last().Length)));
+            userFileSystemItem.MetadataETag = GetPropertyValue(remoteStorageItem, "metadata-Etag", null);
+
+            // Set item capabilities.
+            userFileSystemItem.Capabilities = FileSystemItemCapabilityMac.Writing
+               | FileSystemItemCapabilityMac.Deleting
+               | FileSystemItemCapabilityMac.Reading
+               | FileSystemItemCapabilityMac.Renaming
+               | FileSystemItemCapabilityMac.Reparenting
+               | FileSystemItemCapabilityMac.ExcludingFromSync;
 
             if (DateTime.MinValue != remoteStorageItem.CreationDate)
-            { 
+            {
                 DateTimeOffset lastModifiedDate = remoteStorageItem.LastModified;
                 userFileSystemItem.CreationTime = remoteStorageItem.CreationDate;
                 userFileSystemItem.LastWriteTime = lastModifiedDate;
@@ -87,7 +100,13 @@ namespace WebDAVFileProviderExtension
 
                 // Add Unclock context menu for the item in macOS finder.
                 userFileSystemItemMac.UserInfo.AddOrUpdate("locked", "1");
-            }       
+
+                if(lockInfo.Owner != Environment.UserName)
+                {
+                    // Set readOnly attributes when a file is locked by another user.
+                    userFileSystemItem.Attributes |= FileAttributes.ReadOnly;
+                }
+            }
 
             return userFileSystemItem;
         }
@@ -95,25 +114,18 @@ namespace WebDAVFileProviderExtension
         /// <summary>
         /// Returns property value, if property not exists returns default value.
         /// </summary>
-        private static byte[] GetPropertyValue(Client.IHierarchyItem remoteStorageItem, string propertyName, string defaultValue)
+        private static string GetPropertyValue(Client.IHierarchyItem remoteStorageItem, string propertyName, string defaultValue)
         {
-            byte[] resultValue = null;
-            try
-            {
-                Client.Property property = remoteStorageItem.Properties.Where(p => p.Name.Name == propertyName).FirstOrDefault();
-                if (property != null)
-                {
-                    resultValue = Encoding.UTF8.GetBytes(property.StringValue);
-                }
-                else if(defaultValue != null)
-                {
-                    resultValue = Encoding.UTF8.GetBytes(defaultValue);
-                }
+            string resultValue = null;
 
-            }
-            catch (Exception ex)
+            Client.Property property = remoteStorageItem.Properties.Where(p => p.Name.Name == propertyName).FirstOrDefault();
+            if (property != null)
             {
-                (new ConsoleLogger("Mapping")).LogError($"Error parsing {remoteStorageItem.Href.AbsoluteUri} property {propertyName}", ex: ex);
+                resultValue = property.StringValue;
+            }
+            else if (defaultValue != null)
+            {
+                resultValue = defaultValue;
             }
 
             return resultValue;

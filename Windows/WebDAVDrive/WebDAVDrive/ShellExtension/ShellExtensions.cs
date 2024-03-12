@@ -28,6 +28,7 @@ namespace WebDAVDrive.ShellExtension
             ("ThumbnailProvider", typeof(ThumbnailProviderIntegrated).GUID, false),
             ("MenuVerbHandler_0", typeof(ContextMenuVerbIntegratedLock).GUID, false),
             ("MenuVerbHandler_1", typeof(ContextMenuVerbIntegratedCompare).GUID, false),
+            ("MenuVerbHandler_2", typeof(ContextMenuVerbIntegratedUnmount).GUID, false),
             ("CustomStateHandler", typeof(CustomStateProviderIntegrated).GUID, false),
             //("UriHandler", typeof(ShellExtension.UriSourceIntegrated).GUID, false)
         };
@@ -52,6 +53,7 @@ namespace WebDAVDrive.ShellExtension
             server.RegisterClass<ThumbnailProviderIntegrated>();
             server.RegisterClass<ContextMenuVerbIntegratedLock>();
             server.RegisterClass<ContextMenuVerbIntegratedCompare>();
+            server.RegisterClass<ContextMenuVerbIntegratedUnmount>();
             server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProviderIntegrated>();
             //server.RegisterWinRTClass<IStorageProviderUriSource, ShellExtension.UriSourceIntegrated>();
 

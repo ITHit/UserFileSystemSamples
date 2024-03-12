@@ -66,7 +66,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <inheritdoc/>
-        public async Task InvokeAsync(IEnumerable<string> filesPath, IEnumerable<byte[]> remoteStorageItemIds = null)
+        public async Task InvokeAsync(IEnumerable<string> filesPath, IEnumerable<byte[]> remoteStorageItemIds = null, CancellationToken cancellationToken = default)
         {
             // If you need a remote storage ID for each item use the following code:
             //foreach (string userFileSystemPath in filesPath)

@@ -1,6 +1,4 @@
 using System;
-using System.IO;
-using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -91,19 +89,18 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         private void Engine_ItemsChanged(Engine sender, ItemsChangeEventArgs e)
         {
-            var logger = Logger.CreateLogger(e.ComponentName);
             foreach (ChangeEventItem item in e.Items)
             {
-                // Save custom properties received from the remote storage
-                // that will be displayed in Windows Explorer columns.
-                if (e.Direction == SyncDirection.Incoming && e.Result.Status == OperationStatus.Success)
+                // Save custom properties received from the remote storage here
+                // they will be displayed in Windows Explorer columns.
+                if (e.Direction == SyncDirection.Incoming && e.Result.IsSuccess)
                 {
                     switch (e.OperationType)
                     {
                         case OperationType.Create:
                         //case OperationType.CreateCompletion:
                         case OperationType.Populate:
-                        case OperationType.Update:
+                        case OperationType.UpdateMetadata:
                             if (item.Metadata != null)
                             {
                                 item.Properties.SaveProperties(item.Metadata as FileSystemItemMetadataExt);
@@ -113,46 +110,54 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 }
 
                 // If incoming update failed becase a file is in use,
-                // try to show merge dialog (for MS Office, etc.).
+                // try to show merge dialog (for MS Office Word, PowerPoint etc.).
                 if (e.Direction == SyncDirection.Incoming
-                    && e.OperationType == OperationType.Update)
+                    && e.OperationType == OperationType.UpdateContent)
                 {
                     switch (e.Result.Status)
                     {
                         case OperationStatus.FileInUse:
-                            ITHit.FileSystem.Windows.AppHelper.MergeHelper.TryNotifyUpdateAvailable(item.Path, e.Result.ShadowFilePath);
+                            ITHit.FileSystem.Windows.AppHelper.Utilities.TryNotifyUpdateAvailable(item.Path, e.Result.ShadowFilePath);
                             break;
                     }
                 }
 
-
                 // Log info about the opertion.
-                switch (e.Result.Status)
-                {
-                    case OperationStatus.Success:
-                        switch (e.Direction)
-                        {
-                            case SyncDirection.Incoming:
-                                logger.LogMessage($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
-                                break;
-                            case SyncDirection.Outgoing:
-                                logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
-                                break;
-                        }
-                        break;
-                    case OperationStatus.Conflict:
-                        logger.LogMessage($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
-                        break;
-                    case OperationStatus.Exception:
-                        logger.LogError($"{e.Direction} {e.OperationType}", item.Path, item.NewPath, e.Result.Exception);
-                        break;
-                    case OperationStatus.Filtered:
-                        logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status} by {e.Result.FilteredBy.GetType().Name}", item.Path, item.NewPath, e.OperationContext);
-                        break;
-                    default:
-                        logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status}. {e.Result.Message}", item.Path, item.NewPath, e.OperationContext);
-                        break;
-                }
+                LogItemChange(e, item);
+            }
+        }
+
+        private void LogItemChange(ItemsChangeEventArgs e, ChangeEventItem item)
+        {
+            ILogger logger = Logger.CreateLogger(e.ComponentName);
+            string msg = $"{e.Direction} {e.OperationType}: {e.Result.Status}";
+            switch (e.Result.Status)
+            {
+                case OperationStatus.Success:
+                    switch (e.Direction)
+                    {
+                        case SyncDirection.Incoming:
+                            logger.LogMessage(msg, item.Path, item.NewPath, e.OperationContext);
+                            break;
+                        case SyncDirection.Outgoing:
+                            logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext);
+                            break;
+                    }
+                    break;
+                case OperationStatus.Conflict:
+                    logger.LogMessage(msg, item.Path, item.NewPath, e.OperationContext);
+                    break;
+                case OperationStatus.Exception:
+                    logger.LogError(msg, item.Path, item.NewPath, e.Result.Exception);
+                    break;
+                case OperationStatus.Filtered:
+                    msg = $"{msg} by {e.Result.FilteredBy.GetType().Name}";
+                    logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext);
+                    break;
+                default:
+                    msg = $"{msg}. {e.Result.Message}";
+                    logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext);
+                    break;
             }
         }
 
@@ -201,7 +206,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="e">Contains new and old Engine state.</param>
         private void Engine_StateChanged(Engine engine, EngineWindows.StateChangeEventArgs e)
         {
-            engine.Logger.LogMessage($"{e.NewState}");
+            engine.Logger.LogMessage($"{e.NewState}", engine.Path);
         }
 
         /// <summary>
@@ -213,7 +218,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             if (e.NewState == SynchronizationState.Enabled || e.NewState == SynchronizationState.Disabled)
             {
-                SyncService.Logger.LogMessage($"{e.NewState}");
+                SyncService.Logger.LogMessage($"{e.NewState}", this.Path);
             }
         }
 

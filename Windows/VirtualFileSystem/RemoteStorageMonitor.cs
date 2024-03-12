@@ -16,9 +16,8 @@ namespace VirtualFileSystem
     /// this class triggers an event with information about changes.
     /// </summary>
     /// <remarks>
-    /// Here, for demo purposes we simulate server by monitoring source file path using FileWatchWrapper.
-    /// In your application, instead of using FileWatchWrapper, you will connect to your remote storage using web sockets 
-    /// or any other technology.
+    /// Here, for demo purposes we simulate server by monitoring source file path using file system watcher.
+    /// In your application, you will connect to your remote storage using web sockets or similar technology.
     /// </remarks>
     public class RemoteStorageMonitor : ISyncService, IDisposable
     {

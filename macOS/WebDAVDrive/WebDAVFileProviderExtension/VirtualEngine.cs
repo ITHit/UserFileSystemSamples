@@ -96,14 +96,7 @@ namespace WebDAVFileProviderExtension
             {
                 WebDavSession.Dispose();
             }
-            WebDavSession = new WebDavSession(AppGroupSettings.Settings.Value.WebDAVClientLicense);
-            WebDavSession.CustomHeaders.Add("InstanceId", Environment.MachineName);
-
-            string loginType = SecureStorage.GetAsync("LoginType").Result;
-            if (!string.IsNullOrEmpty(loginType) && loginType.Equals("UserNamePassword"))
-            {
-                WebDavSession.Credentials = new NetworkCredential(SecureStorage.GetAsync("UserName").Result, SecureStorage.GetAsync("Password").Result);
-            }
+            WebDavSession = WebDavSessionUtils.GetWebDavSessionAsync().Result;
         }
 
         /// <inheritdoc/>

@@ -73,6 +73,10 @@
         </Command>
         <Command>
           <type>AfterBuild</type>
+          <command>cp -rf "${ProjectDir}/../WebDAVFileProviderUIExtension/bin/Release/WebDAVFileProviderUIExtension.appex" "${TargetDir}/WebDAV Drive.app/Contents/PlugIns"</command>
+        </Command>
+        <Command>
+          <type>AfterBuild</type>
           <command>codesign --force --sign "Mac Developer" --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der "${TargetDir}/WebDAV Drive.app"</command>
         </Command>
         <Command>
@@ -141,7 +145,7 @@
     </BundleResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem" Version="8.0.26019-Beta" />
+    <PackageReference Include="ITHit.FileSystem" Version="8.1.26224-Beta2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WebDAVCommon\WebDAVCommon.csproj" />

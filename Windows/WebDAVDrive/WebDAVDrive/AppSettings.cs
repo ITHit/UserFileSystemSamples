@@ -7,6 +7,7 @@ using System.Reflection;
 using ITHit.FileSystem.Samples.Common;
 using WebDAVDrive.UI;
 
+
 namespace WebDAVDrive
 {
     /// <summary>
@@ -20,14 +21,9 @@ namespace WebDAVDrive
         public string WebDAVClientLicense { get; set; }
 
         /// <summary>
-        /// WebDAV server URL.
+        /// WebDAV server URLs.
         /// </summary>
-        public string WebDAVServerUrl { get; set; }
-
-        /// <summary>
-        /// WebSocket server URL.
-        /// </summary>
-        public string WebSocketServerUrl { get; set; }
+        public string[] WebDAVServerURLs { get; set; }
 
         /// <summary>
         /// Automatic lock timout in milliseconds.
@@ -108,12 +104,15 @@ namespace WebDAVDrive
 
             configuration.Bind(settings);
 
-            if (string.IsNullOrEmpty(settings.WebDAVServerUrl))
-            {
-                settings.WebDAVServerUrl = RegistryManager.GetURL(settings);
-            }
 
-            settings.WebDAVServerUrl = $"{settings.WebDAVServerUrl.TrimEnd('/')}/";
+            if (settings.WebDAVServerURLs == null || settings.WebDAVServerURLs.Length == 0)
+            {
+                settings.WebDAVServerURLs = new string[1] { RegistryManager.GetURL(settings) };
+            }
+            for (int i=0; i < settings.WebDAVServerURLs.Length; i++)
+            {
+                settings.WebDAVServerURLs[i] = $"{settings.WebDAVServerURLs[i].TrimEnd('/')}/";
+            }
 
             if (string.IsNullOrEmpty(settings.UserFileSystemRootPath))
             {

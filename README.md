@@ -83,5 +83,18 @@ Note that these steps are NOT required for development. Sample project provided 
 </p>
 </a>
 </li>
+<li>
+<a class="link-header" href="https://www.userfilesystem.com/examples/ios_deployment/">
+<h2>iOS File Provider Extension Projects Deployment</h2>
+</a>
+
+<a href="https://www.userfilesystem.com/examples/ios_deployment/">
+<p>
+To deploy iOS project you will need to create&nbsp;Group ID, App Identifies and Provisioning Profiles.&nbsp;
+The project requires a physical device. You can NOT run the project on iOS simulator. You MUST add a device to a devices list.
+Unlike with macOS, ALL b                                            <span>...</span>
+</p>
+</a>
+</li>
 </ul>
 

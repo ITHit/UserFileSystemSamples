@@ -19,6 +19,6 @@
     <LinkMode>None</LinkMode>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem" Version="8.0.26019-Beta" />
+    <PackageReference Include="ITHit.FileSystem" Version="8.1.26224-Beta2" />
   </ItemGroup>
 </Project>

@@ -11,6 +11,7 @@ using ITHit.FileSystem.Synchronization;
 using System.Text;
 using ITHit.WebDAV.Client.Exceptions;
 using WebDAVCommon;
+using ITHit.FileSystem.Exceptions;
 
 namespace WebDAVFileProviderExtension
 {
@@ -31,7 +32,7 @@ namespace WebDAVFileProviderExtension
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream? content = null, IOperationContext operationContext = null, IInSyncResultContext? inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFileMetadata> CreateFileAsync(IFileMetadata fileMetadata, Stream? content = null, IOperationContext operationContext = null, IInSyncResultContext? inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Uri newFileUri = new Uri(await GetItemHrefAsync(), fileMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", newFileUri.AbsoluteUri);
@@ -51,11 +52,16 @@ namespace WebDAVFileProviderExtension
 
             // Return new item remove storage id to the Engine.
             // It will be past to GetFileSystemItemAsync during next call.
-            return Encoding.UTF8.GetBytes(response.Headers.GetValues("resource-id").FirstOrDefault() ?? string.Empty);
+            IEnumerable<string> values;
+            return new FileMetadata
+            {
+                RemoteStorageItemId = Encoding.UTF8.GetBytes(response.Headers.TryGetValues("resource-id", out values) ? (values.FirstOrDefault() ?? newFileUri.AbsoluteUri) : newFileUri.AbsoluteUri),
+                ContentETag = response.WebDavResponse
+            };
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFolderMetadata> CreateFolderAsync(IFolderMetadata folderMetadata, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Uri newFolderUri = new Uri(await GetItemHrefAsync(), folderMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", newFolderUri.AbsoluteUri);
@@ -64,7 +70,11 @@ namespace WebDAVFileProviderExtension
 
             // Return new item remove storage id to the Engine.
             // It will be past to GetFileSystemItemAsync during next call.
-            return Encoding.UTF8.GetBytes(response.Headers.GetValues("resource-id").FirstOrDefault());
+            IEnumerable<string> values;
+            return new FolderMetadata()
+            {
+                RemoteStorageItemId = Encoding.UTF8.GetBytes(response.Headers.TryGetValues("resource-id", out values) ? (values.FirstOrDefault() ?? newFolderUri.AbsoluteUri) : newFolderUri.AbsoluteUri)
+            };
         }
 
         /// <inheritdoc/>
@@ -74,9 +84,10 @@ namespace WebDAVFileProviderExtension
             {
                 Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", RemoteStorageUriById.AbsoluteUri);
 
-                Client.PropertyName[] propNames = new Client.PropertyName[2];
+                Client.PropertyName[] propNames = new Client.PropertyName[3];
                 propNames[0] = new Client.PropertyName("resource-id", "DAV:");
                 propNames[1] = new Client.PropertyName("parent-resource-id", "DAV:");
+                propNames[2] = new Client.PropertyName("metadata-Etag", "DAV:");
 
                 IList<Client.IHierarchyItem> remoteStorageChildren = (await Engine.WebDavSession.GetChildrenAsync(RemoteStorageUriById, false, propNames, null, cancellationToken)).WebDavResponse;
 
@@ -115,25 +126,35 @@ namespace WebDAVFileProviderExtension
             Changes changes = new Changes();
             changes.NewSyncToken = syncToken;
 
-            // In this sample we use sync id algoritm for synchronization.
-            Client.PropertyName[] propNames = new Client.PropertyName[2];
-            propNames[0] = new Client.PropertyName("resource-id", "DAV:");
-            propNames[1] = new Client.PropertyName("parent-resource-id", "DAV:");
-
-            do
+            try
             {
-                davChanges = (await Engine.WebDavSession.GetChangesAsync(RemoteStorageUriById, propNames, changes.NewSyncToken, deep, limit, cancellationToken: cancellationToken)).WebDavResponse;
-                changes.NewSyncToken = davChanges.NewSyncToken;
+                // In this sample we use sync id algoritm for synchronization.
+                Client.PropertyName[] propNames = new Client.PropertyName[3];
+                propNames[0] = new Client.PropertyName("resource-id", "DAV:");
+                propNames[1] = new Client.PropertyName("parent-resource-id", "DAV:");
+                propNames[2] = new Client.PropertyName("metadata-Etag", "DAV:");
 
-                foreach (Client.IChangedItem remoteStorageItem in davChanges)
+                do
                 {
-                    ChangedItem itemInfo = new ChangedItem(remoteStorageItem.ChangeType == Client.Change.Changed ? Change.Changed : Change.Deleted,
-                        Mapping.GetUserFileSystemItemMetadata(remoteStorageItem));
+                    davChanges = (await Engine.WebDavSession.GetChangesAsync(RemoteStorageUriById, propNames, changes.NewSyncToken, deep, limit, cancellationToken: cancellationToken)).WebDavResponse;
+                    changes.NewSyncToken = davChanges.NewSyncToken;
 
-                    changes.Add(itemInfo);
+                    foreach (Client.IChangedItem remoteStorageItem in davChanges)
+                    {
+                        ChangedItem itemInfo = new ChangedItem(remoteStorageItem.ChangeType == Client.Change.Changed ? Change.Changed : Change.Deleted,
+                            Mapping.GetUserFileSystemItemMetadata(remoteStorageItem));
+
+                        changes.Add(itemInfo);
+                    }
                 }
+                while (davChanges.MoreResults);
             }
-            while (davChanges.MoreResults);
+            catch (Client.Exceptions.MethodNotAllowedException)
+            {
+                Logger.LogDebug($"{nameof(IFolder)}.{nameof(GetChangesAsync)}({syncToken}) - not supported.");
+
+                throw new SyncIdNotSupportedException();
+            }
 
             // Returns changes to the Engine. Engine applies changes to the user file system and stores the new sync-token.
             return changes;

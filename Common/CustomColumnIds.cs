@@ -26,8 +26,13 @@ namespace ITHit.FileSystem.Samples.Common
         LockExpirationDate = 5,
 
         /// <summary>
-        /// ETag column ID.
+        /// Content ETag column ID.
         /// </summary>
-        ETag = 6,
+        ContentETag = 6,
+
+        /// <summary>
+        /// Metadata ETag column ID.
+        /// </summary>
+        MetadataETag = 7,
     }
 }

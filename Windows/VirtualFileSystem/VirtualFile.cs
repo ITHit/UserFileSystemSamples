@@ -43,7 +43,7 @@ namespace VirtualFileSystem
 
         
         /// <inheritdoc/>
-        public async Task ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
+        public async Task<IFileMetadata> ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {
             // On Windows this method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer write to the output stream or call the resultContext.ReportProgress() or resultContext.ReturnData() methods.
@@ -64,6 +64,12 @@ namespace VirtualFileSystem
                     Logger.LogDebug($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default);
                 }
             }
+
+            // Return an updated item to the Engine.
+            // In the returned data set the following fields:
+            //  - Content eTag. The Engine will store it to determine if the file content should be updated.
+            //  - Medatdata eTag. The Engine will store it to determine if the item metadata should be updated.
+            return null;
         }
         
 
@@ -124,8 +130,10 @@ namespace VirtualFileSystem
                 remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value;
             }
 
-            // On macOS you must return updated file info.
-            // On Windows you can return null.
+            // Return an updated item to the Engine.
+            // In the returned data set the following fields:
+            //  - Content eTag. The Engine will store it to determine if the file content should be updated.
+            //  - Medatdata eTag. The Engine will store it to determine if the item metadata should be updated.
             return null;
         }
     }

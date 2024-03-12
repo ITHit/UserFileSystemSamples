@@ -36,19 +36,17 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             {
                 debugLoggingEnabled = value;
                 string debugLoggingState = debugLoggingEnabled ? "Enabled" : "Disabled";
-                log.Info($"{Environment.NewLine}Debug logging {debugLoggingState}");
+                Log.Info($"{Environment.NewLine}Debug logging {debugLoggingState}");
             }
         }
 
-        private bool debugLoggingEnabled = false;
+        public readonly ILog Log;
 
-        private readonly ILog log;
+        private bool debugLoggingEnabled = false;
 
         private readonly string appId;
 
-        private readonly string remoteStorageRootPath;
-
-        private const int sourcePathWidth = 60;
+        private const int sourcePathWidth = 45;
         private const int remoteStorageIdWidth = 20;
 
         private const int indent = -45;
@@ -57,11 +55,10 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Creates instance of this class.
         /// </summary>
         /// <param name="log">Log4net logger.</param>
-        public LogFormatter(ILog log, string appId, string remoteStorageRootPath)
+        public LogFormatter(ILog log, string appId)
         {
-            this.log = log;
+            this.Log = log;
             this.appId = appId;
-            this.remoteStorageRootPath = remoteStorageRootPath;
             LogFilePath = ConfigureLogger();
         }
 
@@ -91,24 +88,24 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         public void PrintEnvironmentDescription()
         {
             // Log environment description.
-            log.Info($"\n{"AppID:",indent} {appId}");
-            log.Info($"\n{"Engine version:",indent} {typeof(IEngine).Assembly.GetName().Version}");
-            log.Info($"\n{"OS version:",indent} {RuntimeInformation.OSDescription}");
-            log.Info($"\n{".NET version:",indent} {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
-            log.Info($"\n{"Package or app identity:",indent} {PackageRegistrar.IsRunningWithIdentity()}");
-            log.Info($"\n{"Sparse package identity:",indent} {PackageRegistrar.IsRunningWithSparsePackageIdentity()}");
-            log.Info($"\n{"Elevated mode:",indent} {new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent()).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator)}");
+            Log.Info($"\n{"AppID:",indent} {appId}");
+            Log.Info($"\n{"Engine version:",indent} {typeof(IEngine).Assembly.GetName().Version}");
+            Log.Info($"\n{"OS version:",indent} {RuntimeInformation.OSDescription}");
+            Log.Info($"\n{".NET version:",indent} {RuntimeInformation.FrameworkDescription} {IntPtr.Size * 8}bit.");
+            Log.Info($"\n{"Package or app identity:",indent} {PackageRegistrar.IsRunningWithIdentity()}");
+            Log.Info($"\n{"Sparse package identity:",indent} {PackageRegistrar.IsRunningWithSparsePackageIdentity()}");
+            Log.Info($"\n{"Elevated mode:",indent} {new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent()).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator)}");
 
             string sparsePackagePath = PackageRegistrar.GetSparsePackagePath();
             if (File.Exists(sparsePackagePath))
             {
-                log.Info($"\n{"Sparse package location:",indent} {sparsePackagePath}");
+                Log.Info($"\n{"Sparse package location:",indent} {sparsePackagePath}");
                 var cert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(sparsePackagePath);
-                log.Info($"\n{"Sparse package cert:",indent} Subject: {cert.Subject}, Issued by: {cert.Issuer}");
+                Log.Info($"\n{"Sparse package cert:",indent} Subject: {cert.Subject}, Issued by: {cert.Issuer}");
             }
             else
             {
-                log.Info($"\n{"Sparse package:",indent} Not found");
+                Log.Info($"\n{"Sparse package:",indent} Not found");
             }
         }
 
@@ -117,25 +114,32 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         /// <param name="engine">Engine instance.</param>
         /// <param name="remoteStorageRootPath">Remote storage root path.</param>
-        public async Task PrintEngineStartInfoAsync(EngineWindows engine)
+        public async Task PrintEngineStartInfoAsync(EngineWindows engine, string remoteStorageRootPath)
         {
-            await PrintEngineDescriptionAsync(engine);
-            log.Info("\n");
+            await PrintEngineDescriptionAsync(engine, remoteStorageRootPath);
+            Log.Info("\n");
 
             // Log logging columns headers.
             PrintHeader();
         }
 
-        public async Task PrintEngineDescriptionAsync(EngineWindows engine)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="engine">Engine instance.</param>
+        /// <param name="remoteStorageRootPath">Remote storage root path.</param>
+        /// <returns></returns>
+        public async Task PrintEngineDescriptionAsync(EngineWindows engine, string remoteStorageRootPath)
         {
-            log.Info($"\n");
-            log.Info($"\n{"File system root:",indent} {engine.Path}");
-            log.Info($"\n{"Remote storage root:",indent} {remoteStorageRootPath}");
-            log.Info($"\n{"AutoLock:",indent} {engine.AutoLock}");
-            log.Info($"\n{"Outgoing sync, ms:",indent} {engine.SyncService.SyncIntervalMs}");
-            log.Info($"\n{"Shell extensions RPC enabled:",indent} {engine.ShellExtensionsComServerRpcEnabled}");
-            log.Info($"\n{"Max create/read/write concurrent requests:",indent} {engine.MaxTransferConcurrentRequests}");
-            log.Info($"\n{"Max list/move/delete concurrent requests:",indent} {engine.MaxOperationsConcurrentRequests}");
+            Log.Info($"\n");
+            Log.Info($"\n{"File system root:",indent} {engine.Path}");
+            Log.Info($"\n{"Remote storage root:",indent} {remoteStorageRootPath}");
+            Log.Info($"\n{"AutoLock:",indent} {engine.AutoLock}");
+            Log.Info($"\n{"Outgoing sync, ms:",indent} {engine.SyncService.SyncIntervalMs}");
+            Log.Info($"\n{"Sync mode:",indent} {engine.SyncService.IncomingSyncMode}");
+            Log.Info($"\n{"Shell extensions RPC enabled:",indent} {engine.ShellExtensionsComServerRpcEnabled}");
+            Log.Info($"\n{"Max create/read/write concurrent requests:",indent} {engine.MaxTransferConcurrentRequests}");
+            Log.Info($"\n{"Max list/move/delete concurrent requests:",indent} {engine.MaxOperationsConcurrentRequests}");
 
             // Log indexing state. Sync root must be indexed.
             await PrintIndexingStateAsync(engine.Path);
@@ -149,17 +153,17 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             StorageFolder userFileSystemRootFolder = await StorageFolder.GetFolderFromPathAsync(path);
             IndexedState indexedState = await userFileSystemRootFolder.GetIndexedStateAsync();
-            log.Info($"\n{"Indexed state:",indent} {indexedState}");
+            Log.Info($"\n{"Indexed state:",indent} {indexedState}");
 
             if (indexedState != IndexedState.FullyIndexed)
             {
-                log.ErrorFormat($"\nIndexing is disabled. Indexing must be enabled for {path}");
+                Log.ErrorFormat($"\nIndexing is disabled. Indexing must be enabled for {path}");
             }
         }
 
         public void LogMessage(string message)
         {
-            log.Info(message);
+            Log.Info(message);
         }
 
         public void LogError(IEngine sender, EngineErrorEventArgs e)
@@ -222,15 +226,15 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 {
                     message += Environment.NewLine;
                 }
-                log.Error(message, ex);
+                Log.Error(message, ex);
             }
             else if (level == log4net.Core.Level.Info)
             {
-                log.Info(message);
+                Log.Info(message);
             }
             else if (level == log4net.Core.Level.Debug && DebugLoggingEnabled)
             {
-                log.Debug(message);
+                Log.Debug(message);
             }
 
         }
@@ -246,9 +250,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         private void PrintHeader()
         {
-            log.Info("\n");
-            log.Info(Format("Time", "Process Name", "Prty", "FS ID", "RS ID", "Component", "Line", "Caller Member Name", "Caller File Path", "Message", "Path", "Attributes"));
-            log.Info(Format("----", "------------", "----", "_____", "_____", "---------", "____", "------------------", "----------------", "-------", "----", "----------"));
+            Log.Info("\n");
+            Log.Info(Format("Time", "Process Name", "Prty", "FS ID", "RS ID", "Component", "Line", "Caller Member Name", "Caller File Path", "Message", "Path", "Attributes"));
+            Log.Info(Format("----", "------------", "----", "_____", "_____", "---------", "____", "------------------", "----------------", "-------", "----", "----------"));
         }
 
         /// <summary>

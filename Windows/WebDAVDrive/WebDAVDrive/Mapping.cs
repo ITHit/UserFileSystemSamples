@@ -120,7 +120,7 @@ namespace WebDAVDrive
                 Client.IFile remoteStorageFile = (Client.IFile)remoteStorageItem;
                 userFileSystemItem = new FileMetadataExt();
                 ((FileMetadataExt)userFileSystemItem).Length = remoteStorageFile.ContentLength;
-                userFileSystemItem.ETag = remoteStorageFile.Etag;
+                ((FileMetadataExt)userFileSystemItem).ContentETag = remoteStorageFile.Etag;
                 userFileSystemItem.Attributes = FileAttributes.Normal;
             }
             else
@@ -129,6 +129,7 @@ namespace WebDAVDrive
                 userFileSystemItem.Attributes = FileAttributes.Normal | FileAttributes.Directory;
             }
 
+            //userFileSystemItem.MetadataETag = GetPropertyValue(remoteStorageItem, "metadata-Etag");
             userFileSystemItem.Name = remoteStorageItem.DisplayName;
 
             // In case the item is deleted, the min value is returned.
@@ -173,6 +174,22 @@ namespace WebDAVDrive
             }
 
             return resultValue;
+        }
+
+        /// <summary>
+        /// Gets properties to be returned with each item when listing 
+        /// folder content or getting an item from server.
+        /// </summary>
+        /// <returns>List of properties.</returns>
+        public static Client.PropertyName[] GetDavProperties()
+        {
+            Client.PropertyName[] propNames = new Client.PropertyName[4];
+            propNames[0] = new Client.PropertyName("resource-id", "DAV:");          // Remote storage item ID
+            propNames[1] = new Client.PropertyName("parent-resource-id", "DAV:");   // Parent remote storage item ID
+            propNames[2] = new Client.PropertyName("Etag", "DAV:");                 // Content eTag.
+            propNames[3] = new Client.PropertyName("metadata-Etag", "DAV:");        // Metadata eTag.
+
+            return propNames;
         }
     }
 }

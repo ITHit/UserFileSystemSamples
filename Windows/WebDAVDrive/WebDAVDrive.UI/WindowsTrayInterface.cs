@@ -16,6 +16,16 @@ namespace WebDAVDrive.UI
     public class WindowsTrayInterface : IDisposable
     {
         /// <summary>
+        /// Stop this engine and exit this tray app menu.
+        /// </summary>
+        public readonly ToolStripItem MenuExit;
+
+        /// <summary>
+        /// Unmount menu.
+        /// </summary>
+        public readonly ToolStripItem MenuUnmount;
+
+        /// <summary>
         /// Icon in the status bar notification area.
         /// </summary>
         private readonly NotifyIcon notifyIcon;
@@ -62,31 +72,31 @@ namespace WebDAVDrive.UI
         /// </summary>s
         /// <param name="productName">Product name.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
+        /// <param name="commands">Engine commands.</param>
         /// <param name="engine">Engine instance. The tray app will start and stop this instance as well as will display its status.</param>
-        /// <param name="exitEvent">ManualResetEvent, used to stop the application.</param>
         /// <returns></returns>
-        public static async Task StartTrayInterfaceAsync(string productName, string iconsFolderPath, Commands commands, EngineWindows engine)
-        {
-            await Task.Run(async () =>
-            {
-                using (WindowsTrayInterface windowsTrayInterface = new WindowsTrayInterface(productName, iconsFolderPath, commands))
-                {
-                    // Listen to engine notifications to change menu and icon states.
-                    engine.StateChanged += windowsTrayInterface.Engine_StateChanged;
-                    engine.SyncService.StateChanged += windowsTrayInterface.SyncService_StateChanged;
+        //public static async Task StartTrayInterfaceAsync(string productName, string webDavServerPath, string iconsFolderPath, Commands commands, EngineWindows engine)
+        //{
+        //    await Task.Run(async () =>
+        //    {
+        //        using (WindowsTrayInterface windowsTrayInterface = new WindowsTrayInterface(productName, webDavServerPath, iconsFolderPath, commands))
+        //        {
+        //            // Listen to engine notifications to change menu and icon states.
+        //            engine.StateChanged += windowsTrayInterface.Engine_StateChanged;
+        //            engine.SyncService.StateChanged += windowsTrayInterface.SyncService_StateChanged;
 
-                    Application.Run();
-                }
-            });
-        }
+        //            Application.Run();
+        //        }
+        //    });
+        //}
 
         /// <summary>
         /// Creates a tray application instance.
         /// </summary>
         /// <param name="title">Tray application title.</param>
         /// <param name="iconsFolderPath">Path to the icons folder.</param>
-        /// <param name="engine">Engine instance.</param>
-        public WindowsTrayInterface(string title, string iconsFolderPath, Commands commands)
+        /// <param name="commands">Engine commands.</param>
+        public WindowsTrayInterface(string title, string webDavServerPath, string iconsFolderPath, Commands commands)
         {
             this.title = title;
             this.iconsFolderPath = iconsFolderPath ?? throw new ArgumentNullException(nameof(iconsFolderPath));
@@ -99,7 +109,7 @@ namespace WebDAVDrive.UI
             notifyIcon.Text = title;
 
             // Show/Hide console on app start. Required to hide the console in the release mode.
-            ConsoleManager.SetConsoleWindowVisibility(ConsoleManager.ConsoleVisible);
+            WindowManager.SetConsoleWindowVisibility(WindowManager.ConsoleVisible);
 
             contextMenu = new ContextMenuStrip();
 
@@ -111,14 +121,14 @@ namespace WebDAVDrive.UI
 
             // Add Show/Hide console menu item.
             menuConsole = new ToolStripMenuItem();
-            menuConsole.Text = ConsoleManager.ConsoleVisible ? Localization.Resources.HideLog : Localization.Resources.ShowLog;
+            menuConsole.Text = WindowManager.ConsoleVisible ? Localization.Resources.HideLog : Localization.Resources.ShowLog;
             menuConsole.Click += MenuConsole_Click;
             contextMenu.Items.Add(menuConsole);
 
             // Add Open Folder menu item.
             ToolStripMenuItem menuOpenFolder = new ToolStripMenuItem();
             menuOpenFolder.Text = Localization.Resources.OpenFolder;
-            menuOpenFolder.Click += async (s, e) => { await commands.OpenFolderAsync(); };
+            menuOpenFolder.Click += async (s, e) => { await commands.OpenRootFolderAsync(); };
             contextMenu.Items.Add(menuOpenFolder);
 
             // Add open web browser menu item.
@@ -131,10 +141,19 @@ namespace WebDAVDrive.UI
             contextMenu.Items.Add(new ToolStripSeparator());
 
             // Add Exit menu item.
-            ToolStripItem menuExit = new ToolStripMenuItem();
-            menuExit.Text = $"{Localization.Resources.Exit} {title}";
-            menuExit.Click += MenuExit_Click;
-            contextMenu.Items.Add(menuExit);
+            //MenuExit = new ToolStripMenuItem();
+            //MenuExit.Text = $"{Localization.Resources.Exit} {title}";
+            //contextMenu.Items.Add(MenuExit);
+
+            //// Add Unmount menu item.
+            //MenuUnmount = new ToolStripMenuItem();
+            //MenuUnmount.Text = $"{Localization.Resources.Unmount} {title}";
+            //contextMenu.Items.Add(MenuUnmount);
+
+            // Drive path, to distinguish tray applications for different drives.
+            //ToolStripItem name = new ToolStripStatusLabel();
+            //name.Text = title;
+            //contextMenu.Items.Add(webDavServerPath);
 
             notifyIcon.ContextMenuStrip = contextMenu;
         }
@@ -152,17 +171,8 @@ namespace WebDAVDrive.UI
         /// </summary>
         private void MenuConsole_Click(object sender, EventArgs e)
         {
-            ConsoleManager.SetConsoleWindowVisibility(!ConsoleManager.ConsoleVisible);
-            menuConsole.Text = ConsoleManager.ConsoleVisible ? Localization.Resources.HideLog : Localization.Resources.ShowLog;
-        }
-
-        /// <summary>
-        /// App exit.
-        /// </summary>
-        private async void MenuExit_Click(object sender, EventArgs e)
-        {
-            await commands.AppExitAsync();
-            Application.Exit();
+            WindowManager.SetConsoleWindowVisibility(!WindowManager.ConsoleVisible);
+            menuConsole.Text = WindowManager.ConsoleVisible ? Localization.Resources.HideLog : Localization.Resources.ShowLog;
         }
 
         /// <summary>
@@ -191,18 +201,21 @@ namespace WebDAVDrive.UI
         /// </summary>
         /// <param name="engine">Engine</param>
         /// <param name="e">Contains new and old Engine state.</param>
-        private void Engine_StateChanged(Engine engine, EngineWindows.StateChangeEventArgs e)
+        public void Engine_StateChanged(Engine engine, EngineWindows.StateChangeEventArgs e)
         {
-            if (contextMenu.IsHandleCreated)
+            if (!disposedValue)
             {
-                contextMenu.Invoke(() =>
+                if (contextMenu.IsHandleCreated)
+                {
+                    contextMenu.Invoke(() =>
+                    {
+                        UpdateMenuStartStop(e.NewState);
+                    });
+                }
+                else
                 {
                     UpdateMenuStartStop(e.NewState);
-                });
-            }
-            else
-            {
-                UpdateMenuStartStop(e.NewState);
+                }
             }
         }
 
@@ -211,19 +224,22 @@ namespace WebDAVDrive.UI
         /// </summary>
         /// <param name="sender">Sync service.</param>
         /// <param name="e">Contains new and old sync service state.</param>
-        private void SyncService_StateChanged(object sender, SynchEventArgs e)
+        public void SyncService_StateChanged(object sender, SynchEventArgs e)
         {
-            switch (e.NewState)
+            if (!disposedValue)
             {
-                case SynchronizationState.Synchronizing:
-                    notifyIcon.Text = $"{title}\n{Localization.Resources.StatusSync}";
-                    notifyIcon.Icon = new System.Drawing.Icon(Path.Combine(iconsFolderPath, "DriveSync.ico"));
-                    break;
+                switch (e.NewState)
+                {
+                    case SynchronizationState.Synchronizing:
+                        notifyIcon.Text = $"{title}\n{Localization.Resources.StatusSync}";
+                        notifyIcon.Icon = new System.Drawing.Icon(Path.Combine(iconsFolderPath, "DriveSync.ico"));
+                        break;
 
-                case SynchronizationState.Idle:
-                    notifyIcon.Text = $"{title}\n{Localization.Resources.Idle}";
-                    notifyIcon.Icon = new System.Drawing.Icon(Path.Combine(iconsFolderPath, "Drive.ico"));
-                    break;
+                    case SynchronizationState.Idle:
+                        notifyIcon.Text = $"{title}\n{Localization.Resources.Idle}";
+                        notifyIcon.Icon = new System.Drawing.Icon(Path.Combine(iconsFolderPath, "Drive.ico"));
+                        break;
+                }
             }
         }
 
@@ -233,13 +249,9 @@ namespace WebDAVDrive.UI
             {
                 if (disposing)
                 {
-                    // TODO: dispose managed state (managed objects)
-                    //notifyIcon?.Icon?.Dispose();
                     notifyIcon?.Dispose();
                 }
 
-                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                // TODO: set large fields to null
                 disposedValue = true;
             }
         }

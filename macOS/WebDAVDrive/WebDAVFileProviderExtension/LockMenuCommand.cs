@@ -28,7 +28,7 @@ namespace WebDAVFileProviderExtension
             this.logger = logger.CreateLogger(nameof(LockMenuCommand));
         }
 
-        public async Task InvokeAsync(IEnumerable<string> filesPath, IEnumerable<byte[]> remoteStorageItemIds)
+        public async Task InvokeAsync(IEnumerable<string> filesPath, IEnumerable<byte[]> remoteStorageItemIds, CancellationToken cancellationToken = default)
         {
             logger.LogMessage($"{nameof(LockMenuCommand)}.{nameof(InvokeAsync)}()", string.Join(",", remoteStorageItemIds.Select(p => Encoding.UTF8.GetString(p))));
 

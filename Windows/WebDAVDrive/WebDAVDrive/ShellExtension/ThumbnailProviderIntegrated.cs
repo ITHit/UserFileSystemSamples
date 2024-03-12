@@ -13,7 +13,7 @@ namespace WebDAVDrive.ShellExtension
     [Guid("A5B0C82F-50AA-445C-A404-66DEB510E84B")]
     public class ThumbnailProviderIntegrated : ThumbnailProviderHandlerIntegratedBase
     {
-        public ThumbnailProviderIntegrated() : base(Program.Engine)
+        public ThumbnailProviderIntegrated() : base(Program.Engines)
         {
         }
     }

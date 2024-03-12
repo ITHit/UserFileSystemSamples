@@ -46,7 +46,7 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
+        public async Task<IFileMetadata> ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {
             // On Windows this method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer write to the output stream or call the resultContext.ReportProgress() or resultContext.ReturnData() methods.
@@ -59,11 +59,11 @@ namespace WebDAVDrive
                 offset = -1;
             }
 
-            string eTag = null;
+            string contentETag = null;
 
             // Buffer size must be multiple of 4096 bytes for optimal performance.
             const int bufferSize = 0x500000; // 5Mb.
-            using (Client.IDownloadResponse response = await Program.DavClient.DownloadAsync(new Uri(RemoteStoragePath), offset, length, null, cancellationToken))
+            using (Client.IDownloadResponse response = await Dav.DownloadAsync(new Uri(RemoteStoragePath), offset, length, null, cancellationToken))
             {
                 using (Stream stream = await response.GetResponseStreamAsync())
                 {
@@ -77,11 +77,19 @@ namespace WebDAVDrive
                         Logger.LogMessage($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default);
                     }
                 }
-                eTag = response.Headers.ETag.Tag;
+                // Return content eTag to the Engine.
+                contentETag = response.Headers.ETag.Tag;
             }
 
-            // Store ETag here.
-            operationContext.Properties.SetETag(eTag);
+            // Return an updated item to the Engine.
+            // In the returned data set the following fields:
+            //  - Content eTag. The Engine will store it to determine if the file content should be updated.
+            //  - Medatdata eTag. The Engine will store it to determine if the item metadata should be updated.
+            return new FileMetadataExt()
+            {
+                ContentETag = contentETag
+                //MetadataETag = 
+            };
         }
 
         /// <inheritdoc/>
@@ -101,13 +109,15 @@ namespace WebDAVDrive
         /// <inheritdoc/>
         public async Task<IFileMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
+            long contentLength = content != null ? content.Length : 0;
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}({contentLength})", UserFileSystemPath, default, operationContext);
 
+            string newContentEtag = null;
             if (content != null)
             {
                 // Send the ETag to the server as part of the update to ensure
                 // the file in the remote storge is not modified since last read.
-                operationContext.Properties.TryGetETag(out string oldEtag);
+                string oldContentEtag = fileBasicInfo.ContentETag;
 
                 Client.LockUriTokenPair[] lockTokens = null;
                 // Read the lock-token and send it to the server as part of the update.
@@ -120,20 +130,19 @@ namespace WebDAVDrive
                 try
                 {
                     // Update remote storage file content.
-                    Client.IWebDavResponse<string> response = await Program.DavClient.UploadAsync(new Uri(RemoteStoragePath), async (outputStream) =>
+                    Client.IWebDavResponse<string> response = await Dav.UploadAsync(new Uri(RemoteStoragePath), async (outputStream) =>
                     {
                         content.Position = 0; // Setting position to 0 is required in case of retry.
                         await content.CopyToAsync(outputStream, cancellationToken);
-                    }, null, content.Length, 0, -1, lockTokens, oldEtag, null, cancellationToken);
+                    }, null, content.Length, 0, -1, lockTokens, oldContentEtag, null, cancellationToken);
 
-                    // Save a new ETag returned by the server, if any.
-                    string newEtag = response.WebDavResponse;
+                    // Return new content eTag back to the Engine.
+                    newContentEtag = response.WebDavResponse;
 
-                    if (string.IsNullOrEmpty(newEtag))
+                    if (string.IsNullOrEmpty(newContentEtag))
                     {
                         Logger.LogError("The server did not return ETag after update.", UserFileSystemPath, null, null, operationContext);
                     }
-                    operationContext.Properties.SetETag(newEtag);
                 }
                 catch (Client.Exceptions.LockedException)
                 {
@@ -152,12 +161,20 @@ namespace WebDAVDrive
                     // This item can not be uploaded automatically, conflict needs to be resolved first.
 
                     Logger.LogMessage($"Conflict. The item is modified", UserFileSystemPath, default, operationContext);
-                    Engine.Placeholders.GetItem(UserFileSystemPath).SetConflictStatus(true);
+                    Engine.Placeholders.GetFile(UserFileSystemPath).SetConflictStatus(true);
                     inSyncResultContext.SetInSync = false;
                 }
             }
 
-            return null;
+            // Return an updated item to the Engine.
+            // In the returned data set the following fields:
+            //  - Content eTag. The Engine will store it to determine if the file content should be updated.
+            //  - Medatdata eTag. The Engine will store it to determine if the item metadata should be updated.
+            return new FileMetadataExt()
+            {
+                ContentETag = newContentEtag
+                //MetadataETag = 
+            };
         }
     }
 }

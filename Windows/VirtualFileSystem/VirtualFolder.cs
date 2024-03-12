@@ -29,7 +29,7 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFileMetadata> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
@@ -62,14 +62,14 @@ namespace VirtualFileSystem
             remoteStorageNewItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
             remoteStorageNewItem.Attributes = fileMetadata.Attributes;
 
-            // Typically you must return a remote storage item ID.
-            // It will be passed later into IEngine.GetFileSystemItemAsync() method.
+            // Typically you must return IFileMetadata with a remote storage item ID, content eTag and metadata eTag.
+            // The ID will be passed later into IEngine.GetFileSystemItemAsync() method.
             // However, becuse we can not read the ID for the network path we return null.
             return null; 
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> CreateFolderAsync(IFolderMetadata folderMetadata, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
+        public async Task<IFolderMetadata> CreateFolderAsync(IFolderMetadata folderMetadata, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
         {
             string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, folderMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
@@ -84,8 +84,8 @@ namespace VirtualFileSystem
             remoteStorageNewItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
             remoteStorageNewItem.Attributes = folderMetadata.Attributes;
 
-            // Typically you must return a remote storage item ID.
-            // It will be passed later into IEngine.GetFileSystemItemAsync() method.
+            // Typically you must return IFileMetadata with a remote storage item ID and metadata eTag.
+            // The ID will be passed later into IEngine.GetFileSystemItemAsync() method.
             // However, becuse we can not read the ID for the network path we return null.
             return null;
         }
@@ -100,18 +100,18 @@ namespace VirtualFileSystem
 
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath, default, operationContext);
 
-            List<IFileSystemItemMetadata> userFileSystemChildren = new List<IFileSystemItemMetadata>();
+            List<IFileSystemItemMetadata> children = new List<IFileSystemItemMetadata>();
             IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(RemoteStoragePath).EnumerateFileSystemInfos(pattern);
 
             foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
             {
                 IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
-                userFileSystemChildren.Add(itemInfo);
+                children.Add(itemInfo);
             }
 
             // To signal that the children enumeration is completed 
             // always call ReturnChildren(), even if the folder is empty.
-            await resultContext.ReturnChildrenAsync(userFileSystemChildren.ToArray(), userFileSystemChildren.Count());
+            await resultContext.ReturnChildrenAsync(children.ToArray(), children.Count(), true, cancellationToken);
         }
 
         /// <inheritdoc/>

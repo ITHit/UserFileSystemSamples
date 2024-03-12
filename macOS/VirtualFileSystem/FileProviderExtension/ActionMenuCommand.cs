@@ -24,7 +24,7 @@ namespace FileProviderExtension
             this.logger = logger.CreateLogger("Simple Action Command");
         }
 
-        public async Task InvokeAsync(IEnumerable<string> filesPath, IEnumerable<byte[]> remoteStorageItemIds)
+        public async Task InvokeAsync(IEnumerable<string> filesPath, IEnumerable<byte[]> remoteStorageItemIds, CancellationToken cancellationToken = default)
         {
             logger.LogMessage($"Action Menu items: {string.Join(",", remoteStorageItemIds.Select(p => Encoding.UTF8.GetString(p)))}");
         }

@@ -21,12 +21,13 @@ namespace WebDAVFileProviderExtension
         }
      
         /// <inheritdoc/>
-        public async Task ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
+        public async Task<IFileMetadata> ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {           
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", RemoteStorageUriById.AbsoluteUri, default, operationContext);
 
             // Buffer size must be multiple of 4096 bytes for optimal performance.
             const int bufferSize = 0x500000; // 5Mb.
+            string contentETag = null;
             using (Client.IDownloadResponse response = await Engine.WebDavSession.DownloadAsync(new Uri(RemoteStorageUriById.AbsoluteUri), offset, length, null, cancellationToken))
             {
                 using (Stream stream = await response.GetResponseStreamAsync())
@@ -46,7 +47,16 @@ namespace WebDAVFileProviderExtension
                         HandleWebExceptions(httpException, resultContext);
                     }
                 }
+
+                // Return content eTag to the Engine.
+                contentETag = response.Headers.ETag.Tag;
             }
+
+            return new FileMetadataMac()
+            {
+                ContentETag = contentETag
+                //MetadataETag = 
+            };
         }
         
 

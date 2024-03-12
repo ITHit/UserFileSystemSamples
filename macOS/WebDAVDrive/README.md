@@ -25,7 +25,7 @@
 <h2>Solution Structure</h2>
 <p>The macOS sample solution consists of 3 projects: container application, an extension project, and a common code.</p>
 <p>The container application provides a Menu Bar icon to install/uninstall the file system extension.&nbsp;</p>
-<p>The extension project runs in the background and implements a virtual file system on macOS (File Provider). It processes requests from macOS applications sent via macOS file system API and lists folders content. The macOS extension can be installed only as part of a container application, you can not install the extension application by itself.</p>
+<p>The extension project runs in the background and implements a virtual file system on macOS (File Provider). It processes requests from macOS applications sent via macOS file system API and lists folders content. The macOS extension can be installed only as part of a container application, you can not install the extension application separately.</p>
 <h2>Setting License</h2>
 <p><span class="warn">Note that to use the sample you need both the IT Hit WebDAV Client Library license and IT Hit User File System license.</span></p>
 <p>To run the example, you will need both IT Hit WebDAV Client Library for .NET license and IT Hit User File System Engine for .NET License. You can download&nbsp;a WebDAV Client for .NET trial license in the&nbsp;<a title="Download" href="https://www.webdavsystem.com/client/download/">IT Hit WebDAV Client Library product download area</a>&nbsp;and the User File System trial license in the&nbsp;<a title="Download" href="https://www.userfilesystem.com/download/">IT Hit User File System&nbsp;</a><a title="Download" href="https://www.userfilesystem.com/download/">product download area</a>.&nbsp;Note that this sample is fully functional with a trial licenses and does not have any limitations. The trial licenses are valid for one month will stop working after this. You can check the expiration date inside the license file.&nbsp;Download the license files and specify license strings in the&nbsp;<code class="code">WebDAVClientLicense</code>&nbsp;and&nbsp;<code class="code">UserFileSystemLicense</code>&nbsp;fields respectively in&nbsp;<code class="code">WebDAVMacApp\Resources\appsettings.json</code>&nbsp;file.&nbsp;Set the license content directly as a value (NOT as a path to the license file). Do not forget to escape quotes: \":</p>
@@ -43,7 +43,7 @@
 <p><span class="warn">Note that&nbsp;this sample does NOT require <a title="Projects Deployment on macOS" href="https://www.userfilesystem.com/examples/apple_deployment/">Group ID, App Identifies and Provisioning Profiles configuration</a> for development. It is required only required for production deployment.</span></p>
 <p>To run the sample:</p>
 <ol>
-<li>Open the project in Visual Studio and run the project. The application is added the macOS Status Bar.</li>
+<li>Open the project in Visual Studio and run the project. The application is added to the macOS Status Bar.</li>
 <li>Select 'Install Extension' command in the Status Bar.&nbsp;This will mount your WebDAV file system.</li>
 </ol>
 <p>Now you can manage documents using Finder, command prompt or by any other means. You can find the new file system in the 'Locations' sections in Finder.&nbsp;</p>
@@ -55,5 +55,5 @@
 <li><a title="Projects Deployment on macOS" href="https://www.userfilesystem.com/examples/apple_deployment/">macOS File Provider Extension Projects Deployment</a></li>
 </ul>
 <h3 class="para d-inline next-article-heading">Next Article:</h3>
-<a title="File Provider Extension Troubleshooting on macOS" href="https://www.userfilesystem.com/examples/mac_troubleshooting/">File Provider Extension Troubleshooting on macOS</a>
+<a title="WebDAV Drive Sample for iOS in .NET, C#" href="https://www.userfilesystem.com/examples/webdav_drive_ios/">WebDAV Drive Sample for iOS in .NET, C#</a>
 

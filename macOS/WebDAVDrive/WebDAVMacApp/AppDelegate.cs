@@ -52,10 +52,9 @@ namespace WebDAVMacApp
                         webSocketServerUrl = domainSettings.WebSocketServerUrl;
                     }
 
-                    RemoteStorageMonitor = new RemoteStorageMonitor(webDAVServerUrl, webSocketServerUrl, new ConsoleLogger(typeof(RemoteStorageMonitor).Name));
-                    RemoteStorageMonitor.ServerNotifications = new ServerNotifications(
-                        NSFileProviderManager.FromDomain(new NSFileProviderDomain(domainIdentifier, SecureStorage.ExtensionDisplayName)),
-                        RemoteStorageMonitor.Logger);
+                    NSFileProviderManager fileProviderManager = NSFileProviderManager.FromDomain(new NSFileProviderDomain(domainIdentifier, SecureStorage.ExtensionDisplayName));
+                    RemoteStorageMonitor = new RemoteStorageMonitor(webDAVServerUrl, webSocketServerUrl, fileProviderManager, new ConsoleLogger(typeof(RemoteStorageMonitor).Name));
+                    RemoteStorageMonitor.ServerNotifications = new ServerNotifications(fileProviderManager, RemoteStorageMonitor.Logger);
                     await RemoteStorageMonitor.StartAsync();
 
                     if (NSProcessInfo.ProcessInfo.Arguments.Length > 1)
@@ -285,7 +284,8 @@ namespace WebDAVMacApp
             {
                 // Save domain identifier.
                 await SecureStorage.SetAsync("CurrentDomainIdentifier", domainIdentifier);
-                RemoteStorageMonitor = new RemoteStorageMonitor(domainSettings.WebDAVServerUrl, domainSettings.WebSocketServerUrl, new ConsoleLogger(typeof(RemoteStorageMonitor).Name));
+                RemoteStorageMonitor = new RemoteStorageMonitor(domainSettings.WebDAVServerUrl, domainSettings.WebSocketServerUrl, NSFileProviderManager.FromDomain(domain),
+                                                                new ConsoleLogger(typeof(RemoteStorageMonitor).Name));
                 RemoteStorageMonitor.ServerNotifications = new ServerNotifications(NSFileProviderManager.FromDomain(domain), RemoteStorageMonitor.Logger);
                 await RemoteStorageMonitor.StartAsync();
                 success = true;

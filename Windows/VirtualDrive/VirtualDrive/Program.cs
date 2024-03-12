@@ -11,6 +11,7 @@ using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Windows.Package;
 using ITHit.FileSystem;
+using Microsoft.VisualBasic.Logging;
 
 namespace VirtualDrive
 {
@@ -37,7 +38,7 @@ namespace VirtualDrive
         /// <summary>
         /// Log4Net logger.
         /// </summary>
-        private static readonly ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+        internal static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         /// <summary>
         /// Processes OS file system calls,
@@ -70,28 +71,26 @@ namespace VirtualDrive
             // Load Settings.
             Settings = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build().ReadSettings();
 
-            logFormatter = new LogFormatter(log, Settings.AppID, Settings.RemoteStorageRootPath);
-            commands = new Commands(log, Settings.RemoteStorageRootPath);
-            commands.ConfigureConsole();
+            logFormatter = new LogFormatter(Log, Settings.AppID);
+            WindowManager.ConfigureConsole();
 
             // Log environment description.
             logFormatter.PrintEnvironmentDescription();
 
-            registrar = new SparsePackageRegistrar(SyncRootId, Settings.UserFileSystemRootPath, log, ShellExtension.ShellExtensions.Handlers);
-
-            consoleProcessor = new ConsoleProcessor(registrar, logFormatter, commands);
+            registrar = new SparsePackageRegistrar(Log, ShellExtension.ShellExtensions.Handlers);
+            consoleProcessor = new ConsoleProcessor(registrar, logFormatter, Settings.AppID);
 
             switch (args.FirstOrDefault())
             {
 #if DEBUG
                 case "-InstallDevCert":
                     /// Called by <see cref="CertificateRegistrar.TryInstallCertificate"/> in elevated mode.
-                    registrar.EnsureDevelopmentCertificateInstalled();
+                    SparsePackageRegistrar.EnsureDevelopmentCertificateInstalled(Log);
                     return;
 
                 case "-UninstallDevCert":
                     /// Called by <see cref="CertificateRegistrar.TryUninstallCertificate"/> in elevated mode.
-                    registrar.EnsureDevelopmentCertificateUninstalled();
+                    SparsePackageRegistrar.EnsureDevelopmentCertificateUninstalled(Log);
                     return;
 #endif
                 case "-Embedding":
@@ -119,7 +118,7 @@ namespace VirtualDrive
             }
             catch (Exception ex)
             {
-                log.Error($"\n\n Press Shift-Esc to fully uninstall the app. Then start the app again.\n\n", ex);
+                Log.Error($"\n\n Press Shift-Esc to fully uninstall the app. Then start the app again.\n\n", ex);
                 await consoleProcessor.ProcessUserInputAsync();
             }
         }
@@ -139,7 +138,13 @@ namespace VirtualDrive
         private static async Task RunEngineAsync()
         {
             // Register sync root and create app folders.
-            await registrar.RegisterSyncRootAsync(Settings.ProductName, Path.Combine(Settings.IconsFolderPath, "Drive.ico"), Settings.ShellExtensionsComServerExePath);
+            await registrar.RegisterSyncRootAsync(
+                SyncRootId,
+                Settings.UserFileSystemRootPath,
+                Settings.RemoteStorageRootPath,
+                Settings.ProductName, 
+                Path.Combine(Settings.IconsFolderPath, "Drive.ico"), 
+                Settings.ShellExtensionsComServerExePath);
 
             using (Engine = new VirtualEngine(
                     Settings.UserFileSystemLicense,
@@ -148,8 +153,12 @@ namespace VirtualDrive
                     Settings.IconsFolderPath,
                     logFormatter))
             {
-                commands.Engine = Engine;
+                commands = new Commands(Engine, Settings.RemoteStorageRootPath, Log);
                 commands.RemoteStorageMonitor = Engine.RemoteStorageMonitor;
+                consoleProcessor.Commands.TryAdd(Guid.Empty, commands);
+
+                // Here we disable incoming sync. To get changes using pooling call IncomingPooling.ProcessAsync()
+                Engine.SyncService.IncomingSyncMode = ITHit.FileSystem.Synchronization.IncomingSyncMode.Disabled;
 
                 Engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
                 Engine.AutoLock = Settings.AutoLock;
@@ -166,13 +175,16 @@ namespace VirtualDrive
                 consoleProcessor.PrintHelp();
 
                 // Print Engine config, settings, logging headers.
-                await logFormatter.PrintEngineStartInfoAsync(Engine);
+                await logFormatter.PrintEngineStartInfoAsync(Engine, Settings.RemoteStorageRootPath);
 
                 // Start processing OS file system calls.
                 await Engine.StartAsync();
+
+                // Sync all changes from remote storage one time for demo purposes.
+                await Engine.SyncService.IncomingPooling.ProcessAsync();
 #if DEBUG
                 // Opens Windows File Manager with user file system folder and remote storage folder.
-                commands.ShowTestEnvironment();
+                commands.ShowTestEnvironment(Settings.ProductName);
 #endif
                 // Keep this application running and reading user input.
                 await consoleProcessor.ProcessUserInputAsync();

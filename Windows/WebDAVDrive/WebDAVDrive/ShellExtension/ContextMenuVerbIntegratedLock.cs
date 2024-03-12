@@ -13,7 +13,7 @@ namespace WebDAVDrive.ShellExtension
     [Guid("A22EBD03-343E-433C-98DF-372C6B3A1538")]
     public class ContextMenuVerbIntegratedLock : CloudFilesContextMenuVerbIntegratedBase
     {
-        public ContextMenuVerbIntegratedLock() : base(Program.Engine)
+        public ContextMenuVerbIntegratedLock() : base(Program.Engines)
         {
         }
     }

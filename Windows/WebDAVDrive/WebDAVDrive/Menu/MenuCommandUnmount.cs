@@ -13,11 +13,12 @@ using ITHit.FileSystem.Samples.Common.Windows;
 namespace WebDAVDrive
 {
     /// <summary>
-    /// Implements compare menu command displayed in a file manager.
+    /// Implements Unmount menu command displayed in a file manager.
+    /// The menu is shown on root items.
     /// </summary>
-    public class MenuCommandCompare : IMenuCommandWindows
+    public class MenuCommandUnmount : IMenuCommandWindows
     {
-        private readonly VirtualEngineBase engine;
+        private readonly VirtualEngine engine;
         private readonly ILogger logger;
 
         /// <summary>
@@ -25,16 +26,16 @@ namespace WebDAVDrive
         /// </summary>
         /// <param name="engine">Engine instance.</param>
         /// <param name="logger">Logger.</param>
-        public MenuCommandCompare(VirtualEngineBase engine, ILogger logger)
+        public MenuCommandUnmount(VirtualEngine engine, ILogger logger)
         {
             this.engine = engine;
-            this.logger = logger.CreateLogger("Compare Menu Command");
+            this.logger = logger.CreateLogger("Unmount Menu Command");
         }
 
         /// <inheritdoc/>
         public async Task<string> GetTitleAsync(IEnumerable<string> filesPath)
         {
-            return "Compare...";
+            return "Unmount...";
         }
 
         /// <inheritdoc/>
@@ -50,26 +51,11 @@ namespace WebDAVDrive
             // Show menu only if a single item is selected and the item is in conflict state.
             if (filesPath.Count() == 1)
             {
-                string userFileSystemPath = filesPath.First();
-                FileAttributes atts = File.GetAttributes(userFileSystemPath);
-
-                // Enable menu for online files.
-                if (!atts.HasFlag(FileAttributes.Offline) && !atts.HasFlag(FileAttributes.Directory))
+                string userFileSystemPath = filesPath.First().TrimEnd('\\');
+                if(engine.Path.TrimEnd('\\').Equals(userFileSystemPath, StringComparison.InvariantCultureIgnoreCase))
                 {
                     return MenuState.Enabled;
                 }
-                /*
-                // The menu is shown only if the item is in conflict state and a single item is selected. 
-                // Otherwise the menu is hidden.
-                if (engine.Placeholders.TryGetItem(userFileSystemPath, out PlaceholderItem placeholder))
-                {
-                    
-                    if (placeholder.TryGetErrorStatus(out bool errorStatus) && errorStatus)
-                    {
-                        return MenuState.Enabled;
-                    }
-                }
-                */
             }
             return MenuState.Hidden;
         }
@@ -77,20 +63,13 @@ namespace WebDAVDrive
         /// <inheritdoc/>
         public async Task InvokeAsync(IEnumerable<string> filesPath, IEnumerable<byte[]> remoteStorageItemIds = null, CancellationToken cancellationToken = default)
         {
-            string userFileSystemPath = filesPath.First();
-
-            if (engine.Placeholders.TryGetItem(userFileSystemPath, out PlaceholderItem placeholder))
-            {
-                OperationResult res = await (placeholder as PlaceholderFile).TryShadowDownloadAsync(default, logger, cancellationToken);
-
-                ITHit.FileSystem.Windows.AppHelper.Utilities.TryCompare(placeholder.Path, res.ShadowFilePath);
-            }
+            await Program.RemoveEngineAsync(engine, true);
         }
 
         /// <inheritdoc/>
         public async Task<string> GetToolTipAsync(IEnumerable<string> filesPath)
         {
-            return "Compare local and remote files";
+            return "Unmount this drive";
         }
     }
 }

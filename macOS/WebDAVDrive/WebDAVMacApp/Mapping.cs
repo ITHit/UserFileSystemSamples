@@ -15,7 +15,7 @@ namespace WebDAVMacApp
             Uri webDavServerUri = new Uri(webDAVServerRootUrl);
             string host = webDavServerUri.GetLeftPart(UriPartial.Authority);
 
-            string path = $"{host}/{relativePath}";
+            string path = $"{host}/{relativePath}/";
             return path;
         }
     }

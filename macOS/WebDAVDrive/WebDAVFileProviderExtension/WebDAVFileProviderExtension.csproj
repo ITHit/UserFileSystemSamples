@@ -75,8 +75,8 @@
     <ProjectReference Include="..\WebDAVCommon\WebDAVCommon.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHitWebDAVClient" Version="7.1.4811" />
-    <PackageReference Include="ITHit.FileSystem.Mac" Version="8.0.26019-Beta" />
+    <PackageReference Include="ITHitWebDAVClient" Version="7.1.4970" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="8.1.26224-Beta2" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Security.Permissions" Version="8.0.0" />

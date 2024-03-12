@@ -168,6 +168,9 @@
   <data name="StopSync" xml:space="preserve">
     <value>Stop synchronization</value>
   </data>
+  <data name="Unmount" xml:space="preserve">
+    <value>Unmount</value>
+  </data>
   <data name="URLError" xml:space="preserve">
     <value>Please enter correct WebDAV server URL</value>
   </data>

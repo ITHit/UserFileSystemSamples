@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
+using System.Security.RightsManagement;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -15,8 +16,6 @@ namespace WebDAVDrive
 {
     /// <summary>
     /// Monitors changes in the remote storage, notifies the client and updates the user file system.
-    /// If any file or folder is created, updated, delated, moved, locked or unlocked in the remote storage, 
-    /// calls <see cref="IServerCollectionNotifications.ProcessChangesAsync"/>.
     /// </summary>
     public abstract class RemoteStorageMonitorBase : ISyncService, IDisposable
     {
@@ -46,6 +45,12 @@ namespace WebDAVDrive
         public readonly ILogger Logger;
 
         /// <summary>
+        /// Sync mode that corresponds with this remote storage monitor type;
+        /// </summary>
+        public virtual ITHit.FileSystem.Synchronization.IncomingSyncMode SyncMode { get; }
+
+
+        /// <summary>
         /// Current synchronization state.
         /// </summary>
         public virtual SynchronizationState SyncState
@@ -60,6 +65,13 @@ namespace WebDAVDrive
         }
 
         /// <summary>
+        /// Maximum number of items allowed in the message queue.
+        /// If queue cntains more messages, extra messages will be ignored.
+        /// This property is required for Sync ID mode.
+        /// </summary>
+        private readonly int MaxQueueLength;
+
+        /// <summary>
         /// WebSocket client.
         /// </summary>
         private ClientWebSocket clientWebSocket;
@@ -67,7 +79,7 @@ namespace WebDAVDrive
         /// <summary>
         /// WebSocket server url.
         /// </summary>
-        private readonly string webSocketServerUrl;
+        protected readonly string WebSocketServerUrl;
 
         /// <summary>
         /// WebSocket cancellation token.
@@ -88,17 +100,19 @@ namespace WebDAVDrive
         /// arrive from remote storage during execution only the last one will be processed.
         /// We do not want to execute multiple requests concurrently.
         /// </remarks>
-        private BlockingCollection<string> changeQueue = new BlockingCollection<string>();
+        private BlockingCollection<WebSocketMessage> changeQueue = new BlockingCollection<WebSocketMessage>();
 
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="webSocketServerUrl">WebSocket server url.</param>
+        /// <param name="maxQueueLength">Maximum number of items allowed in the message queue.</param>
         /// <param name="logger">Logger.</param>
-        internal RemoteStorageMonitorBase(string webSocketServerUrl, ILogger logger)
+        internal RemoteStorageMonitorBase(string webSocketServerUrl, int maxQueueLength, ILogger logger)
         {
-            this.Logger = logger.CreateLogger("Remote Storage Monitor");
-            this.webSocketServerUrl = webSocketServerUrl;
+            this.WebSocketServerUrl = webSocketServerUrl;
+            this.MaxQueueLength = maxQueueLength;
+            this.Logger = logger.CreateLogger($"RS Monitor {SyncMode}");
         }
 
         /// <summary>
@@ -106,7 +120,7 @@ namespace WebDAVDrive
         /// in the user file system and should be updated.
         /// </summary>
         /// <param name="webSocketMessage">Information about change in the remote storage.</param>
-        /// <returns>True if the item exists and should be updated. False otherwise.</returns>
+        /// <returns>True if the item does NOT exists in user file system and should NOT be updated. False - otherwise.</returns>
         public abstract bool Filter(WebSocketMessage webSocketMessage);
 
         /// <summary>
@@ -132,9 +146,9 @@ namespace WebDAVDrive
 
                 // Because of the on-demand loading, item or its parent may not exists or be offline.
                 // We can ignore notifiction in this case and avoid many requests to the remote storage.
-                if (webSocketMessage != null && !Filter(webSocketMessage) && changeQueue.Count == 0)
+                if (webSocketMessage != null && !Filter(webSocketMessage) && changeQueue.Count <= (MaxQueueLength-1))
                 {
-                    changeQueue.Add(webSocketMessage.ItemPath);
+                    changeQueue.Add(webSocketMessage);
                 }
             }
         }
@@ -146,7 +160,7 @@ namespace WebDAVDrive
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
-            Logger.LogDebug("Starting", webSocketServerUrl);
+            Logger.LogDebug("Starting", WebSocketServerUrl);
 
             await Task.Factory.StartNew(
               async () =>
@@ -180,15 +194,16 @@ namespace WebDAVDrive
                                   {
                                       clientWebSocket.Options.SetRequestHeader("InstanceId", InstanceId.ToString());
                                   }
-                                  await clientWebSocket.ConnectAsync(new Uri(webSocketServerUrl), cancellationToken);
-                                  Logger.LogMessage("Connected", webSocketServerUrl);
+                                  await clientWebSocket.ConnectAsync(new Uri(WebSocketServerUrl), cancellationToken);
+                                  Logger.LogMessage("Connected", WebSocketServerUrl);
 
-                                  // After esteblishing connection with a server we must get all changes from the remote storage.
+                                  // After esteblishing connection with a server, in case of Sync ID algorithm,
+                                  // we must get all changes from the remote storage.
                                   // This is required on Engine start, server recovery, network recovery, etc.
-                                  Logger.LogDebug("Getting all changes from server", webSocketServerUrl);
-                                  await ProcessAsync();
+                                  Logger.LogDebug("Getting all changes from server", WebSocketServerUrl);
+                                  await ProcessAsync(null);
 
-                                  Logger.LogMessage("Started", webSocketServerUrl);
+                                  Logger.LogMessage("Started", WebSocketServerUrl);
 
                                   await RunWebSocketsAsync(cancellationTokenSource.Token);
                               }
@@ -197,7 +212,7 @@ namespace WebDAVDrive
                                   // Start socket after first successeful WebDAV PROPFIND. Restart socket if disconnected.
                                   if (clientWebSocket != null && clientWebSocket?.State != WebSocketState.Closed)
                                   {
-                                      Logger.LogError(e.Message, webSocketServerUrl, null, e);
+                                      Logger.LogError(e.Message, WebSocketServerUrl, null, e);
                                   }
 
                                   // Here we delay WebSocket connection to avoid overload on
@@ -229,32 +244,24 @@ namespace WebDAVDrive
             }
             catch (WebSocketException ex)
             {
-                Logger.LogError("Failed to close websocket.", webSocketServerUrl, null, ex);
+                Logger.LogError("Failed to close websocket.", WebSocketServerUrl, null, ex);
             };
 
-            Logger.LogMessage("Stoped", webSocketServerUrl);
+            Logger.LogMessage("Stoped", WebSocketServerUrl);
         }
 
         /// <summary>
-        /// Triggers <see cref="ISynchronizationCollection.GetChangesAsync"/> call to get 
-        /// and process all changes from the remote storage.
+        /// Processes message recieved from the remote storage.
         /// </summary>
+        /// <param name="message">Information about changes or null in case of web sockets start/reconnection.</param>
         /// <remarks>
+        /// This method is called on each message being received as well as on web sockets connection and reconnection.
+        /// 
         /// We do not pass WebSockets cancellation token to this method because stopping 
         /// web sockets should not stop processing changes. 
         /// To stop processing changes that are already received the Engine must be stopped.
         /// </remarks>
-        private async Task ProcessAsync()
-        {
-            try
-            {
-                await ServerNotifications.ProcessChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError("Failed to process changes", null, null, ex);
-            }
-        }
+        protected abstract Task ProcessAsync(WebSocketMessage message = null);
 
         /// <summary>
         /// Starts thread that processes changes queue.
@@ -269,9 +276,8 @@ namespace WebDAVDrive
                 {
                     while (!cancelationToken.IsCancellationRequested)
                     {
-                        _ = changeQueue.Take(cancelationToken);
-
-                        await ProcessAsync();
+                        WebSocketMessage message = changeQueue.Take(cancelationToken);
+                        await ProcessAsync(message);
                     }
                 }
                 catch (OperationCanceledException)

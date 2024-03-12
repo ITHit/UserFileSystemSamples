@@ -35,7 +35,7 @@ namespace VirtualFilesystemMacApp
         /// <summary>
         /// Server notifications will be sent to this object.
         /// </summary>
-        public IServerCollectionNotifications ServerNotifications;
+        public IServerNotifications ServerNotifications;
 
         public RemoteStorageMonitor(string remoteStorageRootPath, ILogger logger)
         {

@@ -1,15 +1,12 @@
-using System;
 using System.Collections.Concurrent;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-
+using FileProvider;
 using ITHit.FileSystem;
+using ITHit.FileSystem.Mac;
+using ITHit.WebDAV.Client;
 
 namespace WebDAVMacApp
 {
@@ -20,6 +17,11 @@ namespace WebDAVMacApp
     /// </summary>
     public abstract class RemoteStorageMonitorBase : ISyncService, IDisposable
     {
+        /// <summary>
+        /// WebDAV server root url.
+        /// </summary>
+        public readonly string WebDAVServerUrl;
+
         /// <summary>
         /// Credentials to authenticate web sockets.
         /// </summary>
@@ -70,6 +72,11 @@ namespace WebDAVMacApp
         private readonly string webSocketServerUrl;
 
         /// <summary>
+        /// Indicates if the root folder supports Collection Synchronization implementation.
+        /// </summary>
+        private bool isSyncCollectionSupported = false;
+
+        /// <summary>
         /// WebSocket cancellation token.
         /// </summary>
         private CancellationTokenSource cancellationTokenSource;
@@ -88,17 +95,25 @@ namespace WebDAVMacApp
         /// arrive from remote storage during execution only the last one will be processed.
         /// We do not want to execute multiple requests concurrently.
         /// </remarks>
-        private BlockingCollection<string> changeQueue = new BlockingCollection<string>();
+        private BlockingCollection<WebSocketMessage> changeQueue = new BlockingCollection<WebSocketMessage>();
+
+        /// <summary>
+        /// File provider manager.
+        /// </summary>
+        private readonly NSFileProviderManager fileProviderManager;
 
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
         /// <param name="webSocketServerUrl">WebSocket server url.</param>
+        /// <param name="fileProviderManager">File provider manager.</param>
         /// <param name="logger">Logger.</param>
-        internal RemoteStorageMonitorBase(string webSocketServerUrl, ILogger logger)
+        internal RemoteStorageMonitorBase(string webDAVServerUrl, string webSocketServerUrl, NSFileProviderManager fileProviderManager, ILogger logger)
         {
             this.Logger = logger.CreateLogger("Remote Storage Monitor");
+            this.fileProviderManager = fileProviderManager;
             this.webSocketServerUrl = webSocketServerUrl;
+            this.WebDAVServerUrl = webDAVServerUrl;
         }
 
         /// <summary>
@@ -108,6 +123,12 @@ namespace WebDAVMacApp
         /// <param name="webSocketMessage">Information about change in the remote storage.</param>
         /// <returns>True if the item exists and should be updated. False otherwise.</returns>
         public abstract bool Filter(WebSocketMessage webSocketMessage);
+
+        /// <summary>
+        /// Indicates if the root folder supports Collection Synchronization implementation.
+        /// </summary>
+        /// <returns>True if the WebDav server supports Collection Synchronization. False otherwise.</returns>
+        public abstract Task<bool> IsSyncCollectionSupportedAsync();
 
         /// <summary>
         /// Monitors and processes WebSockets notifications from the remote storage.
@@ -132,9 +153,9 @@ namespace WebDAVMacApp
 
                 // Because of the on-demand loading, item or its parent may not exists or be offline.
                 // We can ignore notifiction in this case and avoid many requests to the remote storage.
-                if (webSocketMessage != null && !Filter(webSocketMessage) && changeQueue.Count == 0)
+                if (webSocketMessage != null && !Filter(webSocketMessage) && (changeQueue.Count == 0 || !isSyncCollectionSupported))
                 {
-                    changeQueue.Add(webSocketMessage.ItemPath);
+                    changeQueue.Add(webSocketMessage);
                 }
             }
         }
@@ -165,6 +186,9 @@ namespace WebDAVMacApp
                               {
                                   repeat = false;
 
+                                  // Check if WebDAV server supports Collection Synchronization.
+                                  isSyncCollectionSupported = await IsSyncCollectionSupportedAsync();
+
                                   // Configure web sockets and connect to the server.
                                   clientWebSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(10);
                                   if (Credentials != null)
@@ -183,10 +207,17 @@ namespace WebDAVMacApp
                                   await clientWebSocket.ConnectAsync(new Uri(webSocketServerUrl), cancellationToken);
                                   Logger.LogMessage("Connected", webSocketServerUrl);
 
-                                  // After esteblishing connection with a server we must get all changes from the remote storage.
-                                  // This is required on Engine start, server recovery, network recovery, etc.
-                                  Logger.LogDebug("Getting all changes from server", webSocketServerUrl);
-                                  await ProcessAsync();
+                                  if (isSyncCollectionSupported)
+                                  {
+                                      // After esteblishing connection with a server we must get all changes from the remote storage.
+                                      // This is required on Engine start, server recovery, network recovery, etc.
+                                      Logger.LogDebug("Getting all changes from server", webSocketServerUrl);
+                                      await ProcessChangesAsync();
+                                  }
+                                  else
+                                  {
+                                      await PoolingAsync();
+                                  }
 
                                   Logger.LogMessage("Started", webSocketServerUrl);
 
@@ -204,7 +235,7 @@ namespace WebDAVMacApp
                                   // network disconnections or server failure.
                                   await Task.Delay(TimeSpan.FromSeconds(2), cancellationTokenSource.Token);
                                   repeat = true;
-                              };
+                              }
                           }
                       } while (repeat && !cancellationToken.IsCancellationRequested);
                   }
@@ -244,7 +275,7 @@ namespace WebDAVMacApp
         /// web sockets should not stop processing changes. 
         /// To stop processing changes that are already received the Engine must be stopped.
         /// </remarks>
-        private async Task ProcessAsync()
+        private async Task ProcessChangesAsync()
         {
             try
             {                
@@ -253,6 +284,26 @@ namespace WebDAVMacApp
             catch (Exception ex)
             {
                 Logger.LogError("Failed to process changes", null, null, ex);
+            }
+        }
+
+        /// <summary>
+        /// Starts pooling synchronization.
+        /// </summary>
+        /// <remarks>
+        /// We do not pass WebSockets cancellation token to this method because stopping 
+        /// web sockets should not stop processing pooling. 
+        /// To stop processing changes that are already received the Engine must be stopped.
+        /// </remarks>
+        private async Task PoolingAsync()
+        {
+            try
+            {
+                await ServerNotifications.PoolingAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to process pooling", null, null, ex);
             }
         }
 
@@ -269,9 +320,16 @@ namespace WebDAVMacApp
                 {
                     while (!cancelationToken.IsCancellationRequested)
                     {
-                        _ = changeQueue.Take(cancelationToken);
+                        WebSocketMessage message = changeQueue.Take(cancelationToken);
 
-                        await ProcessAsync();
+                        if (isSyncCollectionSupported)
+                        {
+                            await ProcessChangesAsync();
+                        }
+                        else
+                        {
+                            await PoolingAsync();
+                        }
                     }
                 }
                 catch (OperationCanceledException)

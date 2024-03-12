@@ -80,18 +80,19 @@ namespace WebDAVFileProviderExtension
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(GetMetadataAsync)}()", RemoteStorageUriById.AbsoluteUri);
 
             IHierarchyItem? item = null;
-            Client.PropertyName[] propNames = new Client.PropertyName[2];
+            Client.PropertyName[] propNames = new Client.PropertyName[3];
             propNames[0] = new Client.PropertyName("resource-id", "DAV:");
             propNames[1] = new Client.PropertyName("parent-resource-id", "DAV:");
+            propNames[2] = new Client.PropertyName("metadata-Etag", "DAV:");
 
             try
             {
                 // Return IFileMetadata for a file, IFolderMetadata for a folder.
                 item = (await Engine.WebDavSession.GetItemAsync(RemoteStorageUriById, propNames)).WebDavResponse;
             }
-            catch (Client.Exceptions.NotFoundException e)
+            catch (Client.Exceptions.NotFoundException)
             {
-                Logger.LogError($"{nameof(IFileSystemItem)}.{nameof(GetMetadataAsync)}()", RemoteStorageUriById.AbsoluteUri, ex: e);
+                Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(GetMetadataAsync)}() - item not found.", RemoteStorageUriById.AbsoluteUri);
 
                 item = null;
             }

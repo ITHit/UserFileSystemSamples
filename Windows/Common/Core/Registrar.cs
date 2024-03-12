@@ -12,6 +12,7 @@ using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Windows.Package;
 using ITHit.FileSystem.Windows.ShellExtension;
 using System.Reflection;
+using System.Linq;
 
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
@@ -20,8 +21,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
     /// </summary>
     public class Registrar
     {
-        protected readonly string SyncRootId;
-        protected readonly string UserFileSystemRootPath;
         protected readonly ILog Log;
         private readonly IEnumerable<(string Name, Guid Guid, bool AlwaysRegister)> shellExtensionHandlers;
 
@@ -37,10 +36,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// List of shell extension handlers. Use it only for applications without application or package identity.
         /// For applications with identity this list is ignored.
         /// </param>
-        public Registrar(string syncRootId, string userFileSystemRootPath, ILog log, IEnumerable<(string Name, Guid Guid, bool AlwaysRegister)> shellExtensionHandlers = null)
+        public Registrar(ILog log, IEnumerable<(string Name, Guid Guid, bool AlwaysRegister)> shellExtensionHandlers = null)
         {
-            this.SyncRootId = syncRootId;
-            this.UserFileSystemRootPath = userFileSystemRootPath;
             this.Log = log;
             this.shellExtensionHandlers = shellExtensionHandlers;
         }
@@ -55,27 +52,31 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// In the case of a packaged installer (msix) call this method during first program start.
         /// In the case of a regular installer (msi) call this method during installation.
         /// </remarks>
-        public async Task RegisterSyncRootAsync(string displayName, string iconPath, string shellExtensionsComServerExePath = null)
+        public async Task<StorageProviderSyncRootInfo> RegisterSyncRootAsync(string syncRootId, string userFileSystemRootPath, string remotestorageRootPath, string displayName, string iconPath, string shellExtensionsComServerExePath = null)
         {
-            if (!await IsRegisteredAsync(UserFileSystemRootPath))
+            StorageProviderSyncRootInfo syncRoot = null;
+            if (!await IsRegisteredAsync(userFileSystemRootPath))
             {
                 Log.Info($"\n\nRegistering sync root.");
-                Directory.CreateDirectory(UserFileSystemRootPath);
+                Directory.CreateDirectory(userFileSystemRootPath);
 
-                await RegisterAsync(SyncRootId, UserFileSystemRootPath, displayName, iconPath);
+                syncRoot = await RegisterAsync(syncRootId, userFileSystemRootPath, remotestorageRootPath, displayName, iconPath);
             }
             else
             {
-                Log.Info($"\n\nSync root already registered: {UserFileSystemRootPath}");
+                Log.Info($"\n\nSync root already registered: {userFileSystemRootPath}");
             }
 
             if (shellExtensionHandlers != null)
             {
                 // Register thumbnails handler, custom states handler, etc.
-                RegisterShellExtensions(shellExtensionsComServerExePath);
+                RegisterShellExtensions(syncRootId, shellExtensionHandlers, Log, shellExtensionsComServerExePath);
             }
+
+            return syncRoot;
         }
 
+        /*
         /// <summary>
         /// Unregisters sync root, shell extensions, deletes all synced items. 
         /// </summary>
@@ -102,7 +103,90 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             // Delete all files/folders.
             await CleanupAppFoldersAsync(engine);
         }
+        */
 
+        /// <summary>
+        /// Unmounts sync root, deletes all synced items and any data stored by the Engine.
+        /// </summary>
+        public static async Task<bool> UnregisterSyncRootAsync(string syncRootPath, string dataPath, ILog log)
+        {
+            bool res = await UnregisterSyncRootAsync(syncRootPath, log);
+
+            // Delete data folder.
+
+            // IMPORTANT!
+            // Delete any data only if unregistration was succesefull!
+
+            if (res && !string.IsNullOrWhiteSpace(dataPath))
+            {
+                log.Debug($"Deleteing data folder {syncRootPath} {dataPath}");
+                try
+                {
+                    Directory.Delete(dataPath, true);
+                }
+                catch (Exception ex)
+                {
+                    res = false;
+                    log.Error($"Failed to delete data folder {syncRootPath} {dataPath}", ex);
+                }
+            }
+
+            return res;
+        }
+
+        /// <summary>
+        /// Unmounts sync root, deletes all synced items. 
+        /// </summary>
+        private static async Task<bool> UnregisterSyncRootAsync(string syncRootPath, ILog logger)
+        {
+            bool res = false;
+            // Get sync root ID.
+            StorageFolder storageFolder = await StorageFolder.GetFolderFromPathAsync(syncRootPath);
+            StorageProviderSyncRootInfo syncRootInfo = null;
+            try
+            {
+                logger.Debug($"Getting sync root info {syncRootPath}");
+                syncRootInfo = StorageProviderSyncRootManager.GetSyncRootInformationForFolder(storageFolder);
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"Sync root is not registered {syncRootPath}", ex);
+            }
+
+            // Unregister sync root.
+            if (syncRootInfo != null)
+            {
+                try
+                { 
+                    logger.Debug($"Unregistering sync root {syncRootPath} {syncRootInfo.Id}");
+                    StorageProviderSyncRootManager.Unregister(syncRootInfo.Id);
+                }
+                catch (Exception ex)
+                {
+                    logger.Error($"Failed to unregister sync root {syncRootPath} {syncRootInfo.Id}", ex);
+                    // IMPORTANT!
+                    // If Unregister() failed, deleting items on the client may trigger deleting
+                    // items in the remote storage if the Engine did not stop or if started again.
+                    // Do NOT delete sync root folder in this case!
+                    return res;
+                }
+            }
+
+            // Delete sync root folder.
+            try
+            {
+                logger.Debug($"Deleteing sync root folder {syncRootPath}");
+                Directory.Delete(syncRootPath, true);
+                res = true;
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"Failed to delete sync root folder {syncRootPath}", ex);
+            }
+            return res;
+        }
+
+        /*
         public async Task CleanupAppFoldersAsync(EngineWindows engine)
         {
             Log.Info("\n\nDeleting all file and folder placeholders.");
@@ -130,18 +214,40 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 Log.Error($"\n{ex}");
             }
         }
+        */
 
         /// <summary>
-        /// Unregisters all components.
+        /// Unregisters all sync roots that has a provider ID and removes all components.
         /// </summary>
-        /// <param name="fullUninstall">
+        /// <param name="providerID">This method will only unmount sync roots that has this provider ID.</param>
+        /// <param name="fullUnregistration">
         /// Pass true in the released application to remove all registered components.
         /// Pass false in development mode, to keep sparse package, 
         /// development certificate or any other components required for development convenience.
         /// </param>
-        public virtual async Task UnregisterAsync(EngineWindows engine, bool fullUnregistration = true)
+        public virtual async Task<bool> UnregisterAllSyncRootsAsync(string providerId, bool fullUnregistration = true)
         {
-            await UnregisterSyncRootAsync(engine);
+            bool res = true;
+            var syncRoots = StorageProviderSyncRootManager.GetCurrentSyncRoots();
+            foreach(var syncRoot in syncRoots)
+            {
+                string storedProviderId = syncRoot.Id?.Split('!')?.FirstOrDefault();
+                if (storedProviderId.Equals(providerId))
+                {
+                    if (!await UnregisterSyncRootAsync(syncRoot.Path.Path, Log))
+                    {
+                        res = false;
+                    }
+                }
+            }
+
+            // Unregister shell extensions.
+            if (shellExtensionHandlers != null)
+            {
+                UnregisterShellExtensions();
+            }
+
+            return res;
         }
 
         /// <summary>
@@ -156,19 +262,19 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Note that this method can NOT register context menu commands on Windows 11. Windows 11 context menu
         /// requires application or package identity.
         /// </remarks>
-        private void RegisterShellExtensions(string shellExtensionsComServerExePath = null)
+        private static void RegisterShellExtensions(string syncRootId, IEnumerable<(string Name, Guid Guid, bool AlwaysRegister)> shellExtensionHandlers, ILog log, string shellExtensionsComServerExePath = null)
         {
             bool isRunningWithIdentity = PackageRegistrar.IsRunningWithIdentity();
             foreach (var handler in shellExtensionHandlers)
             {
-                if (!ShellExtensionRegistrar.IsHandlerRegistered(handler.Guid))
+                //if (!ShellExtensionRegistrar.IsHandlerRegistered(handler.Guid))
                 {
                     // Register handlers only if this app has no identity. Otherwise manifest will do this automatically.
                     // Unlike other handlers, CopyHook requires registration regardless of identity.
                     if (!isRunningWithIdentity || handler.AlwaysRegister)
                     {
-                        Log.Info($"\nRegistering shell extension {handler.Name} with CLSID {handler.Guid:B}...\n");
-                        ShellExtensionRegistrar.RegisterHandler(SyncRootId, handler.Name, handler.Guid, shellExtensionsComServerExePath);
+                        log.Info($"\nRegistering shell extension {handler.Name} with CLSID {handler.Guid:B}...\n");
+                        ShellExtensionRegistrar.RegisterHandler(syncRootId, handler.Name, handler.Guid, shellExtensionsComServerExePath);
                     }
                 }
             }
@@ -178,8 +284,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Unregisters shell service providers COM classes.
         /// Use this method only for applications without application or package identity.
         /// </summary>
-        /// <param name="shellextensionHandlers">List of shell extension handlers.</param>
-        /// <param name="log">log4net Logger.</param>
         /// <remarks>
         /// Note that this method can NOT unregister context menu commands on Windows 11. Windows 11 context menu 
         /// requires application or package identity.
@@ -203,13 +307,15 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         /// <param name="syncRootId">ID of the sync root.</param>
         /// <param name="path">A root folder of your user file system. Your file system tree will be located under this folder.</param>
+        /// <param name="remoteStoragePath">Remote storage path. It will be stored inide the sync root to distinguish between sync roots when mounting a new remote storage.</param>
         /// <param name="displayName">Human readable display name.</param>
         /// <param name="iconPath">Path to the drive ico file.</param>
+        /// <param name="providerID">Provider ID will be stored in sync root to find if this sync root belongs to this application.</param>
         /// <remarks>
         /// In the case of a packaged installer (msix) call this method during first program start.
         /// In the case of a regular installer (msi) call this method during installation.
         /// </remarks>
-        private static async Task RegisterAsync(string syncRootId, string path, string displayName, string iconPath)
+        private static async Task<StorageProviderSyncRootInfo> RegisterAsync(string syncRootId, string path, string remoteStoragePath, string displayName, string iconPath)
         {
             StorageProviderSyncRootInfo storageInfo = new StorageProviderSyncRootInfo();
             storageInfo.Path = await StorageFolder.GetFolderFromPathAsync(path);
@@ -218,7 +324,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             storageInfo.IconResource = iconPath;
             storageInfo.Version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
             storageInfo.RecycleBinUri = new Uri("https://userfilesystem.com/recyclebin");
-            storageInfo.Context = CryptographicBuffer.ConvertStringToBinary(path, BinaryStringEncoding.Utf8);
+            storageInfo.SetRemoteStoragePath(remoteStoragePath);
+            //storageInfo.ProviderId = providerID; // Provider ID is not returned by StorageProviderSyncRootManager.GetCurrentSyncRoots()
 
             // To open mp4 files using Windows Movies & TV application the Hydration Policy must be set to Full.
             storageInfo.HydrationPolicy = StorageProviderHydrationPolicy.Full;
@@ -229,17 +336,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             storageInfo.PopulationPolicy = StorageProviderPopulationPolicy.Full; // Set to Full to list folder content immediately on program start.
 
             // The read-only attribute is used to indicate that the item is being locked by another user. Do NOT include it into InSyncPolicy.
-            storageInfo.InSyncPolicy = 
-                //StorageProviderInSyncPolicy.FileCreationTime    | StorageProviderInSyncPolicy.DirectoryCreationTime |
-                //StorageProviderInSyncPolicy.FileLastWriteTime   | StorageProviderInSyncPolicy.DirectoryLastWriteTime |
-                //StorageProviderInSyncPolicy.FileHiddenAttribute | StorageProviderInSyncPolicy.DirectoryHiddenAttribute |
-                //StorageProviderInSyncPolicy.FileSystemAttribute | StorageProviderInSyncPolicy.DirectorySystemAttribute |
-                //StorageProviderInSyncPolicy.FileReadOnlyAttribute | StorageProviderInSyncPolicy.DirectoryReadOnlyAttribute |
-                StorageProviderInSyncPolicy.Default;
-
-            //storageInfo.ShowSiblingsAsGroup = false;
-            //storageInfo.HardlinkPolicy = StorageProviderHardlinkPolicy.None;
-
+            storageInfo.InSyncPolicy = StorageProviderInSyncPolicy.Default;
 
             // Adds columns to Windows File Manager. 
             // Show/hide columns in the "More..." context menu on the columns header in Windows Explorer.
@@ -247,12 +344,15 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Lock Owner"   , Id = (int)CustomColumnIds.LockOwnerIcon });            
             proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Lock Scope"   , Id = (int)CustomColumnIds.LockScope });
             proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Lock Expires" , Id = (int)CustomColumnIds.LockExpirationDate });            
-            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "ETag"         , Id = (int)CustomColumnIds.ETag });
+            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Content ETag" , Id = (int)CustomColumnIds.ContentETag });
+            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Metadata ETag", Id = (int)CustomColumnIds.MetadataETag });
 
 
             ValidateStorageProviderSyncRootInfo(storageInfo);
 
             StorageProviderSyncRootManager.Register(storageInfo);
+
+            return storageInfo;
         }
         
 
@@ -308,13 +408,13 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <summary>
         /// Determines if the syn root is registered for specified folder.
         /// </summary>
-        /// <param name="path">Sync root path.</param>
+        /// <param name="userFileSystemPath">Sync root path.</param>
         /// <returns>True if the sync root is registered, false otherwise.</returns>
-        private static async Task<bool> IsRegisteredAsync(string path)
+        private static async Task<bool> IsRegisteredAsync(string userFileSystemPath)
         {
-            if (Directory.Exists(path))
+            if (Directory.Exists(userFileSystemPath))
             {
-                StorageFolder storageFolder = await StorageFolder.GetFolderFromPathAsync(path);
+                StorageFolder storageFolder = await StorageFolder.GetFolderFromPathAsync(userFileSystemPath);
                 try
                 {
                     StorageProviderSyncRootManager.GetSyncRootInformationForFolder(storageFolder);
@@ -326,6 +426,60 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Determines if the syn root is registered for specified URI.
+        /// </summary>
+        /// <param name="uri">Uri.</param>
+        /// <returns>True if the sync root is registered, false otherwise.</returns>
+        public static bool IsRegisteredUri(Uri uri)
+        {
+            return GetSyncRootInfo(uri) != null;
+        }
+
+        /// <summary>
+        /// Determines if the syn root is registered for specified URI.
+        /// </summary>
+        /// <param name="uri">Uri.</param>
+        /// <returns>True if the sync root is registered, false otherwise.</returns>
+        public static bool IsRegisteredUri(string uriString)
+        {
+            if (!Uri.IsWellFormedUriString(uriString, UriKind.Absolute))
+                throw new ArgumentException("URI not well formed", nameof(uriString));
+
+            if (Uri.TryCreate(uriString, UriKind.Absolute, out Uri uri))
+            {
+                return IsRegisteredUri(uri);
+            }
+            else
+            {
+                throw new ArgumentException("Can not create URI", nameof(uriString));
+            }
+        }
+
+        /// <summary>
+        /// Gets sync root info for specified URI or null if sync root is not registered for this URI.
+        /// </summary>
+        /// <param name="uri">Uri.</param>
+        /// <returns>Sync root info or null.</returns>
+        private static StorageProviderSyncRootInfo GetSyncRootInfo(Uri uri)
+        {
+            var syncRoots = StorageProviderSyncRootManager.GetCurrentSyncRoots();
+
+            foreach (var syncRoot in syncRoots)
+            {
+                string storedUri = syncRoot.GetRemoteStoragePath();
+                if (Uri.TryCreate(storedUri, UriKind.Absolute, out Uri storedParsedUri))
+                {
+                    if (storedParsedUri.Equals(uri))
+                    {
+                        return syncRoot;
+                    }
+                }    
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -347,6 +501,44 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         private static async Task UnregisterAsync(string syncRootId)
         {
             StorageProviderSyncRootManager.Unregister(syncRootId);
+        }
+
+        public static async Task<IEnumerable<StorageProviderSyncRootInfo>> GetMountedSyncRootsAsync(string providerId, ILog log)
+        {
+            _ = string.IsNullOrEmpty(providerId) ? throw new ArgumentNullException(nameof(providerId)) : string.Empty;
+
+            IList<StorageProviderSyncRootInfo> mountedRoots = new List<StorageProviderSyncRootInfo>();
+            IReadOnlyList<StorageProviderSyncRootInfo> syncRoots = StorageProviderSyncRootManager.GetCurrentSyncRoots();
+            foreach (var syncRoot in syncRoots)
+            {
+                string storedProviderId = syncRoot.Id?.Split('!')?.FirstOrDefault();
+                if (storedProviderId.Equals(providerId))
+                {
+                    string storedUri = syncRoot.GetRemoteStoragePath();
+                    if (!System.Uri.TryCreate(storedUri, UriKind.Absolute, out System.Uri _))
+                    {
+                        log.Error($"Can not parse URI for {syncRoot.DisplayNameResource}: {storedUri}");
+                        continue;
+                    }
+
+                    mountedRoots.Add(syncRoot);
+                }
+            }
+
+            return mountedRoots;
+        }
+    }
+
+    public static class StorageProviderSyncRootInfoExtensions
+    {
+        public static string GetRemoteStoragePath(this StorageProviderSyncRootInfo rootInfo)
+        {
+            return CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf16LE, rootInfo.Context);
+        }
+
+        public static void SetRemoteStoragePath(this StorageProviderSyncRootInfo rootInfo, string remoteStoragePath)
+        {
+            rootInfo.Context = CryptographicBuffer.ConvertStringToBinary(remoteStoragePath, BinaryStringEncoding.Utf16LE);
         }
     }
 }
