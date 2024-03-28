@@ -46,13 +46,20 @@ namespace WebDAVMacApp
         /// <returns>True if the WebDav server supports Collection Synchronization. False otherwise.</returns>
         public override async Task<bool> IsSyncCollectionSupportedAsync()
         {
-            using (WebDavSession webDavSession = await WebDavSessionUtils.GetWebDavSessionAsync())
+            try
             {
-                Client.PropertyName[] propNames = new Client.PropertyName[1];
-                propNames[0] = new Client.PropertyName("supported-report-set", "DAV:");
-                Client.IHierarchyItem rootFolder = (await webDavSession.GetItemAsync(WebDAVServerUrl, propNames)).WebDavResponse;
+                using (WebDavSession webDavSession = await WebDavSessionUtils.GetWebDavSessionAsync())
+                {
+                    Client.PropertyName[] propNames = new Client.PropertyName[1];
+                    propNames[0] = new Client.PropertyName("supported-report-set", "DAV:");
+                    Client.IHierarchyItem rootFolder = (await webDavSession.GetItemAsync(WebDAVServerUrl, propNames)).WebDavResponse;
 
-                return rootFolder.Properties.Any(p => p.Name.Name == "supported-report-set" && p.StringValue.Contains("sync-collection"));
+                    return rootFolder.Properties.Any(p => p.Name.Name == "supported-report-set" && p.StringValue.Contains("sync-collection"));
+                }
+            }
+            catch(ITHit.WebDAV.Client.Exceptions.WebDavHttpException)
+            {
+                return false;
             }
         }
     }

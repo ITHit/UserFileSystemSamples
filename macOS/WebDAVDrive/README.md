@@ -49,6 +49,14 @@
 <p>Now you can manage documents using Finder, command prompt or by any other means. You can find the new file system in the 'Locations' sections in Finder.&nbsp;</p>
 <p>For the development and testing convenience, when installing the extension, it will automatically open an instance of Finder with a mounted file system as well as will launch a default web browser navigating to the WebDAV server URL specified in your appsettings.json:</p>
 <p><img id="__mcenew" alt="WebDAV Drive for macOS sample" src="https://www.userfilesystem.com/media/2196/webdavdrivemac.png" rel="125365"></p>
+<h2 class="heading-link" id="nav_packagingthesample">Packaging the Sample</h2>
+<p>To create installer for testing purposes and install the sample to /Application folder follow this steps:</p>
+<ol>
+<li>You need Mac Developer certificate to sign app and 3rd Party Mac Developer Installer certificate to sign pkg. To get them use this <a href="https://developer.apple.com/help/account/create-certificates/create-developer-id-certificates/">guide</a>.</li>
+<li>Start Release build.</li>
+<li>Then open Release output folder and find WebDAV Drive signed.pkg and use this pkg to install the Sample on the same host.</li>
+</ol>
+<p>For production environment you need to create&nbsp;Group ID, App Identifies and Provisioning Profiles configuration as described in <a title="Projects Deployment on macOS" href="https://www.userfilesystem.com/examples/apple_deployment/">this article</a>.</p>
 <h2>See also:</h2>
 <ul>
 <li><a title="Troubleshooting on macOS" href="https://www.userfilesystem.com/examples/mac_troubleshooting/">macOS File Provider Extension Troubleshooting</a></li>

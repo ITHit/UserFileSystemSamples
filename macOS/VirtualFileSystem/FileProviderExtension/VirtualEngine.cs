@@ -17,6 +17,11 @@ namespace FileProviderExtension
     [Register(nameof(VirtualEngine))]
     public class VirtualEngine : EngineMac
     {
+        /// <summary>
+        /// Secure Storage.
+        /// </summary>
+        public SecureStorage SecureStorage;
+
         [Export("initWithDomain:")]
         public VirtualEngine(NSFileProviderDomain domain)
             : base(domain)
@@ -28,10 +33,18 @@ namespace FileProviderExtension
             Debug += consolelogger.LogDebug;
 
             AutoLock = AppGroupSettings.Settings.Value.AutoLock;
+            SecureStorage = new SecureStorage();
 
-            SecureStorage secureStorage = new SecureStorage();
+            // set remote root storage item id.
+            SetRemoteStorageRootItemId(GetRootStorageItemIdAsync().Result);
 
-            DomainSettings domainSettings = secureStorage.GetAsync<DomainSettings>(domain.Identifier).Result;
+            Logger.LogMessage($"Engine started.");
+        }
+
+        /// <inheritdoc/>
+        public override async Task<byte[]> GetRootStorageItemIdAsync()
+        {
+            DomainSettings domainSettings = await SecureStorage.GetAsync<DomainSettings>(domain.Identifier);
             string remoteStorageRootPath = AppGroupSettings.Settings.Value.RemoteStorageRootPath;
 
             if (domainSettings != null && !string.IsNullOrEmpty(domainSettings.RemoteStorageRootPath))
@@ -39,10 +52,7 @@ namespace FileProviderExtension
                 remoteStorageRootPath = domainSettings.RemoteStorageRootPath;
             }
 
-            // set remote root storage item id.
-            SetRemoteStorageRootItemId(Mapping.EncodePath(remoteStorageRootPath));
-
-            Logger.LogMessage($"Engine started.");
+            return Mapping.EncodePath(remoteStorageRootPath);
         }
 
         /// <inheritdoc/>

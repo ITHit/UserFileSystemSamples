@@ -14,14 +14,9 @@ namespace WebDAVCommon
         public string WebDAVClientLicense { get; set; }
 
         /// <summary>
-        /// WebDAV server URL.
+        /// WebDAV server URLs.
         /// </summary>
-        public string WebDAVServerUrl { get; set; }
-
-        /// <summary>
-        /// WebSocket server URL.
-        /// </summary>
-        public string WebSocketServerUrl { get; set; }
+        public List<string> WebDAVServerURLs { get; set; } = new();
 
         /// <summary>
         /// Automatic lock timout in milliseconds.

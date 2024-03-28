@@ -174,22 +174,28 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// Opens Windows File Manager with both remote storage and user file system for testing.
         /// </summary>
         /// <param name="openRemoteStorage">True if the Remote Storage must be opened. False - otherwise.</param>
+        /// <param name="engineIndex">Index used to position Windows Explorer window to show this user file system.</param>
+        /// <param name="totalEngines">Total number of Engined that will be mounted by this app.</param>
         /// <remarks>This method is provided solely for the development and testing convenience.</remarks>
-        public void ShowTestEnvironment(string userFileSystemWindowName, bool openRemoteStorage = true, CancellationToken cancellationToken = default)
+        public void ShowTestEnvironment(string userFileSystemWindowName, bool openRemoteStorage = true, CancellationToken cancellationToken = default, int engineIndex = 0, int totalEngines = 1)
         {
-            // Open Windows File Manager with user file system.
-            Commands.Open(Engine.Path);
-            IntPtr hWndUserFileSystem = WindowManager.FindWindow(userFileSystemWindowName, cancellationToken);
-            WindowManager.PositionFileSystemWindow(hWndUserFileSystem, 1, 2);
+            int numWindowsPerEngine = 2; //openRemoteStorage ? 2 : 1; // Each engine shows 2 windows - remote storage and UFS.
+            int horizintalIndex = engineIndex * numWindowsPerEngine;
+            int totalWindows = totalEngines * numWindowsPerEngine;
 
+            // Open remote storage.
             if (openRemoteStorage)
             {
-                // Open remote storage.
                 Commands.Open(RemoteStorageRootPath);
                 string rsWindowName = Path.GetFileName(RemoteStorageRootPath.TrimEnd('\\'));
                 IntPtr hWndRemoteStorage = WindowManager.FindWindow(rsWindowName, cancellationToken);
-                WindowManager.PositionFileSystemWindow(hWndRemoteStorage, 0, 2);
+                WindowManager.PositionFileSystemWindow(hWndRemoteStorage, horizintalIndex, totalWindows);
             }
+
+            // Open Windows File Manager with user file system.
+            Commands.Open(Engine.Path);
+            IntPtr hWndUserFileSystem = WindowManager.FindWindow(userFileSystemWindowName, cancellationToken);
+            WindowManager.PositionFileSystemWindow(hWndUserFileSystem, horizintalIndex + 1, totalWindows);
         }
 
 #endif

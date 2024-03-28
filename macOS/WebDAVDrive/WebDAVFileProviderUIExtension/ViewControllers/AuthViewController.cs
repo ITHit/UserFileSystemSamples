@@ -120,9 +120,9 @@ namespace WebDAVFileProviderUIExtension.ViewControllers
             {
                 logger.LogDebug($"OnAuthenticationButtonActivated: send signal to file provider.");
 
-                secureStorage.SetAsync("LoginType", "UserNamePassword").Wait();
                 secureStorage.SetAsync("UserName", loginTextField.StringValue).Wait();
-                secureStorage.SetAsync("Password", passwordTextField.StringValue).Wait();              
+                secureStorage.SetAsync("Password", passwordTextField.StringValue).Wait();
+                secureStorage.SetAsync("RequireAuthentication", string.Empty).Wait();
                 extensionContext.CompleteRequest();
             }
             catch(Exception ex)

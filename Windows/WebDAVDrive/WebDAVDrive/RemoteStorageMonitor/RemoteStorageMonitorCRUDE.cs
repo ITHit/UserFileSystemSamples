@@ -39,7 +39,7 @@ namespace WebDAVDrive
         private readonly string webDAVServerUrl;
 
         internal RemoteStorageMonitorCRUDE(string webSocketServerUrl, string webDAVServerUrl, VirtualEngine engine) 
-            : base(webSocketServerUrl, int.MinValue, engine.Logger)
+            : base(webSocketServerUrl, int.MinValue, engine.Logger.CreateLogger($"Remote Storage Monitor: CRUDE"))
         {
             this.webDAVServerUrl = webDAVServerUrl;
             this.engine = engine;

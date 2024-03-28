@@ -9,8 +9,7 @@ namespace WebDAVFileProviderUIExtension;
 [Register("FPUIActionExtension")]
 public class FPUIActionExtension : FPUIActionExtensionViewControllerMac
 {
-    public FPUIActionExtension() : base(NSFileProviderManager.FromDomain(new NSFileProviderDomain(SecureStorage.ExtensionIdentifier, SecureStorage.ExtensionDisplayName)),
-        new ConsoleLogger(typeof(FPUIActionExtension).Name))
+    public FPUIActionExtension() : base(new ConsoleLogger(typeof(FPUIActionExtension).Name))
     { }
 
     /// <inheritdoc/>
@@ -24,8 +23,19 @@ public class FPUIActionExtension : FPUIActionExtensionViewControllerMac
     /// <inheritdoc/>
     public override async Task<NSViewController> RequireAuthenticationAsync(IMacFPUIActionExtensionContext context)
     {
-        Logger.LogMessage($"{nameof(FPUIActionExtension)}.{nameof(RequireAuthenticationAsync)}()");
+        SecureStorage secureStorage = new SecureStorage();
+        Logger.LogMessage($"{nameof(FPUIActionExtension)}.{nameof(RequireAuthenticationAsync)}()");  
 
-        return new AuthViewController(context);
+        if (await secureStorage.GetAsync("LoginType") == "UserNamePassword")
+        {
+            return new AuthViewController(context);
+        }
+        else
+        {
+            Logger.LogMessage($"Return CookiesAuthViewController.");
+            string url = await secureStorage.GetAsync("CookiesFailedUrl");
+            Logger.LogMessage($"Return CookiesAuthViewController read url {url}.");
+            return new CookiesAuthViewController(context, url);
+        }
     }
 }

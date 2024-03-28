@@ -20,6 +20,17 @@ namespace WebDAVCommon
             {
                 webDavSession.Credentials = new NetworkCredential(await secureStorage.GetAsync("UserName"), await secureStorage.GetAsync("Password"));
             }
+            else if (!string.IsNullOrEmpty(loginType) && loginType.Equals("Cookies"))
+            {
+                List<Cookie> cookies = await secureStorage.GetAsync<List<Cookie>>("Cookies");
+                if (cookies != null)
+                {
+                    foreach (Cookie cookie in cookies)
+                    {
+                        webDavSession.CookieContainer.Add(cookie);
+                    }
+                }
+            }
 
             return webDavSession;
         }

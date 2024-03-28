@@ -84,6 +84,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             Debug += logFormatter.LogDebug;
         }
 
+        
         /// <summary>
         /// Fired for each file or folder change.
         /// </summary>
@@ -160,6 +161,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                     break;
             }
         }
+        
 
         /// <inheritdoc/>
         public override async Task<bool> FilterAsync(SyncDirection direction, OperationType operationType, string path, FileSystemItemType itemType, string newPath, IOperationContext operationContext)

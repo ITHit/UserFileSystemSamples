@@ -119,7 +119,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
             if (res && !string.IsNullOrWhiteSpace(dataPath))
             {
-                log.Debug($"Deleteing data folder {syncRootPath} {dataPath}");
+                log.Debug($"Deleteing data folder for {syncRootPath}");
                 try
                 {
                     Directory.Delete(dataPath, true);
@@ -172,6 +172,20 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 }
             }
 
+            // Remore the read-only arrtibute. Otherwise delete fails.
+            var allItems = Directory.EnumerateFileSystemEntries(syncRootPath, "*", SearchOption.AllDirectories);
+            foreach(var path in allItems)
+            {
+                try
+                {
+                    new FileInfo(path).IsReadOnly = false;
+                }
+                catch (Exception ex)
+                {
+                    logger.Error($"Failed to remove read-only attribute for {path}", ex);
+                }
+            }
+
             // Delete sync root folder.
             try
             {
@@ -185,36 +199,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
             return res;
         }
-
-        /*
-        public async Task CleanupAppFoldersAsync(EngineWindows engine)
-        {
-            Log.Info("\n\nDeleting all file and folder placeholders.");
-            try
-            {
-                if (Directory.Exists(UserFileSystemRootPath))
-                {
-                    Directory.Delete(UserFileSystemRootPath, true);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Failed to delete placeholders.", ex);
-            }
-
-            try
-            {
-                if (engine != null && !string.IsNullOrWhiteSpace(engine.DataPath))
-                {
-                    Directory.Delete(engine.DataPath, true);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"\n{ex}");
-            }
-        }
-        */
 
         /// <summary>
         /// Unregisters all sync roots that has a provider ID and removes all components.

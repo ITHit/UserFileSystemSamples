@@ -84,10 +84,15 @@ namespace WebDAVDrive
             //  - Content eTag. The Engine will store it to determine if the file content should be updated.
             //  - Medatdata eTag. The Engine will store it to determine if the item metadata should be updated.
 
-            string remoteStorageId = response.Headers.GetValues("resource-id").FirstOrDefault();
+            byte[] remoteStorageItemId = null;
+            if (response.Headers.Contains("resource-id"))
+            {
+                string remoteStorageId = response.Headers.GetValues("resource-id").FirstOrDefault();
+                remoteStorageItemId = Encoding.UTF8.GetBytes(remoteStorageId);
+            }
             return new FileMetadataExt()
             {
-                RemoteStorageItemId = Encoding.UTF8.GetBytes(remoteStorageId),
+                RemoteStorageItemId = remoteStorageItemId,
                 ContentETag = response.WebDavResponse
                 // MetadataETag =
             };
@@ -107,10 +112,15 @@ namespace WebDAVDrive
             //  - Remote storage item ID. It will be passed to GetFileSystemItem() during next calls.
             //  - Medatdata eTag. The Engine will store it to determine if the item metadata should be updated.
 
-            string remoteStorageId = response.Headers.GetValues("resource-id").FirstOrDefault();
+            byte[] remoteStorageItemId = null;
+            if (response.Headers.Contains("resource-id"))
+            {
+                string remoteStorageId = response.Headers.GetValues("resource-id").FirstOrDefault();
+                remoteStorageItemId = Encoding.UTF8.GetBytes(remoteStorageId);
+            }
             return new FolderMetadataExt()
             {
-                RemoteStorageItemId = Encoding.UTF8.GetBytes(remoteStorageId)
+                RemoteStorageItemId = remoteStorageItemId
                 // MetadataETag =
             };
         }

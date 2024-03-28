@@ -14,7 +14,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
     public static class CustomDataExtensions
     {
         /// <summary>
-        /// Saves all custom metadata properties (eTag, locks, etc) to storage associated with an item.
+        /// Saves all custom metadata properties, such as locks, to storage associated with an item.
         /// This data that is displayed in custom columns in file manager.
         /// </summary>
         /// <param name="properties">Custom data attached to the item.</param>

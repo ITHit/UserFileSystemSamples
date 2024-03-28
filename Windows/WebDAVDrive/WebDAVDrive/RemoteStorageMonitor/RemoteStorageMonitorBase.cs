@@ -112,7 +112,7 @@ namespace WebDAVDrive
         {
             this.WebSocketServerUrl = webSocketServerUrl;
             this.MaxQueueLength = maxQueueLength;
-            this.Logger = logger.CreateLogger($"RS Monitor {SyncMode}");
+            this.Logger = logger;
         }
 
         /// <summary>
@@ -156,74 +156,97 @@ namespace WebDAVDrive
         /// <summary>
         /// Starts monitoring changes in the remote storage.
         /// </summary>
-        /// <param name="cookies">Cookies to add to web sockets requests.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
+            // Start sockets after first successeful WebDAV PROPFIND. 
             Logger.LogDebug("Starting", WebSocketServerUrl);
 
+            // Configure web sockets and connect to the server.
+            // If connection fails this method throws exception.
+            // This will signal to the caller that web sockets are not supported.
+            clientWebSocket = await ConnectWebSocketsAsync(cancellationToken);
+            
             await Task.Factory.StartNew(
-              async () =>
-              {
-                  using (cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
-                  {
-                      // Create task for processing websocket events.
-                      handlerChangesTask = CreateHandlerChangesTask(cancellationTokenSource.Token);
+                async () =>
+                {
+                    using (cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+                    {
+                        // Create task for processing websocket events.
+                        handlerChangesTask = CreateHandlerChangesTask(cancellationTokenSource.Token);
 
-                      bool repeat = false;
-                      do
-                      {
-                          using (clientWebSocket = new ClientWebSocket())
-                          {
-                              try
-                              {
-                                  repeat = false;
+                        // Restart socket if disconnected. 
+                        bool repeat = false;
+                        do
+                        {
+                            using (clientWebSocket ??= await ConnectWebSocketsAsync(cancellationToken))
+                            {
+                                try
+                                {
+                                    repeat = false;
 
-                                  // Configure web sockets and connect to the server.
-                                  clientWebSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(10);
-                                  if (Credentials != null)
-                                  {
-                                      clientWebSocket.Options.Credentials = Credentials;
-                                  }
-                                  if (Cookies != null)
-                                  {
-                                      clientWebSocket.Options.Cookies = new CookieContainer();
-                                      clientWebSocket.Options.Cookies.Add(Cookies);
-                                  }
-                                  if (InstanceId != Guid.Empty)
-                                  {
-                                      clientWebSocket.Options.SetRequestHeader("InstanceId", InstanceId.ToString());
-                                  }
-                                  await clientWebSocket.ConnectAsync(new Uri(WebSocketServerUrl), cancellationToken);
-                                  Logger.LogMessage("Connected", WebSocketServerUrl);
+                                    // After esteblishing connection with a server, 
+                                    // we must get all changes from the remote storage.
+                                    // This is required on Engine start, server recovery, network recovery, etc.
+                                    Logger.LogDebug("Getting changes from server", WebSocketServerUrl);
+                                    await ProcessAsync(null);
 
-                                  // After esteblishing connection with a server, in case of Sync ID algorithm,
-                                  // we must get all changes from the remote storage.
-                                  // This is required on Engine start, server recovery, network recovery, etc.
-                                  Logger.LogDebug("Getting all changes from server", WebSocketServerUrl);
-                                  await ProcessAsync(null);
+                                    Logger.LogMessage("Started", WebSocketServerUrl);
 
-                                  Logger.LogMessage("Started", WebSocketServerUrl);
+                                    await RunWebSocketsAsync(cancellationTokenSource.Token);
+                                }
+                                catch (Exception e) when (e is WebSocketException || e is AggregateException)
+                                {                                    
+                                    if (clientWebSocket != null && clientWebSocket?.State != WebSocketState.Closed)
+                                    {
+                                        Logger.LogError(e.Message, WebSocketServerUrl, null, e);
+                                    }
+                                    else
+                                    {
+                                        Logger.LogDebug(e.Message, WebSocketServerUrl);
+                                    }
 
-                                  await RunWebSocketsAsync(cancellationTokenSource.Token);
-                              }
-                              catch (Exception e) when (e is WebSocketException || e is AggregateException)
-                              {
-                                  // Start socket after first successeful WebDAV PROPFIND. Restart socket if disconnected.
-                                  if (clientWebSocket != null && clientWebSocket?.State != WebSocketState.Closed)
-                                  {
-                                      Logger.LogError(e.Message, WebSocketServerUrl, null, e);
-                                  }
-
-                                  // Here we delay WebSocket connection to avoid overload on
-                                  // network disconnections or server failure.
-                                  await Task.Delay(TimeSpan.FromSeconds(2), cancellationTokenSource.Token);
-                                  repeat = true;
-                              };
-                          }
-                      } while (repeat && !cancellationToken.IsCancellationRequested);
-                  }
+                                    // Here we delay WebSocket connection to avoid overload on
+                                    // network disconnections or server failure.
+                                    await Task.Delay(TimeSpan.FromSeconds(2), cancellationTokenSource.Token);
+                                    repeat = true;
+                                };
+                            }
+                            clientWebSocket = null;
+                        } while (repeat && !cancellationToken.IsCancellationRequested);
+                    }
               }, cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        }
+
+        /// <summary>
+        /// Configures web sockets and connects to the server.
+        /// </summary>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        private async Task<ClientWebSocket> ConnectWebSocketsAsync(CancellationToken cancellationToken)
+        {
+            clientWebSocket = new ClientWebSocket();
+
+            // Configure web sockets.
+            clientWebSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(10);
+            if (Credentials != null)
+            {
+                clientWebSocket.Options.Credentials = Credentials;
+            }
+            if (Cookies != null)
+            {
+                clientWebSocket.Options.Cookies = new CookieContainer();
+                clientWebSocket.Options.Cookies.Add(Cookies);
+            }
+            if (InstanceId != Guid.Empty)
+            {
+                clientWebSocket.Options.SetRequestHeader("InstanceId", InstanceId.ToString());
+            }
+
+            // Connect to the server.
+            await clientWebSocket.ConnectAsync(new Uri(WebSocketServerUrl), cancellationToken);
+            Logger.LogMessage("Connected", WebSocketServerUrl);
+
+            return clientWebSocket;
         }
 
         /// <summary>
@@ -239,7 +262,7 @@ namespace WebDAVDrive
                 if (clientWebSocket != null
                     && (clientWebSocket?.State == WebSocketState.Open || clientWebSocket?.State == WebSocketState.CloseSent || clientWebSocket?.State == WebSocketState.CloseReceived))
                 {
-                    await clientWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+                    await clientWebSocket?.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
                 }
             }
             catch (WebSocketException ex)

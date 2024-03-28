@@ -261,7 +261,7 @@ namespace WebDAVDrive
                 consoleProcessor.Commands.TryAdd(engine.InstanceId, engine.Commands);
 
                 engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
-                engine.SyncService.IncomingSyncMode = ITHit.FileSystem.Synchronization.IncomingSyncMode.SyncId;
+                engine.SyncService.IncomingSyncMode = Settings.PreferredIncomingSyncMode;
                 engine.AutoLock = Settings.AutoLock;
                 engine.MaxTransferConcurrentRequests = Settings.MaxTransferConcurrentRequests.Value;
                 engine.MaxOperationsConcurrentRequests = Settings.MaxOperationsConcurrentRequests.Value;
@@ -277,7 +277,7 @@ namespace WebDAVDrive
                 await engine.StartAsync();
 #if DEBUG
                 // Start Windows File Manager with user file system folder.
-                engine.Commands.ShowTestEnvironment(GetDisplayName(webDAVServerUrl), false);
+                engine.Commands.ShowTestEnvironment(GetDisplayName(webDAVServerUrl), false, default, Engines.Count-1, Settings.WebDAVServerURLs.Count());
 #endif
                 return true;
             }
@@ -337,7 +337,7 @@ namespace WebDAVDrive
             }
             engine.Dispose();
 
-            // Refresh Windows Explorer.
+            // Refresh Windows Explorer to remove the root node.
             PlaceholderItem.UpdateUI(Path.GetDirectoryName(engine.Path));
 
             // If no Engines are running exit the app.

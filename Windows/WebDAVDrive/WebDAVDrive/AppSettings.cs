@@ -6,6 +6,7 @@ using System.Reflection;
 
 using ITHit.FileSystem.Samples.Common;
 using WebDAVDrive.UI;
+using ITHit.FileSystem.Synchronization;
 
 
 namespace WebDAVDrive
@@ -76,11 +77,15 @@ namespace WebDAVDrive
         public bool ShellExtensionsComServerRpcEnabled { get; set; }
 
         /// <summary>
-        // Mark documents locked by other users as read-only for this user and vice versa.
-        // A read-only MS Office document opens in a view-only mode preventing document collisions.
+        /// Mark documents locked by other users as read-only for this user and vice versa.
+        /// A read-only MS Office document opens in a view-only mode preventing document collisions.
         /// </summary>
         public bool SetLockReadOnly { get; set; }
 
+        /// <summary>
+        /// Preferred incoming synchronization mode.
+        /// </summary>
+        public IncomingSyncMode PreferredIncomingSyncMode { get; set; }
     }
 
     /// <summary>

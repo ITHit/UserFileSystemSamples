@@ -6,7 +6,7 @@ namespace Common.Core
 	public class SecureStorageBase
 	{
         private string appGroupId;
-        private const string InternalSettingFile = "data.out";
+        private const string InternalSettingFile = "userdata.out";
 
         public SecureStorageBase(string appGroupId)
         {
@@ -103,11 +103,21 @@ namespace Common.Core
         }
 
         /// <summary>
-        /// Triggers log-in button in file manager.
+        /// Triggers log-in button in file manager for basic and digest.
         /// </summary>
-        public async Task RequireAuthenticationAsync()
+        public async Task RequirePasswordAuthenticationAsync()
         {
-            await SetAsync("LoginType", "RequireAuthentication");
+            await SetAsync("LoginType", "UserNamePassword");
+            await SetAsync("RequireAuthentication", "true");
+        }
+
+        /// <summary>
+        /// Triggers log-in button in file manager for cookies.
+        /// </summary>
+        public async Task RequireCookiesAuthenticationAsync()
+        {
+            await SetAsync("LoginType", "Cookies");
+            await SetAsync("RequireAuthentication", "true");          
         }
     }
 }

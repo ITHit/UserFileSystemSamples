@@ -2,19 +2,21 @@ using System;
 using System.Net;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Security;
+using Windows.Security.Credentials.UI;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.WebDAV.Client;
 using ITHit.WebDAV.Client.Exceptions;
-using Microsoft.VisualBasic.Logging;
-using System.Security;
-using WebDAVDrive.UI.ViewModels;
-using NotImplementedException = System.NotImplementedException;
-using WebDAVDrive.UI;
 using ITHit.FileSystem.Synchronization;
 
+using WebDAVDrive.UI;
+using System.Runtime.InteropServices.WindowsRuntime;
+using System.IO;
+using System.Windows;
+using System.Text;
 
 namespace WebDAVDrive
 {
@@ -213,7 +215,7 @@ namespace WebDAVDrive
             }
 
             Logger.LogError($"Menu not found", Path, menuGuid.ToString());
-            throw new NotImplementedException();
+            throw new System.NotImplementedException();
         }
 
         /// <inheritdoc/>
@@ -289,7 +291,10 @@ namespace WebDAVDrive
         public override async Task StopAsync()
         {
             await base.StopAsync();
-            await RemoteStorageMonitor?.StopAsync();
+            if (RemoteStorageMonitor != null)
+            {
+                await RemoteStorageMonitor?.StopAsync();
+            }
         }
 
         /// <summary>
@@ -301,15 +306,15 @@ namespace WebDAVDrive
             var response = await DavClient.GetItemAsync(new Uri(webDAVServerUrl), Mapping.GetDavProperties(), null, cancellationToken);
             IHierarchyItem rootFolder = response.WebDavResponse;
 
-            byte[] remoteStorageItemId = Mapping.GetUserFileSystemItemMetadata(rootFolder).RemoteStorageItemId;
+            IFileSystemItemMetadata metadata = Mapping.GetUserFileSystemItemMetadata(rootFolder);
 
-            // This sample requires synchronization support, verifying that the ID was returned.
-            if (remoteStorageItemId == null)
+            // If remote storage ID is not returned, the SyncID collection synchronization is not supported.
+            if (metadata.RemoteStorageItemId == null)
             {
-                throw new WebDavException("remote-id or parent-resource-id is not found. Your WebDAV server does not support collection synchronization. Upgrade your .NET WebDAV server to v13.2 or Java WebDAV server to v6.2 or later version.");
+                Logger.LogMessage("Root resource-id is null.", Path);
             }
 
-            return remoteStorageItemId;
+            return metadata.RemoteStorageItemId;
         }
 
         /// <summary>
@@ -433,37 +438,31 @@ namespace WebDAVDrive
             }
             else
             {
-                string login = null;
-                SecureString password = null;
-                bool dialogResult = false;
-                bool keepLogedin = false;
-
-                // Show login dialog
-                WebDAVDrive.UI.ChallengeLogin loginForm = null;
-                Thread thread = new Thread(() =>
-                {
-                    loginForm = new WebDAVDrive.UI.ChallengeLogin();
-                    ((ChallengeLoginViewModel)loginForm.DataContext).Url = failedUri.OriginalString;
-                    ((ChallengeLoginViewModel)loginForm.DataContext).WindowTitle = Title;
-                    loginForm.ShowDialog();
-
-                    login = ((ChallengeLoginViewModel)loginForm.DataContext).Login;
-                    password = ((ChallengeLoginViewModel)loginForm.DataContext).Password;
-                    keepLogedin = ((ChallengeLoginViewModel)loginForm.DataContext).KeepLogedIn;
-                    dialogResult = (bool)loginForm.DialogResult;
-                });
-                thread.SetApartmentState(ApartmentState.STA);
-                thread.Start();
-                thread.Join();
+                CredentialPickerResults res;
+                CredentialPickerOptions options = new CredentialPickerOptions();
+                options.Caption = productName;
+                options.CredentialSaveOption = CredentialSaveOption.Unselected;
+                options.AuthenticationProtocol = AuthenticationProtocol.Basic;
+                options.TargetName = failedUri.OriginalString;
+                options.Message = failedUri.OriginalString;
+                
+                res = CredentialPicker.PickAsync(options).GetAwaiter().GetResult();
 
                 loginRetriesCurrent++;
-                if (dialogResult)
+                if (res.ErrorCode == 0)
                 {
-                    if (keepLogedin)
+                    if (res.CredentialSaveOption == CredentialSaveOption.Selected)
                     {
-                        CredentialManager.SaveCredentials(CredentialsStorageKey, login, password);
+                        //using (var dataReader = Windows.Storage.Streams.DataReader.FromBuffer(res.Credential))
+                        //{
+                        //    dataReader.UnicodeEncoding = Windows.Storage.Streams.UnicodeEncoding.Utf16LE;
+                        //    string creds = dataReader.ReadString(res.Credential.Length);
+                        //}
+
+                        CredentialManager.SaveCredentials(CredentialsStorageKey, res.CredentialUserName, res.CredentialPassword);
                     }
-                    NetworkCredential newNetworkCredential = new NetworkCredential(login, password);
+
+                    NetworkCredential newNetworkCredential = new NetworkCredential(res.CredentialUserName, res.CredentialPassword);
                     DavClient.Credentials = newNetworkCredential;
                     this.Credentials = newNetworkCredential;
                     this.CurrentUserPrincipal = newNetworkCredential.UserName;

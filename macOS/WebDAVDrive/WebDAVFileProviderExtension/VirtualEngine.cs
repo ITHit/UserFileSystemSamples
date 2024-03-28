@@ -68,12 +68,8 @@ namespace WebDAVFileProviderExtension
 
             SecureStorage = new SecureStorage();
 
-            WebDAVServerUrl = AppGroupSettings.Settings.Value.WebDAVServerUrl;
-            DomainSettings domainSettings = SecureStorage.GetAsync<DomainSettings>(domain.Identifier).Result;
-            if (domainSettings != null && !string.IsNullOrEmpty(domainSettings.WebDAVServerUrl))
-            {
-                WebDAVServerUrl = domainSettings.WebDAVServerUrl;
-            }
+            // Get WebDAV url from user settings.
+            WebDAVServerUrl = SecureStorage.GetAsync(domain.Identifier).Result;
 
             InitWebDavSession();
 
@@ -133,11 +129,8 @@ namespace WebDAVFileProviderExtension
             throw new NotImplementedException();
         }
 
-        /// <summary>
-        /// Returns remote storage item id.
-        /// </summary>
-        /// <returns></returns>
-        public async Task<byte[]> GetRootStorageItemIdAsync()
+        /// <inheritdoc/>
+        public override async Task<byte[]> GetRootStorageItemIdAsync()
         {
             Logger.LogMessage($"{nameof(VirtualEngine)}.{nameof(GetRootStorageItemIdAsync)}()");
             try
@@ -152,7 +145,14 @@ namespace WebDAVFileProviderExtension
                     // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
                     case 401:
                         // Set login type to display sing in button in Finder.
-                        await SecureStorage.RequireAuthenticationAsync();
+                        await SecureStorage.RequirePasswordAuthenticationAsync();
+                        return null;
+                    // 302 redirect to login page.
+                    case 302:
+                        Uri failedUri = httpException.Uri;
+                        await SecureStorage.SetAsync("CookiesFailedUrl", failedUri.AbsoluteUri);
+                        // Set login type to display sing in button in Finder.
+                        await SecureStorage.RequireCookiesAuthenticationAsync();
                         return null;
                 }
                 return null;
@@ -180,8 +180,9 @@ namespace WebDAVFileProviderExtension
         public override async Task<bool> IsAuthenticatedAsync()
         {
             Logger.LogMessage($"{nameof(IEngine)}.{nameof(IsAuthenticatedAsync)}()");
-            string loginType = await SecureStorage.GetAsync("LoginType");
-            return string.IsNullOrEmpty(loginType) || loginType != "RequireAuthentication";
+            string requireAuthentication = await SecureStorage.GetAsync("RequireAuthentication");
+
+            return string.IsNullOrEmpty(requireAuthentication);
         }
     }
 }

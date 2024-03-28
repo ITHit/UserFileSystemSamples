@@ -20,13 +20,13 @@ namespace WebDAVDrive
         /// </summary>
         /// <param name="resource">Resource name under which credentials will be saved.</param>
         /// <param name="login">User name to be saved.</param>
-        /// <param name="securePassword">Password to be saved.</param>
-        public static void SaveCredentials(string resource, string login, SecureString securePassword)
+        /// <param name="password">Password to be saved.</param>
+        public static void SaveCredentials(string resource, string login, string password)
         {
             PasswordVault vault = new PasswordVault();
 
             //retrive string password form SecureString (password can not be retrived directly from Security string)
-            string password = new System.Net.NetworkCredential(string.Empty, securePassword).Password;
+            //string password = new System.Net.NetworkCredential(string.Empty, securePassword).Password;
 
             PasswordCredential credential = new PasswordCredential()
             {
@@ -35,7 +35,7 @@ namespace WebDAVDrive
                 Resource = resource
             };
 
-            //save credential in Credential Manager
+            // Save credentials in vault.
             vault.Add(credential);
         }
 

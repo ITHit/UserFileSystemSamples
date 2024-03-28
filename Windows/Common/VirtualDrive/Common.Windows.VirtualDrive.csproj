@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net7.0-windows10.0.19041.0</TargetFrameworks>
+    <TargetFrameworks>net8.0-windows10.0.19041.0</TargetFrameworks>
     <Description>Contains functionality common for all Windows Virtual Drive samples.</Description>
     <Authors>IT Hit LTD.</Authors>
     <Product>IT Hit User File System</Product>
@@ -13,8 +13,8 @@
     <Compile Remove="IVirtualFolder.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.AppHelper" Version="8.1.26224.0-Beta2" />
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="8.1.26224.0-Beta2" />
+    <PackageReference Include="ITHit.FileSystem.Windows.AppHelper" Version="8.1.26727.0-Beta2" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="8.1.26727.0-Beta2" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Core\Common.Windows.Core.csproj" />
   </ItemGroup>
