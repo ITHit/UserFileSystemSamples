@@ -1,3 +1,4 @@
+using System.Globalization;
 using FileProviderExtension.Extensions;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Mac;
@@ -44,7 +45,7 @@ namespace WebDAVFileProviderExtension
                     }
                     catch (Client.Exceptions.WebDavHttpException httpException)
                     {
-                        HandleWebExceptions(httpException, resultContext);
+                        await HandleWebExceptionsAsync(httpException, resultContext);
                     }
                 }
 
@@ -98,7 +99,8 @@ namespace WebDAVFileProviderExtension
                     {
                         Client.IFile file = (await Engine.WebDavSession.GetFileAsync(RemoteStorageUriById.AbsoluteUri, null, cancellationToken)).WebDavResponse;
                         Client.Property[] propsToAddAndUpdate = new Client.Property[1];
-                        propsToAddAndUpdate[0] = new Client.Property(new Client.PropertyName("Win32LastModifiedTime", "urn:schemas-microsoft-com:"), fileBasicInfo.LastWriteTime.ToString());
+                        propsToAddAndUpdate[0] = new Client.Property(new Client.PropertyName("Win32LastModifiedTime", "urn:schemas-microsoft-com:"),
+                            fileBasicInfo.LastWriteTime?.ToString(new CultureInfo("en-US")));
 
                         await file.UpdatePropertiesAsync(propsToAddAndUpdate, null, lockTokens?.FirstOrDefault()?.LockToken);
                     }

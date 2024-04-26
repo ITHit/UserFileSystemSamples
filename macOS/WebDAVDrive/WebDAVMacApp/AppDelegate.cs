@@ -9,6 +9,8 @@ using FileProvider;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Mac;
 using WebDAVCommon;
+using WebDAVFileProviderUIExtension.ViewControllers;
+//using WebDAVFileProviderUIExtension.ViewControllers;
 
 namespace WebDAVMacApp
 {
@@ -57,7 +59,6 @@ namespace WebDAVMacApp
             });
             StatusItem.Menu.AddItem(exitMenuItem);
 
-
             Logger.LogMessage("Finished DidFinishLaunching");
         }
 
@@ -66,109 +67,198 @@ namespace WebDAVMacApp
         {
             Logger.LogMessage($"OpenUrls - {string.Join(",", urls.Select(p => p.AbsoluteUrl))}");
 
-            foreach (NSUrl url in urls)
+            try
             {
-                Dictionary<string, string> parameters = url.AbsoluteUrl.ToString().Replace(ProtocolPrefix, string.Empty).Split(';').ToDictionary(p => p.Split('=')[0], p => p.Split('=')[1]);
-
-                Uri itemUrl = new Uri(HttpUtility.UrlDecode(parameters["ItemUrl"]));
-                Uri webDAVServerUrl = new Uri(HttpUtility.UrlDecode(parameters["MountUrl"]));
-                string domainIdentifier = webDAVServerUrl.Host;
-
-                List<string> webDAVServerURLs = await SecureStorage.GetAsync<List<string>>("WebDAVServerURLs");
-                Task<bool> taskIsExtensionRegistered = Task.Run<bool>(async () => await Common.Core.Registrar.IsRegisteredAsync(domainIdentifier));
-                bool isExtensionRegistered = taskIsExtensionRegistered.Result;
-                if (!isExtensionRegistered)
+                foreach (NSUrl url in urls)
                 {
-                    if (!DomainsMenuItems.ContainsKey(domainIdentifier))
+                    Dictionary<string, string> parameters = url.AbsoluteUrl.ToString().Replace(ProtocolPrefix, string.Empty).Split(';').ToDictionary(p => p.Split('=')[0], p => p.Split('=')[1]);
+
+                    Uri itemUrl = new Uri(HttpUtility.UrlDecode(parameters["ItemUrl"]));
+                    Uri webDAVServerUrl = new Uri(HttpUtility.UrlDecode(parameters["MountUrl"]));
+                    string domainIdentifier = webDAVServerUrl.Host;
+
+                    List<string> webDAVServerURLs = (await SecureStorage.GetAsync<List<string>>("WebDAVServerURLs")) ?? new List<string>();
+                    Task<bool> taskIsExtensionRegistered = Task.Run<bool>(async () => await Common.Core.Registrar.IsRegisteredAsync(domainIdentifier));
+                    bool isExtensionRegistered = taskIsExtensionRegistered.Result;
+                    if (!isExtensionRegistered)
                     {
-                        // Add new url.
-                        webDAVServerURLs.Add(webDAVServerUrl.AbsoluteUri);
+                        if (!DomainsMenuItems.ContainsKey(domainIdentifier))
+                        {
+                            // Add new url.
+                            webDAVServerURLs.Add(webDAVServerUrl.AbsoluteUri);
 
+                            // Add menu item with domain name and start remote storage monitor.
+                            AddDomainMenu(webDAVServerUrl.AbsoluteUri);
+                        }
+                        else
+                        {
+                            await SecureStorage.SetAsync(domainIdentifier, webDAVServerUrl.AbsoluteUri);
 
-                        // Add menu item with domain name.
-                        AddDomainMenu(webDAVServerUrl.AbsoluteUri);
+                            // Update existing.url.
+                            int index = webDAVServerURLs.FindIndex(p => p.Contains(domainIdentifier));
+                            if (index != -1)
+                            {
+                                webDAVServerURLs[index] = webDAVServerUrl.AbsoluteUri;
+                            }
+                        }
+
+                        // Save webdav server url to user's settings.  
+                        await SecureStorage.SetAsync("WebDAVServerURLs", webDAVServerURLs);
+
+                        // Register domain.
+                        Install(DomainsMenuItems[domainIdentifier].installMenu, null, false);
                     }
                     else
                     {
-                        await SecureStorage.SetAsync(domainIdentifier, webDAVServerUrl.AbsoluteUri);
-
-                        // Update existing.url.
-                        int index = webDAVServerURLs.FindIndex(p => p.Contains(domainIdentifier));
-                        if (index != -1)
+                        if (await SecureStorage.GetAsync(domainIdentifier) != webDAVServerUrl.AbsoluteUri)
                         {
-                            webDAVServerURLs[index] = webDAVServerUrl.AbsoluteUri;
+                            Uninstall(DomainsMenuItems[domainIdentifier].uninstallMenu, null);
+
+                            // update WebDAV server url.
+                            await SecureStorage.SetAsync(domainIdentifier, webDAVServerUrl.AbsoluteUri);
+
+                            // Update existing.url.
+                            int index = webDAVServerURLs.FindIndex(p => p.Contains(domainIdentifier));
+                            if (index != -1)
+                            {
+                                webDAVServerURLs[index] = webDAVServerUrl.AbsoluteUri;
+                            }
+
+                            await SecureStorage.SetAsync("WebDAVServerURLs", webDAVServerURLs);
+
+                            Install(DomainsMenuItems[domainIdentifier].installMenu, null, false);
                         }
                     }
 
-                    // Save webdav server url to user's settings.  
-                    await SecureStorage.SetAsync("WebDAVServerURLs", webDAVServerURLs);
+                    // Open item url.
+                    NSFileProviderManager fileProviderManager = NSFileProviderManager.FromDomain(await Common.Core.Registrar.GetDomainAsync(domainIdentifier));
+                    NSUrl rootPath = await fileProviderManager.GetUserVisibleUrlAsync(NSFileProviderItemIdentifier.RootContainer);
+                    string itemPath = Path.Combine(rootPath.Path, itemUrl.AbsoluteUri.Substring(webDAVServerUrl.AbsoluteUri.Length).TrimStart('/'));
 
-                    // Register domain.
-                    Install(DomainsMenuItems[domainIdentifier].installMenu, null, false);
+                    if (File.Exists(itemPath) || Directory.Exists(itemPath))
+                    {
+                        Process.Start("open", itemPath);
+                    }
+                    else
+                    {
+                        await ShowLoginDialogAsync(domainIdentifier, itemPath);
+                    }
                 }
+            }
+            catch(Exception ex)
+            {
+                Logger.LogError("OpenUrls", ex: ex);
+            }
+
+            Logger.LogMessage($"OpenUrls - finish");
+        }       
+
+        private async Task ShowLoginDialogAsync(string domainIdentifier, string openItemPath)
+        {            
+            NSAlert alertLogin = new NSAlert()
+            {
+                AlertStyle = NSAlertStyle.Informational,
+                MessageText = $"Login Required\n{domainIdentifier}",
+            };       
+
+            NSView? authView = null;
+            NSViewController? viewController = null;
+            SecureStorage domainStorage = new SecureStorage(domainIdentifier);
+            string loginType = await domainStorage.GetAsync("LoginType");
+
+            if(!string.IsNullOrEmpty(loginType) && loginType.Equals("UserNamePassword"))
+            {
+                viewController = new AuthViewController(domainIdentifier, openItemPath);
+                authView = viewController.View;
+            }
+            else if(!string.IsNullOrEmpty(loginType) && loginType.Equals("Cookies"))
+            {
+                viewController = new CookiesAuthViewController(domainIdentifier, alertLogin.Window, openItemPath, await domainStorage.GetAsync("CookiesFailedUrl"));
+                authView = viewController.View;
+            }
+
+            if (authView != null)
+            {
+                // Create a stack view and add text fields as arranged subviews.
+                NSStackView stackView = new NSStackView();
+                stackView.Orientation = NSUserInterfaceLayoutOrientation.Vertical;
+                stackView.AddArrangedSubview(authView);              
+
+                // Set the stack view as the accessory view of the alert.
+                alertLogin.AccessoryView = stackView;
+
+                // Setup view for Basic auth.
+                if (loginType.Equals("UserNamePassword"))
+                {
+                    stackView.Frame = new CGRect(0, 0, 300, 100);
+                    alertLogin.AddButton("Submit");
+                }
+                // Setup view for cookies auth.
                 else
                 {
-                    if (await SecureStorage.GetAsync(domainIdentifier) != webDAVServerUrl.AbsoluteUri)
+                    stackView.Frame = new CGRect(0, 0, 500, 400);
+                }
+                alertLogin.AddButton("Cancel");
+
+                nint response = alertLogin.RunModal();
+                if (loginType.Equals("UserNamePassword"))
+                {
+                    while (response == (int)NSAlertButtonReturn.First && !(viewController as AuthViewController).ValidateCredentials())
                     {
-                        Uninstall(DomainsMenuItems[domainIdentifier].uninstallMenu, null);
-
-                        // update WebDAV server url.
-                        await SecureStorage.SetAsync(domainIdentifier, webDAVServerUrl.AbsoluteUri);
-
-                        // Update existing.url.
-                        int index = webDAVServerURLs.FindIndex(p => p.Contains(domainIdentifier));
-                        if(index != -1)
-                        {
-                            webDAVServerURLs[index] = webDAVServerUrl.AbsoluteUri;
-                        }
-
-                        await SecureStorage.SetAsync("WebDAVServerURLs", webDAVServerURLs);
-
-                        Install(DomainsMenuItems[domainIdentifier].installMenu, null, false);
+                        (viewController as AuthViewController).OnAuthenticationButtonActivated(null, null);
+                        alertLogin.RunModal();
                     }
+
+                    await Task.Delay(TimeSpan.FromSeconds(2));
+                    Process.Start("open", openItemPath);
                 }
 
-                // Open item url.
-                NSFileProviderManager fileProviderManager = NSFileProviderManager.FromDomain(await Common.Core.Registrar.GetDomainAsync(domainIdentifier));
-                string itemPath = (await fileProviderManager.GetUserVisibleUrlAsync(NSFileProviderItemIdentifier.RootContainer)).ToString() + "/" +
-                                                                                    itemUrl.AbsoluteUri.Substring(webDAVServerUrl.AbsoluteUri.Length);
-                Process.Start("open", itemPath);
+                alertLogin.Window.Close();
+            }
+            else
+            {
+                NSAlert alert = NSAlert.WithMessage("Auth method not found.", null, null, null, "");
+                alert.RunModal();
             }
         }
 
         private void AddDomainMenu(string serverUrl)
         {
-            Uri webDavRootUri = new Uri(serverUrl);
-            NSMenuItem domainMenu = new NSMenuItem(webDavRootUri.Host);
-            NSMenuItem installMenuItem = new NSMenuItem("Install");
-            NSMenuItem uninstallMenuItem = new NSMenuItem("Uninstall");
-            string domainIdentifier = webDavRootUri.Host;
-
-            // Save domain's WebDav server url.
-            Task.Run(async () =>
+            // Check if the menu is created in case when the open url will be called first.
+            if (StatusItem != null)
             {
-                await SecureStorage.SetAsync(domainIdentifier, serverUrl);
-            }).Wait();
+                Uri webDavRootUri = new Uri(serverUrl);
+                NSMenuItem domainMenu = new NSMenuItem(webDavRootUri.Host);
+                NSMenuItem installMenuItem = new NSMenuItem("Install");
+                NSMenuItem uninstallMenuItem = new NSMenuItem("Uninstall");
+                string domainIdentifier = webDavRootUri.Host;
 
-            Task<bool> taskIsExtensionRegistered = Task.Run<bool>(async () => await Common.Core.Registrar.IsRegisteredAsync(domainIdentifier));
-            bool isExtensionRegistered = taskIsExtensionRegistered.Result;
-            if (isExtensionRegistered)
-            {
-                Task.Run(async () => await StartRemoteStorageMonitorAsync(await Common.Core.Registrar.GetDomainAsync(domainIdentifier), serverUrl)).Wait();
-                uninstallMenuItem.Activated += Uninstall;
+                // Save domain's WebDav server url.
+                Task.Run(async () =>
+                {
+                    await SecureStorage.SetAsync(domainIdentifier, serverUrl);
+                }).Wait();
+
+                Task<bool> taskIsExtensionRegistered = Task.Run<bool>(async () => await Common.Core.Registrar.IsRegisteredAsync(domainIdentifier));
+                bool isExtensionRegistered = taskIsExtensionRegistered.Result;
+                if (isExtensionRegistered)
+                {
+                    Task.Run(async () => await StartRemoteStorageMonitorAsync(await Common.Core.Registrar.GetDomainAsync(domainIdentifier), serverUrl)).Wait();
+                    uninstallMenuItem.Activated += Uninstall;
+                }
+                else
+                {
+                    installMenuItem.Activated += Install;
+                }
+                installMenuItem.Identifier = uninstallMenuItem.Identifier = webDavRootUri.Host;
+
+                domainMenu.Submenu = new NSMenu();
+                domainMenu.Submenu.AddItem(installMenuItem);
+                domainMenu.Submenu.AddItem(uninstallMenuItem);
+                StatusItem.Menu.InsertItem(domainMenu, 0);
+
+                DomainsMenuItems.Add(webDavRootUri.Host, new(installMenuItem, uninstallMenuItem));
             }
-            else
-            {
-                installMenuItem.Activated += Install;
-            }
-            installMenuItem.Identifier = uninstallMenuItem.Identifier = webDavRootUri.Host;
-
-            domainMenu.Submenu = new NSMenu();
-            domainMenu.Submenu.AddItem(installMenuItem);
-            domainMenu.Submenu.AddItem(uninstallMenuItem);
-            StatusItem.Menu.InsertItem(domainMenu, 0);
-
-            DomainsMenuItems.Add(webDavRootUri.Host, new(installMenuItem, uninstallMenuItem));
         }
 
         private void Install(object? sender, EventArgs e)
@@ -245,10 +335,10 @@ namespace WebDAVMacApp
             }
             else
             {
-                RemoteStorageMonitor remoteStorageMonitor = new RemoteStorageMonitor(webDAVServerUrl,
+                RemoteStorageMonitor remoteStorageMonitor = new RemoteStorageMonitor(domain.Identifier, webDAVServerUrl,
                $"ws{(webDAVServerUrl.StartsWith("https:") ? "s" : string.Empty)}://{domain.Identifier}",
                NSFileProviderManager.FromDomain(domain), new ConsoleLogger(typeof(RemoteStorageMonitor).Name));
-                remoteStorageMonitor.ServerNotifications = new ServerNotifications(NSFileProviderManager.FromDomain(domain), remoteStorageMonitor.Logger);
+                remoteStorageMonitor.ServerNotifications = new ServerNotifications(domain.Identifier, NSFileProviderManager.FromDomain(domain), remoteStorageMonitor.Logger);
                 await remoteStorageMonitor.StartAsync();
                 DomainsRemoteStorageMonitor.Add(domain.Identifier, remoteStorageMonitor);
             }

@@ -12,6 +12,9 @@ using Common.Core;
 using System.Text;
 using VirtualFileSystemCommon;
 
+// workaround for NSFileProvider Extension crash on MacOS 14.4 https://github.com/xamarin/xamarin-macios/issues/20034
+[assembly: ObjCRuntime.LinkWith(LinkerFlags = "-Wl,-unexported_symbol -Wl,_main")]
+
 namespace FileProviderExtension
 {
     [Register(nameof(VirtualEngine))]

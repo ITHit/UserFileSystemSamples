@@ -32,18 +32,18 @@
 	<string>WebDAVMacApp</string>
 	<key>LSUIElement</key>
 	<true/>
-	<key>com.apple.developer.web-browser</key>  
-	<true/>  
+	<key>com.apple.developer.web-browser</key>
+	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
-    	<dict>
-        	<key>CFBundleURLName</key>
-        	<string>com.webdav.vfs.app.fuse</string>
-        	<key>CFBundleURLSchemes</key>
-        	<array>
-            	<string>fuse</string>
-        	</array>
-    	</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.webdav.vfs.app.fuse</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fuse</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

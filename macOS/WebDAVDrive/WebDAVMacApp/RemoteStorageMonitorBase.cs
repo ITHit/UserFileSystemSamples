@@ -7,6 +7,7 @@ using FileProvider;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Mac;
 using ITHit.WebDAV.Client;
+using WebDAVCommon;
 
 namespace WebDAVMacApp
 {
@@ -23,14 +24,9 @@ namespace WebDAVMacApp
         public readonly string WebDAVServerUrl;
 
         /// <summary>
-        /// Credentials to authenticate web sockets.
+        /// Secure Storage
         /// </summary>
-        public NetworkCredential Credentials;
-
-        /// <summary>
-        /// Cookies to add to web sockets requests.
-        /// </summary>
-        public CookieCollection Cookies;
+        protected readonly SecureStorage secureStorage;
 
         /// <summary>
         /// Engine instance ID, to avoid sending notifications back to originating client. 
@@ -105,15 +101,17 @@ namespace WebDAVMacApp
         /// <summary>
         /// Creates instance of this class.
         /// </summary>
+        /// <param name="domainIdentifier">Domain Identifier.</param>
         /// <param name="webSocketServerUrl">WebSocket server url.</param>
         /// <param name="fileProviderManager">File provider manager.</param>
         /// <param name="logger">Logger.</param>
-        internal RemoteStorageMonitorBase(string webDAVServerUrl, string webSocketServerUrl, NSFileProviderManager fileProviderManager, ILogger logger)
+        internal RemoteStorageMonitorBase(string domainIdentifier, string webDAVServerUrl, string webSocketServerUrl, NSFileProviderManager fileProviderManager, ILogger logger)
         {
             this.Logger = logger.CreateLogger("Remote Storage Monitor");
             this.fileProviderManager = fileProviderManager;
             this.webSocketServerUrl = webSocketServerUrl;
             this.WebDAVServerUrl = webDAVServerUrl;
+            this.secureStorage = new SecureStorage(domainIdentifier);
         }
 
         /// <summary>
@@ -153,7 +151,7 @@ namespace WebDAVMacApp
 
                 // Because of the on-demand loading, item or its parent may not exists or be offline.
                 // We can ignore notifiction in this case and avoid many requests to the remote storage.
-                if (webSocketMessage != null && !Filter(webSocketMessage) && (changeQueue.Count == 0 || !isSyncCollectionSupported))
+                if (webSocketMessage != null && !Filter(webSocketMessage) && changeQueue.Count == 0)
                 {
                     changeQueue.Add(webSocketMessage);
                 }
@@ -191,15 +189,30 @@ namespace WebDAVMacApp
 
                                   // Configure web sockets and connect to the server.
                                   clientWebSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(10);
-                                  if (Credentials != null)
+                                  string loginType = await secureStorage.GetAsync("LoginType");
+                                  if (!string.IsNullOrEmpty(loginType) && loginType.Equals("UserNamePassword"))
                                   {
-                                      clientWebSocket.Options.Credentials = Credentials;
+                                      clientWebSocket.Options.Credentials = new NetworkCredential(await secureStorage.GetAsync("UserName"), await secureStorage.GetAsync("Password"));
                                   }
-                                  if (Cookies != null)
+                                  else if (!string.IsNullOrEmpty(loginType) && loginType.Equals("Cookies"))
                                   {
                                       clientWebSocket.Options.Cookies = new CookieContainer();
-                                      clientWebSocket.Options.Cookies.Add(Cookies);
+                                      List<Cookie> cookies = await secureStorage.GetAsync<List<Cookie>>("Cookies");
+
+                                      if (cookies != null)
+                                      {
+                                          foreach (Cookie cookie in cookies)
+                                          {
+                                              clientWebSocket.Options.Cookies.Add(new Cookie(cookie.Name, cookie.Value)
+                                              {
+                                                  Domain = cookie.Domain,
+                                                  Secure = cookie.Secure,
+                                                  HttpOnly = cookie.HttpOnly
+                                              });
+                                          }
+                                      }
                                   }
+                                 
                                   if (!string.IsNullOrEmpty(InstanceId))
                                   {
                                       clientWebSocket.Options.SetRequestHeader("InstanceId", InstanceId);
@@ -334,6 +347,10 @@ namespace WebDAVMacApp
                 }
                 catch (OperationCanceledException)
                 {
+                }
+                catch(Exception ex)
+                {
+                    Logger.LogError("Handler Changes Task", null, null, ex);
                 }
             },
             cancelationToken);

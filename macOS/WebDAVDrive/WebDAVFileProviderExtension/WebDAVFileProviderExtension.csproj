@@ -17,6 +17,7 @@
     <DefineConstants>DEBUG;</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <EnableCodeSigning>False</EnableCodeSigning>
     <CreatePackage>false</CreatePackage>
     <EnablePackageSigning>false</EnablePackageSigning>
     <IncludeMonoRuntime>false</IncludeMonoRuntime>
@@ -76,7 +77,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ITHitWebDAVClient" Version="7.1.4970" />
-    <PackageReference Include="ITHit.FileSystem.Mac" Version="8.1.26727-Beta2" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="8.1.26791-Beta2" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Security.Permissions" Version="8.0.0" />

@@ -145,7 +145,7 @@
     </BundleResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem" Version="8.1.26727-Beta2" />
+    <PackageReference Include="ITHit.FileSystem" Version="8.1.26791-Beta2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WebDAVCommon\WebDAVCommon.csproj" />

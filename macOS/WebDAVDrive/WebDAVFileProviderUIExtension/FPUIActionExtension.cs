@@ -21,21 +21,21 @@ public class FPUIActionExtension : FPUIActionExtensionViewControllerMac
     }
 
     /// <inheritdoc/>
-    public override async Task<NSViewController> RequireAuthenticationAsync(IMacFPUIActionExtensionContext context)
+    public override async Task<NSViewController> RequireAuthenticationAsync(string domainIdentifier, IMacFPUIActionExtensionContext context)
     {
-        SecureStorage secureStorage = new SecureStorage();
+        SecureStorage secureStorage = new SecureStorage(domainIdentifier);
         Logger.LogMessage($"{nameof(FPUIActionExtension)}.{nameof(RequireAuthenticationAsync)}()");  
 
         if (await secureStorage.GetAsync("LoginType") == "UserNamePassword")
         {
-            return new AuthViewController(context);
+            return new AuthViewController(domainIdentifier, context);
         }
         else
         {
             Logger.LogMessage($"Return CookiesAuthViewController.");
             string url = await secureStorage.GetAsync("CookiesFailedUrl");
             Logger.LogMessage($"Return CookiesAuthViewController read url {url}.");
-            return new CookiesAuthViewController(context, url);
+            return new CookiesAuthViewController(domainIdentifier, context, url);
         }
     }
 }

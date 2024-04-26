@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using Common.Core;
 using ITHit.FileSystem.Mac;
@@ -11,8 +12,10 @@ namespace WebDAVFileProviderUIExtension.ViewControllers
     {
         private readonly IMacFPUIActionExtensionContext extensionContext;
         private readonly ConsoleLogger consoleLogger = new(nameof(CookiesAuthViewController));
-        private readonly SecureStorage secureStorage = new();
+        private readonly SecureStorage secureStorage;
         private readonly string failedUrl;
+        private readonly string openItemPath;
+        private readonly NSWindow window;
         private WKWebViewConfiguration webViewConfiguration;
         private NSProgressIndicator progressIndicator = new()
         {
@@ -22,12 +25,23 @@ namespace WebDAVFileProviderUIExtension.ViewControllers
         };
         private WKWebView webView;
 
-        public CookiesAuthViewController(IMacFPUIActionExtensionContext extensionContext, string failedUrl)
+        public CookiesAuthViewController(string domainIdentifier, IMacFPUIActionExtensionContext extensionContext, string failedUrl)
                 : base(nameof(CookiesAuthViewController), null)
         {
             consoleLogger.LogDebug("CookiesAuthViewController constructor");
             this.extensionContext = extensionContext;
             this.failedUrl = failedUrl;
+            this.secureStorage = new SecureStorage(domainIdentifier);
+            consoleLogger.LogDebug("CookiesAuthViewController init all parameters.");
+        }
+
+        public CookiesAuthViewController(string domainIdentifier, NSWindow window, string openItemPath, string failedUrl) : base(nameof(CookiesAuthViewController), null)
+        {
+            consoleLogger.LogDebug("CookiesAuthViewController constructor");
+            this.openItemPath = openItemPath;
+            this.failedUrl = failedUrl;
+            this.window = window;
+            this.secureStorage = new SecureStorage(domainIdentifier);
             consoleLogger.LogDebug("CookiesAuthViewController init all parameters.");
         }
 
@@ -92,7 +106,7 @@ namespace WebDAVFileProviderUIExtension.ViewControllers
         public override void ViewDidLoad()
         {
             consoleLogger.LogDebug($"CookiesAuthViewController ViewDidLoad {failedUrl}");
-            base.ViewDidLoad();         
+            base.ViewDidLoad();
             var url = new NSUrl(failedUrl);
             var request = new NSUrlRequest(url);
             webView.LoadRequest(request);
@@ -118,9 +132,26 @@ namespace WebDAVFileProviderUIExtension.ViewControllers
             webViewConfiguration.WebsiteDataStore.HttpCookieStore.GetAllCookies(cookies =>
             {
                 consoleLogger.LogDebug($"CookiesAuthViewController set cookies");
-                secureStorage.SetAsync("RequireAuthentication", "").Wait();
-                secureStorage.SetAsync("Cookies", cookies.Select(c => new Cookie(c.Name, c.Value, c.Path, c.Domain)).ToList()).Wait();            
-                extensionContext.CompleteRequest();
+                Task.Run(async () =>
+                {
+                    await secureStorage.SetAsync("Cookies", cookies.Select(c => new Cookie(c.Name, c.Value, c.Path, c.Domain)).ToList());
+                    await secureStorage.SetAsync("UpdateWebdavSession", "true");
+                }).Wait();
+
+                if (extensionContext != null)
+                {
+                    extensionContext.CompleteRequest();
+                }
+                else
+                {
+                    // Open file/folder if auth dialog was shown from host app.
+                    Task.Run(async () =>
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(2));
+                        Process.Start("open", openItemPath);
+                    }).Wait();
+                    window.Close();
+                }
             });
             decisionHandler?.Invoke(WKNavigationResponsePolicy.Allow);
 

@@ -104,7 +104,7 @@ namespace WebDAVFileProviderExtension
             }
             catch (WebDavHttpException httpException)
             {
-                HandleWebExceptions(httpException, resultContext);               
+                await HandleWebExceptionsAsync(httpException, resultContext);               
             }
         }
 

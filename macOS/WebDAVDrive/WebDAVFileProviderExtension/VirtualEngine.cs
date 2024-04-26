@@ -15,6 +15,9 @@ using ITHit.FileSystem.Mac.Contexts;
 using ITHit.WebDAV.Client;
 using WebDAVCommon;
 
+// workaround for NSFileProvider Extension crash on MacOS 14.4 https://github.com/xamarin/xamarin-macios/issues/20034
+[assembly: ObjCRuntime.LinkWith(LinkerFlags = "-Wl,-unexported_symbol -Wl,_main")]
+
 namespace WebDAVFileProviderExtension
 {
     [Register(nameof(VirtualEngine))]
@@ -61,38 +64,27 @@ namespace WebDAVFileProviderExtension
         {
             License = AppGroupSettings.Settings.Value.UserFileSystemLicense;
             ConsoleLogger consolelogger = new ConsoleLogger(GetType().Name);
-   
+
             Error += consolelogger.LogError;
             Message += consolelogger.LogMessage;
             Debug += consolelogger.LogDebug;
 
-            SecureStorage = new SecureStorage();
+            SecureStorage = new SecureStorage(domain.Identifier);
 
             // Get WebDAV url from user settings.
-            WebDAVServerUrl = SecureStorage.GetAsync(domain.Identifier).Result;
-
-            InitWebDavSession();
+            WebDAVServerUrl = SecureStorage.GetAsync(domain.Identifier, false).Result;
 
             AutoLock = AppGroupSettings.Settings.Value.AutoLock;
             AutoLockTimoutMs = AppGroupSettings.Settings.Value.AutoLockTimoutMs;
             ManualLockTimoutMs = AppGroupSettings.Settings.Value.ManualLockTimoutMs;
 
-            // set remote root storage item id.
-            SetRemoteStorageRootItemId(GetRootStorageItemIdAsync().Result);
-          
-            Logger.LogMessage("Engine started.");
-        }
+            // Init WebDAV session.
+            WebDavSession = WebDavSessionUtils.GetWebDavSessionAsync(SecureStorage).Result;
 
-        /// <summary>
-        /// Initializes WebDAV session.
-        /// </summary>
-        internal void InitWebDavSession()
-        {
-            if(WebDavSession != null)
-            {
-                WebDavSession.Dispose();
-            }
-            WebDavSession = WebDavSessionUtils.GetWebDavSessionAsync().Result;
+            // set remote root storage item id.
+            SetRemoteStorageRootItemId(GetRootStorageItemIdAsync().Result);            
+
+            Logger.LogMessage("Engine started.");
         }
 
         /// <inheritdoc/>
@@ -119,7 +111,7 @@ namespace WebDAVFileProviderExtension
             Dictionary<Guid, IMenuCommand> menuCommands = new Dictionary<Guid, IMenuCommand>() {
                 { typeof(UnLockMenuCommand).GUID, new UnLockMenuCommand(this, Logger) }, { typeof(LockMenuCommand).GUID, new LockMenuCommand(this, Logger) } };
 
-            if(menuCommands.ContainsKey(menuGuid))
+            if (menuCommands.ContainsKey(menuGuid))
             {
                 return menuCommands[menuGuid];
             }
@@ -134,29 +126,9 @@ namespace WebDAVFileProviderExtension
         {
             Logger.LogMessage($"{nameof(VirtualEngine)}.{nameof(GetRootStorageItemIdAsync)}()");
             try
-            {                
-                return (await new VirtualFolder(Encoding.UTF8.GetBytes(WebDAVServerUrl), this, Logger).GetMetadataAsync())?.RemoteStorageItemId;
-            }
-            catch (ITHit.WebDAV.Client.Exceptions.WebDavHttpException httpException)
             {
-                Logger.LogError($"{nameof(VirtualEngine)}.{nameof(GetRootStorageItemIdAsync)}()", ex: httpException);
-                switch (httpException.Status.Code)
-                {
-                    // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
-                    case 401:
-                        // Set login type to display sing in button in Finder.
-                        await SecureStorage.RequirePasswordAuthenticationAsync();
-                        return null;
-                    // 302 redirect to login page.
-                    case 302:
-                        Uri failedUri = httpException.Uri;
-                        await SecureStorage.SetAsync("CookiesFailedUrl", failedUri.AbsoluteUri);
-                        // Set login type to display sing in button in Finder.
-                        await SecureStorage.RequireCookiesAuthenticationAsync();
-                        return null;
-                }
-                return null;
-            }
+                return (await new VirtualFolder(Encoding.UTF8.GetBytes(WebDAVServerUrl), this, Logger).GetMetadataAsync())?.RemoteStorageItemId;
+            }            
             catch (Exception ex)
             {
                 Logger.LogError($"{nameof(VirtualEngine)}.{nameof(GetRootStorageItemIdAsync)}()", ex: ex);
@@ -169,7 +141,7 @@ namespace WebDAVFileProviderExtension
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            WebDavSession.Dispose();
+            WebDavSession?.Dispose();
         }
 
         protected override void Stop()
@@ -181,6 +153,23 @@ namespace WebDAVFileProviderExtension
         {
             Logger.LogMessage($"{nameof(IEngine)}.{nameof(IsAuthenticatedAsync)}()");
             string requireAuthentication = await SecureStorage.GetAsync("RequireAuthentication");
+            string updateWebDavSession = await SecureStorage.GetAsync("UpdateWebdavSession");
+
+            // Check if Authentication is still required.
+            if (!string.IsNullOrEmpty(requireAuthentication) && !string.IsNullOrEmpty(updateWebDavSession))
+            {
+                // Update auth for WebDav session.
+                Logger.LogMessage($"{nameof(IEngine)}.{nameof(IsAuthenticatedAsync)}() - update WebDav session.");
+
+                await WebDavSessionUtils.UpdateAuthenticationAsync(WebDavSession, SecureStorage);
+                await SecureStorage.SetAsync("UpdateWebdavSession", "");
+
+                if (await GetRootStorageItemIdAsync() != null)
+                {
+                    requireAuthentication = string.Empty;
+                    await SecureStorage.SetAsync("RequireAuthentication", "");
+                }
+            }
 
             return string.IsNullOrEmpty(requireAuthentication);
         }

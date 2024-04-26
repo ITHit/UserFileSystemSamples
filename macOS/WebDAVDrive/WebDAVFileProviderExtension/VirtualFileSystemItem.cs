@@ -98,7 +98,7 @@ namespace WebDAVFileProviderExtension
             }
             catch (Client.Exceptions.WebDavHttpException httpException)
             {
-                HandleWebExceptions(httpException, resultContext);                
+                await HandleWebExceptionsAsync(httpException, resultContext);                
             }
 
             return item != null ? Mapping.GetUserFileSystemItemMetadata(item) : null;
@@ -170,7 +170,7 @@ namespace WebDAVFileProviderExtension
             throw new NotImplementedException();
         }
 
-        protected async void HandleWebExceptions(Client.Exceptions.WebDavHttpException webDavHttpException, IResultContext resultContext)
+        protected async Task HandleWebExceptionsAsync(Client.Exceptions.WebDavHttpException webDavHttpException, IResultContext resultContext)
         {
             Logger.LogError("HandleWebExceptions", ex: webDavHttpException);
 
@@ -178,24 +178,12 @@ namespace WebDAVFileProviderExtension
             {
                 // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
                 case 401:
-                    
-                    if ((Engine.WebDavSession.Credentials == null && !string.IsNullOrEmpty(await Engine.SecureStorage.GetAsync("UserName"))) ||
-                        (Engine.WebDavSession.Credentials is NetworkCredential &&
-                        (Engine.WebDavSession.Credentials as NetworkCredential).UserName != await Engine.SecureStorage.GetAsync("UserName")))
-                    {
-                        Engine.Logger.LogDebug("Reset WebDav session  - password auth");
 
-                        // Reset WebDavSession.
-                        Engine.InitWebDavSession();
-                    }
-                    else
+                    // Set login type to display sing in button in Finder.
+                    await Engine.SecureStorage.RequirePasswordAuthenticationAsync();
+                    if (resultContext != null)
                     {
-                        // Set login type to display sing in button in Finder.
-                        await Engine.SecureStorage.RequirePasswordAuthenticationAsync();
-                        if (resultContext != null)
-                        {
-                            resultContext.ReportStatus(CloudFileStatus.STATUS_CLOUD_FILE_AUTHENTICATION_FAILED);
-                        }
+                        resultContext.ReportStatus(CloudFileStatus.STATUS_CLOUD_FILE_AUTHENTICATION_FAILED);
                     }
                     break;
 
@@ -204,22 +192,11 @@ namespace WebDAVFileProviderExtension
                     Uri failedUri = webDavHttpException.Uri;
                     await Engine.SecureStorage.SetAsync("CookiesFailedUrl", failedUri.AbsoluteUri);
 
-
-                    if (Engine.WebDavSession.CookieContainer.Count == 0)
+                    // Set login type to display sing in button in Finder.
+                    await Engine.SecureStorage.RequireCookiesAuthenticationAsync();
+                    if (resultContext != null)
                     {
-                        Engine.Logger.LogDebug($"Reset WebDav session  - cookies auth: {Engine.WebDavSession.CookieContainer.Count}");
-
-                        // Reset WebDavSession.
-                        Engine.InitWebDavSession();
-                    }
-                    else
-                    {
-                        // Set login type to display sing in button in Finder.
-                        await Engine.SecureStorage.RequireCookiesAuthenticationAsync();
-                        if (resultContext != null)
-                        {
-                            resultContext.ReportStatus(CloudFileStatus.STATUS_CLOUD_FILE_AUTHENTICATION_FAILED);
-                        }
+                        resultContext.ReportStatus(CloudFileStatus.STATUS_CLOUD_FILE_AUTHENTICATION_FAILED);
                     }
                     break;
             }    

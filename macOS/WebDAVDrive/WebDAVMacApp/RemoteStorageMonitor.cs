@@ -10,9 +10,8 @@ namespace WebDAVMacApp
 {
     internal class RemoteStorageMonitor : RemoteStorageMonitorBase
     {       
-
-        internal RemoteStorageMonitor(string webDAVServerUrl, string webSocketServerUrl, NSFileProviderManager fileProviderManager, ILogger logger) :
-            base(webDAVServerUrl, webSocketServerUrl, fileProviderManager, logger)
+        internal RemoteStorageMonitor(string domainIdentifier, string webDAVServerUrl, string webSocketServerUrl, NSFileProviderManager fileProviderManager, ILogger logger) :
+            base(domainIdentifier, webDAVServerUrl, webSocketServerUrl, fileProviderManager, logger)
         {
             this.InstanceId = Environment.MachineName;          
         }
@@ -48,7 +47,7 @@ namespace WebDAVMacApp
         {
             try
             {
-                using (WebDavSession webDavSession = await WebDavSessionUtils.GetWebDavSessionAsync())
+                using (WebDavSession webDavSession = await WebDavSessionUtils.GetWebDavSessionAsync(this.secureStorage))
                 {
                     Client.PropertyName[] propNames = new Client.PropertyName[1];
                     propNames[0] = new Client.PropertyName("supported-report-set", "DAV:");
