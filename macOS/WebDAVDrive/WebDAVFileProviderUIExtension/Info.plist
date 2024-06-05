@@ -7,7 +7,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>WebDAVFileProviderUIExtension</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.webdav.vfs.app.extension.ui</string>
+	<string>com.webdav.efp.app.extensionui</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -19,7 +19,7 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>10.14</string>
+	<string>11.0</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -51,7 +51,7 @@
 		<key>NSExtensionPrincipalClass</key>
 		<string>FPUIActionExtension</string>
 		<key>NSExtensionFileProviderDocumentGroup</key>
-		<string>H9B9JEKY3W.group.com.webdav.vfs</string>
+		<string>H9B9JEKY3W.group.com.webdav.efp</string>
 	</dict>
 </dict>
 </plist>

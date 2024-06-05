@@ -12,13 +12,13 @@ namespace WebDAVDrive.ShellExtension
         {
             try
             {
-                using (var server = new LocalServer())
+                using (var server = new LocalServerRpc())
                 {
                     server.RegisterClass<ThumbnailProviderRpc>();
                     server.RegisterClass<ContextMenuVerbRpc>();
                     server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProviderRpc>();
 
-                    await server.Run();
+                    await server.RunAsync();
                 }
             }
             catch (Exception ex)

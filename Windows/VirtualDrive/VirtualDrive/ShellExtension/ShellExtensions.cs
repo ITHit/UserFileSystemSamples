@@ -46,7 +46,7 @@ namespace VirtualDrive.ShellExtension
                 return null;
             }
 
-            LocalServer server = new LocalServer();
+            LocalServer server = new LocalServerIntegrarted();
 
             server.RegisterClass<ThumbnailProviderIntegrated>();
             server.RegisterClass<ContextMenuVerbIntegrated>();

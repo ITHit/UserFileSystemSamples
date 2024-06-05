@@ -132,8 +132,7 @@ namespace VirtualFileSystem
 
             // This check is only required because we can not prevent circular calls because of the simplicity of this example.
             // In your real-life application you will not send updates from server back to client that issued the update.
-            if (FsPath.Exists(userFileSystemPath)  
-                && IsModified(userFileSystemPath, remoteStoragePath))
+            if (IsModified(userFileSystemPath, remoteStoragePath))
             {
                 FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
                 if (remoteStorageItem != null)
@@ -226,22 +225,22 @@ namespace VirtualFileSystem
         /// <returns>True if file is modified. False - otherwise.</returns>
         internal static bool IsModified(string userFileSystemPath, string remoteStoragePath)
         {
-            if (FsPath.IsFolder(userFileSystemPath) && FsPath.IsFolder(remoteStoragePath))
-            {
-                return false;
-            }
-
-            FileInfo fiUserFileSystem = new FileInfo(userFileSystemPath);
-            FileInfo fiRemoteStorage = new FileInfo(remoteStoragePath);
-
-            // This check is to prevent circular calls. In your real app you would not send notifications to the client that generated the event.
-            if (fiUserFileSystem.LastWriteTimeUtc >= fiRemoteStorage.LastWriteTimeUtc)
+            if (!FsPath.TryIsFolder(userFileSystemPath, out bool isFolder1) || isFolder1 || !FsPath.TryIsFolder(remoteStoragePath, out bool isFolder2) || isFolder2)
             {
                 return false;
             }
             
             try
             {
+                FileInfo fiUserFileSystem = new FileInfo(userFileSystemPath);
+                FileInfo fiRemoteStorage = new FileInfo(remoteStoragePath);
+
+                // This check is to prevent circular calls. In your real app you would not send notifications to the client that generated the event.
+                if (fiUserFileSystem.LastWriteTimeUtc >= fiRemoteStorage.LastWriteTimeUtc)
+                {
+                    return false;
+                }
+
                 if (fiUserFileSystem.Length == fiRemoteStorage.Length)
                 {
                     // Verify that the file is not offline,

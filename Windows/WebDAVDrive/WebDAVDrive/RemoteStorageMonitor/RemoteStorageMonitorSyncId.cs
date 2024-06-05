@@ -36,7 +36,7 @@ namespace WebDAVDrive
         private readonly string webDAVServerUrl;
 
         internal RemoteStorageMonitorSyncId(string webSocketServerUrl, string webDAVServerUrl, VirtualEngine engine) 
-            : base(webSocketServerUrl, 1, engine.Logger.CreateLogger($"Remote Storage Monitor: SyncID"))
+            : base(webSocketServerUrl, 1, engine.Logger.CreateLogger($"RS Monitor: SyncID"))
         {
             this.webDAVServerUrl = webDAVServerUrl;
             this.engine = engine;

@@ -169,7 +169,6 @@ namespace WebDAVDrive
         {
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChangesAsync)}({syncToken})", UserFileSystemPath);
 
-            // In this sample we use sync id algoritm for synchronization.
             Client.IChanges davChanges = null;
             Changes changes = new Changes();
             changes.NewSyncToken = syncToken;

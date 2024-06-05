@@ -3,10 +3,9 @@ using System.Net;
 using Common.Core;
 using ITHit.FileSystem.Mac;
 using ObjCRuntime;
-using WebDAVCommon;
 using WebKit;
 
-namespace WebDAVFileProviderUIExtension.ViewControllers
+namespace WebDAVCommon.ViewControllers
 {
     public class CookiesAuthViewController : NSViewController, IWKNavigationDelegate
     {

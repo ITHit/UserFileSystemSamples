@@ -27,6 +27,24 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <summary>
+        /// Tries to determine if the provided path points to the file or folder.
+        /// </summary>
+        /// <param name="path">Path to the file or folder.</param>
+        /// <param name="isFolder">True if the path is folder. False - otherwise.</param>
+        /// <returns>True if this method successeds. False - otherwise.</returns>
+        public static bool TryIsFolder(string path, out bool isFolder)
+        {
+            if (WindowsFileSystemItem.TryGetAttributes(path, out FileAttributes? attributes))
+            {
+                isFolder = (attributes & FileAttributes.Directory) == FileAttributes.Directory;
+                return true;
+            }
+
+            isFolder = false;
+            return false;
+        }
+
+        /// <summary>
         /// Returns true if a file or folder exists under the specified path. False - otherwise.
         /// </summary>
         /// <remarks>Does not throw exceptions.</remarks>

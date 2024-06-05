@@ -18,7 +18,7 @@
   <ItemGroup>
     <PackageReference Include="log4net" Version="2.0.15" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2210.55" />
-    <PackageReference Include="ITHitWebDAVClient" Version="7.1.4970" />
+    <PackageReference Include="ITHitWebDAVClient" Version="7.1.5036" />
   </ItemGroup>
 
   <ItemGroup>

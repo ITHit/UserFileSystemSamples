@@ -330,6 +330,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Lock Expires" , Id = (int)CustomColumnIds.LockExpirationDate });            
             proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Content ETag" , Id = (int)CustomColumnIds.ContentETag });
             proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Metadata ETag", Id = (int)CustomColumnIds.MetadataETag });
+            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "ID"           , Id = (int)CustomColumnIds.Id });
 
 
             ValidateStorageProviderSyncRootInfo(storageInfo);

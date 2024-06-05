@@ -89,7 +89,7 @@ namespace VirtualFileSystem
                     commands.RemoteStorageMonitor = Engine.RemoteStorageMonitor;
                     consoleProcessor.Commands.TryAdd(Guid.Empty, commands);
 
-                    // Here we disable incoming sync. To get changes using pooling call IncomingPooling.ProcessAsync()
+                    // Here we disable incoming sync. To get changes from your remote storage using pooling, call the IncomingPooling.ProcessAsync() method.
                     Engine.SyncService.IncomingSyncMode = ITHit.FileSystem.Synchronization.IncomingSyncMode.Disabled;
 
                     // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()

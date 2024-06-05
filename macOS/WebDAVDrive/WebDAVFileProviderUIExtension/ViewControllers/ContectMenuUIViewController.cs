@@ -1,8 +1,8 @@
 using Common.Core;
 using ITHit.FileSystem.Mac;
 using ObjCRuntime;
-using WebDAVCommon;
-using WebDAVFileProviderUIExtension.Extension;
+using WebDAVCommon.Extension;
+using WebDAVCommon.ViewControllers;
 
 namespace WebDAVFileProviderUIExtension.ViewControllers
 {

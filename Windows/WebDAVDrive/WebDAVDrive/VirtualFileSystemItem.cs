@@ -270,6 +270,18 @@ namespace WebDAVDrive
                 props.Add(propertyMetadataETag);
             }
 
+            // Remote storage item ID.
+            if (RemoteStorageItemId != null)
+            {
+                FileSystemItemPropertyData propertyId = new FileSystemItemPropertyData()
+                {
+                    Id = (int)CustomColumnIds.Id,
+                    Value = LogFormatter.IdToSting(RemoteStorageItemId),
+                    IconResource = Path.Combine(Engine.IconsFolderPath, "Empty.ico")
+                };
+                props.Add(propertyId);
+            }
+
             return props;
         }   
 

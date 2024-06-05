@@ -1,13 +1,11 @@
-using System.Diagnostics;
 using Common.Core;
 using ITHit.FileSystem.Mac;
 using ITHit.WebDAV.Client;
 using ITHit.WebDAV.Client.Exceptions;
 using ObjCRuntime;
-using WebDAVCommon;
-using WebDAVFileProviderUIExtension.Extension;
+using WebDAVCommon.Extension;
 
-namespace WebDAVFileProviderUIExtension.ViewControllers
+namespace WebDAVCommon.ViewControllers
 {
     public class AuthViewController : NSViewController
     {

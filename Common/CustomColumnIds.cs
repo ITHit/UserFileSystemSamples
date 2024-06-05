@@ -34,5 +34,10 @@ namespace ITHit.FileSystem.Samples.Common
         /// Metadata ETag column ID.
         /// </summary>
         MetadataETag = 7,
+
+        /// <summary>
+        /// Remote storage item ID.
+        /// </summary>
+        Id = 8
     }
 }

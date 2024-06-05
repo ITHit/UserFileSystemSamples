@@ -46,6 +46,15 @@
     <ProjectReference Include="..\..\Common\Core\Common.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHitWebDAVClient" Version="7.1.4970" />
+    <PackageReference Include="ITHitWebDAVClient" Version="7.1.5036" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="8.1.26791-Beta2" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="ViewControllers\" />
+    <None Remove="Extension\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="ViewControllers\" />
+    <Folder Include="Extension\" />    
   </ItemGroup>
 </Project>

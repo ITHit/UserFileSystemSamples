@@ -12,7 +12,7 @@ namespace VirtualDrive.ShellExtension
         {
             try
             {
-                using (var server = new LocalServer())
+                using (var server = new LocalServerRpc())
                 {
                     server.RegisterClass<ThumbnailProviderRpc>();
                     server.RegisterClass<ContextMenuVerbRpc>();
@@ -20,7 +20,7 @@ namespace VirtualDrive.ShellExtension
                     server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProviderRpc>();
                     server.RegisterWinRTClass<IStorageProviderUriSource, UriSourceRpc>();
 
-                    await server.Run();
+                    await server.RunAsync();
                 }
             }
             catch (Exception ex)

@@ -4,7 +4,7 @@
     <OutputType>Library</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>true</ImplicitUsings>
-    <SupportedOSPlatformVersion>10.14</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>11.0</SupportedOSPlatformVersion>
     <IsAppExtension>True</IsAppExtension>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
@@ -62,11 +62,19 @@
       <CustomCommands>
         <Command>
           <type>AfterBuild</type>
+          <command>rm -f "${TargetDir}/WebDAVFileProviderExtension.appex/Contents/MonoBundle/createdump"</command>
+        </Command>
+        <Command>
+          <type>AfterBuild</type>
+          <command>cp -rf "${ProjectDir}/embedded.provisionprofile" "${TargetDir}/WebDAVFileProviderExtension.appex/Contents"</command>
+        </Command>
+        <Command>
+          <type>AfterBuild</type>
           <command>bash ${ProjectDir}/sign_release.sh ${TargetDir}</command>
         </Command>
         <Command>
           <type>AfterBuild</type>
-          <command>codesign --force --sign "Mac Developer" -o runtime --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der ${TargetDir}/WebDAVFileProviderExtension.appex</command>
+          <command>codesign --force --sign "Apple Distribution" -o runtime --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der ${TargetDir}/WebDAVFileProviderExtension.appex</command>
         </Command>
       </CustomCommands>
     </CustomCommands>
@@ -76,7 +84,7 @@
     <ProjectReference Include="..\WebDAVCommon\WebDAVCommon.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHitWebDAVClient" Version="7.1.4970" />
+    <PackageReference Include="ITHitWebDAVClient" Version="7.1.5036" />
     <PackageReference Include="ITHit.FileSystem.Mac" Version="8.1.26791-Beta2" />
   </ItemGroup>
   <ItemGroup>

@@ -9,8 +9,7 @@ using FileProvider;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Mac;
 using WebDAVCommon;
-using WebDAVFileProviderUIExtension.ViewControllers;
-//using WebDAVFileProviderUIExtension.ViewControllers;
+using WebDAVCommon.ViewControllers;
 
 namespace WebDAVMacApp
 {
@@ -35,7 +34,7 @@ namespace WebDAVMacApp
 
             List<string> webDAVServerURLs = Task.Run<List<string>>(async () => await SecureStorage.GetAsync<List<string>>("WebDAVServerURLs")).Result;
 
-            if (webDAVServerURLs == null)
+            if (webDAVServerURLs == null || webDAVServerURLs.Count == 0)
             {
                 webDAVServerURLs = AppGroupSettings.Settings.Value.WebDAVServerURLs;
 

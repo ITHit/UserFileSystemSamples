@@ -5,7 +5,7 @@
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>true</ImplicitUsings>
-    <SupportedOSPlatformVersion>10.16</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>11.0</SupportedOSPlatformVersion>
     <RootNamespace>WebDAVMacApp</RootNamespace>
     <AssemblyName>WebDAV Drive</AssemblyName>
   </PropertyGroup>
@@ -61,6 +61,14 @@
       <CustomCommands>
         <Command>
           <type>AfterBuild</type>
+          <command>rm -f "${TargetDir}/WebDAV Drive.app/Contents/MonoBundle/createdump"</command>
+        </Command>
+        <Command>
+          <type>AfterBuild</type>
+          <command>cp -rf "${ProjectDir}/embedded.provisionprofile" "${TargetDir}/WebDAV Drive.app/Contents"</command>
+        </Command>
+        <Command>
+          <type>AfterBuild</type>
           <command>bash ${ProjectDir}/sign_release.sh ${TargetDir}</command>
         </Command>
         <Command>
@@ -77,11 +85,11 @@
         </Command>
         <Command>
           <type>AfterBuild</type>
-          <command>codesign --force --sign "Mac Developer" --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der "${TargetDir}/WebDAV Drive.app"</command>
+          <command>codesign --force --sign "Apple Distribution" --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der "${TargetDir}/WebDAV Drive.app"</command>
         </Command>
         <Command>
           <type>AfterBuild</type>
-          <command>bash ${ProjectDir}/pkg.sh ${TargetDir}</command>
+          <command>productbuild --component "${TargetDir}/WebDAV Drive.app" /Applications --sign "Apple Distribution" "${TargetFile}/WebDAV Drive.pkg"</command>
         </Command>
       </CustomCommands>
     </CustomCommands>

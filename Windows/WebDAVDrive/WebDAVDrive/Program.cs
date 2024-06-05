@@ -122,7 +122,7 @@ namespace WebDAVDrive
 
                 // Start tray processing.
                 trayUI = new TrayUI();
-                Task taskTrayUI = trayUI.StartAsync();
+                await trayUI.StartAsync();
 
                 // Register this app to process COM shell extensions calls.
                 using (ShellExtension.ShellExtensions.StartComServer(Settings.ShellExtensionsComServerRpcEnabled))
@@ -137,14 +137,12 @@ namespace WebDAVDrive
                     }
                     else
                     {
-                        // Roots were lready mountied during previous runs. This is app restart or reboot.
+                        // This is an app restart or machine reboot. Roots were already mounted during previous runs. 
                         await RunExistingAsync(syncRoots);
                     }
 
                     // Wait for console or all tray apps exit.
-                    //System.Windows.Forms.Application.Run();
-
-                    Task.WaitAny(taskConsole, taskTrayUI);
+                    Task.WaitAny(taskConsole);
                 }
             }
             catch (Exception ex)

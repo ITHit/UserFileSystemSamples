@@ -46,7 +46,7 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task<IFileMetadata> ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
+        public async Task<IFileMetadata> ReadAsync(Stream output, long offset, long length, IFileMetadata metadata, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {
             // On Windows this method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer write to the output stream or call the resultContext.ReportProgress() or resultContext.ReturnData() methods.
@@ -147,8 +147,8 @@ namespace WebDAVDrive
                 catch (Client.Exceptions.LockedException)
                 {
                     // The item is locked on the server and the client did not provide a lock token.
-                    // We do not set the conflict status.
-                    // This item may be uploaded later automatically, when server item is unlocked.
+                    // Here do NOT set conflict status because this item may be uploaded
+                    // later automatically, when server item is unlocked.
                     //placeholder.SetConflictStatus(true);
 
                     Logger.LogMessage($"Upload failed. The item is locked", UserFileSystemPath, default, operationContext);
@@ -156,9 +156,9 @@ namespace WebDAVDrive
                 }
                 catch (Client.Exceptions.PreconditionFailedException)
                 {
-                    // Server and client ETags do not match.
-                    // Set conflict status in Windows Explorer.
-                    // This item can not be uploaded automatically, conflict needs to be resolved first.
+                    // Server and client content ETags do not match.
+                    // Here we set conflict status in Windows Explorer becuse this item can
+                    // NOT be uploaded automatically. The conflict must be resolved first.
 
                     Logger.LogMessage($"Conflict. The item is modified", UserFileSystemPath, default, operationContext);
                     Engine.Placeholders.GetFile(UserFileSystemPath).SetConflictStatus(true);

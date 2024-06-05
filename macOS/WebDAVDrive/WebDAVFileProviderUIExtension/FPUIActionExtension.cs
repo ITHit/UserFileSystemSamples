@@ -2,6 +2,7 @@ using Common.Core;
 using FileProvider;
 using ITHit.FileSystem.Mac;
 using WebDAVCommon;
+using WebDAVCommon.ViewControllers;
 using WebDAVFileProviderUIExtension.ViewControllers;
 
 namespace WebDAVFileProviderUIExtension;

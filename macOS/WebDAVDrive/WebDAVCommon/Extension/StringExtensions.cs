@@ -1,4 +1,5 @@
-namespace WebDAVFileProviderUIExtension.Extension
+using System;
+namespace WebDAVCommon.Extension
 {
     public static class StringExtensions
     {

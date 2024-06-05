@@ -92,8 +92,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             foreach (ChangeEventItem item in e.Items)
             {
-                // Save custom properties received from the remote storage here
-                // they will be displayed in Windows Explorer columns.
+                // Save custom properties received from the remote storage here.
+                // They will be displayed in Windows Explorer columns.
                 if (e.Direction == SyncDirection.Incoming && e.Result.IsSuccess)
                 {
                     switch (e.OperationType)

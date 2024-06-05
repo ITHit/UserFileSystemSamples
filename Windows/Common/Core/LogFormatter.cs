@@ -13,6 +13,7 @@ using log4net.Appender;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Windows.Package;
 using Windows.Storage.Search;
+using System.Text;
 
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
@@ -313,6 +314,31 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             int place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
             double num = Math.Round(bytes / Math.Pow(1024, place), 1);
             return (Math.Sign(length) * num).ToString() + suf[place];
+        }
+
+        public static string IdToSting(byte[] remoteStorageItemId)
+        {
+            if (remoteStorageItemId == null)
+                return null;
+
+            switch(remoteStorageItemId.Length)
+            {
+                case 8:
+                    return BitConverter.ToInt64(remoteStorageItemId, 0).ToString();
+                case 16:
+                    return new Guid(remoteStorageItemId).ToString();
+                default:
+                    // Try parse URI
+                    string uriStrId = Encoding.UTF8.GetString(remoteStorageItemId);
+                    if (Uri.TryCreate(uriStrId, UriKind.RelativeOrAbsolute, out Uri uriId))
+                    {
+                        return uriId.Segments.Last();
+                    }
+                    else
+                    {
+                        return uriStrId;
+                    }
+            }
         }
     }
 

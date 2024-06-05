@@ -43,7 +43,7 @@ namespace VirtualFileSystem
 
         
         /// <inheritdoc/>
-        public async Task<IFileMetadata> ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
+        public async Task<IFileMetadata> ReadAsync(Stream output, long offset, long length, IFileMetadata metadata, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {
             // On Windows this method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer write to the output stream or call the resultContext.ReportProgress() or resultContext.ReturnData() methods.

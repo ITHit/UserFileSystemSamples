@@ -129,7 +129,7 @@ namespace WebDAVDrive
                 userFileSystemItem.Attributes = FileAttributes.Normal | FileAttributes.Directory;
             }
 
-            //userFileSystemItem.MetadataETag = GetPropertyValue(remoteStorageItem, "metadata-Etag");
+            userFileSystemItem.MetadataETag = GetPropertyStringValue(remoteStorageItem, "metadata-Etag");
             userFileSystemItem.Name = remoteStorageItem.DisplayName;
 
             // In case the item is deleted, the min value is returned.
@@ -141,8 +141,8 @@ namespace WebDAVDrive
                 userFileSystemItem.ChangeTime = remoteStorageItem.LastModified;
             }
 
-            userFileSystemItem.RemoteStorageItemId = GetPropertyValue(remoteStorageItem, "resource-id");
-            userFileSystemItem.RemoteStorageParentItemId = GetPropertyValue(remoteStorageItem, "parent-resource-id");
+            userFileSystemItem.RemoteStorageItemId = GetPropertyByteValue(remoteStorageItem, "resource-id");
+            userFileSystemItem.RemoteStorageParentItemId = GetPropertyByteValue(remoteStorageItem, "parent-resource-id");
 
             // Set information about third-party lock, if any.
             Client.LockInfo lockInfo = remoteStorageItem.ActiveLocks.FirstOrDefault();
@@ -161,9 +161,9 @@ namespace WebDAVDrive
         }
 
         /// <summary>
-        /// Returns property value. If the property does not exist, returns default value.
+        /// Gets property byte array value. If the property does not exist, returns default value.
         /// </summary>
-        private static byte[] GetPropertyValue(Client.IHierarchyItem remoteStorageItem, string propertyName)
+        private static byte[] GetPropertyByteValue(Client.IHierarchyItem remoteStorageItem, string propertyName)
         {
             byte[] resultValue = null;
 
@@ -175,6 +175,23 @@ namespace WebDAVDrive
 
             return resultValue;
         }
+
+        /// <summary>
+        /// Gets property string value. If the property does not exist, returns default value.
+        /// </summary>
+        private static string GetPropertyStringValue(Client.IHierarchyItem remoteStorageItem, string propertyName)
+        {
+            string resultValue = null;
+
+            Client.Property property = remoteStorageItem.Properties.Where(p => p.Name.Name == propertyName).FirstOrDefault();
+            if (property != null)
+            {
+                resultValue = property.StringValue;
+            }
+
+            return resultValue;
+        }
+
 
         /// <summary>
         /// Gets properties to be returned with each item when listing 

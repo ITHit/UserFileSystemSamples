@@ -63,29 +63,25 @@ namespace WebDAVDrive.UI
 
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
-            await Task.Run(async () => { await StartUIAsync(cancellationToken); }, cancellationToken);            
+            Task.Run(() => { StartProcessingTraysQueue(cancellationToken); }, cancellationToken);
         }
 
-        private static async Task StartUIAsync(CancellationToken cancellationToken)
-        {
-            // Run task to cteate trays.
-            Task.Run(async () => { await StartProcessingTraysQueueAsync(cancellationToken); }, cancellationToken);
-
-            Application.Run();
-        }
-
-        private static async Task StartProcessingTraysQueueAsync(CancellationToken cancellationToken)
+        private static void StartProcessingTraysQueue(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
                 TrayData trayData = newTraysData.Take(cancellationToken); // Blocks if the queue is empty.
+                Task.Run(() =>
+                {
+                    WindowsTrayInterface windowsTrayInterface = new WindowsTrayInterface(trayData.ProductName, trayData.WebDavServerPath, trayData.IconsFolderPath, trayData.Commands);
+                    trays.TryAdd(trayData.InstanceId, windowsTrayInterface);
 
-                WindowsTrayInterface windowsTrayInterface = new WindowsTrayInterface(trayData.ProductName, trayData.WebDavServerPath, trayData.IconsFolderPath, trayData.Commands);
-                // Listen to engine notifications to change menu and icon states.
-                trayData.Engine.StateChanged += windowsTrayInterface.Engine_StateChanged;
-                trayData.Engine.SyncService.StateChanged += windowsTrayInterface.SyncService_StateChanged;
+                    // Listen to engine notifications to change menu and icon states.
+                    trayData.Engine.StateChanged += windowsTrayInterface.Engine_StateChanged;
+                    trayData.Engine.SyncService.StateChanged += windowsTrayInterface.SyncService_StateChanged;
 
-                trays.TryAdd(trayData.InstanceId, windowsTrayInterface);
+                    Application.Run();
+                });
             }
 
             // Clear the queue.
