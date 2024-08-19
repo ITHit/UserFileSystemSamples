@@ -2,7 +2,7 @@ using System;
 using System.Net;
 using System.Threading.Tasks;
 using System.Threading;
-using System.Security;
+using System.IO;
 using Windows.Security.Credentials.UI;
 
 using ITHit.FileSystem;
@@ -13,10 +13,8 @@ using ITHit.WebDAV.Client.Exceptions;
 using ITHit.FileSystem.Synchronization;
 
 using WebDAVDrive.UI;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.IO;
-using System.Windows;
-using System.Text;
+using System.Linq;
+
 
 namespace WebDAVDrive
 {
@@ -61,11 +59,6 @@ namespace WebDAVDrive
         public CookieCollection Cookies { get; set; } = new CookieCollection();
 
         /// <summary>
-        /// Tray UI.
-        /// </summary>
-        //public readonly WindowsTrayInterface Tray;
-
-        /// <summary>
         /// Commands.
         /// </summary>
         public readonly Commands Commands;
@@ -101,6 +94,11 @@ namespace WebDAVDrive
         private readonly string productName;
 
         /// <summary>
+        /// Unique application ID.
+        /// </summary>
+        private readonly string appId;
+
+        /// <summary>
         /// Remote storage root path.
         /// </summary>
         internal readonly string RemoteStorageRootPath;
@@ -123,7 +121,7 @@ namespace WebDAVDrive
         /// </summary>
         private string CredentialsStorageKey
         {
-            get { return $"{productName} - {RemoteStorageRootPath}"; }
+            get { return $"{appId} - {RemoteStorageRootPath}"; }
         }
 
         /// <summary>
@@ -141,6 +139,8 @@ namespace WebDAVDrive
         /// <param name="manualLockTimoutMs">Manual lock timout in milliseconds.</param>
         /// <param name="setLockReadOnly">Mark documents locked by other users as read-only for this user and vice versa.</param>
         /// <param name="logFormatter">Formats log output.</param>
+        /// <param name="productname">Name of the product. To be displayed in UI.</param>
+        /// <param name="appId">Unique Application ID.</param>
         public VirtualEngine(
             string license,
             string userFileSystemRootPath,
@@ -151,17 +151,19 @@ namespace WebDAVDrive
             double manualLockTimoutMs,
             bool setLockReadOnly,
             LogFormatter logFormatter,
-            string productname)
+            string productname, 
+            string appId)
             : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, setLockReadOnly, logFormatter)
         {
             this.productName = productname;
+            this.appId = appId;
             this.RemoteStorageRootPath = remoteStorageRootPath;
             this.webSocketServerUrl = webSocketServerUrl;
             this.log = logFormatter.Log;
 
             Mapping = new Mapping(Path, remoteStorageRootPath);
 
-            
+
 
             this.autoLockTimoutMs = autoLockTimoutMs;
             this.manualLockTimoutMs = manualLockTimoutMs;
@@ -170,13 +172,8 @@ namespace WebDAVDrive
 
             Commands = new Commands(this, remoteStorageRootPath, logFormatter.Log);
 
-            //// Create tray app.
+            // Create the tray app.
             TrayUI.CreateTray(productName, remoteStorageRootPath, iconsFolderPath, Commands, this, this.InstanceId);
-            //Tray = new WindowsTrayInterface(productName, remoteStorageRootPath, iconsFolderPath, Commands);
-            
-            //// Listen to engine notifications to change menu and icon states.
-            //this.StateChanged += Tray.Engine_StateChanged;
-            //this.SyncService.StateChanged += Tray.SyncService_StateChanged;
         }
 
         /// <inheritdoc/>
@@ -199,7 +196,7 @@ namespace WebDAVDrive
             // For this method to be called you need to register a menu command handler.
             // See method description for more details.
 
-            Logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString());
+            Logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString(), default, operationContext);
 
             if (menuGuid == typeof(ShellExtension.ContextMenuVerbIntegratedLock).GUID)
             {
@@ -214,41 +211,106 @@ namespace WebDAVDrive
                 return new MenuCommandUnmount(this, this.Logger);
             }
 
-            Logger.LogError($"Menu not found", Path, menuGuid.ToString());
+            Logger.LogError($"Menu not found", Path, menuGuid.ToString(), default, operationContext);
             throw new System.NotImplementedException();
         }
 
         /// <inheritdoc/>
         public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
         {
+            if (!await AuthenticateAsync(null, cancellationToken))
+            {
+                // Authentication failed. There is no way to send requests without auth info. The Engine can not be started.
+                return;
+            }
+
+            await InitAsync(cancellationToken);
+
+            Logger.LogMessage($"Sync mode: {Program.Settings.IncomingSyncMode}", Path);
+
+            await base.StartAsync(processModified, cancellationToken);
+
+            // Create and start monitor, depending on server capabilities and prefered SyncMode.
+            RemoteStorageMonitor = await StartRemoteStorageMonitorAsync(Program.Settings.IncomingSyncMode, cancellationToken);
+
+            Logger.LogMessage($"Actual sync mode: {SyncService.IncomingSyncMode}", Path);
+        }
+
+        public override async Task<bool> AuthenticateAsync(IItemsChange itemsChange, CancellationToken cancellationToken)
+        {
+            if (await IsAuthenticatedAsync(itemsChange, cancellationToken))
+            {
+                return true;
+            }
+
+            bool authenticated = true;
+            try
+            {
+                // This call is oly requitred to get server authentication type: Token-based, Basic, NTLM, Cookies, etc.
+                await DavClient.GetFolderAsync(this.RemoteStorageRootPath, Mapping.GetDavProperties(), cancellationToken: cancellationToken);
+            }
+            catch (WebDavHttpException ex)
+            {
+                // Show login dialog or read auth info from storage.
+                authenticated = ShowLoginDialog(ex, Path);
+            }
+
+            if (!authenticated)
+            {
+                ILogger logger = this.Logger.CreateLogger("WebDAV Session");
+                logger.LogMessage("Authentication failed", this.RemoteStorageRootPath);
+            }
+
+            return authenticated;
+        }
+
+        public override async Task<bool> IsAuthenticatedAsync(IItemsChange itemsChange, CancellationToken cancellationToken)
+        {
+            if (this.Credentials != null)
+            {
+                // Challenge-response auth.
+                return true;
+            }
+
+            if (this.Cookies != null && this.Cookies.Any())
+            {
+                //Cookies auth.
+                return true;
+            }
+
+            return false;
+        }
+
+
+        /// <summary>
+        /// Sets remote storage item ID for the root folder and initializes other Engine values if needed.
+        /// </summary>
+        /// <returns></returns>
+        private async Task InitAsync(CancellationToken cancellationToken)
+        {
             // Set the remote storage item ID for the root folder. It will be passed to the IEngine.GetFileSystemItemAsync()
             // method as a remoteStorageItemId parameter when a root folder is requested.
             byte[] remoteStorageItemId = await GetRootRemoteStorageItemId(this.RemoteStorageRootPath, cancellationToken);
             this.SetRemoteStorageRootItemId(remoteStorageItemId);
+        }
 
-            await base.StartAsync(processModified, cancellationToken);
-
-            // Start remote storage monitor.
-            if (SyncService.IncomingSyncMode != IncomingSyncMode.TimerPooling)
+        static internal IncomingSyncMode GetSyncMode(IncomingSyncModeSetting preferedSyncMode)
+        {
+            switch (preferedSyncMode)
             {
-                if (RemoteStorageMonitor == null)
-                {
-                    Logger.LogMessage($"Prefered sync mode: {SyncService.IncomingSyncMode}", Path);
-
-                    // Create and start monitor, depending on server capabilities and prefered SyncMode.
-                    RemoteStorageMonitor = await TryCreateRemoteStorageMonitorAsync(SyncService.IncomingSyncMode);
-                    
-                    // If Sync ID & Manual pooling modes are not available, set timer pooling mode.
-                    SyncService.IncomingSyncMode = RemoteStorageMonitor?.SyncMode ?? IncomingSyncMode.TimerPooling;
-                    Logger.LogMessage($"Actual sync mode: {SyncService.IncomingSyncMode}", Path);
-
-                    Commands.RemoteStorageMonitor = RemoteStorageMonitor;
-                }
-                else
-                {
-                    await RemoteStorageMonitor?.StartAsync();
-                }
-            }            
+                case IncomingSyncModeSetting.Off:
+                    return IncomingSyncMode.Disabled;
+                case IncomingSyncModeSetting.SyncId:
+                    return IncomingSyncMode.SyncId;
+                case IncomingSyncModeSetting.CRUD:
+                    return IncomingSyncMode.Disabled;
+                case IncomingSyncModeSetting.TimerPooling:
+                    return IncomingSyncMode.TimerPooling;
+                case IncomingSyncModeSetting.Auto:
+                    return IncomingSyncMode.SyncId;
+                default:
+                    return IncomingSyncMode.SyncId;
+            }
         }
 
         /// <summary>
@@ -256,9 +318,66 @@ namespace WebDAVDrive
         /// </summary>
         /// <param name="preferedSyncMode">Prefered sync mode.</param>
         /// <returns>Remote storage monitor or null if sync mode is not supported or sockets failed to connect.</returns>
-        private async Task<RemoteStorageMonitorBase> TryCreateRemoteStorageMonitorAsync(IncomingSyncMode preferedSyncMode)
+        private async Task<RemoteStorageMonitorBase> StartRemoteStorageMonitorAsync(IncomingSyncModeSetting preferedSyncMode, CancellationToken cancellationToken)
         {
             RemoteStorageMonitorBase monitor = null;
+            try
+            {
+                switch (preferedSyncMode)
+                {
+                    case IncomingSyncModeSetting.Off:
+                        break;
+                    case IncomingSyncModeSetting.SyncId:
+                        monitor = new RemoteStorageMonitorSyncId(webSocketServerUrl, RemoteStorageRootPath, this);
+                        break;
+                    case IncomingSyncModeSetting.CRUD:
+                        monitor = new RemoteStorageMonitorCRUDE(webSocketServerUrl, RemoteStorageRootPath, this);
+                        break;
+                    case IncomingSyncModeSetting.TimerPooling:
+                        break;
+                    case IncomingSyncModeSetting.Auto:
+                        if (SyncService.IsSyncIdSupported)
+                        {
+                            monitor = new RemoteStorageMonitorSyncId(webSocketServerUrl, RemoteStorageRootPath, this);
+                        }
+                        else
+                        {
+                            monitor = new RemoteStorageMonitorCRUDE(webSocketServerUrl, RemoteStorageRootPath, this);
+                        }
+                        break;
+                }
+
+                if (monitor != null)
+                {
+                    monitor.Credentials = this.Credentials;
+                    monitor.Cookies = this.Cookies;
+                    monitor.InstanceId = this.InstanceId;
+                    monitor.ServerNotifications = this.ServerNotifications(this.Path, monitor.Logger);
+                    await monitor.StartAsync();
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Logger.LogMessage($"Failed to create remote storage monitor. {ex.Message}", Path);
+                monitor = null;
+                SyncService.IncomingSyncMode = preferedSyncMode == IncomingSyncModeSetting.Auto ? IncomingSyncMode.TimerPooling : IncomingSyncMode.Disabled;
+            }
+            Commands.RemoteStorageMonitor = monitor;
+
+            return monitor;
+        }
+
+        /*
+        /// <summary>
+        /// Creates and starts remote storage monitor, depending on sync mode.
+        /// </summary>
+        /// <param name="preferedSyncMode">Prefered sync mode.</param>
+        /// <returns>Remote storage monitor or null if sync mode is not supported or sockets failed to connect.</returns>
+        private async Task<RemoteStorageMonitorBase> TryCreateRemoteStorageMonitorAsync(PreferredIncomingSyncMode preferedSyncMode)
+        {
+            RemoteStorageMonitorBase monitor = null;
+
             try
             {
                 if (preferedSyncMode == IncomingSyncMode.SyncId && SyncService.IsSyncIdSupported)
@@ -269,6 +388,8 @@ namespace WebDAVDrive
                 {
                     monitor = new RemoteStorageMonitorCRUDE(webSocketServerUrl, RemoteStorageRootPath, this);
                 }
+
+
                 if (monitor != null)
                 {
                     monitor.Credentials = this.Credentials;
@@ -287,6 +408,7 @@ namespace WebDAVDrive
             
             return monitor;
         }
+        */
 
         public override async Task StopAsync()
         {
@@ -294,6 +416,8 @@ namespace WebDAVDrive
             if (RemoteStorageMonitor != null)
             {
                 await RemoteStorageMonitor?.StopAsync();
+                RemoteStorageMonitor?.Dispose();
+                RemoteStorageMonitor = null;
             }
         }
 
@@ -350,55 +474,63 @@ namespace WebDAVDrive
 
         /// <summary>
         /// Event handler to process WebDAV errors. 
-        /// If server returns 401 or 302 response here we show the login dialog.
         /// </summary>
         /// <param name="sender">WebDAV session.</param>
         /// <param name="e">WebDAV error details.</param>
         private void DavClient_WebDavError(ISession sender, WebDavErrorEventArgs e)
         {
-            WebDavHttpException httpException = e.Exception as WebDavHttpException;
-            if (httpException != null)
+            // You can process WebDAV errors below:
+            //if (e.Exception is WebDavHttpException)
+            //{
+            //    ProcessDavException(e.Exception as WebDavHttpException);
+            //}
+            //e.Result = WebDavErrorEventResult.Fail;
+        }
+
+        private bool ShowLoginDialog(WebDavHttpException httpException, string userFileSystemPath)
+        {
+            bool success = false;
+
+            Uri failedUri = httpException.Uri;
+
+            switch (httpException.Status.Code)
             {
-                Uri failedUri = httpException.Uri;
+                // 302 redirect to login page.
+                case 302:
+                    // Show login dialog.
 
-                switch (httpException.Status.Code)
-                {
-                    // 302 redirect to login page.
-                    case 302:
-                        // Show login dialog.
-
-                        // Azure AD can not navigate directly to login page - failed corelation.
-                        //string loginUrl = ((Redirect302Exception)e.Exception).Location;
-                        //Uri url = new System.Uri(loginUrl, System.UriKind.Absolute);
+                    // Azure AD can not navigate directly to login page - failed corelation.
+                    //string loginUrl = ((Redirect302Exception)e.Exception).Location;
+                    //Uri url = new System.Uri(loginUrl, System.UriKind.Absolute);
                         
-                        Logger.LogDebug($"{httpException?.Status.Code} {httpException?.Status.Description} {e.Exception.Message}", null, failedUri?.OriginalString);
+                    Logger.LogDebug($"{httpException?.Status.Code} {httpException?.Status.Description} {httpException.Message}", null, failedUri?.OriginalString);
 
-                        WebBrowserLogin(failedUri);
+                    WebBrowserLogin(failedUri);
+                    success = true;
 
-                        // Replay the request, so the listing or update can complete succesefully.
-                        // Unless this is LOCK - incorrect lock owner map be passed in this case.
-                        //bool isLock = httpException.HttpMethod.NotEquals("LOCK", StringComparison.InvariantCultureIgnoreCase);
-                        bool isLock = false;
-                        e.Result = isLock ? WebDavErrorEventResult.Fail : WebDavErrorEventResult.Repeat;
+                    // Replay the request, so the listing or update can complete succesefully.
+                    // Unless this is LOCK - incorrect lock owner map be passed in this case.
+                    //bool isLock = httpException.HttpMethod.NotEquals("LOCK", StringComparison.InvariantCultureIgnoreCase);
+                    //e.Result = isLock ? WebDavErrorEventResult.Fail : WebDavErrorEventResult.Repeat;
 
-                        break;
+                    break;
 
-                    // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
-                    case 401:
+                // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
+                case 401:
 
-                        Logger.LogDebug($"{httpException?.Status.Code} {httpException?.Status.Description} {e.Exception.Message}", null, failedUri?.OriginalString);
+                    Logger.LogDebug($"{httpException?.Status.Code} {httpException?.Status.Description} {httpException.Message}", null, failedUri?.OriginalString);
 
-                        if (loginRetriesCurrent < loginRetriesMax)
-                        {
-                            e.Result = ChallengeLoginLogin(failedUri);
-                        }
-                        break;
-                    default:
-                        ILogger logger = this.Logger.CreateLogger("WebDAV Session");
-                        logger.LogMessage($"{httpException.Status.Code} {e.Exception.Message}", null, failedUri?.OriginalString);
-                        break;
-                }
+                    if (loginRetriesCurrent < loginRetriesMax)
+                    {
+                        success = ChallengeLoginLogin(failedUri);
+                    }
+                    break;
+                default:
+                    ILogger logger = this.Logger.CreateLogger("WebDAV Session");
+                    logger.LogMessage($"{httpException.Status.Code} {httpException.Message}", null, failedUri?.OriginalString);
+                    break;
             }
+            return success;
         }
 
         private void WebBrowserLogin(Uri failedUri)
@@ -424,7 +556,12 @@ namespace WebDAVDrive
             this.Cookies = webBrowserLogin.Cookies;
         }
 
-        private WebDavErrorEventResult ChallengeLoginLogin(Uri failedUri)
+        /// <summary>
+        /// Shows login dialog for Basic, NTLM and Kerberos auth.
+        /// </summary>
+        /// <param name="failedUri">URI on which authentication is required.</param>
+        /// <returns>True if login was succesefull. False - otherwise.</returns>
+        private bool ChallengeLoginLogin(Uri failedUri)
         {
             Windows.Security.Credentials.PasswordCredential passwordCredential = CredentialManager.GetCredentials(CredentialsStorageKey, log);
             if (passwordCredential != null)
@@ -434,7 +571,7 @@ namespace WebDAVDrive
                 DavClient.Credentials = networkCredential;
                 this.Credentials = networkCredential;
                 this.CurrentUserPrincipal = networkCredential.UserName;
-                return WebDavErrorEventResult.Repeat;
+                return true;
             }
             else
             {
@@ -466,11 +603,11 @@ namespace WebDAVDrive
                     DavClient.Credentials = newNetworkCredential;
                     this.Credentials = newNetworkCredential;
                     this.CurrentUserPrincipal = newNetworkCredential.UserName;
-                    return WebDavErrorEventResult.Repeat;
+                    return true;
                 }
             }
 
-            return WebDavErrorEventResult.Fail;
+            return false;
         }
 
         private bool disposedValue;
@@ -482,9 +619,8 @@ namespace WebDAVDrive
                 if (disposing)
                 {
                     TrayUI.RemoveTray(this.InstanceId);
-                    //Tray?.Dispose();
                     RemoteStorageMonitor?.Dispose();
-                    DavClient?.Dispose();
+                    DavClient?.Dispose();                    
                 }
 
                 disposedValue = true;

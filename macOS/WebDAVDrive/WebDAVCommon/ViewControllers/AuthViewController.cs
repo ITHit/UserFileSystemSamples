@@ -12,7 +12,6 @@ namespace WebDAVCommon.ViewControllers
         private readonly ConsoleLogger logger = new ConsoleLogger(typeof(AuthViewController).Name);
         private readonly SecureStorage secureStorage;
         private readonly string domainIdentifier;
-        private readonly string openItemPath;
 
         private NSTextField loginTextField = new()
         {
@@ -38,9 +37,8 @@ namespace WebDAVCommon.ViewControllers
             this.secureStorage = new SecureStorage(domainIdentifier);
         }
 
-        public AuthViewController(string domainIdentifier, string openItemPath) : base(nameof(AuthViewController), null)
+        public AuthViewController(string domainIdentifier) : base(nameof(AuthViewController), null)
         {
-            this.openItemPath = openItemPath;
             this.domainIdentifier = domainIdentifier;
             this.secureStorage = new SecureStorage(domainIdentifier);
         }

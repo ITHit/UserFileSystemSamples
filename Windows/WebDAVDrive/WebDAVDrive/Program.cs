@@ -125,7 +125,7 @@ namespace WebDAVDrive
                 await trayUI.StartAsync();
 
                 // Register this app to process COM shell extensions calls.
-                using (ShellExtension.ShellExtensions.StartComServer(Settings.ShellExtensionsComServerRpcEnabled))
+                using (ShellExtension.ShellExtensions.StartComServer())
                 {
                     
                     // Read mounted file systems.
@@ -195,8 +195,7 @@ namespace WebDAVDrive
                     userFileSystemRootPath,
                     webDAVServerUrl,
                     displayName,
-                    Path.Combine(Settings.IconsFolderPath, "Drive.ico"),
-                    Settings.ShellExtensionsComServerExePath);
+                    Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
             }
             catch (Exception ex)
             {
@@ -250,20 +249,19 @@ namespace WebDAVDrive
                     Settings.ManualLockTimoutMs,
                     Settings.SetLockReadOnly,
                     logFormatter,
-                    Settings.ProductName);
+                    Settings.ProductName, 
+                    Settings.AppID);
 
                 Engines.TryAdd(engine.InstanceId, engine);
-                //engine.Tray.MenuExit.Click += async (object sender, EventArgs e) => { await RemoveEngineAsync(engine, false); };
-                //engine.Tray.MenuUnmount.Click += async (object sender, EventArgs e) => { await RemoveEngineAsync(engine, true); };
 
                 consoleProcessor.Commands.TryAdd(engine.InstanceId, engine.Commands);
 
+                engine.FolderInvalidationIntervalMs = Settings.FolderInvalidationIntervalMs;
                 engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
-                engine.SyncService.IncomingSyncMode = Settings.PreferredIncomingSyncMode;
+                engine.SyncService.IncomingSyncMode = VirtualEngine.GetSyncMode(Settings.IncomingSyncMode);
                 engine.AutoLock = Settings.AutoLock;
                 engine.MaxTransferConcurrentRequests = Settings.MaxTransferConcurrentRequests.Value;
                 engine.MaxOperationsConcurrentRequests = Settings.MaxOperationsConcurrentRequests.Value;
-                engine.ShellExtensionsComServerRpcEnabled = Settings.ShellExtensionsComServerRpcEnabled; // Enable RPC in case RPC shaell extension handlers, hosted in separate process. 
 
                 // Print Engine config, settings, logging headers.
                 await logFormatter.PrintEngineStartInfoAsync(engine, webDAVServerUrl);

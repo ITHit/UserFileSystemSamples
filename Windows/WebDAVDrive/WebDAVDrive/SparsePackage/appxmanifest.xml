@@ -61,26 +61,6 @@
             </desktop3:CloudFilesContextMenus>
           </desktop3:CloudFiles>
         </desktop3:Extension>
-
-        <!--
-        To use out-of-proc handlers with gRPC:
-        1. Add a reference to ShellExtensions project, so the shell extension COM executable is copied to the app folder
-        2. Enable RPC by setting ShellExtensionsComServerRpcEnabled to true in appsettings.json
-        3. Comment <ApplicationManifest>app.manifest</ApplicationManifest> element in VirtualDrive.csproj
-        4. Uncomment <com:Extension> section here:
-        -->
-
-        <!--<com:Extension Category="windows.comServer">
-          <com:ComServer>
-            <com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="WebDAVDrive.ShellExtension.exe">
-              <com:Class Id="754F334F-095C-46CD-B033-B2C0523D2829" />
-              <com:Class Id="A5B0C82F-50AA-445C-A404-66DEB510E84B" />
-              <com:Class Id="A22EBD03-343E-433C-98DF-372C6B3A1538" />
-			  <com:Class Id="A54BD1AD-4816-44B0-9247-8F43D8CA7AE7" />
-			  <com:Class Id="FF039488-137F-454D-A546-AA329A1D963F" />
-            </com:ExeServer>
-          </com:ComServer>
-        </com:Extension>-->
       </Extensions>
     </Application>
   </Applications>

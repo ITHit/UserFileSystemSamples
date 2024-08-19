@@ -35,17 +35,6 @@ namespace VirtualDrive
         /// Throttling max of listing/move/delete concurrent requests.
         /// </summary>
         public int? MaxOperationsConcurrentRequests { get; set; }
-
-        /// <summary>
-        /// Absolute or relative path of external COM server executable.
-        /// If empty, will host COM classes in the current process.
-        /// </summary>
-        public string ShellExtensionsComServerExePath { get; set; }
-
-        /// <summary>
-        /// Is RPC server enabled
-        /// </summary>
-        public bool ShellExtensionsComServerRpcEnabled { get; set; }
     }
 
     /// <summary>
@@ -116,11 +105,6 @@ namespace VirtualDrive
                 }
 
                 settings.RemoteStorageRootPath = remoteStorageRootPath;
-            }
-
-            if (!Path.IsPathRooted(settings.ShellExtensionsComServerExePath))
-            {
-                settings.ShellExtensionsComServerExePath = !string.IsNullOrWhiteSpace(settings.ShellExtensionsComServerExePath) ? Path.Combine(AppContext.BaseDirectory, settings.ShellExtensionsComServerExePath) : null;
             }
 
             if (!Directory.Exists(settings.RemoteStorageRootPath))

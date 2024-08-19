@@ -13,7 +13,7 @@ namespace WebDAVCommon.ViewControllers
         private readonly ConsoleLogger consoleLogger = new(nameof(CookiesAuthViewController));
         private readonly SecureStorage secureStorage;
         private readonly string failedUrl;
-        private readonly string openItemPath;
+        private readonly Action? onLoginSuccess;
         private readonly NSWindow window;
         private WKWebViewConfiguration webViewConfiguration;
         private NSProgressIndicator progressIndicator = new()
@@ -34,10 +34,10 @@ namespace WebDAVCommon.ViewControllers
             consoleLogger.LogDebug("CookiesAuthViewController init all parameters.");
         }
 
-        public CookiesAuthViewController(string domainIdentifier, NSWindow window, string openItemPath, string failedUrl) : base(nameof(CookiesAuthViewController), null)
+        public CookiesAuthViewController(string domainIdentifier, NSWindow window, Action? onLoginSuccess, string failedUrl) : base(nameof(CookiesAuthViewController), null)
         {
             consoleLogger.LogDebug("CookiesAuthViewController constructor");
-            this.openItemPath = openItemPath;
+            this.onLoginSuccess = onLoginSuccess;
             this.failedUrl = failedUrl;
             this.window = window;
             this.secureStorage = new SecureStorage(domainIdentifier);
@@ -142,14 +142,12 @@ namespace WebDAVCommon.ViewControllers
                     extensionContext.CompleteRequest();
                 }
                 else
-                {
-                    // Open file/folder if auth dialog was shown from host app.
-                    Task.Run(async () =>
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(2));
-                        Process.Start("open", openItemPath);
-                    }).Wait();
+                {                   
                     window.Close();
+                    if (onLoginSuccess != null)
+                    {
+                        onLoginSuccess();
+                    }
                 }
             });
             decisionHandler?.Invoke(WKNavigationResponsePolicy.Allow);

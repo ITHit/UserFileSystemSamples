@@ -174,12 +174,12 @@ namespace WebDAVDrive
                 }
                 catch (Exception e)
                 {
-                    Logger.LogError($"Failed to load thumbnail {size}px", UserFileSystemPath, null, e);
+                    Logger.LogError($"Failed to load thumbnail {size}px", UserFileSystemPath, null, e, operationContext);
                 }
             }
 
             string thumbnailResult = thumbnail != null ? "Success" : "Not Impl";
-            Logger.LogMessage($"{nameof(VirtualEngine)}.{nameof(GetThumbnailAsync)}() - {thumbnailResult}", UserFileSystemPath);
+            Logger.LogMessage($"{nameof(VirtualEngine)}.{nameof(GetThumbnailAsync)}() - {thumbnailResult}", UserFileSystemPath, default, operationContext);
 
             return thumbnail;
         }
@@ -200,7 +200,7 @@ namespace WebDAVDrive
             // For this method to be called you need to register a properties handler.
             // See method description for more details.
 
-            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(GetPropertiesAsync)}()", UserFileSystemPath);
+            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(GetPropertiesAsync)}()", UserFileSystemPath, default, operationContext);
 
             IList<FileSystemItemPropertyData> props = new List<FileSystemItemPropertyData>();
 
@@ -331,7 +331,7 @@ namespace WebDAVDrive
                 // Update Windows Explorer.
                 placeholder.UpdateUI();
 
-                Logger.LogDebug($"Locked/Refreshed by {lockInfo.Owner}, timout: {lockInfo.TimeOut:hh\\:mm\\:ss\\.ff}", UserFileSystemPath);
+                Logger.LogDebug($"Locked/Refreshed by {lockInfo.Owner}, timout: {lockInfo.TimeOut:hh\\:mm\\:ss\\.ff}", UserFileSystemPath, default, operationContext);
 
                 // Start the timer to extend (refresh) the automatic lock when it is about to expire.
                 if (lockInfo.TimeOut < TimeSpan.MaxValue && lockMode == LockMode.Auto)
@@ -371,6 +371,15 @@ namespace WebDAVDrive
                     bool sameToken = lockToken.Equals(serverLockInfo.LockToken, StringComparison.InvariantCultureIgnoreCase);
                     if (sameToken)
                     {
+                        // If this is auto-lock and the there is no lock file (owner file) - do not refresh lock, unlock the file instead.
+                        if(lockMode == LockMode.Auto
+                            && !FilterHelper.IsOwnerFileExists(UserFileSystemPath))
+                        {
+                            await UnlockAsync(operationContext, cancellationToken);
+                            PlaceholderItem.UpdateUI(UserFileSystemPath);
+                            return;
+                        }
+
                         // Extend (refresh) the lock.
                         //Program.DavClient.RefreshLockAsync(new Uri(RemoteStoragePath), lockToken, timout, cancellationToken);
                         IHierarchyItem item = (await Dav.GetItemAsync(new Uri(RemoteStoragePath), null, cancellationToken)).WebDavResponse;
@@ -385,11 +394,11 @@ namespace WebDAVDrive
             }
             catch(TaskCanceledException)
             {
-                Logger.LogDebug("Lock refresh canceled", UserFileSystemPath);
+                Logger.LogDebug("Lock refresh canceled", UserFileSystemPath, default, operationContext);
             }
             catch (Exception ex)
             {
-                Logger.LogError("Lock refresh failed", UserFileSystemPath, default, ex);
+                Logger.LogError("Lock refresh failed", UserFileSystemPath, default, ex, operationContext);
             }
         }
         

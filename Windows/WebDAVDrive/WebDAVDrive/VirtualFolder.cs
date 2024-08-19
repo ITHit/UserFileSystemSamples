@@ -35,11 +35,11 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task<IFileMetadata> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFileMetadata> CreateFileAsync(IFileMetadata metadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
-            string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
+            string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, metadata.Name);
             string contentParam = content != null ? content.Length.ToString() : "null";
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}({contentParam})", userFileSystemNewItemPath);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}({contentParam})", userFileSystemNewItemPath, default, operationContext, metadata);
 
             // Comment out the code below if you require a 0-lenght file to
             // be created in the remote storage as soon as possible. The Engine
@@ -53,7 +53,7 @@ namespace WebDAVDrive
             }
 
             // Create a new file in the remote storage.
-            Uri newFileUri = new Uri(new Uri(RemoteStoragePath), fileMetadata.Name);
+            Uri newFileUri = new Uri(new Uri(RemoteStoragePath), metadata.Name);
 
             // Send content to remote storage.
             // Get the ETag returned by the server, if any.
@@ -99,12 +99,12 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task<IFolderMetadata> CreateFolderAsync(IFolderMetadata folderMetadata, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
+        public async Task<IFolderMetadata> CreateFolderAsync(IFolderMetadata metadata, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
         {
-            string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, folderMetadata.Name);
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
+            string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, metadata.Name);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath, default, operationContext, metadata);
 
-            Uri newFolderUri = new Uri(new Uri(RemoteStoragePath), folderMetadata.Name);
+            Uri newFolderUri = new Uri(new Uri(RemoteStoragePath), metadata.Name);
             Client.IResponse response = await Dav.CreateFolderAsync(newFolderUri, null, null, cancellationToken);
 
             // Return newly created item to the Engine.
@@ -130,7 +130,7 @@ namespace WebDAVDrive
         {
             // This method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer call one of the following:
-            // - resultContext.ReturnChildren() method.
+            // - resultContext.ReturnChildrenAsync() method.
             // - resultContext.ReportProgress() method.
 
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath, default, operationContext);
@@ -148,19 +148,18 @@ namespace WebDAVDrive
 
             // To signal that the children enumeration is completed 
             // always call ReturnChildren(), even if the folder is empty.
-            await resultContext.ReturnChildrenAsync(children.ToArray(), children.Count());
+            await resultContext.ReturnChildrenAsync(children.ToArray(), children.Count(), true, cancellationToken);
         }
 
         /// <inheritdoc/>
-        public async Task<IFolderMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
+        public async Task<IFolderMetadata> WriteAsync(IFolderMetadata metadata, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
         {
             // Typically we can not change any folder metadata on a WebDAV server, just logging the call.
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext, metadata);
 
             // Return an updated item to the Engine.
             // In the returned data set the following fields:
             //  - Medatdata eTag. The Engine will store it to determine if the item metadata should be updated.
-
             return null;
         }
 

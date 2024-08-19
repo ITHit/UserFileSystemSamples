@@ -68,7 +68,7 @@ namespace VirtualDrive
                 catch (OperationCanceledException)
                 {
                     // Operation was canceled by the calling Engine.StopAsync() or the operation timeout occured.
-                    Logger.LogDebug($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default);
+                    Logger.LogDebug($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default, operationContext, metadata);
                 }
             }
 
@@ -94,7 +94,7 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task<IFileMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFileMetadata> WriteAsync(IFileMetadata metadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
 
@@ -121,35 +121,35 @@ namespace VirtualDrive
             }
 
             // Update remote storage file metadata.
-            if (fileBasicInfo.Attributes.HasValue)
+            if (metadata.Attributes.HasValue)
             {
-                remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value & ~FileAttributes.ReadOnly;
+                remoteStorageItem.Attributes = metadata.Attributes.Value & ~FileAttributes.ReadOnly;
             }
 
-            if (fileBasicInfo.CreationTime.HasValue)
+            if (metadata.CreationTime.HasValue)
             {
-                remoteStorageItem.CreationTimeUtc = fileBasicInfo.CreationTime.Value.UtcDateTime;
+                remoteStorageItem.CreationTimeUtc = metadata.CreationTime.Value.UtcDateTime;
             }
 
-            if (fileBasicInfo.LastWriteTime.HasValue)
+            if (metadata.LastWriteTime.HasValue)
             {
-                remoteStorageItem.LastWriteTimeUtc = fileBasicInfo.LastWriteTime.Value.UtcDateTime;
+                remoteStorageItem.LastWriteTimeUtc = metadata.LastWriteTime.Value.UtcDateTime;
             }
 
-            if (fileBasicInfo.LastAccessTime.HasValue)
+            if (metadata.LastAccessTime.HasValue)
             {
-                remoteStorageItem.LastAccessTimeUtc = fileBasicInfo.LastAccessTime.Value.UtcDateTime;
+                remoteStorageItem.LastAccessTimeUtc = metadata.LastAccessTime.Value.UtcDateTime;
             }
 
-            if (fileBasicInfo.Attributes.HasValue)
+            if (metadata.Attributes.HasValue)
             {
-                remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value;
+                remoteStorageItem.Attributes = metadata.Attributes.Value;
             }
 
-            // Save ETag received from your remote storage in persistent placeholder properties.
-            // string newEtag = ...
-            // operationContext.Properties.SetETag(newEtag);
-
+            // Return an updated item to the Engine.
+            // In the returned data set the following fields:
+            //  - Content eTag. The Engine will store it to determine if the file content should be updated.
+            //  - Medatdata eTag. The Engine will store it to determine if the item metadata should be updated.
             return null;
         }
     }

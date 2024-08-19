@@ -29,8 +29,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Common", "..\Common\Common.
 EndProject
 Project("{C7167F0D-BC9F-4E6E-AFE1-012C56B48DB5}") = "WebDAVDrive.Package", "WebDAVDrive\WebDAVDrive.Package\WebDAVDrive.Package.wapproj", "{86767A2F-1559-4DFB-925D-B8E7FCDE74CA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebDAVDrive.ShellExtension", "WebDAVDrive\WebDAVDrive.ShellExtension\WebDAVDrive.ShellExtension.csproj", "{2EC2F0CD-4E7D-47ED-AAD0-E6DCCB5138B1}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -81,10 +79,6 @@ Global
 		{86767A2F-1559-4DFB-925D-B8E7FCDE74CA}.Release|x64.ActiveCfg = Release|x64
 		{86767A2F-1559-4DFB-925D-B8E7FCDE74CA}.Release|x64.Build.0 = Release|x64
 		{86767A2F-1559-4DFB-925D-B8E7FCDE74CA}.Release|x64.Deploy.0 = Release|x64
-		{2EC2F0CD-4E7D-47ED-AAD0-E6DCCB5138B1}.Debug|x64.ActiveCfg = Debug|x64
-		{2EC2F0CD-4E7D-47ED-AAD0-E6DCCB5138B1}.Debug|x64.Build.0 = Debug|x64
-		{2EC2F0CD-4E7D-47ED-AAD0-E6DCCB5138B1}.Release|x64.ActiveCfg = Release|x64
-		{2EC2F0CD-4E7D-47ED-AAD0-E6DCCB5138B1}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -99,7 +93,6 @@ Global
 		{E589600E-97A4-4B1D-8921-0CCC63B03E96} = {F24CBDD0-7A18-43F0-BCD2-A8FD1A8A7B54}
 		{C1585095-4C3B-4CD1-B8B2-ECDD378D41BE} = {F24CBDD0-7A18-43F0-BCD2-A8FD1A8A7B54}
 		{86767A2F-1559-4DFB-925D-B8E7FCDE74CA} = {264745B0-DF86-41E1-B400-3CAA1B403830}
-		{2EC2F0CD-4E7D-47ED-AAD0-E6DCCB5138B1} = {264745B0-DF86-41E1-B400-3CAA1B403830}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {740A716A-38A7-46BC-A21F-18336D0023B7}

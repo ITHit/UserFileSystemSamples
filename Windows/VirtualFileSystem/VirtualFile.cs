@@ -48,7 +48,7 @@ namespace VirtualFileSystem
             // On Windows this method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer write to the output stream or call the resultContext.ReportProgress() or resultContext.ReturnData() methods.
 
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext, metadata);
 
             using (FileStream stream = new FileInfo(RemoteStoragePath).Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
             {
@@ -61,7 +61,7 @@ namespace VirtualFileSystem
                 catch (OperationCanceledException)
                 {
                     // Operation was canceled by the calling Engine.StopAsync() or the operation timeout occured.
-                    Logger.LogDebug($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default);
+                    Logger.LogDebug($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default, operationContext, metadata);
                 }
             }
 
@@ -88,9 +88,9 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task<IFileMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFileMetadata> WriteAsync(IFileMetadata metadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext, metadata);
 
             FileInfo remoteStorageItem = new FileInfo(RemoteStoragePath);
 
@@ -105,29 +105,29 @@ namespace VirtualFileSystem
             }
 
             // Update remote storage file metadata.
-            if (fileBasicInfo.Attributes.HasValue)
+            if (metadata.Attributes.HasValue)
             {
-                remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value & ~FileAttributes.ReadOnly;
+                remoteStorageItem.Attributes = metadata.Attributes.Value & ~FileAttributes.ReadOnly;
             }
 
-            if (fileBasicInfo.CreationTime.HasValue)
+            if (metadata.CreationTime.HasValue)
             {
-                remoteStorageItem.CreationTimeUtc = fileBasicInfo.CreationTime.Value.UtcDateTime;
+                remoteStorageItem.CreationTimeUtc = metadata.CreationTime.Value.UtcDateTime;
             }
 
-            if (fileBasicInfo.LastWriteTime.HasValue)
+            if (metadata.LastWriteTime.HasValue)
             {
-                remoteStorageItem.LastWriteTimeUtc = fileBasicInfo.LastWriteTime.Value.UtcDateTime;
+                remoteStorageItem.LastWriteTimeUtc = metadata.LastWriteTime.Value.UtcDateTime;
             }
 
-            if (fileBasicInfo.LastAccessTime.HasValue)
+            if (metadata.LastAccessTime.HasValue)
             {
-                remoteStorageItem.LastAccessTimeUtc = fileBasicInfo.LastAccessTime.Value.UtcDateTime;
+                remoteStorageItem.LastAccessTimeUtc = metadata.LastAccessTime.Value.UtcDateTime;
             }
 
-            if (fileBasicInfo.Attributes.HasValue)
+            if (metadata.Attributes.HasValue)
             {
-                remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value;
+                remoteStorageItem.Attributes = metadata.Attributes.Value;
             }
 
             // Return an updated item to the Engine.

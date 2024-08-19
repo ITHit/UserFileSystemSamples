@@ -62,7 +62,7 @@ namespace VirtualFileSystem
             foreach (ChangeEventItem item in e.Items)
             {
 
-                // If incoming update failed becase a file is in use,
+                // If update from server failed becase a file is in use,
                 // try to show merge dialog (for MS Office, etc.).
                 if (e.Direction == SyncDirection.Incoming
                     && e.OperationType == OperationType.UpdateContent)
@@ -87,27 +87,27 @@ namespace VirtualFileSystem
             switch (e.Result.Status)
             {
                 case OperationStatus.Success:
-                    switch (e.Direction)
+                    switch (e.Source)
                     {
-                        case SyncDirection.Incoming:
-                            logger.LogMessage($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
+                        case OperationSource.Server:
+                            logger.LogMessage($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext, item.Metadata);
                             break;
-                        case SyncDirection.Outgoing:
-                            logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
+                        case OperationSource.Client:
+                            logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext, item.Metadata);
                             break;
                     }
                     break;
                 case OperationStatus.Conflict:
-                    logger.LogMessage($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext);
+                    logger.LogMessage($"{e.Direction} {e.OperationType}: {e.Result.Status}", item.Path, item.NewPath, e.OperationContext, item.Metadata);
                     break;
                 case OperationStatus.Exception:
-                    logger.LogError($"{e.Direction} {e.OperationType}", item.Path, item.NewPath, e.Result.Exception);
+                    logger.LogError($"{e.Direction} {e.OperationType}", item.Path, item.NewPath, e.Result.Exception, e.OperationContext, item.Metadata);
                     break;
                 case OperationStatus.Filtered:
-                    logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status} by {e.Result.FilteredBy.GetType().Name}", item.Path, item.NewPath, e.OperationContext);
+                    logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status} by {e.Result.FilteredBy.GetType().Name}", item.Path, item.NewPath, e.OperationContext, item.Metadata);
                     break;
                 default:
-                    logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status}. {e.Result.Message}", item.Path, item.NewPath, e.OperationContext);
+                    logger.LogDebug($"{e.Direction} {e.OperationType}: {e.Result.Status}. {e.Result.Message}", item.Path, item.NewPath, e.OperationContext, item.Metadata);
                     break;
             }
         }
@@ -182,7 +182,7 @@ namespace VirtualFileSystem
         /// <param name="e">Contains new and old Engine state.</param>
         private void Engine_StateChanged(Engine engine, EngineWindows.StateChangeEventArgs e)
         {
-            engine.Logger.LogMessage($"{e.NewState}");
+            engine.Logger.LogMessage($"{e.NewState}", this.Path);
         }
 
         /// <summary>
@@ -194,7 +194,7 @@ namespace VirtualFileSystem
         {
             if (e.NewState == SynchronizationState.Enabled || e.NewState == SynchronizationState.Disabled)
             {
-                SyncService.Logger.LogMessage($"{e.NewState}");
+                SyncService.Logger.LogMessage($"{e.NewState}", this.Path);
             }
         }
 

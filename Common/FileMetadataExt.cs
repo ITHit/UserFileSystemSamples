@@ -9,7 +9,7 @@ namespace ITHit.FileSystem.Samples.Common
     public class FileMetadataExt : FileSystemItemMetadataExt, IFileMetadata
     {
         ///<inheritdoc/>
-        public long Length { get; set; }
+        public long? Length { get; set; }
 
         ///<inheritdoc/>
         public string ContentETag { get; set; }

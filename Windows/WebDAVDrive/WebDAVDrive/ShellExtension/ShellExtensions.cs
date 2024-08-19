@@ -35,15 +35,12 @@ namespace WebDAVDrive.ShellExtension
 
         /// <summary>
         /// Runs shell extensions COM server and registers shell extension class objects with EXE COM server
-        /// so other applications can connect to them if <paramref name="shellExtensionsComServerExePath"/> is null or empty
-        /// or the application is running with a sparse package identity.
+        /// so other applications (Windows Explorer) can connect to COMs running in this app.
         /// </summary>
-        /// <param name="shellExtensionsComServerRpcEnabled">True if RPC server is enabled</param>
-        /// <returns><see cref="LocalServer"/> instance if <paramref name="shellExtensionsComServerExePath"/> is null or empty
-        /// or the application is running with a sparse package identity; null otherwise.</returns>
-        internal static LocalServer StartComServer(bool shellExtensionsComServerRpcEnabled)
+        /// <returns><see cref="LocalServer"/> instance.</returns>
+        internal static LocalServer StartComServer()
         {
-            if (shellExtensionsComServerRpcEnabled && !PackageRegistrar.IsRunningWithSparsePackageIdentity())
+            if (!PackageRegistrar.IsRunningWithSparsePackageIdentity())
             {
                 return null;
             }

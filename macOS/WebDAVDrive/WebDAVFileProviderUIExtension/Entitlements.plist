@@ -6,7 +6,7 @@
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>H9B9JEKY3W.group.com.webdav.efp</string>
+		<string>H9B9JEKY3W.group.com.webdav.vfs</string>
 	</array>
 	<key>com.apple.security.files.downloads.read-write</key>
 	<true/>

@@ -69,8 +69,7 @@ namespace WebDAVDrive
 
                     case "moved":
                         // Verify that source exists OR target folder exists and is not offline.
-                        // TODO: incorrect condition
-                        if (File.Exists(userFileSystemPath))
+                        if (FsPath.Exists(userFileSystemPath))
                         {
                             return false;
                         }
@@ -86,7 +85,7 @@ namespace WebDAVDrive
                     case "updated":
                     default:
                         // Any other notifications.
-                        return !File.Exists(userFileSystemPath);
+                        return !FsPath.Exists(userFileSystemPath);
                 }
             }
 

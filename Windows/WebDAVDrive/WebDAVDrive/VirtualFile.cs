@@ -51,13 +51,13 @@ namespace WebDAVDrive
             // On Windows this method has a 60 sec timeout. 
             // To process longer requests and reset the timout timer write to the output stream or call the resultContext.ReportProgress() or resultContext.ReturnData() methods.
 
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext, metadata);
 
             if (offset == 0 && length == operationContext.FileSize)
             {
                 // If we read entire file we do not add a Range header.
                 offset = -1;
-            }
+            } 
 
             string contentETag = null;
 
@@ -74,7 +74,7 @@ namespace WebDAVDrive
                     catch (OperationCanceledException)
                     {
                         // Operation was canceled by the calling Engine.StopAsync() or the operation timeout occured.
-                        Logger.LogMessage($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default);
+                        Logger.LogMessage($"{nameof(ReadAsync)}({offset}, {length}) canceled", UserFileSystemPath, default, operationContext, metadata);
                     }
                 }
                 // Return content eTag to the Engine.
@@ -107,17 +107,17 @@ namespace WebDAVDrive
         }
 
         /// <inheritdoc/>
-        public async Task<IFileMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFileMetadata> WriteAsync(IFileMetadata metadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             long contentLength = content != null ? content.Length : 0;
-            Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}({contentLength})", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}({contentLength})", UserFileSystemPath, default, operationContext, metadata);
 
             string newContentEtag = null;
             if (content != null)
             {
                 // Send the ETag to the server as part of the update to ensure
                 // the file in the remote storge is not modified since last read.
-                string oldContentEtag = fileBasicInfo.ContentETag;
+                string oldContentEtag = metadata.ContentETag;
 
                 Client.LockUriTokenPair[] lockTokens = null;
                 // Read the lock-token and send it to the server as part of the update.
@@ -141,7 +141,7 @@ namespace WebDAVDrive
 
                     if (string.IsNullOrEmpty(newContentEtag))
                     {
-                        Logger.LogError("The server did not return ETag after update.", UserFileSystemPath, null, null, operationContext);
+                        Logger.LogError("The server did not return ETag after update.", UserFileSystemPath, null, null, operationContext, metadata);
                     }
                 }
                 catch (Client.Exceptions.LockedException)
@@ -151,7 +151,7 @@ namespace WebDAVDrive
                     // later automatically, when server item is unlocked.
                     //placeholder.SetConflictStatus(true);
 
-                    Logger.LogMessage($"Upload failed. The item is locked", UserFileSystemPath, default, operationContext);
+                    Logger.LogMessage($"Upload failed. The item is locked", UserFileSystemPath, default, operationContext, metadata);
                     inSyncResultContext.SetInSync = false;
                 }
                 catch (Client.Exceptions.PreconditionFailedException)
@@ -160,7 +160,7 @@ namespace WebDAVDrive
                     // Here we set conflict status in Windows Explorer becuse this item can
                     // NOT be uploaded automatically. The conflict must be resolved first.
 
-                    Logger.LogMessage($"Conflict. The item is modified", UserFileSystemPath, default, operationContext);
+                    Logger.LogMessage($"Conflict. The item is modified", UserFileSystemPath, default, operationContext, metadata);
                     Engine.Placeholders.GetFile(UserFileSystemPath).SetConflictStatus(true);
                     inSyncResultContext.SetInSync = false;
                 }

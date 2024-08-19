@@ -29,12 +29,12 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task<IFileMetadata> CreateFileAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFileMetadata> CreateFileAsync(IFileMetadata metadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
-            string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, fileMetadata.Name);
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath);
+            string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, metadata.Name);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}()", userFileSystemNewItemPath, default, operationContext, metadata);
 
-            FileInfo remoteStorageNewItem = new FileInfo(Path.Combine(RemoteStoragePath, fileMetadata.Name));
+            FileInfo remoteStorageNewItem = new FileInfo(Path.Combine(RemoteStoragePath, metadata.Name));
 
             // Create remote storage file.
             using (FileStream remoteStorageStream = remoteStorageNewItem.Open(FileMode.CreateNew, FileAccess.Write, FileShare.Delete))
@@ -49,18 +49,18 @@ namespace VirtualFileSystem
                     catch (OperationCanceledException)
                     {
                         // Operation was canceled by the calling Engine.StopAsync() or the operation timeout occurred.
-                        Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}() canceled", userFileSystemNewItemPath, default);
+                        Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFileAsync)}() canceled", userFileSystemNewItemPath, default, operationContext, metadata);
                     }
                     remoteStorageStream.SetLength(content.Length);
                 }
             }
 
             // Update remote storage file metadata.
-            remoteStorageNewItem.Attributes = fileMetadata.Attributes & ~FileAttributes.ReadOnly;
-            remoteStorageNewItem.CreationTimeUtc = fileMetadata.CreationTime.UtcDateTime;
-            remoteStorageNewItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
-            remoteStorageNewItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
-            remoteStorageNewItem.Attributes = fileMetadata.Attributes;
+            remoteStorageNewItem.Attributes = metadata.Attributes.Value & ~FileAttributes.ReadOnly;
+            remoteStorageNewItem.CreationTimeUtc = metadata.CreationTime.Value.UtcDateTime;
+            remoteStorageNewItem.LastWriteTimeUtc = metadata.LastWriteTime.Value.UtcDateTime;
+            remoteStorageNewItem.LastAccessTimeUtc = metadata.LastAccessTime.Value.UtcDateTime;
+            remoteStorageNewItem.Attributes = metadata.Attributes.Value;
 
             // Typically you must return IFileMetadata with a remote storage item ID, content eTag and metadata eTag.
             // The ID will be passed later into IEngine.GetFileSystemItemAsync() method.
@@ -69,20 +69,20 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task<IFolderMetadata> CreateFolderAsync(IFolderMetadata folderMetadata, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
+        public async Task<IFolderMetadata> CreateFolderAsync(IFolderMetadata metadata, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
         {
-            string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, folderMetadata.Name);
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath);
+            string userFileSystemNewItemPath = Path.Combine(UserFileSystemPath, metadata.Name);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", userFileSystemNewItemPath, default, operationContext, metadata);
 
-            DirectoryInfo remoteStorageNewItem = new DirectoryInfo(Path.Combine(RemoteStoragePath, folderMetadata.Name));
+            DirectoryInfo remoteStorageNewItem = new DirectoryInfo(Path.Combine(RemoteStoragePath, metadata.Name));
             remoteStorageNewItem.Create();
 
             // Update remote storage folder metadata.
-            remoteStorageNewItem.Attributes = folderMetadata.Attributes & ~FileAttributes.ReadOnly;
-            remoteStorageNewItem.CreationTimeUtc = folderMetadata.CreationTime.UtcDateTime;
-            remoteStorageNewItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
-            remoteStorageNewItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
-            remoteStorageNewItem.Attributes = folderMetadata.Attributes;
+            remoteStorageNewItem.Attributes = metadata.Attributes.Value & ~FileAttributes.ReadOnly;
+            remoteStorageNewItem.CreationTimeUtc = metadata.CreationTime.Value.UtcDateTime;
+            remoteStorageNewItem.LastWriteTimeUtc = metadata.LastWriteTime.Value.UtcDateTime;
+            remoteStorageNewItem.LastAccessTimeUtc = metadata.LastAccessTime.Value.UtcDateTime;
+            remoteStorageNewItem.Attributes = metadata.Attributes.Value;
 
             // Typically you must return IFileMetadata with a remote storage item ID and metadata eTag.
             // The ID will be passed later into IEngine.GetFileSystemItemAsync() method.
@@ -115,36 +115,36 @@ namespace VirtualFileSystem
         }
 
         /// <inheritdoc/>
-        public async Task<IFolderMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
+        public async Task<IFolderMetadata> WriteAsync(IFolderMetadata metadata, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
         {
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext, metadata);
 
             DirectoryInfo remoteStorageItem = new DirectoryInfo(RemoteStoragePath);
 
             // Update remote storage folder metadata.
-            if (fileBasicInfo.Attributes.HasValue)
+            if (metadata.Attributes.HasValue)
             {
-                remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value & ~FileAttributes.ReadOnly;
+                remoteStorageItem.Attributes = metadata.Attributes.Value & ~FileAttributes.ReadOnly;
             }
 
-            if (fileBasicInfo.CreationTime.HasValue)
+            if (metadata.CreationTime.HasValue)
             {
-                remoteStorageItem.CreationTimeUtc = fileBasicInfo.CreationTime.Value.UtcDateTime;
+                remoteStorageItem.CreationTimeUtc = metadata.CreationTime.Value.UtcDateTime;
             }
 
-            if (fileBasicInfo.LastWriteTime.HasValue)
+            if (metadata.LastWriteTime.HasValue)
             {
-                remoteStorageItem.LastWriteTimeUtc = fileBasicInfo.LastWriteTime.Value.UtcDateTime;
+                remoteStorageItem.LastWriteTimeUtc = metadata.LastWriteTime.Value.UtcDateTime;
             }
 
-            if (fileBasicInfo.LastAccessTime.HasValue)
+            if (metadata.LastAccessTime.HasValue)
             {
-                remoteStorageItem.LastAccessTimeUtc = fileBasicInfo.LastAccessTime.Value.UtcDateTime;
+                remoteStorageItem.LastAccessTimeUtc = metadata.LastAccessTime.Value.UtcDateTime;
             }
 
-            if (fileBasicInfo.Attributes.HasValue)
+            if (metadata.Attributes.HasValue)
             {
-                remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value;
+                remoteStorageItem.Attributes = metadata.Attributes.Value;
             }
 
             return null;

@@ -60,7 +60,7 @@ namespace VirtualDrive
             // For this method to be called you need to register a menu command handler.
             // See method description for more details.
 
-            Logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString());
+            Logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString(), default, operationContext);
 
             Guid menuCommandLockGuid = typeof(ShellExtension.ContextMenuVerbIntegrated).GUID;
 
@@ -69,7 +69,7 @@ namespace VirtualDrive
                 return new MenuCommandLock(this, this.Logger);
             }
 
-            Logger.LogError($"Menu not found", menuGuid.ToString());
+            Logger.LogError($"Menu not found", Path, menuGuid.ToString(), default, operationContext);
             throw new NotImplementedException();
         }
         

@@ -40,8 +40,7 @@ namespace WebDAVDrive
         /// <inheritdoc/>
         public async Task<string> GetIconAsync(IEnumerable<string> filesPath)
         {
-            //string iconPath = Path.Combine(Path.GetDirectoryName(typeof(MenuCommandLock).Assembly.Location), iconName);
-            return null;
+            return Path.Combine(Path.GetDirectoryName(typeof(MenuCommandCompare).Assembly.Location), @"Images\DriveSync.ico");
         }
 
         /// <inheritdoc/>

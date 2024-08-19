@@ -19,6 +19,7 @@ namespace WebDAVMacApp
         private const string ProtocolPrefix = "fuse:";
         private ILogger Logger = new ConsoleLogger("WebDavFileProviderHostApp");
         private SecureStorage SecureStorage = new SecureStorage();
+        private BookmarkUtils BookmarkUtils = new BookmarkUtils(new ConsoleLogger("WebDavFileProviderHostApp"));
 
         private NSStatusItem StatusItem;
         private Dictionary<string, (NSMenuItem installMenu, NSMenuItem uninstallMenu)> DomainsMenuItems = new Dictionary<string, (NSMenuItem installMenu, NSMenuItem uninstallMenu)>();
@@ -131,16 +132,16 @@ namespace WebDAVMacApp
 
                     // Open item url.
                     NSFileProviderManager fileProviderManager = NSFileProviderManager.FromDomain(await Common.Core.Registrar.GetDomainAsync(domainIdentifier));
-                    NSUrl rootPath = await fileProviderManager.GetUserVisibleUrlAsync(NSFileProviderItemIdentifier.RootContainer);
-                    string itemPath = Path.Combine(rootPath.Path, itemUrl.AbsoluteUri.Substring(webDAVServerUrl.AbsoluteUri.Length).TrimStart('/'));
+                    NSUrl domainPath = await fileProviderManager.GetUserVisibleUrlAsync(NSFileProviderItemIdentifier.RootContainer);
+                    string itemPath = Path.Combine(domainPath.Path, itemUrl.AbsoluteUri.Substring(webDAVServerUrl.AbsoluteUri.Length).TrimStart('/'));
 
                     if (File.Exists(itemPath) || Directory.Exists(itemPath))
                     {
-                        Process.Start("open", itemPath);
+                        OpenLocalItem(domainIdentifier, itemPath, domainPath);
                     }
                     else
                     {
-                        await ShowLoginDialogAsync(domainIdentifier, itemPath);
+                        await ShowLoginDialogAsync(domainIdentifier, () => OpenLocalItem(domainIdentifier, itemPath, domainPath));
                     }
                 }
             }
@@ -150,9 +151,34 @@ namespace WebDAVMacApp
             }
 
             Logger.LogMessage($"OpenUrls - finish");
-        }       
+        }
 
-        private async Task ShowLoginDialogAsync(string domainIdentifier, string openItemPath)
+        private void OpenLocalItem(string domainIdentifier, string itemPath, NSUrl domainPath)
+        {
+            Logger.LogDebug($"OpenLocalItem - {domainIdentifier}, {itemPath}");
+            string domainBookmarkPath = Path.Combine(SecureStorage.GetSharedContainerPath(), $"{domainIdentifier}.dat");
+            if (!BookmarkUtils.OpenFolderFromBookmark(domainBookmarkPath, itemPath))
+            {
+                // If no saved bookmark or failed, open NSOpenPanel to select folder
+                string selectedFolderPath = BookmarkUtils.GarantAccessDialog(domainPath);
+                if (!string.IsNullOrEmpty(selectedFolderPath))
+                {
+                    Logger.LogDebug($"Selected folder path: {selectedFolderPath}");
+
+                    // Save the security-scoped bookmark for future access
+                    BookmarkUtils.SaveBookmarkForFolder(selectedFolderPath, domainBookmarkPath);
+
+                    // Open file/folder.
+                    NSWorkspace.SharedWorkspace.OpenUrl(NSUrl.FromString($"file://{itemPath}"));
+                }
+                else
+                {
+                    Logger.LogDebug("No folder was selected.");
+                }
+            }
+        }        
+
+        private async Task ShowLoginDialogAsync(string domainIdentifier, Action? onLoginSuccess)
         {            
             NSAlert alertLogin = new NSAlert()
             {
@@ -167,12 +193,12 @@ namespace WebDAVMacApp
 
             if(!string.IsNullOrEmpty(loginType) && loginType.Equals("UserNamePassword"))
             {
-                viewController = new AuthViewController(domainIdentifier, openItemPath);
+                viewController = new AuthViewController(domainIdentifier);
                 authView = viewController.View;
             }
             else if(!string.IsNullOrEmpty(loginType) && loginType.Equals("Cookies"))
             {
-                viewController = new CookiesAuthViewController(domainIdentifier, alertLogin.Window, openItemPath, await domainStorage.GetAsync("CookiesFailedUrl"));
+                viewController = new CookiesAuthViewController(domainIdentifier, alertLogin.Window, onLoginSuccess, await domainStorage.GetAsync("CookiesFailedUrl"));
                 authView = viewController.View;
             }
 
@@ -209,7 +235,10 @@ namespace WebDAVMacApp
                     }
 
                     await Task.Delay(TimeSpan.FromSeconds(2));
-                    Process.Start("open", openItemPath);
+                   if(onLoginSuccess != null)
+                    {
+                        onLoginSuccess();
+                    }
                 }
 
                 alertLogin.Window.Close();

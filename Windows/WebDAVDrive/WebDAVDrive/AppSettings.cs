@@ -66,26 +66,15 @@ namespace WebDAVDrive
         public string RequestThumbnailsFor { get; set; }
 
         /// <summary>
-        /// Absolute or relative path of external COM server executable.
-        /// If empty, will host COM classes in the current process.
-        /// </summary>
-        public string ShellExtensionsComServerExePath { get; set; }
-
-        /// <summary>
-        /// Is RPC server enabled
-        /// </summary>
-        public bool ShellExtensionsComServerRpcEnabled { get; set; }
-
-        /// <summary>
         /// Mark documents locked by other users as read-only for this user and vice versa.
         /// A read-only MS Office document opens in a view-only mode preventing document collisions.
         /// </summary>
         public bool SetLockReadOnly { get; set; }
 
         /// <summary>
-        /// Preferred incoming synchronization mode.
+        /// Incoming synchronization mode.
         /// </summary>
-        public IncomingSyncMode PreferredIncomingSyncMode { get; set; }
+        public IncomingSyncModeSetting IncomingSyncMode { get; set; }
     }
 
     /// <summary>
@@ -129,11 +118,6 @@ namespace WebDAVDrive
                 settings.UserFileSystemRootPath = Environment.ExpandEnvironmentVariables(settings.UserFileSystemRootPath);
             }
 
-            if (!Path.IsPathRooted(settings.ShellExtensionsComServerExePath))
-            {
-                settings.ShellExtensionsComServerExePath = !string.IsNullOrWhiteSpace(settings.ShellExtensionsComServerExePath) ? Path.Combine(AppContext.BaseDirectory, settings.ShellExtensionsComServerExePath) : null;
-            }
-
             // Icons folder.
             settings.IconsFolderPath = Path.Combine(AppContext.BaseDirectory, @"Images");
 
@@ -156,5 +140,36 @@ namespace WebDAVDrive
 
             return settings;
         }
+    }
+
+    /// <summary>
+    /// Incoming synchronization mode settings value.
+    /// </summary>
+    public enum IncomingSyncModeSetting
+    {
+        /// <summary>
+        /// No pulling or pushing from server will be used.
+        /// </summary>
+        Off = IncomingSyncMode.Disabled,
+
+        /// <summary>
+        /// Synchronization using on Sync ID algorithm.
+        /// </summary>
+        SyncId = IncomingSyncMode.SyncId,
+
+        /// <summary>
+        /// Recive Create, update, delete and move notifications via Web Sockets.
+        /// </summary>
+        CRUD = 2,
+
+        /// <summary>
+        /// Synchronization using remote storage pooling.
+        /// </summary>
+        TimerPooling = IncomingSyncMode.TimerPooling,
+
+        /// <summary>
+        /// Select mode automatically. Tries SyncID, than CRUD, than TimerPooling.
+        /// </summary>
+        Auto = 256
     }
 }

@@ -110,7 +110,7 @@ namespace VirtualDrive
                 }
 
                 // Register this app to process COM shell extensions calls.
-                using (ShellExtension.ShellExtensions.StartComServer(Settings.ShellExtensionsComServerRpcEnabled))
+                using (ShellExtension.ShellExtensions.StartComServer())
                 {
                     // Run the User File System Engine.
                     await RunEngineAsync();
@@ -143,8 +143,7 @@ namespace VirtualDrive
                 Settings.UserFileSystemRootPath,
                 Settings.RemoteStorageRootPath,
                 Settings.ProductName, 
-                Path.Combine(Settings.IconsFolderPath, "Drive.ico"), 
-                Settings.ShellExtensionsComServerExePath);
+                Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
 
             using (Engine = new VirtualEngine(
                     Settings.UserFileSystemLicense,
@@ -164,7 +163,6 @@ namespace VirtualDrive
                 Engine.AutoLock = Settings.AutoLock;
                 Engine.MaxTransferConcurrentRequests = Settings.MaxTransferConcurrentRequests.Value;
                 Engine.MaxOperationsConcurrentRequests = Settings.MaxOperationsConcurrentRequests.Value;
-                Engine.ShellExtensionsComServerRpcEnabled = Settings.ShellExtensionsComServerRpcEnabled; // Enable RPC in case RPC shaell extension handlers, hosted in separate process.  
 
                 // Set the remote storage item ID for the root item. It will be passed to the IEngine.GetFileSystemItemAsync()
                 // method as a remoteStorageItemId parameter when a root folder is requested.

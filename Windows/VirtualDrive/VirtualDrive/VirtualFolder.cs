@@ -66,11 +66,11 @@ namespace VirtualDrive
             }
 
             // Update remote storage file metadata.
-            remoteStorageNewItem.Attributes = fileMetadata.Attributes & ~FileAttributes.ReadOnly;
-            remoteStorageNewItem.CreationTimeUtc = fileMetadata.CreationTime.UtcDateTime;
-            remoteStorageNewItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.UtcDateTime;
-            remoteStorageNewItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.UtcDateTime;
-            remoteStorageNewItem.Attributes = fileMetadata.Attributes;
+            remoteStorageNewItem.Attributes = fileMetadata.Attributes.Value & ~FileAttributes.ReadOnly;
+            remoteStorageNewItem.CreationTimeUtc = fileMetadata.CreationTime.Value.UtcDateTime;
+            remoteStorageNewItem.LastWriteTimeUtc = fileMetadata.LastWriteTime.Value.UtcDateTime;
+            remoteStorageNewItem.LastAccessTimeUtc = fileMetadata.LastAccessTime.Value.UtcDateTime;
+            remoteStorageNewItem.Attributes = fileMetadata.Attributes.Value;
 
 
             // Return newly created item to the Engine.
@@ -96,7 +96,7 @@ namespace VirtualDrive
             if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath))
             {
                 // Possibly parent is deleted in the remote storage.
-                Logger.LogMessage($"Can't create. Parent not found", userFileSystemNewItemPath, BitConverter.ToString(RemoteStorageItemId).Replace("-", ""));
+                Logger.LogMessage($"Can't create. Parent not found", userFileSystemNewItemPath, BitConverter.ToString(RemoteStorageItemId).Replace("-", ""), operationContext);
                 inSyncResultContext.SetInSync = false;
                 return null;
             }
@@ -105,11 +105,11 @@ namespace VirtualDrive
             remoteStorageNewItem.Create();
 
             // Update remote storage folder metadata.
-            remoteStorageNewItem.Attributes = folderMetadata.Attributes & ~FileAttributes.ReadOnly;
-            remoteStorageNewItem.CreationTimeUtc = folderMetadata.CreationTime.UtcDateTime;
-            remoteStorageNewItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.UtcDateTime;
-            remoteStorageNewItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.UtcDateTime;
-            remoteStorageNewItem.Attributes = folderMetadata.Attributes;
+            remoteStorageNewItem.Attributes = folderMetadata.Attributes.Value & ~FileAttributes.ReadOnly;
+            remoteStorageNewItem.CreationTimeUtc = folderMetadata.CreationTime.Value.UtcDateTime;
+            remoteStorageNewItem.LastWriteTimeUtc = folderMetadata.LastWriteTime.Value.UtcDateTime;
+            remoteStorageNewItem.LastAccessTimeUtc = folderMetadata.LastAccessTime.Value.UtcDateTime;
+            remoteStorageNewItem.Attributes = folderMetadata.Attributes.Value;
 
             byte[] remoteStorageId = WindowsFileSystemItem.GetItemIdByPath(remoteStorageNewItem.FullName);
             return new FolderMetadataExt()
@@ -165,37 +165,37 @@ namespace VirtualDrive
         }
 
         /// <inheritdoc/>
-        public async Task<IFolderMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
+        public async Task<IFolderMetadata> WriteAsync(IFolderMetadata metadata, IOperationContext operationContext, IInSyncResultContext inSyncResultContext, CancellationToken cancellationToken = default)
         {
-            Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext);
+            Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", UserFileSystemPath, default, operationContext, metadata);
 
             if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return null;
             DirectoryInfo remoteStorageItem = new DirectoryInfo(remoteStoragePath);
 
             // Update remote storage folder metadata.
-            if (fileBasicInfo.Attributes.HasValue)
+            if (metadata.Attributes.HasValue)
             {
-                remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value & ~FileAttributes.ReadOnly;
+                remoteStorageItem.Attributes = metadata.Attributes.Value & ~FileAttributes.ReadOnly;
             }
 
-            if (fileBasicInfo.CreationTime.HasValue)
+            if (metadata.CreationTime.HasValue)
             {
-                remoteStorageItem.CreationTimeUtc = fileBasicInfo.CreationTime.Value.UtcDateTime;
+                remoteStorageItem.CreationTimeUtc = metadata.CreationTime.Value.UtcDateTime;
             }
 
-            if (fileBasicInfo.LastWriteTime.HasValue)
+            if (metadata.LastWriteTime.HasValue)
             {
-                remoteStorageItem.LastWriteTimeUtc = fileBasicInfo.LastWriteTime.Value.UtcDateTime;
+                remoteStorageItem.LastWriteTimeUtc = metadata.LastWriteTime.Value.UtcDateTime;
             }
 
-            if (fileBasicInfo.LastAccessTime.HasValue)
+            if (metadata.LastAccessTime.HasValue)
             {
-                remoteStorageItem.LastAccessTimeUtc = fileBasicInfo.LastAccessTime.Value.UtcDateTime;
+                remoteStorageItem.LastAccessTimeUtc = metadata.LastAccessTime.Value.UtcDateTime;
             }
 
-            if (fileBasicInfo.Attributes.HasValue)
+            if (metadata.Attributes.HasValue)
             {
-                remoteStorageItem.Attributes = fileBasicInfo.Attributes.Value;
+                remoteStorageItem.Attributes = metadata.Attributes.Value;
             }
 
             return null;

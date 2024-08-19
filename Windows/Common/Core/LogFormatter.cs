@@ -47,8 +47,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
         private readonly string appId;
 
-        private const int sourcePathWidth = 45;
-        private const int remoteStorageIdWidth = 20;
+        private const int sourcePathWidth = 30;
+        private const int remoteStorageIdWidth = 12;
 
         private const int indent = -45;
 
@@ -192,7 +192,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             string attSource = GetAttString(e.SourcePath);
             string attTarget = GetAttString(e.TargetPath);
-            
+
+            string remoteStorageId = null;
             string process = null;
             byte? priorityHint = null;
             string fileId = null;
@@ -200,6 +201,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
             if (e.OperationContext != null)
             {
+                byte[] rsId = e?.Metadata?.RemoteStorageItemId ?? e.OperationContext.RemoteStorageItemId;
+                remoteStorageId = IdToSting(rsId)?.FitString(remoteStorageIdWidth, 4);
                 process = System.IO.Path.GetFileName(e.OperationContext?.ProcessInfo?.ImagePath);
                 priorityHint = e.OperationContext?.PriorityHint;
                 IWindowsOperationContext ocWin = e.OperationContext as IWindowsOperationContext;
@@ -213,7 +216,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             string sourcePath = e.SourcePath?.FitString(sourcePathWidth, 6);
             string targetPath = e.TargetPath?.FitString(sourcePathWidth, 6);
 
-            string message = Format(DateTimeOffset.Now.ToString("hh:mm:ss.fff"), process, priorityHint?.ToString(), fileId, "", e.ComponentName, e.CallerLineNumber.ToString(), e.CallerMemberName, e.CallerFilePath, e.Message, sourcePath, attSource);
+            string message = Format(DateTimeOffset.Now.ToString("hh:mm:ss.fff"), process, priorityHint?.ToString(), fileId, e.ComponentName, e.CallerLineNumber.ToString(), e.CallerMemberName, e.CallerFilePath, e.Message, remoteStorageId, sourcePath, attSource);
             if (targetPath!=null)
             {
                 // For move operation output target path in the next line.
@@ -240,10 +243,10 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
         }
 
-        private static string Format(string date, string process, string priorityHint, string fileId, string remoteStorageId, string componentName, string callerLineNumber, string callerMemberName, string callerFilePath, string message, string path, string attributes)
+        private static string Format(string date, string process, string priorityHint, string fileId, string componentName, string callerLineNumber, string callerMemberName, string callerFilePath, string message, string remoteStorageId, string path, string attributes)
         {
             // {fileId,-18} | {remoteStorageId,-remoteStorageIdWidth}
-            return $"{Environment.NewLine}|{date,-12}| {process,-25}| {componentName,-26}| {message,-45}| {path,-sourcePathWidth} | {attributes,10}";
+            return $"{Environment.NewLine}|{date,-12}| {process,-25}| {componentName,-26}| {message,-45}| {remoteStorageId,-remoteStorageIdWidth}| {path,-sourcePathWidth} | {attributes,10}";
         }
 
         /// <summary>
@@ -252,8 +255,8 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         private void PrintHeader()
         {
             Log.Info("\n");
-            Log.Info(Format("Time", "Process Name", "Prty", "FS ID", "RS ID", "Component", "Line", "Caller Member Name", "Caller File Path", "Message", "Path", "Attributes"));
-            Log.Info(Format("----", "------------", "----", "_____", "_____", "---------", "____", "------------------", "----------------", "-------", "----", "----------"));
+            Log.Info(Format("Time", "Process Name", "Prty", "FS ID", "Component", "Line", "Caller Member Name", "Caller File Path", "Message", "RS Item ID", "Path", "Attributes"));
+            Log.Info(Format("----", "------------", "----", "_____", "---------", "____", "------------------", "----------------", "-------", "__________", "----", "----------"));
         }
 
         /// <summary>
@@ -330,13 +333,13 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 default:
                     // Try parse URI
                     string uriStrId = Encoding.UTF8.GetString(remoteStorageItemId);
-                    if (Uri.TryCreate(uriStrId, UriKind.RelativeOrAbsolute, out Uri uriId))
+                    if (Uri.TryCreate(uriStrId, UriKind.RelativeOrAbsolute, out Uri uriId) && uriId.IsAbsoluteUri)
                     {
                         return uriId.Segments.Last();
                     }
                     else
                     {
-                        return uriStrId;
+                        return BitConverter.ToString(remoteStorageItemId);
                     }
             }
         }

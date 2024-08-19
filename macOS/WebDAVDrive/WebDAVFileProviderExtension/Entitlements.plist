@@ -6,7 +6,7 @@
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>H9B9JEKY3W.group.com.webdav.efp</string>
+		<string>H9B9JEKY3W.group.com.webdav.vfs</string>
 	</array>
 	<key>com.apple.security.files.downloads.read-write</key>
 	<true/>
@@ -25,7 +25,7 @@
 	<key>com.apple.security.cs.disable-library-validation</key>
 	<true/>
 	<key>com.apple.application-identifier</key>
-	<string>H9B9JEKY3W.com.webdav.efp.app.extension</string>
+	<string>H9B9JEKY3W.com.webdav.vfs.app.extension</string>
 	<key>com.apple.security.inherit</key>
 	<true/>
 </dict>

@@ -38,8 +38,7 @@ namespace ITHit.FileSystem.Samples.Common
         public string IconsFolderPath { get; set; }
 
         /// <summary>
-        /// Product name. Displayed as a mounted folder name under Desktop as 
-        /// well in every location where product name is required.
+        /// Product name. Displayed in every location where product name is required.
         /// </summary>
         public string ProductName { get; set; }
 
@@ -47,5 +46,10 @@ namespace ITHit.FileSystem.Samples.Common
         /// Automatically lock the file in the remote storage when a file handle is being opened for writing, unlock on close.
         /// </summary>
         public bool AutoLock { get; set; }
+
+        /// <summary>
+        /// The folder content invalidation period in milliseconds. 
+        /// </summary>
+        public double FolderInvalidationIntervalMs { get; set; }
     }
 }

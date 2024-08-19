@@ -172,7 +172,7 @@ namespace VirtualDrive
             // For this method to be called you need to register a properties handler.
             // See method description for more details.
 
-            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(GetPropertiesAsync)}()", UserFileSystemPath);
+            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(GetPropertiesAsync)}()", UserFileSystemPath, default, operationContext);
 
             IList<FileSystemItemPropertyData> props = new List<FileSystemItemPropertyData>();
 

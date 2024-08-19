@@ -26,9 +26,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         /// <param name="userName">User name.</param>
         /// <returns>True if user name matches currently loged-in user. False - otherwise.</returns>
-        public bool IsCurrentUser(string userName) 
-        { 
-            return CurrentUserPrincipal.Equals(userName, StringComparison.InvariantCultureIgnoreCase); 
+        public bool IsCurrentUser(string userName)
+        {
+            return CurrentUserPrincipal.Equals(userName, StringComparison.InvariantCultureIgnoreCase);
         }
 
         /// <summary>
@@ -59,12 +59,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="setLockReadOnly">Mark documents locked by other users as read-only for this user and vice versa.</param>
         /// <param name="logFormatter">Formats log output.</param>
         public VirtualEngineBase(
-            string license, 
-            string userFileSystemRootPath, 
-            string remoteStorageRootPath, 
+            string license,
+            string userFileSystemRootPath,
+            string remoteStorageRootPath,
             string iconsFolderPath,
             bool setLockReadOnly,
-            LogFormatter logFormatter) 
+            LogFormatter logFormatter)
             : base(license, userFileSystemRootPath)
         {
             this.iconsFolderPath = iconsFolderPath ?? throw new ArgumentNullException(nameof(iconsFolderPath));
@@ -73,10 +73,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             // We want our file system to run regardless of any errors.
             // If any request to file system fails in user code or in Engine itself we continue processing.
             ThrowExceptions = false;
-            
+
             SetLockReadOnly = setLockReadOnly;
 
             StateChanged += Engine_StateChanged;
+            ItemsChanging += Engine_ItemsChanging;
             ItemsChanged += Engine_ItemsChanged;
             SyncService.StateChanged += SyncService_StateChanged;
             Error += logFormatter.LogError;
@@ -86,7 +87,55 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
         
         /// <summary>
-        /// Fired for each file or folder change.
+        /// Fired before items(s) changes on queing, hydration, upload, population progress.
+        /// </summary>
+        private void Engine_ItemsChanging(Engine sender, ItemsChangeEventArgs e)
+        {
+            // Log info about the opertion.
+            switch (e.OperationType)
+            {
+                case OperationType.Populate:
+                    // Log a single parent folder for folder population.
+                    LogItemChanging(e, e.Parent);
+                    break;
+                default:
+                    // Log each item in the list for all other operations.
+                    foreach (ChangeEventItem item in e.Items)
+                    {
+                        LogItemChanging(e, item);
+                    }
+                    break;
+            }
+        }
+
+        private void LogItemChanging(ItemsChangeEventArgs e, ChangeEventItem item)
+        {
+            // Log info about the opertion.
+            ILogger logger = Logger.CreateLogger(e.ComponentName);
+            string msg = $"{e.Direction} {e.OperationType}:{e.NotificationTime}";
+
+            // Log progress.
+            if (e.NotificationTime.HasFlag(NotificationTime.Progress))
+            {
+                long progress = e.Position * 100 / (e.Length > 0 ? e.Length : 1);
+                msg = $"{msg}: {progress}%";
+            }
+
+            switch (e.Source)
+            {
+                case OperationSource.Server:
+                    logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext, item.Metadata);
+                    break;
+                case OperationSource.Client:
+                    logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext, item.Metadata);
+                    break;
+            }
+        }
+        
+
+        
+        /// <summary>
+        /// Fired after file(s) or folder(s) changed.
         /// </summary>
         private void Engine_ItemsChanged(Engine sender, ItemsChangeEventArgs e)
         {
@@ -122,42 +171,66 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                             break;
                     }
                 }
+            }
 
-                // Log info about the opertion.
-                LogItemChange(e, item);
+            // Log info about the opertion.
+            switch (e.OperationType)
+            {
+                case OperationType.Populate:
+                    // Log a single parent folder for folder population.
+                    LogItemChanged(e, e.Parent);
+                    break;
+                default:
+                    // Log each item in the list for all other operations.
+                    foreach (ChangeEventItem item in e.Items)
+                    {
+                        LogItemChanged(e, item);
+                    }
+                    break;
             }
         }
-
-        private void LogItemChange(ItemsChangeEventArgs e, ChangeEventItem item)
+        private void LogItemChanged(ItemsChangeEventArgs e, ChangeEventItem item)
         {
             ILogger logger = Logger.CreateLogger(e.ComponentName);
-            string msg = $"{e.Direction} {e.OperationType}: {e.Result.Status}";
+            string msg = $"{e.Direction} {e.OperationType}:{e.NotificationTime}";
+
+            if (!e.NotificationTime.HasFlag(NotificationTime.Progress))
+            {
+                msg = $"{msg}:{e.Result.Status}";
+            }
             switch (e.Result.Status)
             {
                 case OperationStatus.Success:
-                    switch (e.Direction)
+                    // Log progress.
+                    if (e.NotificationTime.HasFlag(NotificationTime.Progress))
                     {
-                        case SyncDirection.Incoming:
-                            logger.LogMessage(msg, item.Path, item.NewPath, e.OperationContext);
+                        long progress = e.Position * 100 / (e.Length > 0 ? e.Length : 1);
+                        msg = $"{msg}: {progress}%";
+                    }
+
+                    switch (e.Source)
+                    {
+                        case OperationSource.Server:
+                            logger.LogMessage(msg, item.Path, item.NewPath, e.OperationContext, item.Metadata);
                             break;
-                        case SyncDirection.Outgoing:
-                            logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext);
+                        case OperationSource.Client:
+                            logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext, item.Metadata);
                             break;
                     }
                     break;
                 case OperationStatus.Conflict:
-                    logger.LogMessage(msg, item.Path, item.NewPath, e.OperationContext);
+                    logger.LogMessage(msg, item.Path, item.NewPath, e.OperationContext, item.Metadata);
                     break;
                 case OperationStatus.Exception:
-                    logger.LogError(msg, item.Path, item.NewPath, e.Result.Exception);
+                    logger.LogError(msg, item.Path, item.NewPath, e.Result.Exception, e.OperationContext, item.Metadata);
                     break;
                 case OperationStatus.Filtered:
                     msg = $"{msg} by {e.Result.FilteredBy.GetType().Name}";
-                    logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext);
+                    logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext, item.Metadata);
                     break;
                 default:
                     msg = $"{msg}. {e.Result.Message}";
-                    logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext);
+                    logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext, item.Metadata);
                     break;
             }
         }

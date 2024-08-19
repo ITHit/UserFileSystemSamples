@@ -33,8 +33,8 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="WebDAVDrive.Package"
-        Description="WebDAVDrive.Package"
+        DisplayName="WebDAV Drive"
+        Description="WebDAV Drive"
         BackgroundColor="transparent"
         Square150x150Logo="Images\Square150x150Logo.png"
         Square44x44Logo="Images\Square44x44Logo.png">
@@ -53,7 +53,9 @@
 
             <desktop3:CloudFilesContextMenus>
               <desktop3:Verb Id="LockCommand" Clsid="A22EBD03-343E-433C-98DF-372C6B3A1538" />
-            </desktop3:CloudFilesContextMenus>
+							<desktop3:Verb Id="CommandCompare" Clsid="A54BD1AD-4816-44B0-9247-8F43D8CA7AE7" />
+							<desktop3:Verb Id="CommandUnmount" Clsid="FF039488-137F-454D-A546-AA329A1D963F" />
+						</desktop3:CloudFilesContextMenus>
 
           </desktop3:CloudFiles>
         </desktop3:Extension>
@@ -61,15 +63,23 @@
           <com:ComServer>
             <!-- When changing ProgId make sure to change it also in the ThumbnailProvider.cs -->
 
-            <com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="WebDAVDrive.ShellExtension\WebDAVDrive.ShellExtension.exe">
+            <com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="dummy.exe">
               <com:Class Id="A5B0C82F-50AA-445C-A404-66DEB510E84B" />
             </com:ExeServer>
 
-            <com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="WebDAVDrive.ShellExtension\WebDAVDrive.ShellExtension.exe">
+            <com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="dummy.exe">
               <com:Class Id="A22EBD03-343E-433C-98DF-372C6B3A1538" />
             </com:ExeServer>
 
-            <com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="WebDAVDrive.ShellExtension\WebDAVDrive.ShellExtension.exe">
+						<com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="dummy.exe">
+							<com:Class Id="A54BD1AD-4816-44B0-9247-8F43D8CA7AE7" />
+						</com:ExeServer>
+
+						<com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="dummy.exe">
+							<com:Class Id="FF039488-137F-454D-A546-AA329A1D963F" />
+						</com:ExeServer>
+
+						<com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="dummy.exe">
                 <com:Class Id="754F334F-095C-46CD-B033-B2C0523D2829" />
             </com:ExeServer>
 

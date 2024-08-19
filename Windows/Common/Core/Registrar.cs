@@ -47,12 +47,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         /// <param name="displayName">Human readable display name.</param>
         /// <param name="iconPath">Path to the drive ico file.</param>
-        /// <param name="shellExtensionsComServerExePath">Absolute path of external COM server executable to use when running without application identity. If not provided, will use current process.</param>
         /// <remarks>
         /// In the case of a packaged installer (msix) call this method during first program start.
         /// In the case of a regular installer (msi) call this method during installation.
         /// </remarks>
-        public async Task<StorageProviderSyncRootInfo> RegisterSyncRootAsync(string syncRootId, string userFileSystemRootPath, string remotestorageRootPath, string displayName, string iconPath, string shellExtensionsComServerExePath = null)
+        public async Task<StorageProviderSyncRootInfo> RegisterSyncRootAsync(string syncRootId, string userFileSystemRootPath, string remotestorageRootPath, string displayName, string iconPath)
         {
             StorageProviderSyncRootInfo syncRoot = null;
             if (!await IsRegisteredAsync(userFileSystemRootPath))
@@ -70,7 +69,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             if (shellExtensionHandlers != null)
             {
                 // Register thumbnails handler, custom states handler, etc.
-                RegisterShellExtensions(syncRootId, shellExtensionHandlers, Log, shellExtensionsComServerExePath);
+                RegisterShellExtensions(syncRootId, shellExtensionHandlers, Log);
             }
 
             return syncRoot;
