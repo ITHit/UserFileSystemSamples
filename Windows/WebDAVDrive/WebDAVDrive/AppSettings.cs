@@ -1,13 +1,8 @@
 using Microsoft.Extensions.Configuration;
-using System;
-using System.Diagnostics;
-using System.IO;
 using System.Reflection;
 
 using ITHit.FileSystem.Samples.Common;
-using WebDAVDrive.UI;
 using ITHit.FileSystem.Synchronization;
-
 
 namespace WebDAVDrive
 {
@@ -27,14 +22,14 @@ namespace WebDAVDrive
         public string[] WebDAVServerURLs { get; set; }
 
         /// <summary>
-        /// Automatic lock timout in milliseconds.
+        /// Automatic lock timeout in milliseconds.
         /// </summary>
-        public double AutoLockTimoutMs { get; set; }
+        public double AutoLockTimeoutMs { get; set; }
 
         /// <summary>
-        /// Manual lock timout in milliseconds.
+        /// Manual lock timeout in milliseconds.
         /// </summary>
-        public double ManualLockTimoutMs { get; set; }
+        public double ManualLockTimeoutMs { get; set; }
 
         /// <summary>
         /// Full outgoing synchronization and hydration/dehydration interval in milliseconds.
@@ -101,9 +96,9 @@ namespace WebDAVDrive
 
             if (settings.WebDAVServerURLs == null || settings.WebDAVServerURLs.Length == 0)
             {
-                settings.WebDAVServerURLs = new string[1] { RegistryManager.GetURL(settings) };
+                throw new ArgumentNullException("WebDAVServerURLs");
             }
-            for (int i=0; i < settings.WebDAVServerURLs.Length; i++)
+            for (int i = 0; i < settings.WebDAVServerURLs.Length; i++)
             {
                 settings.WebDAVServerURLs[i] = $"{settings.WebDAVServerURLs[i].TrimEnd('/')}/";
             }

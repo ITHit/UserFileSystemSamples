@@ -20,6 +20,11 @@ namespace WebDAVDrive
     public abstract class VirtualFileSystemItem : IFileSystemItemWindows, ILock
     {
         /// <summary>
+        /// Application settings.
+        /// </summary>
+        protected AppSettings Settings;
+
+        /// <summary>
         /// File or folder path in the user file system.
         /// </summary>
         protected readonly string UserFileSystemPath;
@@ -47,14 +52,14 @@ namespace WebDAVDrive
         protected readonly WebDavSession Dav;
 
         /// <summary>
-        /// Automatic lock timout in milliseconds.
+        /// Automatic lock timeout in milliseconds.
         /// </summary>
-        private readonly double autoLockTimoutMs;
+        private readonly double autoLockTimeoutMs;
 
         /// <summary>
-        /// Manual lock timout in milliseconds.
+        /// Manual lock timeout in milliseconds.
         /// </summary>
-        private readonly double manualLockTimoutMs;
+        private readonly double manualLockTimeoutMs;
 
         /// <summary>
         /// Creates instance of this class.
@@ -62,15 +67,16 @@ namespace WebDAVDrive
         /// <param name="remoteStorageId">Remote storage item ID.</param>
         /// <param name="userFileSystemPath">User file system path. This paramater is available on Windows platform only. On macOS and iOS this parameter is always null.</param>
         /// <param name="engine">Engine instance.</param>
-        /// <param name="autoLockTimoutMs">Automatic lock timout in milliseconds.</param>
-        /// <param name="manualLockTimoutMs">Manual lock timout in milliseconds.</param>
+        /// <param name="autoLockTimeoutMs">Automatic lock timeout in milliseconds.</param>
+        /// <param name="manualLockTimeoutMs">Manual lock timeout in milliseconds.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFileSystemItem(byte[] remoteStorageId, string userFileSystemPath, VirtualEngine engine, double autoLockTimoutMs, double manualLockTimoutMs, ILogger logger)
+        public VirtualFileSystemItem(byte[] remoteStorageId, string userFileSystemPath, VirtualEngine engine, double autoLockTimeoutMs, double manualLockTimeoutMs, AppSettings appSettings, ILogger logger)
         {
             if (string.IsNullOrEmpty(userFileSystemPath))
             {
                 throw new ArgumentNullException(nameof(userFileSystemPath));
             }
+            Settings = appSettings;
             Logger = logger ?? throw new ArgumentNullException(nameof(logger));
             Engine = engine ?? throw new ArgumentNullException(nameof(engine));
             Dav = engine.DavClient;
@@ -79,8 +85,8 @@ namespace WebDAVDrive
             RemoteStorageItemId = remoteStorageId;
             RemoteStoragePath = Engine.Mapping.MapPath(userFileSystemPath);
 
-            this.autoLockTimoutMs = autoLockTimoutMs;
-            this.manualLockTimoutMs = manualLockTimoutMs;
+            this.autoLockTimeoutMs = autoLockTimeoutMs;
+            this.manualLockTimeoutMs = manualLockTimeoutMs;
         }
 
         ///<inheritdoc>
@@ -132,7 +138,7 @@ namespace WebDAVDrive
             {
                 await Dav.DeleteAsync(new Uri(RemoteStoragePath), null, null, cancellationToken);
             }
-            catch(NotFoundException ex)
+            catch (NotFoundException ex)
             {
                 // The item is not found. We do not want the Engine to repeat the delete operation.
                 Logger.LogDebug("Item already deleted", UserFileSystemPath, default, operationContext);
@@ -150,12 +156,12 @@ namespace WebDAVDrive
         {
             byte[] thumbnail = null;
 
-            string[] exts = Program.Settings.RequestThumbnailsFor.Trim().Split("|");
+            string[] exts = Settings.RequestThumbnailsFor.Trim().Split("|");
             string ext = System.IO.Path.GetExtension(UserFileSystemPath).TrimStart('.');
 
             if (exts.Any(ext.Equals) || exts.Any("*".Equals))
             {
-                string ThumbnailGeneratorUrl = Program.Settings.ThumbnailGeneratorUrl.Replace("{thumbnail width}", size.ToString()).Replace("{thumbnail height}", size.ToString());
+                string ThumbnailGeneratorUrl = Settings.ThumbnailGeneratorUrl.Replace("{thumbnail width}", size.ToString()).Replace("{thumbnail height}", size.ToString());
                 string filePathRemote = ThumbnailGeneratorUrl.Replace("{path to file}", Engine.Mapping.MapPath(UserFileSystemPath));
 
                 try
@@ -283,7 +289,7 @@ namespace WebDAVDrive
             }
 
             return props;
-        }   
+        }
 
         
         ///<inheritdoc>
@@ -294,13 +300,13 @@ namespace WebDAVDrive
             // Call your remote storage here to lock the item.
             // Save the lock token and other lock info received from the remote storage on the client.
             // Supply the lock-token as part of each remote storage update in IFile.WriteAsync() method.
-            // Note that the actual lock timout applied by the server may be different from the one requested.
+            // Note that the actual lock timeout applied by the server may be different from the one requested.
 
             string lockOwner = Engine.CurrentUserPrincipal;
-            double timOutMs = lockMode == LockMode.Auto ? autoLockTimoutMs : manualLockTimoutMs;
-            TimeSpan timeOut = timOutMs == -1 ? TimeSpan.MaxValue : TimeSpan.FromMilliseconds(timOutMs);
+            double timeoutMs = lockMode == LockMode.Auto ? autoLockTimeoutMs : manualLockTimeoutMs;
+            TimeSpan timeout = timeoutMs == -1 ? TimeSpan.MaxValue : TimeSpan.FromMilliseconds(timeoutMs);
 
-            LockInfo lockInfo = (await Dav.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, lockOwner, timeOut, null, cancellationToken)).WebDavResponse;
+            LockInfo lockInfo = (await Dav.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, lockOwner, timeout, null, cancellationToken)).WebDavResponse;
 
             // Save lock-token and lock-mode. Start the timer to refresh the lock.
             await SaveLockAsync(lockInfo, lockMode, operationContext, cancellationToken);
@@ -327,36 +333,37 @@ namespace WebDAVDrive
                     Mode = lockMode
                 };
                 operationContext.Properties.SetLockInfo(serverLockInfo);
-                
+
                 // Update Windows Explorer.
                 placeholder.UpdateUI();
 
-                Logger.LogDebug($"Locked/Refreshed by {lockInfo.Owner}, timout: {lockInfo.TimeOut:hh\\:mm\\:ss\\.ff}", UserFileSystemPath, default, operationContext);
+                Logger.LogDebug($"Locked/Refreshed by {lockInfo.Owner}, timeout: {lockInfo.TimeOut:hh\\:mm\\:ss\\.ff}", UserFileSystemPath, default, operationContext);
 
                 // Start the timer to extend (refresh) the automatic lock when it is about to expire.
                 if (lockInfo.TimeOut < TimeSpan.MaxValue && lockMode == LockMode.Auto)
                 {
                     // We want to refresh the lock some time before the lock expires.
-                    // Either 1 minute before, for release config, or 1/5 of a timout time, for dev config.
+                    // Either 1 minute before, for release config, or 1/5 of a timeout time, for dev config.
                     double refreshTimeOut = lockInfo.TimeOut.TotalMilliseconds;
                     refreshTimeOut -= refreshTimeOut > 120000 ? 60000 : refreshTimeOut / 5;
 
                     var timer = new System.Timers.Timer(refreshTimeOut);
                     timer.AutoReset = false;
-                    timer.Elapsed += (object sender, System.Timers.ElapsedEventArgs e) => { 
+                    timer.Elapsed += (object sender, System.Timers.ElapsedEventArgs e) => {
                         LockRefreshAsync(
-                            lockInfo.LockToken.LockToken, 
-                            lockInfo.TimeOut, 
+                            lockInfo.LockToken.LockToken,
+                            lockInfo.TimeOut,
                             lockMode,
-                            operationContext, 
-                            cancellationToken, 
-                            timer); };
+                            operationContext,
+                            cancellationToken,
+                            timer);
+                    };
                     timer.Start();
                 }
             }
         }
 
-        private async void LockRefreshAsync(string lockToken, TimeSpan timOut, LockMode lockMode, IOperationContext operationContext, CancellationToken cancellationToken, System.Timers.Timer timer)
+        private async void LockRefreshAsync(string lockToken, TimeSpan timeout, LockMode lockMode, IOperationContext operationContext, CancellationToken cancellationToken, System.Timers.Timer timer)
         {
             try
             {
@@ -372,8 +379,8 @@ namespace WebDAVDrive
                     if (sameToken)
                     {
                         // If this is auto-lock and the there is no lock file (owner file) - do not refresh lock, unlock the file instead.
-                        if(lockMode == LockMode.Auto
-                            && !FilterHelper.IsOwnerFileExists(UserFileSystemPath))
+                        if (lockMode == LockMode.Auto
+                            && FilterHelper.IsLockedWithOwnerFile(UserFileSystemPath) && !FilterHelper.IsOwnerFileExists(UserFileSystemPath))
                         {
                             await UnlockAsync(operationContext, cancellationToken);
                             PlaceholderItem.UpdateUI(UserFileSystemPath);
@@ -381,18 +388,18 @@ namespace WebDAVDrive
                         }
 
                         // Extend (refresh) the lock.
-                        //Program.DavClient.RefreshLockAsync(new Uri(RemoteStoragePath), lockToken, timout, cancellationToken);
+                        //Program.DavClient.RefreshLockAsync(new Uri(RemoteStoragePath), lockToken, timeout, cancellationToken);
                         IHierarchyItem item = (await Dav.GetItemAsync(new Uri(RemoteStoragePath), null, cancellationToken)).WebDavResponse;
-                        LockInfo lockInfo = (await item.RefreshLockAsync(lockToken, timOut, null, cancellationToken)).WebDavResponse;
+                        LockInfo lockInfo = (await item.RefreshLockAsync(lockToken, timeout, null, cancellationToken)).WebDavResponse;
 
-                        Logger.LogMessage($"Lock extended, new timout: {lockInfo.TimeOut:hh\\:mm\\:ss\\.ff}", UserFileSystemPath);
+                        Logger.LogMessage($"Lock extended, new timeout: {lockInfo.TimeOut:hh\\:mm\\:ss\\.ff}", UserFileSystemPath, default, operationContext);
 
                         // Save the new lock. Start the timer to refresh the lock.
                         await SaveLockAsync(lockInfo, lockMode, operationContext, cancellationToken);
                     }
                 }
             }
-            catch(TaskCanceledException)
+            catch (TaskCanceledException)
             {
                 Logger.LogDebug("Lock refresh canceled", UserFileSystemPath, default, operationContext);
             }

@@ -25,11 +25,11 @@ namespace WebDAVDrive
         /// <param name="remoteStorageId">Remote storage item ID.</param>
         /// <param name="userFileSystemPath">User file system path. This paramater is available on Windows platform only. On macOS and iOS this parameter is always null</param>
         /// <param name="engine">Engine instance.</param>
-        /// <param name="autoLockTimoutMs">Automatic lock timout in milliseconds.</param>
-        /// <param name="manualLockTimoutMs">Manual lock timout in milliseconds.</param>
+        /// <param name="autoLockTimeoutMs">Automatic lock timeout in milliseconds.</param>
+        /// <param name="manualLockTimeoutMs">Manual lock timeout in milliseconds.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFolder(byte[] remoteStorageId, string userFileSystemPath, VirtualEngine engine, double autoLockTimoutMs, double manualLockTimoutMs, ILogger logger)
-            : base(remoteStorageId, userFileSystemPath, engine, autoLockTimoutMs, manualLockTimoutMs, logger)
+        public VirtualFolder(byte[] remoteStorageId, string userFileSystemPath, VirtualEngine engine, double autoLockTimeoutMs, double manualLockTimeoutMs, AppSettings appSettings, ILogger logger)
+            : base(remoteStorageId, userFileSystemPath, engine, autoLockTimeoutMs, manualLockTimeoutMs, appSettings, logger)
         {
 
         }
@@ -129,7 +129,7 @@ namespace WebDAVDrive
         public async Task GetChildrenAsync(string pattern, IOperationContext operationContext, IFolderListingResultContext resultContext, CancellationToken cancellationToken)
         {
             // This method has a 60 sec timeout. 
-            // To process longer requests and reset the timout timer call one of the following:
+            // To process longer requests and reset the timeout timer call one of the following:
             // - resultContext.ReturnChildrenAsync() method.
             // - resultContext.ReportProgress() method.
 

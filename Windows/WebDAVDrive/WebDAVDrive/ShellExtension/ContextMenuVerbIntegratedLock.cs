@@ -1,6 +1,8 @@
 using System.Runtime.InteropServices;
 
 using ITHit.FileSystem.Windows.ShellExtension;
+using WebDAVDrive.Services;
+using WebDAVDrive.Utils;
 
 
 namespace WebDAVDrive.ShellExtension
@@ -10,10 +12,10 @@ namespace WebDAVDrive.ShellExtension
     /// </summary>
     [ComVisible(true)]
     [ProgId("WebDAVDrive.ContextMenuVerb")]
-    [Guid("A22EBD03-343E-433C-98DF-372C6B3A1538")]
+    [Guid("52140CC5-F5DC-4AAB-8AAD-82387C881319")]
     public class ContextMenuVerbIntegratedLock : CloudFilesContextMenuVerbIntegratedBase
     {
-        public ContextMenuVerbIntegratedLock() : base(Program.Engines)
+        public ContextMenuVerbIntegratedLock() : base(ServiceProviderUtil.GetService<IDomainsService>().GetEngineWindowsDictionary())
         {
         }
     }

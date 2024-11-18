@@ -1,6 +1,8 @@
 using System.Runtime.InteropServices;
 
 using ITHit.FileSystem.Windows.ShellExtension;
+using WebDAVDrive.Services;
+using WebDAVDrive.Utils;
 
 
 namespace WebDAVDrive.ShellExtension
@@ -10,10 +12,10 @@ namespace WebDAVDrive.ShellExtension
     /// </summary>
     [ComVisible(true)]
     [ProgId("WebDAVDrive.ThumbnailProvider")]
-    [Guid("A5B0C82F-50AA-445C-A404-66DEB510E84B")]
+    [Guid("C3B06859-38F0-4F6D-AC06-39E1B2C0C77E")]
     public class ThumbnailProviderIntegrated : ThumbnailProviderHandlerIntegratedBase
     {
-        public ThumbnailProviderIntegrated() : base(Program.Engines)
+        public ThumbnailProviderIntegrated() : base(ServiceProviderUtil.GetService<IDomainsService>().GetEngineWindowsDictionary())
         {
         }
     }

@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading.Tasks;
 
 using ITHit.FileSystem.Windows;
-using ITHit.FileSystem.Windows.ExternalDataManager;
 
 
 namespace ITHit.FileSystem.Samples.Common.Windows

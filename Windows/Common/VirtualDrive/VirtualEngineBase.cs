@@ -239,6 +239,10 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <inheritdoc/>
         public override async Task<bool> FilterAsync(SyncDirection direction, OperationType operationType, string path, FileSystemItemType itemType, string newPath, IOperationContext operationContext)
         {
+            if (await new AutoLockFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
+            {
+                return true;
+            }
 
             if (await new ZipFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             {
@@ -254,6 +258,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             {
                 return true;
             }
+
+            //if (await new PhotoshopFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
+            //{
+            //    return true;
+            //}
 
             //if (await new ErrorStatusFilter(true).FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             //{

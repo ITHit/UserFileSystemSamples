@@ -187,15 +187,15 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             if (openRemoteStorage)
             {
                 Commands.Open(RemoteStorageRootPath);
-                string rsWindowName = Path.GetFileName(RemoteStorageRootPath.TrimEnd('\\'));
-                IntPtr hWndRemoteStorage = WindowManager.FindWindow(rsWindowName, cancellationToken);
-                WindowManager.PositionFileSystemWindow(hWndRemoteStorage, horizintalIndex, totalWindows);
+                //string rsWindowName = Path.GetFileName(RemoteStorageRootPath.TrimEnd('\\'));
+                //IntPtr hWndRemoteStorage = WindowManager.FindWindow(rsWindowName, cancellationToken);
+                //WindowManager.PositionFileSystemWindow(hWndRemoteStorage, horizintalIndex, totalWindows);
             }
 
             // Open Windows File Manager with user file system.
             Commands.Open(Engine.Path);
-            IntPtr hWndUserFileSystem = WindowManager.FindWindow(userFileSystemWindowName, cancellationToken);
-            WindowManager.PositionFileSystemWindow(hWndUserFileSystem, horizintalIndex + 1, totalWindows);
+            //IntPtr hWndUserFileSystem = WindowManager.FindWindow(userFileSystemWindowName, cancellationToken);
+            //WindowManager.PositionFileSystemWindow(hWndUserFileSystem, horizintalIndex + 1, totalWindows);
         }
 
 #endif

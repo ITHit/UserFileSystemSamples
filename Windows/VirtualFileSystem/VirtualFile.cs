@@ -46,7 +46,7 @@ namespace VirtualFileSystem
         public async Task<IFileMetadata> ReadAsync(Stream output, long offset, long length, IFileMetadata metadata, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {
             // On Windows this method has a 60 sec timeout. 
-            // To process longer requests and reset the timout timer write to the output stream or call the resultContext.ReportProgress() or resultContext.ReturnData() methods.
+            // To process longer requests and reset the timeout timer write to the output stream or call the resultContext.ReportProgress() or resultContext.ReturnData() methods.
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext, metadata);
 
@@ -77,7 +77,7 @@ namespace VirtualFileSystem
         public async Task ValidateDataAsync(long offset, long length, IValidateDataOperationContext operationContext, IValidateDataResultContext resultContext)
         {
             // This method has a 60 sec timeout. 
-            // To process longer requests and reset the timout timer call the ReturnValidationResult()
+            // To process longer requests and reset the timeout timer call the ReturnValidationResult()
             // method or IResultContext.ReportProgress() method.
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);

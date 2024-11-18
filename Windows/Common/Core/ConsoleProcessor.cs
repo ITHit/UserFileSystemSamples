@@ -55,7 +55,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <summary>
         /// Reads and processes console input.
         /// </summary>
-        public async Task ProcessUserInputAsync()
+        public async Task ProcessUserInputAsync(Action? onAppExit = null)
         {
             do
             {
@@ -78,7 +78,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
                     case ConsoleKey.E:
                         // Start/stop the Engine and all sync services.
-                        foreach(var keyValCommands in Commands)
+                        foreach (var keyValCommands in Commands)
                         {
                             await keyValCommands.Value.StartStopEngineAsync();
                         }
@@ -122,9 +122,14 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                             await keyValCommands.Value.StopEngineAsync();
                         }
 
-                        bool removeSparsePackage = FileSystem.Windows.Package.PackageRegistrar.IsRunningWithSparsePackageIdentity() ? 
+                        bool removeSparsePackage = FileSystem.Windows.Package.PackageRegistrar.IsRunningWithSparsePackageIdentity() ?
                             keyInfo.Modifiers.HasFlag(ConsoleModifiers.Shift) : false;
                         await registrar.UnregisterAllSyncRootsAsync(this.providerId, removeSparsePackage);
+
+                        if (onAppExit != null)
+                        {
+                            onAppExit();
+                        }
                         return;
 
                     case ConsoleKey.Spacebar:
@@ -132,6 +137,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                         foreach (var keyValCommands in Commands)
                         {
                             await keyValCommands.Value.EngineExitAsync();
+                        }
+
+                        if (onAppExit != null)
+                        {
+                            onAppExit();
                         }
                         return;
 

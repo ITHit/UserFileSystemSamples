@@ -123,7 +123,7 @@ namespace VirtualDrive
         public async Task GetChildrenAsync(string pattern, IOperationContext operationContext, IFolderListingResultContext resultContext, CancellationToken cancellationToken)
         {
             // This method has a 60 sec timeout. 
-            // To process longer requests and reset the timout timer call one of the following:
+            // To process longer requests and reset the timeout timer call one of the following:
             // - resultContext.ReturnChildren() method.
             // - resultContext.ReportProgress() method.
 

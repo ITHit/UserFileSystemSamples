@@ -24,11 +24,11 @@ namespace WebDAVDrive
         /// <param name="remoteStorageId">Remote storage item ID.</param>
         /// <param name="userFileSystemPath">User file system path. This paramater is available on Windows platform only. On macOS and iOS this parameter is always null</param>
         /// <param name="engine">Engine instance.</param>
-        /// <param name="autoLockTimoutMs">Automatic lock timout in milliseconds.</param>
-        /// <param name="manualLockTimoutMs">Manual lock timout in milliseconds.</param>
+        /// <param name="autoLockTimeoutMs">Automatic lock timeout in milliseconds.</param>
+        /// <param name="manualLockTimeoutMs">Manual lock timeout in milliseconds.</param>
         /// <param name="logger">Logger.</param>
-        public VirtualFile(byte[] remoteStorageId, string userFileSystemPath, VirtualEngine engine, double autoLockTimoutMs, double manualLockTimoutMs, ILogger logger) 
-            : base(remoteStorageId, userFileSystemPath, engine, autoLockTimoutMs, manualLockTimoutMs, logger)
+        public VirtualFile(byte[] remoteStorageId, string userFileSystemPath, VirtualEngine engine, double autoLockTimeoutMs, double manualLockTimeoutMs, AppSettings appSettings, ILogger logger) 
+            : base(remoteStorageId, userFileSystemPath, engine, autoLockTimeoutMs, manualLockTimeoutMs, appSettings, logger)
         {
 
         }
@@ -49,7 +49,7 @@ namespace WebDAVDrive
         public async Task<IFileMetadata> ReadAsync(Stream output, long offset, long length, IFileMetadata metadata, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {
             // On Windows this method has a 60 sec timeout. 
-            // To process longer requests and reset the timout timer write to the output stream or call the resultContext.ReportProgress() or resultContext.ReturnData() methods.
+            // To process longer requests and reset the timeout timer write to the output stream or call the resultContext.ReportProgress() or resultContext.ReturnData() methods.
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext, metadata);
 
@@ -96,7 +96,7 @@ namespace WebDAVDrive
         public async Task ValidateDataAsync(long offset, long length, IValidateDataOperationContext operationContext, IValidateDataResultContext resultContext)
         {
             // This method has a 60 sec timeout. 
-            // To process longer requests and reset the timout timer call the ReturnValidationResult()
+            // To process longer requests and reset the timeout timer call the ReturnValidationResult()
             // method or IResultContext.ReportProgress() method.
 
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ValidateDataAsync)}({offset}, {length})", UserFileSystemPath, default, operationContext);

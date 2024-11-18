@@ -40,11 +40,6 @@ namespace WebDAVDrive.ShellExtension
         /// <returns><see cref="LocalServer"/> instance.</returns>
         internal static LocalServer StartComServer()
         {
-            if (!PackageRegistrar.IsRunningWithSparsePackageIdentity())
-            {
-                return null;
-            }
-
             LocalServer server = new LocalServerIntegrarted();
 
             server.RegisterClass<ThumbnailProviderIntegrated>();

@@ -1,6 +1,8 @@
 using System.Runtime.InteropServices;
 
 using ITHit.FileSystem.Windows.ShellExtension;
+using WebDAVDrive.Services;
+using WebDAVDrive.Utils;
 
 
 namespace WebDAVDrive.ShellExtension
@@ -11,10 +13,10 @@ namespace WebDAVDrive.ShellExtension
     /// </summary>
     [ComVisible(true)]
     [ProgId("WebDAVDrive.CustomStateProvider")]
-    [Guid("754F334F-095C-46CD-B033-B2C0523D2829")]
+    [Guid("B88C1E80-D493-4EEE-B772-AAF34734B89B")]
     public class CustomStateProviderIntegrated : CustomStateHandlerIntegratedBase
     {
-        public CustomStateProviderIntegrated() : base(Program.Engines)
+        public CustomStateProviderIntegrated() : base(ServiceProviderUtil.GetService<IDomainsService>().GetEngineWindowsDictionary())
         {
         }
     }

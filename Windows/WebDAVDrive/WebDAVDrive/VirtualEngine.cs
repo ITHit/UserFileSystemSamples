@@ -1,8 +1,4 @@
-using System;
 using System.Net;
-using System.Threading.Tasks;
-using System.Threading;
-using System.IO;
 using Windows.Security.Credentials.UI;
 
 using ITHit.FileSystem;
@@ -11,16 +7,21 @@ using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.WebDAV.Client;
 using ITHit.WebDAV.Client.Exceptions;
 using ITHit.FileSystem.Synchronization;
-
-using WebDAVDrive.UI;
-using System.Linq;
-
+using WebDAVDrive.Platforms.Windows.Utils;
+using WebDAVDrive.Services;
+using WebDAVDrive.Utils;
+using InvalidLicenseException = ITHit.FileSystem.InvalidLicenseException;
 
 namespace WebDAVDrive
 {
     /// <inheritdoc />
     public class VirtualEngine : VirtualEngineBase
     {
+        /// <summary>
+        /// Application settings.
+        /// </summary>
+        protected AppSettings Settings;
+
         /// <summary>
         /// WebDAV client for accessing the WebDAV server.
         /// </summary>
@@ -64,14 +65,19 @@ namespace WebDAVDrive
         public readonly Commands Commands;
 
         /// <summary>
-        /// Automatic lock timout in milliseconds.
+        /// Automatic lock timeout in milliseconds.
         /// </summary>
-        private readonly double autoLockTimoutMs;
+        private readonly double autoLockTimeoutMs;
 
         /// <summary>
-        /// Manual lock timout in milliseconds.
+        /// Domains service.
         /// </summary>
-        private readonly double manualLockTimoutMs;
+        private readonly DomainsService domainsService;
+
+        /// <summary>
+        /// Manual lock timeout in milliseconds.
+        /// </summary>
+        private readonly double manualLockTimeoutMs;
 
         /// <summary>
         /// Maximum number of login attempts.
@@ -111,7 +117,7 @@ namespace WebDAVDrive
         /// <summary>
         /// Title to be displayed in UI.
         /// </summary>
-        private string Title
+        internal string Title
         {
             get { return $"{productName} - {RemoteStorageRootPath}"; }
         }
@@ -127,53 +133,56 @@ namespace WebDAVDrive
         /// <summary>
         /// Creates a vitual file system Engine.
         /// </summary>
-        /// <param name="license">A license string.</param>
         /// <param name="userFileSystemRootPath">
         /// A root folder of your user file system. 
         /// Your file system tree will be located under this folder.
         /// </param>
         /// <param name="remoteStorageRootPath">Path to the remote storage root.</param>
         /// <param name="webSocketServerUrl">Web sockets server that sends notifications about changes on the server.</param>
-        /// <param name="iconsFolderPath">Path to the icons folder.</param>
-        /// <param name="autoLockTimoutMs">Automatic lock timout in milliseconds.</param>
-        /// <param name="manualLockTimoutMs">Manual lock timout in milliseconds.</param>
-        /// <param name="setLockReadOnly">Mark documents locked by other users as read-only for this user and vice versa.</param>
         /// <param name="logFormatter">Formats log output.</param>
-        /// <param name="productname">Name of the product. To be displayed in UI.</param>
-        /// <param name="appId">Unique Application ID.</param>
         public VirtualEngine(
-            string license,
             string userFileSystemRootPath,
             string remoteStorageRootPath,
             string webSocketServerUrl,
-            string iconsFolderPath,
-            double autoLockTimoutMs,
-            double manualLockTimoutMs,
-            bool setLockReadOnly,
+            DomainsService domainsService,
             LogFormatter logFormatter,
-            string productname, 
-            string appId)
-            : base(license, userFileSystemRootPath, remoteStorageRootPath, iconsFolderPath, setLockReadOnly, logFormatter)
+            AppSettings appSettings)
+            : base(appSettings.UserFileSystemLicense, userFileSystemRootPath, remoteStorageRootPath,
+                  appSettings.IconsFolderPath, appSettings.SetLockReadOnly, logFormatter)
         {
-            this.productName = productname;
-            this.appId = appId;
+            this.Settings = appSettings;
+            this.productName = appSettings.ProductName;
+            this.appId = appSettings.AppID;
             this.RemoteStorageRootPath = remoteStorageRootPath;
             this.webSocketServerUrl = webSocketServerUrl;
             this.log = logFormatter.Log;
+            this.domainsService = domainsService;
 
             Mapping = new Mapping(Path, remoteStorageRootPath);
 
-
-
-            this.autoLockTimoutMs = autoLockTimoutMs;
-            this.manualLockTimoutMs = manualLockTimoutMs;
+            this.autoLockTimeoutMs = appSettings.AutoLockTimeoutMs;
+            this.manualLockTimeoutMs = appSettings.ManualLockTimeoutMs;
 
             DavClient = CreateWebDavSession(InstanceId);
 
             Commands = new Commands(this, remoteStorageRootPath, logFormatter.Log);
 
-            // Create the tray app.
-            TrayUI.CreateTray(productName, remoteStorageRootPath, iconsFolderPath, Commands, this, this.InstanceId);
+            //// Create tray app.
+            //TrayUI.CreateTray(productName, remoteStorageRootPath, iconsFolderPath, Commands, this, this.InstanceId);
+            //Tray = new WindowsTrayInterface(productName, remoteStorageRootPath, iconsFolderPath, Commands);
+
+            //// Listen to engine notifications to change menu and icon states.
+            //this.StateChanged += Tray.Engine_StateChanged;
+            //this.SyncService.StateChanged += Tray.SyncService_StateChanged;
+            this.Error += VirtualEngine_Error;
+        }
+
+        private void VirtualEngine_Error(IEngine sender, EngineErrorEventArgs e)
+        {
+            if (e.Exception is InvalidLicenseException)
+            {
+                domainsService.NotificationService.ShowLicenseErrorToast((InvalidLicenseException)e.Exception);
+            }
         }
 
         /// <inheritdoc/>
@@ -182,11 +191,11 @@ namespace WebDAVDrive
             string userFileSystemPath = context.FileNameHint;
             if (itemType == FileSystemItemType.File)
             {
-                return new VirtualFile(remoteStorageId, userFileSystemPath, this, autoLockTimoutMs, manualLockTimoutMs, logger);
+                return new VirtualFile(remoteStorageId, userFileSystemPath, this, autoLockTimeoutMs, manualLockTimeoutMs, Settings, logger);
             }
             else
             {
-                return new VirtualFolder(remoteStorageId, userFileSystemPath, this, autoLockTimoutMs, manualLockTimoutMs, logger);
+                return new VirtualFolder(remoteStorageId, userFileSystemPath, this, autoLockTimeoutMs, manualLockTimeoutMs, Settings, logger);
             }
         }
 
@@ -208,14 +217,13 @@ namespace WebDAVDrive
             }
             if (menuGuid == typeof(ShellExtension.ContextMenuVerbIntegratedUnmount).GUID)
             {
-                return new MenuCommandUnmount(this, this.Logger);
+                return new MenuCommandUnmount(domainsService, this, this.Logger);
             }
 
             Logger.LogError($"Menu not found", Path, menuGuid.ToString(), default, operationContext);
             throw new System.NotImplementedException();
         }
 
-        /// <inheritdoc/>
         public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
         {
             if (!await AuthenticateAsync(null, cancellationToken))
@@ -226,12 +234,12 @@ namespace WebDAVDrive
 
             await InitAsync(cancellationToken);
 
-            Logger.LogMessage($"Sync mode: {Program.Settings.IncomingSyncMode}", Path);
+            Logger.LogMessage($"Sync mode: {Settings.IncomingSyncMode}", Path);
 
             await base.StartAsync(processModified, cancellationToken);
 
             // Create and start monitor, depending on server capabilities and prefered SyncMode.
-            RemoteStorageMonitor = await StartRemoteStorageMonitorAsync(Program.Settings.IncomingSyncMode, cancellationToken);
+            RemoteStorageMonitor = await StartRemoteStorageMonitorAsync(Settings.IncomingSyncMode, cancellationToken);
 
             Logger.LogMessage($"Actual sync mode: {SyncService.IncomingSyncMode}", Path);
         }
@@ -246,7 +254,7 @@ namespace WebDAVDrive
             bool authenticated = true;
             try
             {
-                // This call is oly requitred to get server authentication type: Token-based, Basic, NTLM, Cookies, etc.
+                // This call is only requitred to get server authentication type: Token-based, Basic, NTLM, Cookies, etc.
                 await DavClient.GetFolderAsync(this.RemoteStorageRootPath, Mapping.GetDavProperties(), cancellationToken: cancellationToken);
             }
             catch (WebDavHttpException ex)
@@ -331,7 +339,7 @@ namespace WebDAVDrive
                         monitor = new RemoteStorageMonitorSyncId(webSocketServerUrl, RemoteStorageRootPath, this);
                         break;
                     case IncomingSyncModeSetting.CRUD:
-                        monitor = new RemoteStorageMonitorCRUDE(webSocketServerUrl, RemoteStorageRootPath, this);
+                        monitor = new RemoteStorageMonitorCRUD(webSocketServerUrl, RemoteStorageRootPath, this);
                         break;
                     case IncomingSyncModeSetting.TimerPooling:
                         break;
@@ -342,7 +350,7 @@ namespace WebDAVDrive
                         }
                         else
                         {
-                            monitor = new RemoteStorageMonitorCRUDE(webSocketServerUrl, RemoteStorageRootPath, this);
+                            monitor = new RemoteStorageMonitorCRUD(webSocketServerUrl, RemoteStorageRootPath, this);
                         }
                         break;
                 }
@@ -368,48 +376,6 @@ namespace WebDAVDrive
             return monitor;
         }
 
-        /*
-        /// <summary>
-        /// Creates and starts remote storage monitor, depending on sync mode.
-        /// </summary>
-        /// <param name="preferedSyncMode">Prefered sync mode.</param>
-        /// <returns>Remote storage monitor or null if sync mode is not supported or sockets failed to connect.</returns>
-        private async Task<RemoteStorageMonitorBase> TryCreateRemoteStorageMonitorAsync(PreferredIncomingSyncMode preferedSyncMode)
-        {
-            RemoteStorageMonitorBase monitor = null;
-
-            try
-            {
-                if (preferedSyncMode == IncomingSyncMode.SyncId && SyncService.IsSyncIdSupported)
-                {
-                    monitor = new RemoteStorageMonitorSyncId(webSocketServerUrl, RemoteStorageRootPath, this);
-                }
-                else if (preferedSyncMode != IncomingSyncMode.TimerPooling)
-                {
-                    monitor = new RemoteStorageMonitorCRUDE(webSocketServerUrl, RemoteStorageRootPath, this);
-                }
-
-
-                if (monitor != null)
-                {
-                    monitor.Credentials = this.Credentials;
-                    monitor.Cookies = this.Cookies;
-                    monitor.InstanceId = this.InstanceId;
-                    monitor.ServerNotifications = this.ServerNotifications(this.Path, monitor.Logger);
-                    await monitor.StartAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                monitor = null;
-                // Sync ID & manual pooling modes are not available. Use timer pooling.
-                Logger.LogMessage($"Failed to create remote storage monitor. {ex.Message}", Path);
-            }
-            
-            return monitor;
-        }
-        */
-
         public override async Task StopAsync()
         {
             await base.StopAsync();
@@ -418,6 +384,66 @@ namespace WebDAVDrive
                 await RemoteStorageMonitor?.StopAsync();
                 RemoteStorageMonitor?.Dispose();
                 RemoteStorageMonitor = null;
+            }
+        }
+
+
+        /// <summary>
+        /// Executes the specified command on a list of items provided in the protocol parameters.
+        /// </summary>
+        /// <param name="protocolParameters">
+        /// An instance of <see cref="ProtocolParameters"/> containing the list of item URLs, 
+        /// the command to execute, and other relevant data.
+        /// </param>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+        /// <remarks>
+        /// This method performs different actions based on the command specified in the protocol parameters:
+        /// - If the command is "lock", it locks the specified items.
+        /// - If the command is "unlock", it unlocks the specified items.
+        /// - For other commands ("openwith", "print", or "edit"), it executes the appropriate verb action on the items.
+        /// 
+        /// Each item URL is processed by:
+        /// 1. Converting the item URL to a local file system path based on the remote storage root path.
+        /// 2. Decoding and normalizing the item path.
+        /// 3. Executing the corresponding action based on the command.
+        /// </remarks>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown if <paramref name="protocolParameters"/> is null.
+        /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown if any required property (e.g., Command or ItemUrls) is missing or invalid.
+        /// </exception>
+        public async Task ExecuteCommandAsync(ProtocolParameters protocolParameters)
+        {
+            foreach (var itemUrl in protocolParameters.ItemUrls)
+            {
+                string itemPath = System.IO.Path.Combine(Path, WebUtility.UrlDecode(itemUrl.Substring(RemoteStorageRootPath.Length).Trim('/'))
+                    .Replace("/", "\\"));
+
+                switch(protocolParameters.Command)
+                {
+                    case CommandType.Lock:
+                        await ClientNotifications(itemPath).LockAsync();
+                        break;
+                    case CommandType.Unlock:
+                        await ClientNotifications(itemPath).UnlockAsync();
+                        break;
+                    case CommandType.OpenWith:
+                        ClientNotifications(itemPath).ExecVerb(Verb.OpenWith);
+                        break;
+                    case CommandType.Print:
+                        ClientNotifications(itemPath).ExecVerb(Verb.Print);
+                        break;
+                    case CommandType.Edit:
+                        ClientNotifications(itemPath).ExecVerb(Verb.Edit);
+                        break;
+                    case CommandType.Open:
+                        ClientNotifications(itemPath).ExecVerb(Verb.Open);
+                        break;
+                    default:
+                        ClientNotifications(itemPath).ExecVerb(Verb.Default);
+                        break;
+                }
             }
         }
 
@@ -455,7 +481,9 @@ namespace WebDAVDrive
                 // This option improves performance but is less secure. 
                 // PreAuthenticate = true,
             };
-            WebDavSession davClient = new WebDavSession(Program.Settings.WebDAVClientLicense);
+            WebDavSession davClient = new WebDavSession(Settings.WebDAVClientLicense);
+            davClient.Client.Timeout = TimeSpan.FromMinutes(10);
+
             davClient.WebDavError += DavClient_WebDavError;
             davClient.WebDavMessage += DavClient_WebDAVMessage;
             davClient.CustomHeaders.Add("InstanceId", engineInstanceId.ToString());
@@ -472,11 +500,6 @@ namespace WebDAVDrive
             Logger.LogDebug(e.Message);
         }
 
-        /// <summary>
-        /// Event handler to process WebDAV errors. 
-        /// </summary>
-        /// <param name="sender">WebDAV session.</param>
-        /// <param name="e">WebDAV error details.</param>
         private void DavClient_WebDavError(ISession sender, WebDavErrorEventArgs e)
         {
             // You can process WebDAV errors below:
@@ -490,124 +513,131 @@ namespace WebDAVDrive
         private bool ShowLoginDialog(WebDavHttpException httpException, string userFileSystemPath)
         {
             bool success = false;
-
-            Uri failedUri = httpException.Uri;
-
-            switch (httpException.Status.Code)
+            if (httpException != null)
             {
-                // 302 redirect to login page.
-                case 302:
-                    // Show login dialog.
+                Uri failedUri = httpException.Uri;
 
-                    // Azure AD can not navigate directly to login page - failed corelation.
-                    //string loginUrl = ((Redirect302Exception)e.Exception).Location;
-                    //Uri url = new System.Uri(loginUrl, System.UriKind.Absolute);
-                        
-                    Logger.LogDebug($"{httpException?.Status.Code} {httpException?.Status.Description} {httpException.Message}", null, failedUri?.OriginalString);
+                switch (httpException.Status.Code)
+                {
+                    // 302 redirect to login page.
+                    case 302:
+                    // 403 access to the requested resource is forbidden
+                    case 403:
+                        // Show login dialog.
 
-                    WebBrowserLogin(failedUri);
-                    success = true;
+                        // Azure AD can not navigate directly to login page - failed corelation.
+                        //string loginUrl = ((Redirect302Exception)e.Exception).Location;
+                        //Uri url = new System.Uri(loginUrl, System.UriKind.Absolute);
 
-                    // Replay the request, so the listing or update can complete succesefully.
-                    // Unless this is LOCK - incorrect lock owner map be passed in this case.
-                    //bool isLock = httpException.HttpMethod.NotEquals("LOCK", StringComparison.InvariantCultureIgnoreCase);
-                    //e.Result = isLock ? WebDavErrorEventResult.Fail : WebDavErrorEventResult.Repeat;
+                        Logger.LogDebug($"{httpException?.Status.Code} {httpException?.Status.Description} {httpException.Message}", null, failedUri?.OriginalString);
 
-                    break;
+                        WebBrowserLogin(failedUri);
+                        success = true;
 
-                // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
-                case 401:
+                        // Replay the request, so the listing or update can complete succesefully.
+                        // Unless this is LOCK - incorrect lock owner map be passed in this case.
+                        //bool isLock = httpException.HttpMethod.NotEquals("LOCK", StringComparison.InvariantCultureIgnoreCase);
+                        //bool isLock = false;
+                        //e.Result = isLock ? WebDavErrorEventResult.Fail : WebDavErrorEventResult.Repeat;
 
-                    Logger.LogDebug($"{httpException?.Status.Code} {httpException?.Status.Description} {httpException.Message}", null, failedUri?.OriginalString);
+                        break;
 
-                    if (loginRetriesCurrent < loginRetriesMax)
-                    {
-                        success = ChallengeLoginLogin(failedUri);
-                    }
-                    break;
-                default:
-                    ILogger logger = this.Logger.CreateLogger("WebDAV Session");
-                    logger.LogMessage($"{httpException.Status.Code} {httpException.Message}", null, failedUri?.OriginalString);
-                    break;
+                    // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
+                    case 401:
+
+                        Logger.LogDebug($"{httpException?.Status.Code} {httpException?.Status.Description} {httpException.Message}", null, failedUri?.OriginalString);
+
+                        if (loginRetriesCurrent < loginRetriesMax)
+                        {
+                            success = ChallengeLogin(failedUri);
+                        }
+                        break;
+                    default:
+                        ILogger logger = this.Logger.CreateLogger("WebDAV Session");
+                        logger.LogMessage($"{httpException.Status.Code} {httpException.Message}", null, failedUri?.OriginalString);
+                        break;
+                }
             }
+
             return success;
         }
 
         private void WebBrowserLogin(Uri failedUri)
         {
-            WebDAVDrive.UI.WebBrowserLogin webBrowserLogin = null;
-            Thread thread = new Thread(() =>
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+            MainThread.InvokeOnMainThreadAsync(() =>
             {
-                webBrowserLogin = new WebDAVDrive.UI.WebBrowserLogin(failedUri, log);
-                webBrowserLogin.Title = Title;
-                webBrowserLogin.ShowDialog();
+                Window? webBrowserLoginWindow = null;
+                webBrowserLoginWindow = new Window
+                {
+                    Title = $"WebDAV Drive - {failedUri.Host}",
+                    Page = new WebBrowserLoginPage(failedUri, (cookies) =>
+                    {
+                        // Set cookies collected from the web browser dialog.
+                        DavClient.CookieContainer.Add(cookies);
+                        this.Cookies = cookies;
+
+                        tcs.SetResult(true);
+                        // Close the window
+                        Application.Current.CloseWindow(webBrowserLoginWindow!);
+                    }, log)
+                };
+                webBrowserLoginWindow.Width = 400;
+                webBrowserLoginWindow.Height = 650;
+                webBrowserLoginWindow.X = -10000;
+                Application.Current.OpenWindow(webBrowserLoginWindow);
+                InteropWindowsUtil.CenterWindow(webBrowserLoginWindow);
+                InteropWindowsUtil.BringWindowToFront(webBrowserLoginWindow);
             });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
-            thread.Join();
+            tcs.Task.Wait();
 
             // Request currenly loged-in user name or ID from server here and set it below. 
             // In case of WebDAV current-user-principal can be used for this purpose.
             // For demo purposes we just set "DemoUserX".
             this.CurrentUserPrincipal = "DemoUserX";
-
-            // Set cookies collected from the web browser dialog.
-            DavClient.CookieContainer.Add(webBrowserLogin.Cookies);
-            this.Cookies = webBrowserLogin.Cookies;
         }
 
-        /// <summary>
-        /// Shows login dialog for Basic, NTLM and Kerberos auth.
-        /// </summary>
-        /// <param name="failedUri">URI on which authentication is required.</param>
-        /// <returns>True if login was succesefull. False - otherwise.</returns>
-        private bool ChallengeLoginLogin(Uri failedUri)
+        private bool ChallengeLogin(Uri failedUri)
         {
-            Windows.Security.Credentials.PasswordCredential passwordCredential = CredentialManager.GetCredentials(CredentialsStorageKey, log);
-            if (passwordCredential != null)
+            bool succeed = false;
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+            MainThread.InvokeOnMainThreadAsync(() =>
             {
-                passwordCredential.RetrievePassword();
-                NetworkCredential networkCredential = new NetworkCredential(passwordCredential.UserName, passwordCredential.Password);
-                DavClient.Credentials = networkCredential;
-                this.Credentials = networkCredential;
-                this.CurrentUserPrincipal = networkCredential.UserName;
-                return true;
-            }
-            else
-            {
-                CredentialPickerResults res;
-                CredentialPickerOptions options = new CredentialPickerOptions();
-                options.Caption = productName;
-                options.CredentialSaveOption = CredentialSaveOption.Unselected;
-                options.AuthenticationProtocol = AuthenticationProtocol.Basic;
-                options.TargetName = failedUri.OriginalString;
-                options.Message = failedUri.OriginalString;
-                
-                res = CredentialPicker.PickAsync(options).GetAwaiter().GetResult();
-
-                loginRetriesCurrent++;
-                if (res.ErrorCode == 0)
+                Window? challengeWindow = null;
+                challengeWindow = new Window
                 {
-                    if (res.CredentialSaveOption == CredentialSaveOption.Selected)
+                    Page = new CredentialPickerLoginPage(failedUri, (networkCredential) =>
                     {
-                        //using (var dataReader = Windows.Storage.Streams.DataReader.FromBuffer(res.Credential))
-                        //{
-                        //    dataReader.UnicodeEncoding = Windows.Storage.Streams.UnicodeEncoding.Utf16LE;
-                        //    string creds = dataReader.ReadString(res.Credential.Length);
-                        //}
+                        DavClient.Credentials = networkCredential;
+                        this.Credentials = networkCredential;
+                        this.CurrentUserPrincipal = networkCredential.UserName;
+                        succeed = true;
+                        tcs.SetResult(true);
 
-                        CredentialManager.SaveCredentials(CredentialsStorageKey, res.CredentialUserName, res.CredentialPassword);
-                    }
+                        // Close the login window
+                        Application.Current.CloseWindow(challengeWindow!);
+                    }, () =>
+                    {
+                        tcs.SetResult(true);
+                        // Close the login window
+                        Application.Current.CloseWindow(challengeWindow!);
+                    }, CredentialsStorageKey, log)
+                };
+                challengeWindow.Width = 100;
+                challengeWindow.Height = 100;
+                challengeWindow.X = -100000;
 
-                    NetworkCredential newNetworkCredential = new NetworkCredential(res.CredentialUserName, res.CredentialPassword);
-                    DavClient.Credentials = newNetworkCredential;
-                    this.Credentials = newNetworkCredential;
-                    this.CurrentUserPrincipal = newNetworkCredential.UserName;
-                    return true;
-                }
-            }
+                Application.Current.OpenWindow(challengeWindow);
 
-            return false;
+                InteropWindowsUtil.SetWindowTransparent(challengeWindow);
+                InteropWindowsUtil.RemoveMinimizeAndMaximizeBoxes(challengeWindow);
+                InteropWindowsUtil.CenterWindow(challengeWindow);
+                InteropWindowsUtil.BringWindowToFront(challengeWindow);
+
+            });
+            tcs.Task.Wait();
+
+            return succeed;
         }
 
         private bool disposedValue;
@@ -618,9 +648,8 @@ namespace WebDAVDrive
             {
                 if (disposing)
                 {
-                    TrayUI.RemoveTray(this.InstanceId);
                     RemoteStorageMonitor?.Dispose();
-                    DavClient?.Dispose();                    
+                    DavClient?.Dispose();
                 }
 
                 disposedValue = true;

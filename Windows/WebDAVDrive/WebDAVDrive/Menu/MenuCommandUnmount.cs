@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
+using WebDAVDrive.Services;
 
 
 namespace WebDAVDrive
@@ -19,6 +20,7 @@ namespace WebDAVDrive
     public class MenuCommandUnmount : IMenuCommandWindows
     {
         private readonly VirtualEngine engine;
+        private readonly IDomainsService domainsService;
         private readonly ILogger logger;
 
         /// <summary>
@@ -26,8 +28,9 @@ namespace WebDAVDrive
         /// </summary>
         /// <param name="engine">Engine instance.</param>
         /// <param name="logger">Logger.</param>
-        public MenuCommandUnmount(VirtualEngine engine, ILogger logger)
+        public MenuCommandUnmount(IDomainsService domainsService, VirtualEngine engine, ILogger logger)
         {
+            this.domainsService = domainsService;
             this.engine = engine;
             this.logger = logger.CreateLogger("Unmount Menu Command");
         }
@@ -62,7 +65,8 @@ namespace WebDAVDrive
         /// <inheritdoc/>
         public async Task InvokeAsync(IEnumerable<string> filesPath, IEnumerable<byte[]> remoteStorageItemIds = null, CancellationToken cancellationToken = default)
         {
-            await Program.RemoveEngineAsync(engine, true);
+            await engine.Commands.StopEngineAsync();
+            await domainsService.UnMountAsync(engine.InstanceId, engine.RemoteStorageRootPath);
         }
 
         /// <inheritdoc/>

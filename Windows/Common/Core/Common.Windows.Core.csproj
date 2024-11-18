@@ -8,6 +8,8 @@
     <Copyright>IT Hit LTD.</Copyright>
     <RootNamespace>ITHit.FileSystem.Samples.Common.Windows</RootNamespace>
     <Platforms>AnyCPU;x64</Platforms>
+    <Nullable>enable</Nullable>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Installer.cs" />
@@ -21,8 +23,8 @@
     <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.19041.1" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="8.2.27026.0" />
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="8.2.27026.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="8.3.27213.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="8.3.27213.0" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
   </ItemGroup>
 </Project>

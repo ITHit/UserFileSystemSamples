@@ -291,9 +291,7 @@ namespace WebDAVFileProviderExtension
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(UnlockAsync)}()", RemoteStorageUriById.AbsoluteUri, default, operationContext);
 
-            IFileSystemItemMetadata fileSystemItemMetadata = await GetMetadataAsync();
-
-            if (fileSystemItemMetadata != null && fileSystemItemMetadata.Properties.TryGetValue("LockToken", out IDataItem lockInfoData))
+            if (operationContext.Properties.TryGetValue("LockToken", out IDataItem lockInfoData))
             {
                 if (lockInfoData.TryGetValue<ServerLockInfo>(out ServerLockInfo lockInfo) && lockInfo.Owner == Engine.CurrentUserPrincipal)
                 {
@@ -311,6 +309,9 @@ namespace WebDAVFileProviderExtension
                     }
                 }
             }
+
+            // Delete lock-mode and lock-token info.
+            operationContext.Properties.TryDeleteLockInfo();
         }
     }
 }
