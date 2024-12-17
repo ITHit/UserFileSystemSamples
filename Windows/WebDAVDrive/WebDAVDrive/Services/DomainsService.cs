@@ -304,6 +304,7 @@ namespace WebDAVDrive.Services
                 engine.AutoLock = Settings.AutoLock;
                 engine.MaxTransferConcurrentRequests = Settings.MaxTransferConcurrentRequests.Value;
                 engine.MaxOperationsConcurrentRequests = Settings.MaxOperationsConcurrentRequests.Value;
+                engine.FolderInvalidationIntervalMs = Settings.FolderInvalidationIntervalMs;
                
                 // Print Engine config, settings, logging headers.
                 await LogFormatter.PrintEngineStartInfoAsync(engine, webDAVServerUrl);

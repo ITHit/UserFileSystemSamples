@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
     <Authors>IT Hit LTD.</Authors>
     <Company>IT Hit LTD.</Company>
     <Product>Virtual Drive</Product>
@@ -35,12 +35,12 @@ This is an advanced project with ETags support, Microsoft Office documents editi
     <Compile Remove="SyncService.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
-    <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="8.3.27213.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="8.4.27341.0" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\..\Common\VirtualDrive\Common.Windows.VirtualDrive.csproj" />
   </ItemGroup>
@@ -83,6 +83,6 @@ This is an advanced project with ETags support, Microsoft Office documents editi
     </None>
   </ItemGroup>
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="&quot;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\makeappx&quot; pack /d &quot;$(ProjectDir)SparsePackage&quot; /p &quot;$(OutDir)$(ProjectName).msix&quot; /nv /o&#xD;&#xA;&quot;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool&quot; sign /fd SHA256 /a /f &quot;$(ProjectDir)$(ProjectName)_TemporaryKey.pfx&quot; /p &quot;ccaZD9HZ5ueFAYfaTtoN&quot; &quot;$(OutDir)$(ProjectName).msix&quot;&#xD;&#xA;taskkill /f /fi &quot;imagename eq VirtualDrive.ShellExtension.exe&quot;" />
+    <Exec Command="&quot;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\makeappx&quot; pack /d &quot;$(ProjectDir)SparsePackage&quot; /p &quot;$(OutDir)$(ProjectName).msix&quot; /nv /o&#xD;&#xA;&quot;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool&quot; sign /fd SHA256 /a /f &quot;$(ProjectDir)$(ProjectName)_TemporaryKey.pfx&quot; /p &quot;ccaZD9HZ5ueFAYfaTtoN&quot; &quot;$(OutDir)$(ProjectName).msix&quot;" />
   </Target>
 </Project>

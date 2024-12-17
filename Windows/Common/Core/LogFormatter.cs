@@ -141,6 +141,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             Log.Info($"\n{"Shell extensions RPC enabled:",indent} {engine.ShellExtensionsComServerRpcEnabled}");
             Log.Info($"\n{"Max create/read/write concurrent requests:",indent} {engine.MaxTransferConcurrentRequests}");
             Log.Info($"\n{"Max list/move/delete concurrent requests:",indent} {engine.MaxOperationsConcurrentRequests}");
+            Log.Info($"\n{"Folder invalidation interval, ms:",indent} {engine.FolderInvalidationIntervalMs}");
 
             // Log indexing state. Sync root must be indexed.
             await PrintIndexingStateAsync(engine.Path);

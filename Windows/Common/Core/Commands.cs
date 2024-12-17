@@ -199,26 +199,5 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
 #endif
-
-        public void Test()
-        {
-            string name = "Notes.txt";
-            string filePath = Path.Combine(Engine.Path, name);
-            //FileInfo fi = new FileInfo(filePath);
-            //fi.IsReadOnly = true;
-
-            var n = Engine.ServerNotifications(filePath);
-            IFileMetadata metadata = new FileMetadata();
-            metadata.Attributes = FileAttributes.Normal;
-            metadata.CreationTime = DateTimeOffset.Now;
-            metadata.LastWriteTime = DateTimeOffset.Now;
-            metadata.ChangeTime = DateTimeOffset.Now;
-            metadata.LastAccessTime = DateTimeOffset.Now;
-            metadata.Name = name;
-            metadata.MetadataETag = DateTimeOffset.Now.Ticks.ToString();
-            metadata.ContentETag = null;//"etag1";
-            n.UpdateAsync(metadata);
-        }
-
     }
 }

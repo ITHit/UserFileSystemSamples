@@ -45,7 +45,7 @@ namespace WebDAVDrive.Utils
             {
                 ItemUrls = GetItemUrls(parameters),
                 MountUrl = new Uri(HttpUtility.UrlDecode(parameters["MountUrl"])),
-                Command = Enum.TryParse(HttpUtility.UrlDecode(parameters["Command"]), true, out CommandType command)
+                Command = parameters.ContainsKey("Command") && Enum.TryParse(HttpUtility.UrlDecode(parameters["Command"]), true, out CommandType command)
                     ? command
                     : CommandType.Open // Default if parsing fails
             };

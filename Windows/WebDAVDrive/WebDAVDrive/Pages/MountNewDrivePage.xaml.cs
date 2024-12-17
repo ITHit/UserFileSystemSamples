@@ -6,10 +6,10 @@ namespace WebDAVDrive;
 
 public partial class MountNewDrivePage : ContentPage
 {
-	public MountNewDrivePage()
-	{
-		InitializeComponent();
-	}
+    public MountNewDrivePage()
+    {
+        InitializeComponent();
+    }
 
     private async void OnValidateClicked(object sender, EventArgs e)
     {
@@ -34,14 +34,18 @@ public partial class MountNewDrivePage : ContentPage
                 btnAddDrive.IsEnabled = false;
 
                 // Mount new domain.
-                await ServiceProviderUtil.GetService<IDomainsService>().MountNewAsync([url]);
+                _ = Task.Run(async () =>
+                {
+                    await ServiceProviderUtil.GetService<IDomainsService>().MountNewAsync([url]);
+
+                });
                 Application.Current.CloseWindow(Window);
             }
             else
-            {           
+            {
                 ValidationMessage.Text = "Invalid URL. Please enter a valid URL.";
                 ValidationMessage.IsVisible = true;
-            }        
+            }
         }
     }
 

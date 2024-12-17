@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net8.0-windows10.0.19041.0;net48</TargetFrameworks>
+    <TargetFrameworks>net9.0-windows10.0.19041.0;net48</TargetFrameworks>
     <UseWindowsForms>True</UseWindowsForms>
     <Description>Contains functionality common for all Windows Virtual Drive samples.</Description>
     <Authors>IT Hit LTD.</Authors>
@@ -16,15 +16,15 @@
     <Compile Remove="Logger.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="log4net" Version="2.0.13" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
+    <PackageReference Include="log4net" Version="3.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'net48' ">
-    <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.19041.1" />
+    <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.26100.1742" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="8.3.27213.0" />
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="8.3.27213.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="8.4.27341.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="8.4.27341.0" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
   </ItemGroup>
 </Project>
