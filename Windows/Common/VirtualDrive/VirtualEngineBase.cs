@@ -214,7 +214,10 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                             logger.LogMessage(msg, item.Path, item.NewPath, e.OperationContext, item.Metadata);
                             break;
                         case OperationSource.Client:
-                            logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext, item.Metadata);
+                            if(e.OperationType == OperationType.Dehydration)
+                                logger.LogMessage(msg, item.Path, item.NewPath, e.OperationContext, item.Metadata);
+                            else
+                                logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext, item.Metadata);
                             break;
                     }
                     break;

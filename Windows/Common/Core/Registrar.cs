@@ -202,7 +202,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <summary>
         /// Unregisters all sync roots that has a provider ID and removes all components.
         /// </summary>
-        /// <param name="providerID">This method will only unmount sync roots that has this provider ID.</param>
+        /// <param name="providerId">This method will only unmount sync roots that has this provider ID.</param>
         /// <param name="fullUnregistration">
         /// Pass true in the released application to remove all registered components.
         /// Pass false in development mode, to keep sparse package, 

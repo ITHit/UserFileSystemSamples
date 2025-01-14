@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "WebDAVDrive (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "WebDAVDrive (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

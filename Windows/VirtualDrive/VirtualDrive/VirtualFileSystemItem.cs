@@ -160,7 +160,7 @@ namespace VirtualDrive
             byte[] thumbnail = ThumbnailExtractor.GetRemoteThumbnail(remoteStoragePath, size);
 
             string thumbnailResult = thumbnail != null ? "Success" : "Not Impl";
-            Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(GetThumbnailAsync)}(): {thumbnailResult}", UserFileSystemPath);
+            Logger.LogDebug($"{nameof(IFileSystemItem)}.{nameof(GetThumbnailAsync)}(): {thumbnailResult}", UserFileSystemPath, default, operationContext);
 
             return thumbnail;
         }
@@ -230,8 +230,8 @@ namespace VirtualDrive
             // Save the lock token and other lock info received from your remote storage on the client.
             // Supply the lock-token as part of each remote storage update in File.WriteAsync() method.
             // For demo purposes we just fill some generic data.
-            ServerLockInfo serverLockInfo = new ServerLockInfo() 
-            { 
+            ServerLockInfo serverLockInfo = new ServerLockInfo()
+            {
                 LockToken = "ServerToken",
                 Owner = Engine.CurrentUserPrincipal,
                 Exclusive = true,
@@ -241,6 +241,42 @@ namespace VirtualDrive
 
             // Save lock-token and lock-mode.
             operationContext.Properties.SetLockInfo(serverLockInfo);
+
+
+            if (lockMode == LockMode.Auto)
+            {
+                // Start the timer to unlock if the file is not locked.
+                System.Timers.Timer timer = new System.Timers.Timer(10000);
+                timer.AutoReset = true;
+                timer.Elapsed += async (object sender, System.Timers.ElapsedEventArgs e) =>
+                {
+                    try
+                    {                        
+                        if (cancellationToken.IsCancellationRequested) return;
+
+                        if (operationContext.Properties.TryGetLockInfo(out ServerLockInfo serverLockInfo) &&
+                            FilterHelper.IsLockedWithOwnerFile(UserFileSystemPath) && !FilterHelper.IsOwnerFileExists(UserFileSystemPath))
+                        {
+                            await Engine.ClientNotifications(UserFileSystemPath).UnlockAsync(true, cancellationToken);
+                            PlaceholderItem.UpdateUI(UserFileSystemPath);
+                            // Stop the timer.
+                            timer.Dispose();
+                        }
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // Stop the timer.
+                        timer.Dispose();
+
+                        Logger.LogDebug("Checking lock canceled", UserFileSystemPath, default, operationContext);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError("Checking lock failed", UserFileSystemPath, default, ex, operationContext);
+                    }
+                };
+                timer.Start();
+            }
         }
 
         ///<inheritdoc>
@@ -258,7 +294,7 @@ namespace VirtualDrive
         public async Task UnlockAsync(IOperationContext operationContext, CancellationToken cancellationToken)
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(UnlockAsync)}()", UserFileSystemPath, default, operationContext);
-            
+
             // Read the lock-token.
             if (operationContext.Properties.TryGetLockInfo(out ServerLockInfo lockInfo))
             {

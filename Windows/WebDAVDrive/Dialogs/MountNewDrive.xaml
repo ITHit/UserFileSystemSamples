@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<local:DialogWindow
+    x:Class="WebDAVDrive.Dialogs.MountNewDrive"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WebDAVDrive.Dialogs"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid Style="{StaticResource MountNewDriveMainGridStyle}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="44"/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Style="{StaticResource MountNewDriveMainStackPanelStyle}">
+            <!-- Title -->
+            <TextBlock x:Uid="EnterUrl" Style="{StaticResource MountNewDriveMainTextBlockStyle}" />
+
+            <!-- URL Entry TextBox -->
+            <TextBox x:Name="UrlEntry" x:Uid="UrlEntry" Style="{StaticResource MountNewDriveMainTextBoxStyle}" Loaded="UrlEntryLoaded" KeyDown="UrlEntryKeyDown" />
+
+            <!-- Required Validation Message -->
+            <TextBlock x:Name="RequiredMessage" x:Uid="UrlRequiredMessage" Style="{StaticResource MountNewDriveErrorStyle}" />
+
+            <!-- Validation Message -->
+            <TextBlock x:Name="ValidationMessage" Foreground="Red" Style="{StaticResource MountNewDriveErrorStyle}" />            
+        </StackPanel>
+
+        <!-- Buttons -->
+        <StackPanel Style="{StaticResource DialogButtonsStackPanelStyle}" Grid.Row="1">
+            <Button x:Uid="Cancel" Click="OnCloseClicked" Style="{StaticResource DialogButtonStyle}" />
+            <Button x:Uid="Add" x:Name="btnAddDrive" Click="OnValidateClicked" Style="{StaticResource DialogButtonStyle}" />
+        </StackPanel>
+    </Grid>
+</local:DialogWindow>
