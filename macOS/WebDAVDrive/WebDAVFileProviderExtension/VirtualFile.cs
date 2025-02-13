@@ -22,7 +22,7 @@ namespace WebDAVFileProviderExtension
         }
      
         /// <inheritdoc/>
-        public async Task<IFileMetadata> ReadAsync(Stream output, long offset, long length, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
+        public async Task<IFileMetadata> ReadAsync(Stream output, long offset, long length, IFileMetadata metadata, ITransferDataOperationContext operationContext, ITransferDataResultContext resultContext, CancellationToken cancellationToken)
         {           
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", RemoteStorageUriById.AbsoluteUri, default, operationContext);
 
@@ -59,7 +59,7 @@ namespace WebDAVFileProviderExtension
                 //MetadataETag = 
             };
         }
-        
+
 
         /// <inheritdoc/>
         public async Task<IFileMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)

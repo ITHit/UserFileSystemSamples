@@ -262,10 +262,10 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 return true;
             }
 
-            //if (await new PhotoshopFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
-            //{
-            //    return true;
-            //}
+            if (await new PhotoshopFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
+            {
+                return true;
+            }
 
             //if (await new ErrorStatusFilter(true).FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             //{

@@ -25,5 +25,15 @@ namespace WebDAVDrive
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         public static T GetService<T>() => Services.GetService<T>()!;
+
+        /// <summary>
+        /// Indicates whether current application theme is dark.
+        /// </summary>
+        public static bool IsDarkTheme { get; set; }
+
+        /// <summary>
+        /// Windows Scale factor at the moment of application launch (e.g. 100, 125).
+        /// </summary>
+        public static int Scale { get; set; }
     }
 }

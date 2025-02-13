@@ -32,7 +32,7 @@ namespace WebDAVDrive.Services
                 notifyIcon = new NotifyIcon
                 {
                     Icon = new System.Drawing.Icon(Path.Combine(AppContext.BaseDirectory, "Images/drive.ico")),
-                    Text = resourceLoader.GetString("WebDAVDrive/Text"),
+                    Text = ServiceProvider.GetService<AppSettings>().ProductName,
                     Visible = true
                 };
 

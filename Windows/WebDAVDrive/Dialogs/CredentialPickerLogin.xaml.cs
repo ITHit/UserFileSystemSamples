@@ -2,9 +2,10 @@ using System;
 using System.Net;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.Resources;
-using Windows.Graphics;
 using Windows.Security.Credentials.UI;
 using WinUIEx;
+
+using WebDAVDrive.Extensions;
 
 namespace WebDAVDrive.Dialogs
 {
@@ -19,8 +20,6 @@ namespace WebDAVDrive.Dialogs
         /// </summary>
         private readonly Uri url;
         private readonly log4net.ILog log;
-        private const int CustomWindowWidth = 100;
-        private const int CustomWindowHeight = 100;
 
         public CredentialPickerLogin(Uri url, log4net.ILog log) : base()
         {
@@ -33,7 +32,7 @@ namespace WebDAVDrive.Dialogs
 
             //Set the window transparent, remove minimize and maximize boxes, set other UI parameters.
             //as for this window UI parameters are different than for other dialogs - put it here instead of calling base class method
-            AppWindow.Resize(new SizeInt32(CustomWindowWidth, CustomWindowHeight));
+            this.Resize(100, 100);
             SystemBackdrop = new TransparentTintBackdrop();
             this.SetExtendedWindowStyle(ExtendedWindowStyle.Layered | ExtendedWindowStyle.Transparent);
             this.SetIsResizable(false);

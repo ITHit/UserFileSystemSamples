@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:WebDAVDrive.Dialogs"
+    xmlns:controls="using:WebDAVDrive.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:animatedvisuals="using:Microsoft.UI.Xaml.Controls.AnimatedVisuals"
@@ -61,10 +62,10 @@
         </StackPanel>
         <!-- Buttons -->
         <StackPanel Style="{StaticResource DialogButtonsStackPanelStyle}" Grid.Row="1">
-            <Button x:Uid="Compare" Style="{StaticResource DialogButtonStyle}" IsEnabled="{Binding EnableMergeButton}" Click="BtnCompareClicked" />
-            <Button x:Uid="TakeServer" Style="{StaticResource DialogButtonStyle}" IsEnabled="{Binding EnableTakeRemoteVersionButton}" Click="BtnTakeServerVersionClicked" />
-            <Button x:Uid="TakeClient" Style="{StaticResource DialogButtonStyle}" IsEnabled="{Binding EnableTakeLocalVersionButton}" Click="BtnTakeLocalVersionClicked" />
-            <Button x:Uid="Close" x:Name="CloseButton" Style="{StaticResource DialogButtonStyle}" IsEnabled="{Binding EnableCloseButton}" Click="BtnCloseClicked" />
+            <controls:CursorButton x:Uid="Compare" Style="{StaticResource DialogButtonStyle}" IsEnabled="{Binding EnableMergeButton}" Click="BtnCompareClicked" />
+            <controls:CursorButton x:Uid="TakeServer" Style="{StaticResource DialogButtonStyle}" IsEnabled="{Binding EnableTakeRemoteVersionButton}" Click="BtnTakeServerVersionClicked" />
+            <controls:CursorButton x:Uid="TakeClient" Style="{StaticResource DialogButtonStyle}" IsEnabled="{Binding EnableTakeLocalVersionButton}" Click="BtnTakeLocalVersionClicked" />
+            <controls:CursorButton x:Uid="Close" x:Name="CloseButton" Style="{StaticResource DialogButtonStyle}" IsEnabled="{Binding EnableCloseButton}" Click="BtnCloseClicked" />
         </StackPanel>
         <ProgressRing IsActive="{Binding IsLoading}" Width="50" Height="50" />      
     </Grid>

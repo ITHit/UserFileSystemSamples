@@ -297,4 +297,80 @@
     <value>OK</value>
     <comment>Error content dialog close button text</comment>
   </data>
+  <data name="OpenItemMenu.Text" xml:space="preserve">
+    <value>Open</value>
+    <comment>Event's submenu - Open label</comment>
+  </data>
+  <data name="ShowInFolderMenu.Text" xml:space="preserve">
+    <value>Show in Folder</value>
+    <comment>Event's submenu - Show in Folder label</comment>
+  </data>
+  <data name="ViewItemOnlineMenu.Text" xml:space="preserve">
+    <value>View Online</value>
+    <comment>Event's submenu - View Online label</comment>
+  </data>
+  <data name="Checkout.Content" xml:space="preserve">
+    <value>Check Out</value>
+    <comment>Check Out</comment>
+  </data>
+  <data name="Checkout_Question.Text" xml:space="preserve">
+    <value>You are about to open the document, whould you like to check it out?</value>
+  </data>
+  <data name="Checkout_FileName.Text" xml:space="preserve">
+    <value>Sample_Name.pdf</value>
+  </data>
+  <data name="Checkout_OpenFromDomain.Text" xml:space="preserve">
+    <value>ithit.sharepoint.com</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="From" xml:space="preserve">
+    <value>From</value>
+  </data>
+  <data name="Alert_Question.Text" xml:space="preserve">
+    <value>Other users can't see your changes until you check in the document. &amp;#x0a;Do you want to check in now? </value>
+  </data>
+  <data name="Yes" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="No" xml:space="preserve">
+    <value>No</value>
+  </data>
+  <data name="Checkin.Content" xml:space="preserve">
+    <value>Check In</value>
+  </data>
+  <data name="Checkin_Question.Text" xml:space="preserve">
+    <value>You are about to checkin</value>
+  </data>
+  <data name="Checkin_Comments.PlaceholderText" xml:space="preserve">
+    <value>Enter your version comments here</value>
+  </data>
+  <data name="Checkin_Keep.Content" xml:space="preserve">
+    <value>Keep the document checked out after check in this version?</value>
+  </data>
+  <data name="DisableDebugLogging" xml:space="preserve">
+    <value>Disable Debug Logging</value>
+    <comment>Disable Debug Logging menu text</comment>
+  </data>
+  <data name="EnableDebuglogging" xml:space="preserve">
+    <value>Enable Debug Logging</value>
+    <comment>Enable Debug Logging menu text</comment>
+  </data>
+  <data name="PinTooltip.Content" xml:space="preserve">
+    <value>Pin</value>
+    <comment>Pin button tooltip</comment>
+  </data>
+  <data name="SettingsTooltip.Content" xml:space="preserve">
+    <value>Settings</value>
+    <comment>Settings button tooltip</comment>
+  </data>
+  <data name="UnpinTooltip.Content" xml:space="preserve">
+    <value>Unpin</value>
+    <comment>Unpin button tooltip</comment>
+  </data>
+  <data name="DebugMenu.Text" xml:space="preserve">
+    <value>Debug</value>
+    <comment>Debug menu text</comment>
+  </data>
 </root>

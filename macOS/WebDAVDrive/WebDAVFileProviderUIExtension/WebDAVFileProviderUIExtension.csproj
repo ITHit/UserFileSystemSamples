@@ -100,7 +100,7 @@
     <ProjectReference Include="..\WebDAVCommon\WebDAVCommon.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Mac" Version="8.1.26791-Beta2" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="8.1.26901" />
   </ItemGroup>
     <ItemGroup>
       <Content Include="..\WebDAVMacApp\Resources\appsettings.json" Link="Resources\appsettings.json" />

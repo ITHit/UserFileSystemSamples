@@ -37,7 +37,7 @@ namespace WebDAVDrive.Services
             ServiceProvider.DispatcherQueue.TryEnqueue(() =>
             {
                 // Create Tray window.
-                Tray settingsWindow = CreateTrayWindow(engineKey, engine);
+                Tray trayWindow = CreateTrayWindow(engineKey, engine);
 
                 Icon startedIcon = new Icon(Path.Combine(AppContext.BaseDirectory, "Images/drive.ico"));
                 Icon stoppedIcon = new Icon(Path.Combine(AppContext.BaseDirectory, "Images/drivepause.ico"));
@@ -48,7 +48,7 @@ namespace WebDAVDrive.Services
                 NotifyIcon notifyIcon = new NotifyIcon
                 {
                     Icon = startedIcon,
-                    Text = $"{resourceLoader.GetString("WebDAVDrive/Text")} \n {driveName}",
+                    Text = $"{ServiceProvider.GetService<AppSettings>().ProductName}\n{driveName}",
                     Visible = true
                 };
 
@@ -58,12 +58,12 @@ namespace WebDAVDrive.Services
                     if (e.NewState == EngineState.Stopped)
                     {                        
                         notifyIcon.Icon = stoppedIcon;
-                        notifyIcon.Text = $"{resourceLoader.GetString("WebDAVDrive/Text")} \n {driveName} - {resourceLoader.GetString("Idle")}";
+                        notifyIcon.Text = $"{ServiceProvider.GetService<AppSettings>().ProductName}\n{driveName} - {resourceLoader.GetString("Idle")}";
                     }
                     else
                     {                       
                         notifyIcon.Icon = startedIcon;
-                        notifyIcon.Text = $"{resourceLoader.GetString("WebDAVDrive/Text")} \n {driveName} - {resourceLoader.GetString("SynchronizationStopped")}";
+                        notifyIcon.Text = $"{ServiceProvider.GetService<AppSettings>().ProductName}\n{driveName} - {resourceLoader.GetString("SynchronizationStopped")}";
                     }
                 };
 
@@ -73,18 +73,22 @@ namespace WebDAVDrive.Services
                     if (e.NewState ==  SynchronizationState.Synchronizing)
                     {
                         notifyIcon.Icon = syncIcon;
-                        notifyIcon.Text = $"{resourceLoader.GetString("WebDAVDrive/Text")} \n {driveName} - {resourceLoader.GetString("Synching")}";
+                        notifyIcon.Text = $"{ServiceProvider.GetService<AppSettings>().ProductName}\n{driveName} - {resourceLoader.GetString("Synching")}";
                     }
                     else
                     {
                         notifyIcon.Icon = startedIcon;
-                        notifyIcon.Text = $"{resourceLoader.GetString("WebDAVDrive/Text")} \n {driveName} - {resourceLoader.GetString("Idle")}";
+                        notifyIcon.Text = $"{ServiceProvider.GetService<AppSettings>().ProductName}\n{driveName} - {resourceLoader.GetString("Idle")}";
                     }
                 };
 
                 notifyIcon.Click += (_, _) =>
                 {
-                    settingsWindow.ShowWithAnimation();
+                    //in case Tray window is not pinned right now - show it with animation
+                    if (!trayWindow.Pinned)
+                    {
+                        trayWindow.ShowWithAnimation();
+                    }
                 };
 
                 trayIcons.Add(engineKey, notifyIcon);

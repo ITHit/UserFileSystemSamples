@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.UI.Xaml;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
@@ -221,6 +222,12 @@ namespace WebDAVDrive
                     lockIconName += "Auto";
                 }
 
+                //If it's icon for current user (Locked or LockedAuto) and current theme is dark - use white icon
+                if (thisUser && ServiceProvider.IsDarkTheme)
+                {
+                    lockIconName += "White";
+                }
+
                 // Set Lock Owner.
                 FileSystemItemPropertyData propertyLockOwner = new FileSystemItemPropertyData()
                 {
@@ -308,6 +315,9 @@ namespace WebDAVDrive
 
             // Save lock-token and lock-mode. Start the timer to refresh the lock.
             await SaveLockAsync(lockInfo, lockMode, operationContext, cancellationToken);
+
+            // Show checkout dialog and checkout file.
+            await Engine.CheckoutManager.TryCheckOutAsync(UserFileSystemPath, RemoteStoragePath, lockInfo);
         }
 
         /// <summary>
@@ -444,6 +454,9 @@ namespace WebDAVDrive
 
             // Delete lock-mode and lock-token info.
             operationContext.Properties.TryDeleteLockInfo();
+
+            // Show checkin dialog and checkin file if user decide.
+            await Engine.CheckoutManager.TryCheckInAsync(UserFileSystemPath, RemoteStoragePath, lockInfo);
         }
         
     }

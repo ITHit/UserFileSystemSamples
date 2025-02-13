@@ -15,6 +15,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="Dialogs\Alert.xaml" />
+    <None Remove="Dialogs\Checkout.xaml" />
+    <None Remove="Dialogs\ConflictResolution.xaml" />
     <None Remove="Dialogs\CredentialPickerLogin.xaml" />
     <None Remove="Dialogs\MountNewDrive.xaml" />
     <None Remove="Dialogs\Startup.xaml" />
@@ -28,45 +31,161 @@
     <None Remove="Images\Close.png" />
     <None Remove="Images\CloseWhite.png" />
     <None Remove="Images\Cloud.svg" />
+    <None Remove="Images\CloudDownload.png" />
+    <None Remove="Images\CloudDownloadWhite.png" />
+    <None Remove="Images\CloudUpload.png" />
+    <None Remove="Images\CloudUploadWhite.png" />
     <None Remove="Images\CloudWhite.svg" />
     <None Remove="Images\Compare.ico" />
     <None Remove="Images\Contact.png" />
     <None Remove="Images\ContactWhite.png" />
+    <None Remove="Images\Debug.png" />
+    <None Remove="Images\DebugWhite.png" />
+    <None Remove="Images\Download.png" />
+    <None Remove="Images\DownloadWhite.png" />
     <None Remove="Images\Drive.ico" />
     <None Remove="Images\Drive.png" />
     <None Remove="Images\DrivePause.ico" />
     <None Remove="Images\DriveSync.ico" />
     <None Remove="Images\Empty.ico" />
     <None Remove="Images\Error.ico" />
+    <None Remove="Images\Error.png" />
+    <None Remove="Images\ErrorWhite.png" />
     <None Remove="Images\File.png" />
     <None Remove="Images\FileWhite.png" />
     <None Remove="Images\Folder.svg" />
+    <None Remove="Images\FolderLight.png" />
+    <None Remove="Images\FolderLightWhite.png" />
     <None Remove="Images\FolderWhite.svg" />
-    <None Remove="Images\Internet.svg" />
-    <None Remove="Images\InternetWhite.svg" />
+    <None Remove="Images\Internet.png" />
+    <None Remove="Images\InternetWhite.png" />
+    <None Remove="Images\Lock.png" />
     <None Remove="Images\Locked.ico" />
     <None Remove="Images\LockedAuto.ico" />
+    <None Remove="Images\LockedAutoWhite.ico" />
     <None Remove="Images\LockedByAnotherUser.ico" />
     <None Remove="Images\LockedPending.ico" />
+    <None Remove="Images\LockedWhite.ico" />
     <None Remove="Images\LockOpen.png" />
     <None Remove="Images\LockOpenWhite.png" />
+    <None Remove="Images\LockWhite.png" />
+    <None Remove="Images\Open.png" />
+    <None Remove="Images\OpenWhite.png" />
     <None Remove="Images\PauseCircle.png" />
     <None Remove="Images\PauseCircleWhite.png" />
+    <None Remove="Images\Pin.png" />
+    <None Remove="Images\PinWhite.png" />
     <None Remove="Images\Play.png" />
     <None Remove="Images\PlayWhite.png" />
+    <None Remove="Images\Plus.png" />
+    <None Remove="Images\PlusWhite.png" />
+    <None Remove="Images\Question.png" />
+    <None Remove="Images\QuestionWhite.png" />
     <None Remove="Images\Refresh.png" />
     <None Remove="Images\RefreshWhite.png" />
-    <None Remove="Images\Send.png" />
-    <None Remove="Images\SendWhite.png" />
     <None Remove="Images\Settings.png" />
     <None Remove="Images\SettingsWhite.png" />
+    <None Remove="Images\ShowInFolder.png" />
+    <None Remove="Images\ShowInFolderWhite.png" />
     <None Remove="Images\SplashScreen.png" />
     <None Remove="Images\Sync.svg" />
+    <None Remove="Images\ThreeDots.png" />
+    <None Remove="Images\ThreeDotsWhite.png" />
     <None Remove="Images\Unlocked.ico" />
+    <None Remove="Images\Unmount.png" />
+    <None Remove="Images\UnmountWhite.png" />
+    <None Remove="Images\Unpin.png" />
+    <None Remove="Images\UnpinWhite.png" />
+    <None Remove="Images\Upload.png" />
+    <None Remove="Images\UploadWhite.png" />
     <None Remove="log4net.config" />
     <None Remove="Resources\Styles\TrayResources.xaml" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Images\CloudDownload.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\CloudDownloadWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\CloudUpload.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\CloudUploadWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Debug.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\DebugWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Download.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\DownloadWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Error.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\ErrorWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\FolderLight.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\FolderLightWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Internet.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\InternetWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Lock.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\LockedAutoWhite.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\LockedWhite.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\LockWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Open.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\OpenWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Pin.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\PinWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Plus.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\PlusWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Question.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\QuestionWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\ShowInFolder.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\ShowInFolderWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Images\SplashScreen.scale-200.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -80,6 +199,30 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Images\Square44x44Logo.targetsize-24_altform-unplated.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\ThreeDots.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\ThreeDotsWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Unmount.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\UnmountWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Unpin.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\UnpinWhite.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Upload.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\UploadWhite.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Images\Wide310x150Logo.scale-200.png">
@@ -162,12 +305,6 @@
     <Content Include="Images\FolderWhite.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Images\Internet.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Images\InternetWhite.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="Images\LargeTile.scale-100.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -217,12 +354,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Images\RefreshWhite.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Images\Send.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Images\SendWhite.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Images\Settings.png">
@@ -384,7 +515,7 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
-    <PackageReference Include="ITHitWebDAVClient" Version="7.1.5036" />
+    <PackageReference Include="ITHitWebDAVClient" Version="7.1.5044" />
     <PackageReference Include="log4net" Version="3.0.3" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
@@ -396,19 +527,28 @@
     <PackageReference Include="WinUIEx" Version="2.5.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="8.5.27224.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="8.5.27248.0" />
     <ProjectReference Include="..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Common\Core\Common.Windows.Core.csproj" />
     <ProjectReference Include="..\Common\VirtualDrive\Common.Windows.VirtualDrive.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Page Update="Resources\Styles\MountNewDriveResources.xaml">
-      <SubType>Designer</SubType>
+    <Page Update="Dialogs\Alert.xaml">
+      <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="Resources\Styles\CompareResources.xaml">
-      <SubType>Designer</SubType>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Dialogs\Checkin.xaml">
+      <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="Resources\Styles\TrayResources.xaml">
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Dialogs\Checkout.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Dialogs\ConflictResolution.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>

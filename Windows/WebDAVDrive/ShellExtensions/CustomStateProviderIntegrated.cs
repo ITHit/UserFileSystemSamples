@@ -4,7 +4,7 @@ using ITHit.FileSystem.Windows.ShellExtension;
 using WebDAVDrive.Services;
 
 
-namespace WebDAVDrive.ShellExtension
+namespace WebDAVDrive.ShellExtensions
 {
     /// <summary>
     /// Implements custom state provider for virtual drive.

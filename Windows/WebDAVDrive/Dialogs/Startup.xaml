@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:WebDAVDrive.Dialogs"
+    xmlns:controls="using:WebDAVDrive.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
@@ -46,14 +47,14 @@
 
             <!-- "Mount New Drive" Link and Close Button -->
             <StackPanel Style="{StaticResource DialogButtonsStackPanelStyle}" Grid.Column="2">
-                <Button
+                <controls:CursorButton
                    x:Uid="MountNewDriveButton"              
                    Click="OnMountNewDriveClicked" Style="{StaticResource DialogButtonStyle}" >
-                </Button>
-                <Button
+                </controls:CursorButton>
+                <controls:CursorButton
                     x:Uid="Close" x:Name="CloseButton" Loaded="CloseButtonLoaded"
                     Click="OnCloseClicked" Style="{StaticResource DialogButtonStyle}" >
-                </Button>
+                </controls:CursorButton>
             </StackPanel>
         </Grid>
     </Grid>

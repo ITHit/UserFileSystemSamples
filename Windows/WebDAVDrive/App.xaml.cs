@@ -16,9 +16,8 @@ using ITHit.FileSystem.Windows.ShellExtension;
 using WindowManager = ITHit.FileSystem.Samples.Common.Windows.WindowManager;
 
 using WebDAVDrive.Services;
-using WebDAVDrive.ShellExtension;
-using WebDAVDrive.Dialogs;
 using System.Runtime.InteropServices;
+using WebDAVDrive.ShellExtensions;
 
 
 namespace WebDAVDrive
@@ -72,6 +71,8 @@ namespace WebDAVDrive
             // Set the service provider.
             ServiceProvider.Services = Services;
             ServiceProvider.DispatcherQueue = DispatcherQueue.GetForCurrentThread();
+            //assing IsDarkTheme property on application start
+            ServiceProvider.IsDarkTheme = Current.RequestedTheme == ApplicationTheme.Dark;
 
 #if DEBUG
             // Display Console.
@@ -193,7 +194,7 @@ namespace WebDAVDrive
             // Register your services here
             serviceCollection.AddSingleton(options => LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType));
             serviceCollection.AddSingleton(options => configuration.ReadSettings());
-            serviceCollection.AddSingleton(options => ShellExtensions.StartComServer());
+            serviceCollection.AddSingleton(options => LocalServerExtension.StartComServer());
             serviceCollection.AddSingleton<SecureStorageService>();
             serviceCollection.AddSingleton<IToastNotificationService, ToastNotificationService>();
             serviceCollection.AddSingleton<IDrivesService, DrivesService>();

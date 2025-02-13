@@ -19,7 +19,7 @@ namespace WebDAVDrive.Services
         IToastNotificationService NotificationService { get; }
         ConcurrentDictionary<Guid, VirtualEngine> Engines { get; }
         ConcurrentDictionary<Guid, EngineWindows> GetEngineWindowsDictionary();
-        Task MountNewAsync(string[] webDAVServerURLs);
+        Task<(bool success, Exception? exception)> MountNewAsync(string webDAVServerUrl);
         Task UnMountAsync(Guid engineId, string webDAVServerURL);
         Task InitializeAsync(bool displayMountNewDriveWindow);
         Task EnginesExitAsync();

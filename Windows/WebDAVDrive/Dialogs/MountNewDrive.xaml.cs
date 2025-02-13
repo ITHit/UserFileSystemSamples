@@ -1,11 +1,14 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Controls;
+using System;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.Resources;
 using Windows.System;
 
 using WebDAVDrive.Services;
+using WebDAVDrive.Extensions;
 
 namespace WebDAVDrive.Dialogs
 {
@@ -14,14 +17,15 @@ namespace WebDAVDrive.Dialogs
     /// </summary>
     public sealed partial class MountNewDrive : DialogWindow
     {
+        private readonly ResourceLoader resourceLoader = ResourceLoader.GetForViewIndependentUse();
         public MountNewDrive() : base()
         {
             InitializeComponent();
-            ResourceLoader resourceLoader = ResourceLoader.GetForViewIndependentUse();
+            this.Resize(800, 400);
             Title = $"{ServiceProvider.GetService<AppSettings>().ProductName} - {resourceLoader.GetString("MountNewDriveWindow/Title")}";
 
             // Resize and center the window.
-            SetDefaultSizePosition();
+            SetDefaultPosition();
         }
 
         private void OnValidateClicked(object sender, RoutedEventArgs e)
@@ -49,10 +53,32 @@ namespace WebDAVDrive.Dialogs
                     // Mount new domain.
                     _ = Task.Run(async () =>
                     {
-                        await ServiceProvider.GetService<IDrivesService>().MountNewAsync([url]);
+                        (bool success, Exception? exception) result = await ServiceProvider.GetService<IDrivesService>().MountNewAsync(url);
 
+                        if (result.success)
+                        {
+                            ServiceProvider.DispatcherQueue.TryEnqueue(() =>
+                            {
+                                Close();
+                            });
+                        }
+                        else
+                        {
+                            ServiceProvider.DispatcherQueue.TryEnqueue(async () =>
+                            {
+                                ContentDialog dialog = new ContentDialog
+                                {
+                                    Title = resourceLoader.GetString("ErrorContentDialog/Title"),
+                                    Content = result.exception?.Message,
+                                    CloseButtonText = resourceLoader.GetString("ErrorContentDialog/CloseButtonText"),
+                                    XamlRoot = Content.XamlRoot
+                                };
+
+                                await dialog.ShowAsync();
+                                btnAddDrive.IsEnabled = true;
+                            });
+                        }
                     });
-                    Close();
                 }
                 else
                 {

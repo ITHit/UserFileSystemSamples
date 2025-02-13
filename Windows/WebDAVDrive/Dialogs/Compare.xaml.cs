@@ -4,9 +4,9 @@ using System;
 using System.Threading.Tasks;
 
 using Windows.ApplicationModel.Resources;
-using Windows.Graphics;
 
 using WebDAVDrive.ViewModels;
+using WebDAVDrive.Extensions;
 
 namespace WebDAVDrive.Dialogs
 {
@@ -22,6 +22,7 @@ namespace WebDAVDrive.Dialogs
         public Compare(string filePath, VirtualEngine engine) : base()
         {
             InitializeComponent();
+            this.Resize(1000, 500);
             resourceLoader = ResourceLoader.GetForViewIndependentUse();
             Title = $"{ServiceProvider.GetService<AppSettings>().ProductName} - {resourceLoader.GetString("CompareWindow/Title")}";
 
@@ -29,10 +30,8 @@ namespace WebDAVDrive.Dialogs
             // Load the ViewModel only once
             Activated += CompareActivated;
 
-            // Resize and center the window.
-            SetDefaultSizePosition();
-            // TODO: Set the window size to the size of the screen take into accout scale of text.
-            AppWindow.Resize(new SizeInt32(1000, 500));
+            // Center the window.
+            SetDefaultPosition();
         }
 
         private async void CompareActivated(object sender, WindowActivatedEventArgs args)
@@ -45,7 +44,7 @@ namespace WebDAVDrive.Dialogs
                 // Load last server version of the file
                 await compareModel.LoadFileLastServerVersionAsync();
 
-                //focus Close button, make it trigger click by Enter press
+                // Set default button.
                 CloseButton.Focus(FocusState.Programmatic);
             }
         }

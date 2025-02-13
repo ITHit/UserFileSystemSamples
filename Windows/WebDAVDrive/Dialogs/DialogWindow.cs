@@ -15,8 +15,6 @@ namespace WebDAVDrive.Dialogs
     public class DialogWindow : Window
     {
         private bool keyDownEventAttached = false;
-        protected const int WindowWidth = 800;
-        protected const int WindowHeight = 400;
 
         public DialogWindow()
         {
@@ -26,9 +24,8 @@ namespace WebDAVDrive.Dialogs
             AppWindow.SetIcon("Images/AppIcon.ico");
         }
 
-        protected void SetDefaultSizePosition()
-        {
-            AppWindow.Resize(new SizeInt32(WindowWidth, WindowHeight));
+        protected void SetDefaultPosition()
+        {            
             this.SetIsResizable(false);
             this.SetIsMaximizable(false);
             this.SetIsMinimizable(false);

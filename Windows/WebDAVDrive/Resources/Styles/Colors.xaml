@@ -26,6 +26,8 @@
             <Color x:Key="DisabledButtonTextColor" >#141414</Color>
             <Color x:Key="DisabledButtonBackgroundColor">#C8C8C8</Color>
             <Color x:Key="ButtonBackgroundColor">White</Color>
+            <Color x:Key="TraySubMenuHoverColor">#E1DFDD</Color>
+            <Color x:Key="DialogButtonHoverColor">Black</Color>
         </ResourceDictionary>
 
         <!-- Dark Theme Colors -->
@@ -48,6 +50,8 @@
             <Color x:Key="HistoryItemPressedColor">#282828</Color>
             <Color x:Key="DisabledButtonTextColor">#C8C8C8</Color>
             <Color x:Key="ButtonBackgroundColor">#242424</Color>
+            <Color x:Key="TraySubMenuHoverColor">#323130</Color>
+            <Color x:Key="DialogButtonHoverColor">#dddddd</Color>
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>    
 
@@ -99,4 +103,6 @@
     <SolidColorBrush x:Key="DisabledButtonBackgroundBrush" Color="{ThemeResource DisabledButtonBackgroundColor}"/>
     <SolidColorBrush x:Key="ButtonBackgroundBrush" Color="{ThemeResource ButtonBackgroundColor}"/>
     <SolidColorBrush x:Key="BackgroundBrush" Color="{ThemeResource BackgroundColor}"/>
+    <SolidColorBrush x:Key="TraySubMenuHoverBrush" Color="{ThemeResource TraySubMenuHoverColor}"/>
+    <SolidColorBrush x:Key="DialogButtonHoverBrush" Color="{ThemeResource DialogButtonHoverColor}"/>
 </ResourceDictionary>

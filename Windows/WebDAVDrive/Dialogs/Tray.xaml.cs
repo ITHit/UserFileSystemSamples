@@ -8,6 +8,8 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
+using System.Collections.Concurrent;
 using Windows.Storage;
 using Windows.Storage.FileProperties;
 using Windows.System;
@@ -23,6 +25,7 @@ using WindowManager = ITHit.FileSystem.Samples.Common.Windows.WindowManager;
 
 using WebDAVDrive.Services;
 using WebDAVDrive.ViewModels;
+using WebDAVDrive.Extensions;
 
 namespace WebDAVDrive.Dialogs
 {
@@ -34,10 +37,11 @@ namespace WebDAVDrive.Dialogs
         private const int animationDurationMs = 150; //how long Tray window animation durates after user clicks on tray icon
         private const int frameRate = 120; // frame rate of animation in FPS
 
-        private readonly int leftOffset = DisplayArea.Primary.WorkArea.Width - 370; //left offset of the window
-        private const int windowWidth = 340;
+        //left offset of the window set to 4/5 of screen width minus 30 pixels of right offset
+        private const int windowWidth = 400;
         private const int windowHeight = 658;
-
+        private const int maxScrollPositionToPerformAutoScroll = 5; //maximal scroll position in pixels when auto scroll to top performs on adding new events
+        private int leftOffset; //left offset of the window - calculated at initialization
 
         /// <summary>
         /// Virtual engine instance.
@@ -60,6 +64,26 @@ namespace WebDAVDrive.Dialogs
         private readonly LogFormatter logFormatter;
 
         private readonly FilesEventsViewModel filesEventsViewModel = new FilesEventsViewModel();
+        
+        /// <summary>
+        /// BlockingCollection of engine changing events.
+        /// </summary>
+        private BlockingCollection<ItemsChangeEventArgs> eventsQueue = new BlockingCollection<ItemsChangeEventArgs>();
+
+        /// <summary>
+        /// Task which processes events from eventsQueue collection.
+        /// </summary>
+        private Task? handlerEngineEventsTask;
+
+        /// <summary>
+        /// Cancellation token source used to cancel task which processes events from eventsQueue collection.
+        /// </summary>
+        private CancellationTokenSource engineEventsTaskCancellationTokenSource;
+
+        /// <summary>
+        /// Indicates if the window is pinned.
+        /// </summary>
+        public bool Pinned { get; set; } = false;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Tray"/> class.
@@ -74,12 +98,15 @@ namespace WebDAVDrive.Dialogs
             this.engineKey = engineKey;
             this.logFormatter = logFormatter;
             InitializeComponent();
+
             FilesEvents.DataContext = filesEventsViewModel;
             tbDriveName.Text = engine.RemoteStorageRootPath;
 
             ResourceLoader resourceLoader = ResourceLoader.GetForViewIndependentUse();
             tbSyncMessage.Text = resourceLoader.GetString("FilesSynchronized");
             HideShowLog.Text = resourceLoader.GetString("HideLog");
+            EnableDisableDebugLogging.Text = logFormatter.DebugLoggingEnabled ?
+                resourceLoader.GetString("DisableDebugLogging") : resourceLoader.GetString("EnableDebugLogging");
             HeaderText.Text = ServiceProvider.GetService<AppSettings>().ProductName;
 
             // Remove the window icon from the taskbar
@@ -98,19 +125,29 @@ namespace WebDAVDrive.Dialogs
 
 #if DEBUG
             HideShowLog.Visibility = Visibility.Visible;
+            EnableDisableDebugLogging.Visibility = Visibility.Visible;
 #endif
 
             //Hide window on Esc key pressed.
             //This is not dialog window, so the behavior is different - so we should use separate Esc logic instead of deriving from DialogWindow.
             if (Content is UIElement rootContent)
             {
-                rootContent.KeyDown += (sender, e) =>
-                {
-                    if (e.Key == VirtualKey.Escape)
-                    {
-                        HideWindow();
-                    }
-                };
+                rootContent.KeyDown += RootContent_KeyDown;
+            }
+
+            engineEventsTaskCancellationTokenSource = new CancellationTokenSource();
+            handlerEngineEventsTask = CreateHandlerEventsTask(engineEventsTaskCancellationTokenSource.Token);
+        }
+
+        private void RootContent_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            if (e.Key == VirtualKey.Escape)
+            {
+                HideWindow();
+                //set pinned to false and update menu points visibility, as we made window hidden by Esc
+                Pinned = false;
+                Pin.Visibility = Visibility.Visible;
+                Unpin.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -124,7 +161,8 @@ namespace WebDAVDrive.Dialogs
             this.SetIsMaximizable(false);
             this.SetIsMinimizable(false);
             WinUIEx.WindowManager.Get(this).IsTitleBarVisible = false;
-            AppWindow.Resize(new SizeInt32(windowWidth, windowHeight));
+            this.Resize(windowWidth, windowHeight);
+            leftOffset = DisplayArea.Primary.WorkArea.Width - AppWindow.Size.Width - 30; //30 pixels right margin
         }
 
         /// <summary>
@@ -132,31 +170,39 @@ namespace WebDAVDrive.Dialogs
         /// </summary>
         public void ShowWithAnimation()
         {
-            AppWindow.Move(new PointInt32(leftOffset, DisplayArea.Primary.WorkArea.Height));
-            this.SetForegroundWindow();
-
-            // Get the screen dimensions
-            int screenHeight = DisplayArea.Primary.WorkArea.Height;
-
-            // Animate the window's Y position
-            int startY = screenHeight;
-            int endY = screenHeight - windowHeight + 8; //add 8 pixels to force final position right above task panel
-            int totalFrames = animationDurationMs * frameRate / 1000; //frame rate is per second, and duration in ms - so we divide by 1000
-
-            for (int frame = 0; frame <= totalFrames; frame++)
+            try
             {
-                double progress = (double)frame / totalFrames;
-                int currentY = (int)(startY + (endY - startY) * progress);
+                int actualHeight = AppWindow.Size.Height;
 
-                // Set the window position
-                AppWindow.Move(new PointInt32(leftOffset, currentY));
-                // Wait for the next frame
-                Thread.Sleep(1000 / frameRate); //frame rate is per second, so to get time span between frames we take 1000 ms and divide by rate
+                AppWindow.Move(new PointInt32(leftOffset, DisplayArea.Primary.WorkArea.Height));
+                this.SetForegroundWindow();
+
+                // Get the screen dimensions
+                int screenHeight = DisplayArea.Primary.WorkArea.Height;
+
+                // Animate the window's Y position
+                int startY = screenHeight;
+                int endY = screenHeight - actualHeight + 8; //add 8 pixels to force final position right above task panel
+                int totalFrames = animationDurationMs * frameRate / 1000; //frame rate is per second, and duration in ms - so we divide by 1000
+
+                for (int frame = 0; frame <= totalFrames; frame++)
+                {
+                    double progress = (double)frame / totalFrames;
+                    int currentY = (int)(startY + (endY - startY) * progress);
+
+                    // Set the window position
+                    AppWindow.Move(new PointInt32(leftOffset, currentY));
+                    // Wait for the next frame
+                    Thread.Sleep(1000 / frameRate); //frame rate is per second, so to get time span between frames we take 1000 ms and divide by rate
+                }
+
+                // Ensure the window is fully visible at the end
+                AppWindow.Move(new PointInt32(leftOffset, endY));
+                this.SetForegroundWindow();
+                //set IsAlwaysOnTop to make the window always showing behind other windows, once it's pinned
+                this.SetIsAlwaysOnTop(true);
             }
-
-            // Ensure the window is fully visible at the end
-            AppWindow.Move(new PointInt32(leftOffset, endY));
-            this.SetForegroundWindow();
+            catch { } // Ignore the exception that occurs when closing the window.
         }
 
         private void SyncServiceStateChanged(object sender, SynchEventArgs e)
@@ -182,25 +228,171 @@ namespace WebDAVDrive.Dialogs
             });
         }
 
-        private async void EngineItemsChanged(Engine sender, ItemsChangeEventArgs e)
+        private void EngineItemsChanged(Engine sender, ItemsChangeEventArgs e)
+        {            
+            if (ShouldShowEventInTray(e))
+            {
+                eventsQueue.Add(e);
+            }
+        }
+
+        private bool ShouldShowEventInTray(ItemsChangeEventArgs e)
         {
+            //Move and Delete operations not showing in Tray (as well as operations with status Filtered)
+            //Errors shown only of types Conflict, Failed and Exception
+            return e.OperationType != OperationType.Move && e.OperationType != OperationType.Delete &&
+                   (e.Result.IsSuccess || e.Result.Status == OperationStatus.Conflict || e.Result.Status == OperationStatus.Failed
+                || e.Result.Status == OperationStatus.Exception);
+        }
+
+        /// <summary>
+        /// Starts thread that processes engine events queue.
+        /// </summary>
+        /// <param name="cancelationToken">The token to monitor for cancellation requests.</param>
+        /// <returns></returns>
+        private Task CreateHandlerEventsTask(CancellationToken cancelationToken)
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    while (!cancelationToken.IsCancellationRequested)
+                    {
+                        ProcessEngineEventAsync(eventsQueue.Take(cancelationToken));
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            },
+            cancelationToken);
+        }
+
+        /// <summary>
+        /// Processes single event from engine.
+        /// </summary>
+        /// <param name="eventArgs">Event args representing engine event.</param>
+        /// <returns></returns>
+        private void ProcessEngineEventAsync(ItemsChangeEventArgs eventArgs)
+        {
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+
             ServiceProvider.DispatcherQueue.TryEnqueue(async () =>
             {
-                if (e.Result.IsSuccess)
+                string progressString = string.Empty;
+                bool isCompleted = true; //for most events set it to true by default
+                bool ignoreEvent = false;
+                bool shouldShowEventName = true;
+                //only UpdateContent or populating events currently have progress notifications
+                bool isEventWithProgress = eventArgs.OperationType == OperationType.UpdateContent || eventArgs.OperationType == OperationType.Populate;
+                if (isEventWithProgress)
                 {
-                    foreach (ChangeEventItem item in e.Items)
+                    if (eventArgs.NotificationTime.HasFlag(NotificationTime.Progress))
                     {
-                        filesEventsViewModel.LineItems.Insert(0, new FileEventViewModel()
+                        if (eventArgs.Position == eventArgs.Length)
                         {
-                            FileName = Path.GetFileName(item.Path),
-                            EventNameText = Enum.GetName(e.OperationType)!,
-                            Thumbnail = await GetThumbnailAsync(item),
-                            TimeText = DateTime.Now.ToString("h:mm tt")
-                        });
+                            //for Incoming - ignore progress event with final position - to avoid conflict with [NotificationTime == After] event
+                            ignoreEvent = eventArgs.Direction == SyncDirection.Incoming;
+                            isCompleted = true;
+                        }
+                        else
+                        {
+                            progressString = eventArgs.OperationType == OperationType.UpdateContent ?
+                                $"{eventArgs.Position.GetUserFriendlySize()} of {eventArgs.Length.GetUserFriendlySize()}" :
+                                $" {eventArgs.Position} of {eventArgs.Length}";
+                            isCompleted = false;
+                            //for UpdateContent with progress we don't show event name on UI - just progress, to save place
+                            shouldShowEventName = eventArgs.OperationType != OperationType.UpdateContent;
+                        }
+                    }
+                    //if progress event gives error or download/populate is finished - mark it as completed
+                    if (eventArgs.NotificationTime == NotificationTime.After || !eventArgs.Result.IsSuccess)
+                    {
+                        isCompleted = true;
                     }
                 }
 
-                svHistory.ChangeView(horizontalOffset: null, verticalOffset: 0, zoomFactor: null, disableAnimation: false);
+                if (!ignoreEvent)
+                {
+                    //if Populate event we process only Parent item (folder); for other events we process Items array (usually contains a single item)
+                    ChangeEventItem[] eventItems = eventArgs.OperationType == OperationType.Populate ? [eventArgs.Parent] : eventArgs.Items;
+                    foreach (ChangeEventItem item in eventItems)
+                    {
+                        string actualPath = item.NewPath ?? item.Path;
+                        string fileNameShowing = Path.GetFileName(actualPath);
+                        //if the item is a root folder - we show remote URL without protocol (like it is showing in Windows Explorer)
+                        if (actualPath == engine.Path)
+                        {
+                            Uri rootUri = new Uri(engine.RemoteStorageRootPath);
+                            fileNameShowing = (rootUri.Authority + rootUri.PathAndQuery + rootUri.Fragment).TrimEnd('/');
+                        }
+                        //we modify existing UI row only in case the event is UpdateContent or Populate
+                        FileEventViewModel? existingItem = null;
+                        if (isEventWithProgress)
+                        {
+                            existingItem = filesEventsViewModel.LineItems.
+                                FirstOrDefault(li => li.OperationType == eventArgs.OperationType && li.Path == actualPath && eventArgs.Direction == li.Direction &&
+                                    (!li.IsCompleted || (DateTime.Now - li.Time).TotalSeconds <= 1));
+                        }
+                        if (existingItem == null)
+                        {
+                            await AddNewEventRow(eventArgs, item, fileNameShowing, progressString, isCompleted, shouldShowEventName);
+                        }
+                        else
+                        {
+                            await ModifyExistingEventRow(eventArgs, existingItem, progressString, isCompleted, shouldShowEventName);
+                        }
+                    }
+                }
+
+                if (svHistory.VerticalOffset <= maxScrollPositionToPerformAutoScroll)
+                {
+                    svHistory.ChangeView(horizontalOffset: null, verticalOffset: 0, zoomFactor: null, disableAnimation: false);
+                }
+
+                tcs.SetResult(true);
+            });
+            // Wait for UI thread to finish processing event.
+            tcs.Task.Wait();
+        }
+
+        private async Task ModifyExistingEventRow(ItemsChangeEventArgs e, FileEventViewModel existingItem, string progressString, bool isCompleted,
+            bool showEventName)
+        {
+            existingItem.ProgressText = progressString;
+            existingItem.ProgressPercent = e.Length > 0 ? e.Position * 100 / e.Length : 0;
+            existingItem.IsCompleted = isCompleted;
+            existingItem.Time = DateTime.Now;
+            existingItem.ProgressVisibility = isCompleted ? Visibility.Collapsed : Visibility.Visible;
+            existingItem.EventNameVisibility = showEventName ? Visibility.Visible : Visibility.Collapsed;
+            existingItem.ErrorMessage = e.Result.IsSuccess ? null : $"{e.Result.Status}. {e.Result.Exception?.Message ?? e.Result.Message}".Trim();
+            //if it's operation with error - changing icon to error one
+            if (!e.Result.IsSuccess)
+            {
+                existingItem.MainOverlayIcon = await GetMainOverlayIconAsync(e.OperationType, e.Direction, e.Result.Status);
+            }
+        }
+
+        private async Task AddNewEventRow(ItemsChangeEventArgs e, ChangeEventItem engineItem, string fileNameShowing, string progressString, bool isCompleted,
+            bool showEventName)
+        {
+            string actualPath = engineItem.NewPath ?? engineItem.Path;
+            filesEventsViewModel.LineItems.Insert(0, new FileEventViewModel()
+            {
+                Path = actualPath,
+                FileName = fileNameShowing,
+                OperationType = e.OperationType,
+                ProgressText = progressString,
+                ProgressPercent = e.Length > 0 ? e.Position * 100 / e.Length : 0,
+                Time = DateTime.Now,
+                IsCompleted = isCompleted,
+                ProgressVisibility = isCompleted ? Visibility.Collapsed : Visibility.Visible,
+                EventNameVisibility = showEventName ? Visibility.Visible : Visibility.Collapsed,
+                ErrorMessage = e.Result.IsSuccess ? null : $"{e.Result.Status}. {e.Result.Message}".Trim(),
+                Direction = e.Direction,
+                Thumbnail = await GetThumbnailAsync(engineItem),
+                MainOverlayIcon = await GetMainOverlayIconAsync(e.OperationType, e.Direction, e.Result.Status),
+                SyncTypeOverlayIcon = await GetSyncTypeOverlayIconAsync(e.Direction)
             });
         }
 
@@ -223,7 +415,8 @@ namespace WebDAVDrive.Dialogs
 
         private void TrayActivated(object sender, WindowActivatedEventArgs args)
         {
-            if (args.WindowActivationState == WindowActivationState.Deactivated)
+            //hide window on losing focus only in case it is not pinned
+            if (!Pinned && args.WindowActivationState == WindowActivationState.Deactivated)
             {
                 HideWindow();
             }
@@ -240,10 +433,15 @@ namespace WebDAVDrive.Dialogs
         {
             ShowMenu.RemoveHandler(UIElement.PointerPressedEvent, (PointerEventHandler)ShowMenuPointerPressed);
             ShowMenu.RemoveHandler(UIElement.PointerReleasedEvent, (PointerEventHandler)ShowMenuPointerReleased);
+            engineEventsTaskCancellationTokenSource.Cancel();
+            handlerEngineEventsTask?.Wait();
         }
 
         private void OnMenuButtonClicked(object sender, RoutedEventArgs e)
         {
+            ResourceLoader resourceLoader = ResourceLoader.GetForViewIndependentUse();
+            EnableDisableDebugLogging.Text = logFormatter.DebugLoggingEnabled ?
+                resourceLoader.GetString("DisableDebugLogging") : resourceLoader.GetString("EnableDebugLogging");
             MainMenu.ShowAt(ShowMenu);
         }
 
@@ -265,17 +463,42 @@ namespace WebDAVDrive.Dialogs
 
         private void HistoryItemPointerEntered(object sender, PointerRoutedEventArgs e)
         {
-            AssignBrushToBorder(sender as Border, "HistoryItemHoveredBrush");
+            if (sender is Border border)
+            {
+                AssignBrushToBorder(border, "HistoryItemHoveredBrush");
+                //show menu button only in case it's not Delete or DeleteCompletion event (item is not deleted)
+                if (border.Tag is FileEventViewModel fileEvent && FindChildByName(border, "ShowItemMenu") is Button button &&
+                    fileEvent.OperationType != OperationType.Delete && fileEvent.OperationType != OperationType.DeleteCompletion)
+                {
+                    button.Visibility = Visibility.Visible;
+                }
+            }
         }
 
         private void HistoryItemPointerExited(object sender, PointerRoutedEventArgs e)
         {
-            AssignBrushToBorder(sender as Border, "TransparentBrush");
+            if (sender is Border border)
+            {
+                AssignBrushToBorder(border, "TransparentBrush");
+                if (FindChildByName(border, "ShowItemMenu") is Button button)
+                {
+                    button.Visibility = Visibility.Collapsed;
+                }
+            }
         }
 
         private void HistoryItemPointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            AssignBrushToBorder(sender as Border, "HistoryItemPressedBrush");
+            if (sender is Border border)
+            {
+                AssignBrushToBorder(border, "HistoryItemPressedBrush");
+                //show menu button only in case it's not Delete or DeleteCompletion event (item is not deleted)
+                if (border.Tag is FileEventViewModel fileEvent && FindChildByName(border, "ShowItemMenu") is Button button &&
+                    fileEvent.OperationType != OperationType.Delete && fileEvent.OperationType != OperationType.DeleteCompletion)
+                {
+                    button.Visibility = Visibility.Visible;
+                }
+            }
         }
 
         /// <summary>
@@ -327,6 +550,27 @@ namespace WebDAVDrive.Dialogs
         }
 
         /// <summary>
+        /// Pins/Unpins Tray window.
+        /// </summary>
+        private void PinUnpinClicked(object sender, RoutedEventArgs e)
+        {
+            Pinned = !Pinned;
+            Pin.Visibility = Pinned ? Visibility.Collapsed : Visibility.Visible;
+            Unpin.Visibility = Pinned ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        /// <summary>
+        /// Enables/Disables debug logging.
+        /// </summary>
+        private void EnableDisableDebugLoggingClicked(object sender, RoutedEventArgs e)
+        {
+            logFormatter.DebugLoggingEnabled = !logFormatter.DebugLoggingEnabled;
+            ResourceLoader resourceLoader = ResourceLoader.GetForViewIndependentUse();
+            EnableDisableDebugLogging.Text = logFormatter.DebugLoggingEnabled ?
+                resourceLoader.GetString("DisableDebugLogging") : resourceLoader.GetString("EnableDebugLogging");
+        }        
+
+        /// <summary>
         /// Exit application.
         /// </summary>
         private void ExitClicked(object sender, RoutedEventArgs e)
@@ -353,46 +597,168 @@ namespace WebDAVDrive.Dialogs
             Commands.Open(engine.RemoteStorageRootPath);
         }
 
+        private void ViewItemOnlineMenuClicked(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuFlyoutItem menuItem)
+            {
+                if (menuItem.Tag is FileEventViewModel fileEvent)
+                {
+                    string url = engine.Mapping.MapPath(fileEvent.Path);
+                    Commands.Open(url);
+                }
+            }
+        }
+
+        private void OpenItemMenuClicked(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuFlyoutItem menuItem)
+            {
+                if (menuItem.Tag is FileEventViewModel fileEvent)
+                {
+                    engine.ClientNotifications(fileEvent.Path).ExecVerb(Verb.Open);
+                }
+            }
+        }
+
+        private void ShowInFolderMenuClicked(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuFlyoutItem menuItem)
+            {
+                if (menuItem.Tag is FileEventViewModel fileEvent)
+                {
+                    engine.ClientNotifications(fileEvent.Path).ExecVerb(Verb.ShowInFolder);
+                }
+            }
+        }
+
         private async Task<BitmapImage> GetThumbnailAsync(ChangeEventItem item)
         {
-            BitmapImage thumbnailSource = new BitmapImage(new Uri("ms-appx:///Images/Folder.svg"));
-            if (Application.Current.Resources.TryGetValue("FolderSvg", out object resource) && resource is BitmapImage bitmap)
-            {
-                thumbnailSource = bitmap;
-            }
+            BitmapImage thumbnailSource;
 
             try
             {
-                // Get StorageFile from file path
-                StorageFile file = await StorageFile.GetFileFromPathAsync(item.Path);
+                string actualPath = item.NewPath ?? item.Path;
+                StorageItemThumbnail? storageItemThumbnail = null;
 
-                // Get thumbnail
-                using (StorageItemThumbnail thumbnail = await file.GetThumbnailAsync(ThumbnailMode.SingleItem, 40))
-                {
-                    if (thumbnail != null)
-                    {
-                        BitmapImage bitmapImage = new BitmapImage();
-                        await bitmapImage.SetSourceAsync(thumbnail);
-                        thumbnailSource = bitmapImage; // Set thumbnail in LineItem
-                    }
-                }
-            }
-            catch // Handle errors (e.g., file not found, no thumbnail available)
-            {
                 if (item.ItemType == FileSystemItemType.File)
                 {
-                    if (Application.Current.Resources.TryGetValue("FilePng", out object resourceFile) && resourceFile is BitmapImage bitmapFile)
+                    try
                     {
-                        thumbnailSource = bitmapFile;
+                        StorageFile file = await StorageFile.GetFileFromPathAsync(actualPath);
+                        storageItemThumbnail = await file.GetThumbnailAsync(ThumbnailMode.SingleItem, 48);
                     }
-                    else
+                    catch (FileNotFoundException)
                     {
-                        thumbnailSource = new BitmapImage(new Uri("ms-appx:///Images/File.png"));
+                        // File is missing, use a default thumbnail.
+                        storageItemThumbnail = await GetDefaultThumbnailForFileType(actualPath);
                     }
                 }
+                else
+                {
+                    try
+                    {
+                        StorageFolder folder = await StorageFolder.GetFolderFromPathAsync(actualPath);
+                        storageItemThumbnail = await folder.GetThumbnailAsync(ThumbnailMode.SingleItem, 48);
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        // Folder is missing, use a generic folder icon
+                        storageItemThumbnail = await GetDefaultFolderThumbnail();
+                    }
+                }
+
+                // Create a bitmap image from the thumbnail
+                BitmapImage bitmapImage = new BitmapImage();
+                bitmapImage.SetSource(storageItemThumbnail);
+                thumbnailSource = bitmapImage;
+            }
+            catch (Exception)
+            {
+                thumbnailSource = item.ItemType == FileSystemItemType.File ? new BitmapImage(new Uri("ms-appx:///Images/File.png")) :
+                    new BitmapImage(new Uri("ms-appx:///Images/FolderLight.png"));
             }
 
             return thumbnailSource;
+        }
+
+        private async Task<StorageItemThumbnail> GetDefaultThumbnailForFileType(string filePath)
+        {
+            // Create a temporary file with the given extension to get the system icon.
+            StorageFolder tempFolder = ApplicationData.Current.TemporaryFolder;
+            StorageFile fakeFile = await tempFolder.CreateFileAsync($"fake{Path.GetExtension(filePath)}", CreationCollisionOption.ReplaceExisting);
+
+            // Request a system-generated thumbnail.
+            StorageItemThumbnail thumbnail = await fakeFile.GetThumbnailAsync(ThumbnailMode.SingleItem, 48);
+
+            return thumbnail;
+        }
+
+        private async Task<StorageItemThumbnail> GetDefaultFolderThumbnail()
+        {
+            // Create a temporary folder to get the system icon.
+            StorageFolder tempFolder = ApplicationData.Current.TemporaryFolder;
+            StorageFolder fakeFolder = await tempFolder.CreateFolderAsync($"fake", CreationCollisionOption.ReplaceExisting);
+
+            // Request a system-generated thumbnail
+            StorageItemThumbnail thumbnail = await fakeFolder.GetThumbnailAsync(ThumbnailMode.SingleItem, 48);
+
+            return thumbnail;
+        }
+        private async Task<BitmapImage> GetMainOverlayIconAsync(OperationType type, SyncDirection direction, OperationStatus status)
+        {
+            BitmapImage result = null;
+
+            string resourceName = string.Empty;
+            //for non-Success status show error icon instead
+            if (status != OperationStatus.Success)
+            {
+                resourceName = "ErrorPng";
+            }
+            else if (type == OperationType.Create || type == OperationType.CreateCompletion)
+            {
+                resourceName = "PlusPng";
+            }
+            else if (type == OperationType.Lock)
+            {
+                resourceName = "LockPng";
+            }
+            else if (type == OperationType.Unlock)
+            {
+                resourceName = "UnlockPng";
+            }
+            else if (type == OperationType.UpdateContent)
+            {
+                resourceName = direction == SyncDirection.Incoming ? "CloudDownloadPng" : "CloudUploadPng";
+            }
+
+            if (Application.Current.Resources.TryGetValue(resourceName, out object resource) && resource is BitmapImage bitmap)
+            {
+                result = bitmap;
+            }
+
+            return result;
+        }
+
+        private async Task<BitmapImage> GetSyncTypeOverlayIconAsync(SyncDirection direction)
+        {
+            BitmapImage result = null;
+
+            string resourceName = string.Empty;
+            if (direction == SyncDirection.Incoming)
+            {
+                resourceName = "DownloadPng";
+            }
+            else if (direction == SyncDirection.Outgoing)
+            {
+                resourceName = "UploadPng";
+            }
+
+            if (Application.Current.Resources.TryGetValue(resourceName, out object resource) && resource is BitmapImage bitmap)
+            {
+                result = bitmap;
+            }
+
+            return result;
         }
 
         private void AssignBrushToBorder(Border? border, string brushResourceName)
@@ -438,6 +804,8 @@ namespace WebDAVDrive.Dialogs
             {
                 // Hide the window when it loses focus
                 AppWindow.Move(new PointInt32(leftOffset, -10000));
+                //unset IsAlwaysOnTop to make further animation showing behind taskbar
+                this.SetIsAlwaysOnTop(false);
             }
             catch { }// Ignore the exception that occurs when closing the window.
         }

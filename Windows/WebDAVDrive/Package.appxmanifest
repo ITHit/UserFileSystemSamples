@@ -74,23 +74,23 @@
 				<com:Extension Category="windows.comServer">
 					<com:ComServer>
 
-						<com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="dummy.exe">
+						<com:ExeServer DisplayName="WebDAVDrive.ShellExtensions" Executable="dummy.exe">
 							<com:Class Id="C3B06859-38F0-4F6D-AC06-39E1B2C0C77E" />
 						</com:ExeServer>
 
-						<com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="dummy.exe">
+						<com:ExeServer DisplayName="WebDAVDrive.ShellExtensions" Executable="dummy.exe">
 							<com:Class Id="52140CC5-F5DC-4AAB-8AAD-82387C881319" />
 						</com:ExeServer>
 
-						<com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="dummy.exe">
+						<com:ExeServer DisplayName="WebDAVDrive.ShellExtensions" Executable="dummy.exe">
 							<com:Class Id="B05772FC-7A9E-41A7-A9FD-7917C616F273" />
 						</com:ExeServer>
 
-						<com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="dummy.exe">
+						<com:ExeServer DisplayName="WebDAVDrive.ShellExtensions" Executable="dummy.exe">
 							<com:Class Id="9FC5E094-5F3B-4417-995E-68ABF987CF66" />
 						</com:ExeServer>
 
-						<com:ExeServer DisplayName="WebDAVDrive.ShellExtension" Executable="dummy.exe">
+						<com:ExeServer DisplayName="WebDAVDrive.ShellExtensions" Executable="dummy.exe">
 							<com:Class Id="B88C1E80-D493-4EEE-B772-AAF34734B89B" />
 						</com:ExeServer>
 

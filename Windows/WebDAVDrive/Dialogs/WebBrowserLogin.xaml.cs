@@ -4,8 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using Windows.ApplicationModel.Resources;
-using Windows.Graphics;
 using WinUIEx;
+
+using WebDAVDrive.Extensions;
 
 namespace WebDAVDrive.Dialogs
 {
@@ -22,8 +23,6 @@ namespace WebDAVDrive.Dialogs
 
         private readonly log4net.ILog log;
         private readonly Action<CookieCollection> loginSucceeded;
-        private const int CustomWindowWidth = 600;
-        private const int CustomWindowHeight = 800;
 
         public WebBrowserLogin(Uri url, Action<CookieCollection> loginSucceeded, log4net.ILog log) : base()
         {
@@ -40,7 +39,7 @@ namespace WebDAVDrive.Dialogs
             Title = $"{ServiceProvider.GetService<AppSettings>().ProductName} - {resourceLoader.GetString("WebBrowserLogin/Title")}";
 
             //set UI parameters; as for this window they are different than for other dialogs - put it here instead of calling base class method
-            AppWindow.Resize(new SizeInt32(CustomWindowWidth, CustomWindowHeight));
+            this.Resize(600, 800);
             CenterWindow();
             this.SetForegroundWindow();
         }
@@ -52,7 +51,9 @@ namespace WebDAVDrive.Dialogs
                 string currentUrl = webView.Source.ToString().TrimEnd('/');
                 string targetUrl = url.OriginalString.TrimEnd('/');
 
-                if (string.Equals(currentUrl, targetUrl, StringComparison.InvariantCultureIgnoreCase))
+               // For some url I saw currentUrl has tail like /Forms/AllItems.aspx and Equals() fails to compare.
+               // if (string.Equals(currentUrl, targetUrl, StringComparison.InvariantCultureIgnoreCase))
+               if (currentUrl.Contains(targetUrl, StringComparison.InvariantCultureIgnoreCase))
                 {
                     try
                     {

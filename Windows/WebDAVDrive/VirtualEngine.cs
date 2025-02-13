@@ -3,10 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Windows.Graphics;
 using WinUIEx;
-using WindowManager = WinUIEx.WindowManager;
-
 using ITHit.FileSystem;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Samples.Common.Windows;
@@ -17,7 +14,8 @@ using InvalidLicenseException = ITHit.FileSystem.InvalidLicenseException;
 
 using WebDAVDrive.Services;
 using WebDAVDrive.Dialogs;
-using System.Collections.Generic;
+using System.Security.Policy;
+
 
 namespace WebDAVDrive
 {
@@ -33,6 +31,8 @@ namespace WebDAVDrive
         /// WebDAV client for accessing the WebDAV server.
         /// </summary>
         public readonly WebDavSession DavClient;
+
+        public readonly CheckoutManager CheckoutManager;
 
         /// <summary>
         /// Engine instance ID, unique for every Engine instance.
@@ -143,6 +143,11 @@ namespace WebDAVDrive
         }
 
         /// <summary>
+        /// Indicates whether the authentication was successful.
+        /// </summary>
+        private bool isAuthenticateSucceeded = false;
+
+        /// <summary>
         /// Creates a vitual file system Engine.
         /// </summary>
         /// <param name="userFileSystemRootPath">
@@ -178,6 +183,7 @@ namespace WebDAVDrive
             secureStorage = secureStorageService;
 
             DavClient = CreateWebDavSession(InstanceId);
+            CheckoutManager = new CheckoutManager(this);
 
             Commands = new Commands(this, remoteStorageRootPath, logFormatter.Log);
 
@@ -214,15 +220,15 @@ namespace WebDAVDrive
 
             Logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString(), default, operationContext);
 
-            if (menuGuid == typeof(ShellExtension.ContextMenuVerbIntegratedLock).GUID)
+            if (menuGuid == typeof(ShellExtensions.ContextMenuVerbIntegratedLock).GUID)
             {
                 return new MenuCommandLock(this, Logger);
             }
-            if (menuGuid == typeof(ShellExtension.ContextMenuVerbIntegratedCompare).GUID)
+            if (menuGuid == typeof(ShellExtensions.ContextMenuVerbIntegratedCompare).GUID)
             {
                 return new MenuCommandCompare(this, Logger);
             }
-            if (menuGuid == typeof(ShellExtension.ContextMenuVerbIntegratedUnmount).GUID)
+            if (menuGuid == typeof(ShellExtensions.ContextMenuVerbIntegratedUnmount).GUID)
             {
                 return new MenuCommandUnmount(domainsService, this, Logger);
             }
@@ -281,24 +287,15 @@ namespace WebDAVDrive
                 logger.LogMessage("Authentication failed", RemoteStorageRootPath);
             }
 
+            // Save authentication result.
+            isAuthenticateSucceeded = authenticated;
+
             return authenticated;
         }
 
         public override async Task<bool> IsAuthenticatedAsync(IItemsChange itemsChange, CancellationToken cancellationToken)
         {
-            if (Credentials != null)
-            {
-                // Challenge-response auth.
-                return true;
-            }
-
-            if (Cookies != null && Cookies.Any())
-            {
-                //Cookies auth.
-                return true;
-            }
-
-            return false;
+            return isAuthenticateSucceeded;
         }
 
 
@@ -310,8 +307,23 @@ namespace WebDAVDrive
         {
             // Set the remote storage item ID for the root folder. It will be passed to the IEngine.GetFileSystemItemAsync()
             // method as a remoteStorageItemId parameter when a root folder is requested.
-            byte[] remoteStorageItemId = await GetRootRemoteStorageItemId(RemoteStorageRootPath, cancellationToken);
-            SetRemoteStorageRootItemId(remoteStorageItemId);
+            IFileSystemItemMetadata rootMetadata = await GetRootRemoteStorageMetadata(RemoteStorageRootPath, cancellationToken);
+            SetRemoteStorageRootItemId(rootMetadata.RemoteStorageItemId);
+
+            // Update root node display name and icon in Windows Explorer.
+            //var storageFolder = await Windows.Storage.StorageFolder.GetFolderFromPathAsync(Path);
+            //var storageInfo = Windows.Storage.Provider.StorageProviderSyncRootManager.GetSyncRootInformationForFolder(storageFolder);
+            //storageInfo.DisplayNameResource = rootMetadata.Name;
+            ////storageInfo.IconResource =  
+            //StorageProviderSyncRootManager.Register(storageInfo);
+
+            // For sharepoint set specific adjustments for Sync mode.
+            string domain = new Uri(RemoteStorageRootPath).Host;
+            if (domain.Contains("sharepoint.com", StringComparison.InvariantCultureIgnoreCase))
+            {
+                SyncService.SyncIntervalMs = 4000;
+                SyncService.IncomingSyncMode = IncomingSyncMode.Disabled;
+            }
         }
 
         static internal IncomingSyncMode GetSyncMode(IncomingSyncModeSetting preferedSyncMode)
@@ -459,9 +471,9 @@ namespace WebDAVDrive
         }
 
         /// <summary>
-        /// Gets remote storage item ID for the foor folder.
+        /// Gets remote storage metadata for the root folder.
         /// </summary>
-        private async Task<byte[]> GetRootRemoteStorageItemId(string webDAVServerUrl, CancellationToken cancellationToken)
+        private async Task<IFileSystemItemMetadata> GetRootRemoteStorageMetadata(string webDAVServerUrl, CancellationToken cancellationToken)
         {
             // Sending request to the server.
             IWebDavResponse<IHierarchyItem> response = await DavClient.GetItemAsync(new Uri(webDAVServerUrl), Mapping.GetDavProperties(), null, cancellationToken);
@@ -475,7 +487,7 @@ namespace WebDAVDrive
                 Logger.LogMessage("Root resource-id is null.", Path);
             }
 
-            return metadata.RemoteStorageItemId;
+            return metadata;
         }
 
         /// <summary>
@@ -525,12 +537,17 @@ namespace WebDAVDrive
 
         private void DavClient_WebDavError(ISession sender, WebDavErrorEventArgs e)
         {
-            // You can process WebDAV errors below:
-            //if (e.Exception is WebDavHttpException)
-            //{
-            //    ProcessDavException(e.Exception as WebDavHttpException);
-            //}
-            //e.Result = WebDavErrorEventResult.Fail;
+            if (e.Exception is WebDavHttpException httpException)
+            {
+                switch (httpException.Status.Code)
+                {
+                    case 401:
+                    case 403:
+                    case 302:
+                        isAuthenticateSucceeded = false;
+                        break;
+                }
+            }
         }
 
         private bool ShowLoginDialog(WebDavHttpException httpException, string userFileSystemPath)
@@ -595,6 +612,7 @@ namespace WebDAVDrive
                         {
                             // Set cookies collected from the web browser dialog.
                             DavClient.CookieContainer.Add(cookies);
+                            CheckoutManager.AddCookies(cookies);
                             Cookies = cookies;
 
                             // Save cookies to the secure storage.
@@ -638,7 +656,7 @@ namespace WebDAVDrive
 
                     try
                     {   // Retry the request with new credentials.
-                        await GetRootRemoteStorageItemId(RemoteStorageRootPath, default);
+                        await GetRootRemoteStorageMetadata(RemoteStorageRootPath, default);
                         succeed = true;
                     }
                     catch (WebDavHttpException)

@@ -53,7 +53,7 @@ namespace WebDAVDrive.Services
         /// <summary>
         /// Tray icon when any drives are mounted.
         /// </summary>
-        private DefaultTrayIcon? appTrayIconService;
+        private DefaultTrayIcon? defaultTrayIcon;
 
         /// <summary>
         /// Secure storage service.
@@ -70,34 +70,44 @@ namespace WebDAVDrive.Services
         private readonly DrivesTrayIconService trayIconService;
 
         public DrivesService(AppSettings settings, LocalServer localServer, IToastNotificationService notificationService,
-            SecureStorageService secureStorage ,LogFormatter logFormatter)
+            SecureStorageService secureStorage, LogFormatter logFormatter)
         {
             this.localServer = localServer;
             this.secureStorage = secureStorage;
 
             Registrar = new Registrar(logFormatter.Log);
             Settings = settings;
-            LogFormatter = logFormatter;       
+            LogFormatter = logFormatter;
             trayIconService = new DrivesTrayIconService(this, logFormatter);
             NotificationService = notificationService;
             ConsoleProcessor = new ConsoleProcessor(Registrar, LogFormatter, settings.AppID);
-       
+
         }
 
-        public async Task MountNewAsync(string[] webDAVServerURLs)
+        public async Task<(bool success, Exception? exception)> MountNewAsync(string webDAVServerUrl)
         {
-            // Mount new file system for each URL, run Engine and tray app.
-            foreach (string webDAVServerUrl in webDAVServerURLs)
+            // Register sync root and run User File System Engine.
+            (bool success, Exception? exception) result = await TryMountNewAsync(webDAVServerUrl);
+
+            if (result.success)
             {
-                // Register sync root and run User File System Engine.
-                await TryMountNewAsync(webDAVServerUrl);
+                // Remove default tray icon.
+                if (Engines.Count > 0 && defaultTrayIcon != null)
+                {
+                    defaultTrayIcon.Dispose();
+                }
+            }
+            else
+            {
+                // Unmount engine if mounting failed.
+                KeyValuePair<Guid, VirtualEngine>? engine = Engines.Where(p => p.Value.RemoteStorageRootPath == webDAVServerUrl).FirstOrDefault();
+                if (engine != null)
+                {
+                    await UnMountAsync(engine.Value.Value.InstanceId, webDAVServerUrl);
+                }
             }
 
-            // Remove main tray icon.
-            if (Engines.Count > 0 && appTrayIconService != null)
-            {
-                appTrayIconService.Dispose();
-            }
+            return result;
         }
 
         public async Task UnMountAsync(Guid engineId, string webDAVServerUrl)
@@ -115,7 +125,7 @@ namespace WebDAVDrive.Services
             if (Engines.Count == 0)
             {
                 // Create main tray icon for app. 
-                CreateMainTrayIcon();
+                CreateDefaultTrayIcon();
             }
         }
 
@@ -145,12 +155,16 @@ namespace WebDAVDrive.Services
                 }
                 else if (Settings.WebDAVServerURLs.Length != 0)
                 {
-                    await MountNewAsync(Settings.WebDAVServerURLs);
+                    // This is the first run of the app. Mount new drives.
+                    foreach (string webDAVServerUrl in Settings.WebDAVServerURLs)
+                    {
+                        await MountNewAsync(webDAVServerUrl);
+                    }
                 }
                 else
                 {
                     // Create main tray icon for app. 
-                    CreateMainTrayIcon();
+                    CreateDefaultTrayIcon();
 
                     if (displayMountNewDriveWindow)
                     {
@@ -215,7 +229,7 @@ namespace WebDAVDrive.Services
                 return engine;
 
             // If engine not found, mount a new one
-            await MountNewAsync(new[] { mountUrl.AbsoluteUri });
+            await MountNewAsync(mountUrl.AbsoluteUri);
 
             // Retrieve the newly mounted engine
             engine = Engines
@@ -271,7 +285,7 @@ namespace WebDAVDrive.Services
             Task.WaitAll(tasks.ToArray());
         }
 
-        private async Task<bool> TryMountNewAsync(string webDAVServerUrl)
+        private async Task<(bool success, Exception? exception)> TryMountNewAsync(string webDAVServerUrl)
         {
             string? userFileSystemRootPath = null;
             try
@@ -290,13 +304,13 @@ namespace WebDAVDrive.Services
             catch (Exception ex)
             {
                 LogFormatter.Log.Error($"Failed to mount file system {webDAVServerUrl} {userFileSystemRootPath}", ex);
-                return false;
+                return (false, ex);
             }
             // Run the User File System Engine.
             return await TryCreateEngineAsync(webDAVServerUrl, userFileSystemRootPath);
         }
 
-        private async Task<bool> TryCreateEngineAsync(string webDAVServerUrl, string userFileSystemRootPath)
+        private async Task<(bool success, Exception? exception)> TryCreateEngineAsync(string webDAVServerUrl, string userFileSystemRootPath)
         {
             try
             {
@@ -309,7 +323,7 @@ namespace WebDAVDrive.Services
                     webDAVServerUrl,
                     webSocketServerUrl,
                     secureStorage,
-                    this,                    
+                    this,
                     LogFormatter,
                     Settings);
 
@@ -332,20 +346,20 @@ namespace WebDAVDrive.Services
                 // Start processing OS file system calls.
                 await engine.StartAsync();
 
-                return true;
+                return (true, null);
             }
             catch (InvalidLicenseException ex) // Check if it is license validation error.
             {
                 LogFormatter.Log.Error($"License validation failed", ex);
                 NotificationService.ShowLicenseError(ex);
 
-                return false;
+                return (false, ex);
             }
             catch (Exception ex)
             {
                 LogFormatter.Log.Error($"Failed to start Engine {webDAVServerUrl} {userFileSystemRootPath}", ex);
 
-                return false;
+                return (false, ex);
             }
         }
 
@@ -372,12 +386,12 @@ namespace WebDAVDrive.Services
         }
 
         /// <summary>
-        /// Creates main tray icon.
+        /// Creates default tray icon with "Mount new Drive" menu.
         /// </summary>
-        private void CreateMainTrayIcon()
+        private void CreateDefaultTrayIcon()
         {
-            appTrayIconService = new DefaultTrayIcon(this);
-            appTrayIconService.CreateTrayIcon();
+            defaultTrayIcon = new DefaultTrayIcon(this);
+            defaultTrayIcon.CreateTrayIcon();
         }
     }
 }

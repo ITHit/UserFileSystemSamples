@@ -4,7 +4,7 @@ using ITHit.FileSystem.Windows.ShellExtension;
 using WebDAVDrive.Services;
 
 
-namespace WebDAVDrive.ShellExtension
+namespace WebDAVDrive.ShellExtensions
 {
     /// <summary>
     /// Implements Windows Explorer Unmount context menu, displayed on a root node.

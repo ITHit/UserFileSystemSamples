@@ -44,7 +44,8 @@ namespace WebDAVDrive
         /// <inheritdoc/>
         public async Task<string> GetIconAsync(IEnumerable<string> filesPath)
         {
-            return Path.Combine(Path.GetDirectoryName(typeof(MenuCommandUnmount).Assembly.Location), @"Images\DriveSync.ico");
+            string iconPath = ServiceProvider.IsDarkTheme ? @"Images\UnmountWhite.png" : @"Images\Unmount.png";
+            return Path.Combine(Path.GetDirectoryName(typeof(MenuCommandUnmount).Assembly.Location), iconPath);
         }
 
         /// <inheritdoc/>

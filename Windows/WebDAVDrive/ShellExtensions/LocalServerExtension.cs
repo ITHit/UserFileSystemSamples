@@ -2,13 +2,12 @@ using Windows.Storage.Provider;
 
 using ITHit.FileSystem.Windows.ShellExtension;
 
-
-namespace WebDAVDrive.ShellExtension
+namespace WebDAVDrive.ShellExtensions
 {
     /// <summary>
     /// Shell extension handlers registration and startup functionality.
     /// </summary>
-    internal static class ShellExtensions
+    internal static class LocalServerExtension
     {
         /// <summary>
         /// Runs shell extensions COM server and registers shell extension class objects with EXE COM server

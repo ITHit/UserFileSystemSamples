@@ -13,8 +13,8 @@
     <Compile Remove="IVirtualFolder.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.AppHelper" Version="8.5.27224.0" />
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="8.5.27224.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows.AppHelper" Version="8.5.27248.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="8.5.27248.0" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Core\Common.Windows.Core.csproj" />
   </ItemGroup>

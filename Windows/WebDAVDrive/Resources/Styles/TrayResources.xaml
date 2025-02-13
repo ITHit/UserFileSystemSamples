@@ -16,14 +16,31 @@
             <x:String x:Key="SyncImage">/Images/Sync.svg</x:String>
             <x:String x:Key="CloudImage">/Images/Cloud.svg</x:String>
             <x:String x:Key="FolderImage">/Images/Folder.svg</x:String>
-            <x:String x:Key="InternetImage">/Images/Internet.svg</x:String>
 
+            <BitmapImage x:Key="InternetImage" UriSource="/Images/Internet.png" />
             <BitmapImage x:Key="CloseImage" UriSource="/Images/Close.png" />
             <BitmapImage x:Key="PauseCircleImage" UriSource="/Images/PauseCircle.png" />
             <BitmapImage x:Key="PlayImage" UriSource="/Images/Play.png" />
-            <BitmapImage x:Key="SendImage" UriSource="/Images/Send.png" />
+            <BitmapImage x:Key="SendImage" UriSource="/Images/Question.png" />
             <BitmapImage x:Key="FilePng" UriSource="/Images/File.png" />
             <BitmapImage x:Key="FolderSvg" UriSource="/Images/Folder.svg" />
+            <BitmapImage x:Key="FolderLightPng" UriSource="/Images/FolderLight.png" />
+            <BitmapImage x:Key="UnmountPng" UriSource="/Images/Unmount.png" />
+            <BitmapImage x:Key="DebugPng" UriSource="/Images/Debug.png" />
+            <BitmapImage x:Key="PinPng" UriSource="/Images/Pin.png" />
+            <BitmapImage x:Key="UnpinPng" UriSource="/Images/Unpin.png" />
+            <BitmapImage x:Key="CloudDownloadPng" UriSource="/Images/CloudDownload.png" />
+            <BitmapImage x:Key="CloudUploadPng" UriSource="/Images/CloudUpload.png" />
+            <BitmapImage x:Key="ShowInFolderPng" UriSource="/Images/ShowInFolder.png" />
+
+            <BitmapImage x:Key="PlusPng" UriSource="/Images/Plus.png" />
+            <BitmapImage x:Key="LockPng" UriSource="/Images/Lock.png" />
+            <BitmapImage x:Key="UnlockPng" UriSource="/Images/LockOpen.png" />
+            <BitmapImage x:Key="DownloadPng" UriSource="/Images/Download.png" />
+            <BitmapImage x:Key="UploadPng" UriSource="/Images/Upload.png" />
+            <BitmapImage x:Key="OpenPng" UriSource="/Images/Open.png" />
+            <BitmapImage x:Key="ThreeDotsPng" UriSource="/Images/ThreeDots.png" />
+            <BitmapImage x:Key="ErrorPng" UriSource="/Images/Error.png" />
         </ResourceDictionary>
 
         <!-- Dark Theme Colors -->
@@ -32,23 +49,33 @@
             <x:String x:Key="SyncImage">/Images/SyncWhite.svg</x:String>
             <x:String x:Key="CloudImage">/Images/CloudWhite.svg</x:String>
             <x:String x:Key="FolderImage">/Images/FolderWhite.svg</x:String>
-            <x:String x:Key="InternetImage">/Images/InternetWhite.svg</x:String>
+            <x:String x:Key="FolderLightImage">/Images/FolderLightWhite.svg</x:String>
 
+            <BitmapImage x:Key="InternetImage" UriSource="/Images/InternetWhite.png" />
             <BitmapImage x:Key="CloseImage" UriSource="/Images/CloseWhite.png" />
             <BitmapImage x:Key="PauseCircleImage" UriSource="/Images/PauseCircleWhite.png" />
             <BitmapImage x:Key="PlayImage" UriSource="/Images/PlayWhite.png" />
-            <BitmapImage x:Key="SendImage" UriSource="/Images/SendWhite.png" />
+            <BitmapImage x:Key="SendImage" UriSource="/Images/QuestionWhite.png" />
             <BitmapImage x:Key="FilePng" UriSource="/Images/FileWhite.png" />
             <BitmapImage x:Key="FolderSvg" UriSource="/Images/FolderWhite.svg" />
+            <BitmapImage x:Key="FolderLightPng" UriSource="/Images/FolderLightWhite.png" />
+            <BitmapImage x:Key="UnmountPng" UriSource="/Images/UnmountWhite.png" />
+            <BitmapImage x:Key="DebugPng" UriSource="/Images/DebugWhite.png" />
+            <BitmapImage x:Key="PinPng" UriSource="/Images/PinWhite.png" />
+            <BitmapImage x:Key="UnpinPng" UriSource="/Images/UnpinWhite.png" />
+            <BitmapImage x:Key="CloudDownloadPng" UriSource="/Images/CloudDownloadWhite.png" />
+            <BitmapImage x:Key="CloudUploadPng" UriSource="/Images/CloudUploadWhite.png" />
+            <BitmapImage x:Key="ShowInFolderPng" UriSource="/Images/ShowInFolderWhite.png" />
+
+            <BitmapImage x:Key="PlusPng" UriSource="/Images/PlusWhite.png" />
+            <BitmapImage x:Key="LockPng" UriSource="/Images/LockWhite.png" />
+            <BitmapImage x:Key="UnlockPng" UriSource="/Images/LockOpenWhite.png" />
+            <BitmapImage x:Key="DownloadPng" UriSource="/Images/DownloadWhite.png" />
+            <BitmapImage x:Key="OpenPng" UriSource="/Images/OpenWhite.png" />
+            <BitmapImage x:Key="ThreeDotsPng" UriSource="/Images/ThreeDotsWhite.png" />
+            <BitmapImage x:Key="ErrorPng" UriSource="/Images/ErrorWhite.png" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
-    
-    
-
-    <Style x:Name="TrayBorderStyle" TargetType="Border">
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="BorderBrush" Value="{StaticResource BlackBrush}" />
-    </Style>
 
     <Style x:Name="TrayGridStyle" TargetType="Grid">
         <Setter Property="Background" Value="{StaticResource TrayBrush}" />
@@ -65,7 +92,7 @@
 
     <Style x:Name="TrayHeaderTopStyle" TargetType="StackPanel">
         <Setter Property="Orientation" Value="Horizontal" />
-        <Setter Property="Padding" Value="0,5,0,0" />
+        <Setter Property="Padding" Value="0,5,0,5" />
     </Style>
 
     <Style x:Name="TrayHeaderTopImageStyle" TargetType="Image">
@@ -84,7 +111,7 @@
 
     <Style x:Name="TraySubheaderTopTextStyle" TargetType="TextBlock" BasedOn="{StaticResource TrayHeaderTopTextStyle}">
         <Setter Property="FontSize" Value="10" />
-        <Setter Property="Margin" Value="27,0,0,0" />
+        <Setter Property="Margin" Value="0,0,0,5" />
         <Setter Property="FontWeight" Value="Normal" />
         <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         <Setter Property="TextWrapping" Value="NoWrap" />
@@ -92,7 +119,7 @@
 
     <Style x:Name="TrayHeaderBottomStyle" TargetType="StackPanel">
         <Setter Property="Orientation" Value="Horizontal" />
-        <Setter Property="Padding" Value="0,0,0,0" />
+        <Setter Property="Padding" Value="0,0,0,5" />
     </Style>
 
     <Style x:Name="TrayHeaderBottomImageStyle" TargetType="Image">
@@ -129,12 +156,32 @@
         <Setter Property="Template" Value="{StaticResource TrayShowMenuButtonTemplate}" />
     </Style>
 
+    <Style x:Name="TrayPinButtonStyle" TargetType="Button" BasedOn="{StaticResource TrayShowMenuButtonStyle}">
+        <Setter Property="Template" Value="{StaticResource TrayPinButtonTemplate}" />
+    </Style>
+
+    <Style x:Name="TrayUnpinButtonStyle" TargetType="Button" BasedOn="{StaticResource TrayShowMenuButtonStyle}">
+        <Setter Property="Template" Value="{StaticResource TrayUnpinButtonTemplate}" />
+    </Style>
+
     <Style x:Name="TrayShowMenuAnimatedIconStyle" TargetType="AnimatedIcon">
         <Setter Property="Foreground" Value="{StaticResource AnimatedIconBrush}"  />
         <Setter Property="Height" Value="21" />
         <Setter Property="Width" Value="21" />
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Name="TrayPinImageStyle" TargetType="Image">
+        <Setter Property="Height" Value="21" />
+        <Setter Property="Width" Value="21" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Source" Value="{ThemeResource PinPng}" />
+    </Style>
+
+    <Style x:Name="TrayUnpinImageStyle" TargetType="Image" BasedOn="{StaticResource TrayPinImageStyle}">
+        <Setter Property="Source" Value="{ThemeResource UnpinPng}" />
     </Style>
 
     <Style x:Name="TrayMainMenuStyle" TargetType="MenuFlyoutPresenter">
@@ -170,7 +217,97 @@
             </AnimatedIcon>
         </Grid>
     </ControlTemplate>
-    
+
+    <ControlTemplate x:Name="TrayPinButtonTemplate" TargetType="Button">
+        <Grid x:Name="RootGrid" HorizontalAlignment="Center" VerticalAlignment="Center" Background="{StaticResource TransparentBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+            Width="{TemplateBinding Width}" Height="{TemplateBinding Height}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+            <VisualStateManager.VisualStateGroups>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal">
+                        <VisualState.Setters>
+                            <Setter Target="RootGrid.Background" Value="{StaticResource TransparentBrush}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                            <Setter Target="RootGrid.Background" Value="{StaticResource HoverMenuButtonBackground}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Target="RootGrid.Background" Value="{StaticResource HoverMenuButtonBackground}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <Image Style="{StaticResource TrayPinImageStyle}" />
+        </Grid>
+    </ControlTemplate>
+
+    <ControlTemplate x:Name="TrayUnpinButtonTemplate" TargetType="Button">
+        <Grid x:Name="RootGrid" HorizontalAlignment="Center" VerticalAlignment="Center" Background="{StaticResource TransparentBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+        Width="{TemplateBinding Width}" Height="{TemplateBinding Height}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+            <VisualStateManager.VisualStateGroups>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal">
+                        <VisualState.Setters>
+                            <Setter Target="RootGrid.Background" Value="{StaticResource TransparentBrush}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                            <Setter Target="RootGrid.Background" Value="{StaticResource HoverMenuButtonBackground}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Target="RootGrid.Background" Value="{StaticResource HoverMenuButtonBackground}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <Image Style="{StaticResource TrayUnpinImageStyle}" />
+        </Grid>
+    </ControlTemplate>
+
+    <Style x:Name="TrayShowItemMenuButtonStyle" TargetType="Button">
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="Height" Value="38" />
+        <Setter Property="Width" Value="38" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="HorizontalAlignment" Value="Right" />
+        <Setter Property="Template" Value="{StaticResource TrayShowItemMenuButtonTemplate}" />
+    </Style>
+
+    <ControlTemplate x:Name="TrayShowItemMenuButtonTemplate" TargetType="Button">
+        <Grid x:Name="RootGrid" HorizontalAlignment="Center" VerticalAlignment="Center" Background="{StaticResource TransparentBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+            Width="{TemplateBinding Width}" Height="{TemplateBinding Height}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+            <VisualStateManager.VisualStateGroups>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal">
+                        <VisualState.Setters>
+                            <Setter Target="RootGrid.Background" Value="{StaticResource TransparentBrush}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                            <Setter Target="RootGrid.Background" Value="{StaticResource TraySubMenuHoverBrush}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Target="RootGrid.Background" Value="{StaticResource TraySubMenuHoverBrush}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <Image x:Name="ThreeDotsIcon" Source="{StaticResource ThreeDotsPng}" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Grid>
+    </ControlTemplate>
+
 
 
     <Style x:Name="TrayGridHistoryItemStyle" TargetType="Grid" >
@@ -179,13 +316,18 @@
 
     <Style x:Name="TrayHistoryIconStyle" TargetType="Image" >
         <Setter Property="HorizontalAlignment" Value="Center" />
-        <Setter Property="Height" Value="40" />
-        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="48" />
+        <Setter Property="Width" Value="48" />
     </Style>
 
     <Style x:Name="TrayStackPanelHistoryItemDetailsStyle" TargetType="StackPanel" >
         <Setter Property="Orientation" Value="Vertical" />
         <Setter Property="Padding" Value="18,0,0,0" />
+    </Style>
+
+    <Style x:Name="TrayProgressBarStyle" TargetType="ProgressBar">
+        <Setter Property="Height" Value="3" />
+        <Setter Property="Margin" Value="0,3,0,3" />
     </Style>
 
     <Style x:Name="TrayHistoryFileNameStyle" TargetType="TextBlock" >
@@ -201,6 +343,11 @@
     <Style x:Name="TrayHistoryTimeStyle" TargetType="TextBlock" BasedOn="{StaticResource TrayHistoryFileNameStyle}" >
         <Setter Property="FontSize" Value="9" />
         <Setter Property="Margin" Value="0,3,0,0" />
+    </Style>
+
+    <Style x:Name="TrayErrorTooltipStyle" TargetType="ToolTip">
+        <Setter Property="HorizontalOffset" Value="10" />
+        <Setter Property="Placement" Value="Right" />
     </Style>
     
     
@@ -286,5 +433,11 @@
 
     <Style x:Name="TrayBottomButtonInternetStyle" TargetType="Button" BasedOn="{StaticResource TrayBottomButtonStyle}">
         <Setter Property="Template" Value="{StaticResource TrayBottomButtonInternetTemplate}" />
+    </Style>
+
+    <Style x:Name="TrayOverlayIconStyle" TargetType="Image">
+        <Setter Property="Width" Value="13" />
+        <Setter Property="Height" Value="13" />
+        <Setter Property="Margin" Value="0,0,2,0" />
     </Style>
 </ResourceDictionary>

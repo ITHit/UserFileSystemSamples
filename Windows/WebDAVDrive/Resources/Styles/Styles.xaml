@@ -33,7 +33,11 @@
                                         <Setter Target="RootGrid.Background" Value="{StaticResource DisabledButtonBackgroundBrush}" />
                                     </VisualState.Setters>
                                 </VisualState>
-                                <VisualState x:Name="PointerOver" />
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="RootGrid.Background" Value="{StaticResource DialogButtonHoverBrush}" />
+                                    </VisualState.Setters>
+                                </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
                         <ContentPresenter x:Name="ContentPresenter" AutomationProperties.AccessibilityView="Raw" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="20,0"

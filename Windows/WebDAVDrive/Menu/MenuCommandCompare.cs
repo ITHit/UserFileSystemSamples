@@ -59,6 +59,11 @@ namespace WebDAVDrive
                 {
                     return MenuState.Enabled;
                 }
+                //Hide menu for directories.
+                if (atts.HasFlag(FileAttributes.Directory))
+                {
+                    return MenuState.Hidden;
+                }
                 /*
                 // The menu is shown only if the item is in conflict state and a single item is selected. 
                 // Otherwise the menu is hidden.
