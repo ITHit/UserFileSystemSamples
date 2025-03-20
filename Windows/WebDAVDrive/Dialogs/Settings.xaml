@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<local:DialogWindow
+    x:Class="WebDAVDrive.Dialogs.Settings"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WebDAVDrive.Dialogs"
+    xmlns:winui="using:ITHit.FileSystem.Windows.WinUI"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid Style="{StaticResource SettingsMainGridStyle}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="44"/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Style="{StaticResource SettingsMainStackPanelStyle}">
+            <Grid Style="{StaticResource SettingsGridStyle}" >
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="100" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Style="{StaticResource SettingsStackPanel}" Grid.Column="0">
+                    <TextBlock x:Uid="EnableAutomaticLocking" Style="{StaticResource SettingsTextBlockStyle}" />
+                    <TextBlock x:Uid="EnableAutomaticLockingDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                </StackPanel>
+                <ToggleSwitch x:Name="AutoLockEnable" x:Uid="Toggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}" />
+            </Grid>
+
+            <Grid Style="{StaticResource SettingsGridStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="100" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Style="{StaticResource SettingsStackPanel}" Grid.Column="0">
+                    <TextBlock x:Uid="AutomaticLockTimeoutLabel" Style="{StaticResource SettingsTextBlockStyle}" />
+                    <TextBlock x:Uid="AutomaticLockTimeoutLabelDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                </StackPanel>
+                <StackPanel Style="{StaticResource SettingsStackPanelWithTextBox}" Grid.Column="1">
+                    <TextBox x:Name="AutomaticLockTimeout" Style="{StaticResource SettingsTextBoxStyle}" />
+                    <TextBlock x:Name="AutomaticRequiredMessage" x:Uid="AutomaticRequiredMessage" Style="{StaticResource SettingsErrorStyle}" />
+                    <TextBlock x:Name="AutomaticValidationMessage" x:Uid="AutomaticValidationMessage" Style="{StaticResource SettingsErrorStyle}" />
+                </StackPanel>
+            </Grid>
+
+            <Grid Style="{StaticResource SettingsGridStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="100" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Style="{StaticResource SettingsStackPanel}" Grid.Column="0">
+                    <TextBlock x:Uid="ManualLockTimeoutLabel" Style="{StaticResource SettingsTextBlockStyle}" />
+                    <TextBlock x:Uid="ManualLockTimeoutLabelDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                </StackPanel>
+                <StackPanel Style="{StaticResource SettingsStackPanelWithTextBox}" Grid.Column="1">
+                    <TextBox x:Name="ManualLockTimeout" Style="{StaticResource SettingsTextBoxStyle}" />
+                    <TextBlock x:Name="ManualValidationMessage" x:Uid="ManualValidationMessage" Style="{StaticResource SettingsErrorStyle}" />
+                </StackPanel>
+            </Grid>
+
+            <Grid Style="{StaticResource SettingsGridStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="100" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Style="{StaticResource SettingsStackPanel}" Grid.Column="0">
+                    <TextBlock x:Uid="ReadOnlyOnLockedFilesLabel" Style="{StaticResource SettingsTextBlockStyle}" />
+                    <TextBlock x:Uid="ReadOnlyOnLockedFilesLabelDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                </StackPanel>
+                <ToggleSwitch x:Uid="BottomToggle" x:Name="ReadOnlyOnLockedFiles" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}" />
+            </Grid>
+        </StackPanel>
+
+        <!-- Buttons -->
+        <StackPanel Style="{StaticResource DialogButtonsStackPanelStyle}" Grid.Row="1">
+            <winui:CursorButton x:Uid="Cancel" Click="OnCloseClicked" Style="{StaticResource DialogButtonStyle}" />
+            <winui:CursorButton x:Uid="Save" Click="OnSaveClicked" Style="{StaticResource DialogButtonStyle}" />
+        </StackPanel>
+    </Grid>
+</local:DialogWindow>

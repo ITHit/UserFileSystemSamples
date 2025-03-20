@@ -2,6 +2,7 @@ using System;
 using System.IO;
 
 using ITHit.FileSystem;
+using ITHit.FileSystem.Synchronization;
 using ITHit.FileSystem.Windows;
 
 
@@ -74,18 +75,18 @@ namespace VirtualFileSystem
         /// to map your remote storage item data to the user file system data.
         /// </remarks>
         /// <returns>File or folder metadata that corresponds to the <paramref name="remoteStorageItem"/> parameter.</returns>
-        public static IFileSystemItemMetadata GetUserFileSysteItemMetadata(FileSystemInfo remoteStorageItem)
+        public static IMetadata GetMetadata(FileSystemInfo remoteStorageItem)
         {
-            IFileSystemItemMetadata userFileSystemItem;
+            IMetadata metadata;
 
             if (remoteStorageItem is FileInfo)
             {
-                userFileSystemItem = new FileMetadata();
-                ((FileMetadata)userFileSystemItem).Length = ((FileInfo)remoteStorageItem).Length;
+                metadata = new FileMetadata();
+                ((FileMetadata)metadata).Length = ((FileInfo)remoteStorageItem).Length;
             }
             else
             {
-                userFileSystemItem = new FolderMetadata();
+                metadata = new FolderMetadata();
             }
 
             // Typically you store your remote storage item ID in this property.
@@ -93,14 +94,14 @@ namespace VirtualFileSystem
             // However in this sample, as soon as network path does not provide the ID, we do not set it.
             //userFileSystemItem.RemoteStorageItemId = ...;
 
-            userFileSystemItem.Name = remoteStorageItem.Name;
-            userFileSystemItem.Attributes = remoteStorageItem.Attributes;
-            userFileSystemItem.CreationTime = remoteStorageItem.CreationTime;
-            userFileSystemItem.LastWriteTime = remoteStorageItem.LastWriteTime;
-            userFileSystemItem.LastAccessTime = remoteStorageItem.LastAccessTime;
-            userFileSystemItem.ChangeTime = remoteStorageItem.LastWriteTime;
+            metadata.Name = remoteStorageItem.Name;
+            metadata.Attributes = remoteStorageItem.Attributes;
+            metadata.CreationTime = remoteStorageItem.CreationTime;
+            metadata.LastWriteTime = remoteStorageItem.LastWriteTime;
+            metadata.LastAccessTime = remoteStorageItem.LastAccessTime;
+            metadata.ChangeTime = remoteStorageItem.LastWriteTime;
 
-            return userFileSystemItem;
+            return metadata;
         }
     }
 }

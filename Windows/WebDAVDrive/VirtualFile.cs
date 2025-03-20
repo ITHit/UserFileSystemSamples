@@ -55,9 +55,11 @@ namespace WebDAVDrive
             {
                 // If we read entire file we do not add a Range header.
                 offset = -1;
-            } 
+            }
 
-            string contentETag = null;
+            // Send content eTag to the server in download request. 
+            // This will ensure file content did not change since eTag received from server.
+            string contentETag = metadata.ContentETag;
 
             // Buffer size must be multiple of 4096 bytes for optimal performance.
             const int bufferSize = 0x500000; // 5Mb.
@@ -83,7 +85,7 @@ namespace WebDAVDrive
             // In the returned data set the following fields:
             //  - Content eTag. The Engine will store it to determine if the file content should be updated.
             //  - Medatdata eTag. The Engine will store it to determine if the item metadata should be updated.
-            return new FileMetadataExt()
+            return new FileMetadata()
             {
                 ContentETag = contentETag
                 //MetadataETag = 
@@ -142,7 +144,7 @@ namespace WebDAVDrive
                         Logger.LogError("The server did not return ETag after update.", UserFileSystemPath, null, null, operationContext, metadata);
                     }
                 }
-                catch (Client.Exceptions.LockedException)
+                catch (Client.Exceptions.LockedException ex)
                 {
                     // The item is locked on the server and the client did not provide a lock token.
                     // Here do NOT set conflict status because this item may be uploaded
@@ -151,8 +153,9 @@ namespace WebDAVDrive
 
                     Logger.LogMessage($"Upload failed. The item is locked", UserFileSystemPath, default, operationContext, metadata);
                     inSyncResultContext.SetInSync = false;
+                    inSyncResultContext.Result = new OperationResult(OperationStatus.Locked, 0, "Upload failed. The item is locked", ex);
                 }
-                catch (Client.Exceptions.PreconditionFailedException)
+                catch (Client.Exceptions.PreconditionFailedException ex)
                 {
                     // Server and client content ETags do not match.
                     // Here we set conflict status in Windows Explorer becuse this item can
@@ -161,6 +164,7 @@ namespace WebDAVDrive
                     Logger.LogMessage($"Conflict. The item is modified", UserFileSystemPath, default, operationContext, metadata);
                     Engine.Placeholders.GetFile(UserFileSystemPath).SetConflictStatus(true);
                     inSyncResultContext.SetInSync = false;
+                    inSyncResultContext.Result = new OperationResult(OperationStatus.Conflict, 0, "Conflict. The item is modified", ex);
                 }
             }
 
@@ -168,11 +172,16 @@ namespace WebDAVDrive
             // In the returned data set the following fields:
             //  - Content eTag. The Engine will store it to determine if the file content should be updated.
             //  - Medatdata eTag. The Engine will store it to determine if the item metadata should be updated.
-            return new FileMetadataExt()
+            return new FileMetadata()
             {
                 ContentETag = newContentEtag
                 //MetadataETag = 
             };
         }
+    }
+
+    class MyOperationStatus 
+    {
+        
     }
 }

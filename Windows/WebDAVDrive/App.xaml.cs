@@ -8,7 +8,6 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
 using Windows.ApplicationModel.Activation;
-using WinUIEx;
 using log4net;
 
 using ITHit.FileSystem.Samples.Common.Windows;
@@ -18,6 +17,7 @@ using WindowManager = ITHit.FileSystem.Samples.Common.Windows.WindowManager;
 using WebDAVDrive.Services;
 using System.Runtime.InteropServices;
 using WebDAVDrive.ShellExtensions;
+using WebDAVDrive.Dialogs;
 
 
 namespace WebDAVDrive
@@ -120,7 +120,7 @@ namespace WebDAVDrive
 #if DEBUG
                 foreach (VirtualEngine engine in domainsService.Engines.Values)
                 {
-                    Commands.Open(engine.Path);
+                    engine.Commands.TryOpen(engine.Path);
                     Commands.Open(engine.RemoteStorageRootPath); // Open remote storage.
                 }
 #endif
@@ -145,11 +145,9 @@ namespace WebDAVDrive
 #if !DEBUG
             if (!Windows.Storage.ApplicationData.Current.LocalSettings.Values.ContainsKey("StartupWindowDoNotShowAgain"))
             {
-                ServiceProvider.DispatcherQueue.TryEnqueue(() => new Startup().Show());
+                ServiceProvider.DispatcherQueue.TryEnqueue(() => new Startup());
             }
 #endif
-
-
         }
 
         private void WindowClosed(object sender, WindowEventArgs args)
@@ -196,6 +194,7 @@ namespace WebDAVDrive
             serviceCollection.AddSingleton(options => configuration.ReadSettings());
             serviceCollection.AddSingleton(options => LocalServerExtension.StartComServer());
             serviceCollection.AddSingleton<SecureStorageService>();
+            serviceCollection.AddSingleton<UserSettingsService>();
             serviceCollection.AddSingleton<IToastNotificationService, ToastNotificationService>();
             serviceCollection.AddSingleton<IDrivesService, DrivesService>();
             serviceCollection.AddSingleton(options => new LogFormatter(ServiceProvider.GetService<ILog>(), ServiceProvider.GetService<AppSettings>().AppID));

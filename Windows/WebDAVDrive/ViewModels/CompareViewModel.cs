@@ -6,8 +6,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using DavFIle = ITHit.WebDAV.Client.IFile;
 using ITHit.FileSystem;
-using ITHit.FileSystem.Samples.Common;
 using ITHit.FileSystem.Windows;
+using ITHit.FileSystem.Synchronization;
 
 
 namespace WebDAVDrive.ViewModels
@@ -53,9 +53,9 @@ namespace WebDAVDrive.ViewModels
         private PlaceholderFile? placeholderFile;
 
         /// <summary>
-        /// Remote storage file.
+        /// Remote storage file metadata.
         /// </summary>
-        private FileMetadataExt? remoteFileMetadata;
+        private IFileMetadata? remoteFileMetadata;
 
         /// <summary>
         /// Path of the local file.
@@ -287,7 +287,7 @@ namespace WebDAVDrive.ViewModels
         {
             IsLoading = true;
 
-            if (engine != null && engine.Placeholders.TryGetItem(filePath, out PlaceholderItem placeholder))
+            if (engine.Placeholders.TryGetItem(filePath, out PlaceholderItem placeholder))
             {
                 ResourceLoader resourceLoader = ResourceLoader.GetForViewIndependentUse();
                 string bytesLabel = resourceLoader.GetString("Bytes");
@@ -295,9 +295,8 @@ namespace WebDAVDrive.ViewModels
 
                 FileInfo fileInfo = new FileInfo(placeholder.Path);
                 DavFIle? remoteStorageFile = (await engine.DavClient.GetFileAsync(new Uri(engine.Mapping.MapPath(placeholder.Path)), Mapping.GetDavProperties(), null)).WebDavResponse;
-                remoteFileMetadata = (FileMetadataExt)Mapping.GetUserFileSystemItemMetadata(remoteStorageFile);
+                remoteFileMetadata = (IFileMetadata)Mapping.GetMetadata(remoteStorageFile);
 
-                //assuming max size of paths shown is 25 symbols - if more, it shortens with "..." at beginning
                 string localPath = EllipsisAtStart(placeholder.Path, 25, '\\');
                 string remotePath = EllipsisAtStart(remoteStorageFile.Href.ToString(), 25, '/');
 
@@ -311,11 +310,11 @@ namespace WebDAVDrive.ViewModels
                 RemotePath = remotePath;
                 RemoteContentETag = remoteFileMetadata.ContentETag;
                 RemoteMetadataETag = remoteFileMetadata.MetadataETag;
-                RemoteCreationDate = remoteStorageFile.CreationDate.ToString();
-                RemoteModificationDate = remoteStorageFile.LastModified.ToString();
-                RemoteSize = $"{remoteFileMetadata.Length} {bytesLabel}";
+                RemoteCreationDate = remoteFileMetadata?.CreationTime?.ToString() ?? string.Empty;
+                RemoteModificationDate = remoteFileMetadata?.LastWriteTime?.ToString() ?? string.Empty;
+                RemoteSize = $"{remoteFileMetadata?.Length} {bytesLabel}";
 
-                BytesDifferent = $"{bytesDifferentLabel} {Math.Abs(fileInfo.Length - remoteFileMetadata.Length ?? 0)}";
+                BytesDifferent = $"{bytesDifferentLabel} {Math.Abs(fileInfo.Length - remoteFileMetadata?.Length ?? 0)}";
 
                 placeholderFile = placeholder as PlaceholderFile;
                 EnableButtons();

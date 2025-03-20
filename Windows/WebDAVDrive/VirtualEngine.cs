@@ -14,7 +14,6 @@ using InvalidLicenseException = ITHit.FileSystem.InvalidLicenseException;
 
 using WebDAVDrive.Services;
 using WebDAVDrive.Dialogs;
-using System.Security.Policy;
 
 
 namespace WebDAVDrive
@@ -31,8 +30,6 @@ namespace WebDAVDrive
         /// WebDAV client for accessing the WebDAV server.
         /// </summary>
         public readonly WebDavSession DavClient;
-
-        public readonly CheckoutManager CheckoutManager;
 
         /// <summary>
         /// Engine instance ID, unique for every Engine instance.
@@ -74,7 +71,7 @@ namespace WebDAVDrive
         /// <summary>
         /// Automatic lock timeout in milliseconds.
         /// </summary>
-        private readonly double autoLockTimeoutMs;
+        public double AutoLockTimeoutMs;
 
         /// <summary>
         /// Domains service.
@@ -84,7 +81,7 @@ namespace WebDAVDrive
         /// <summary>
         /// Manual lock timeout in milliseconds.
         /// </summary>
-        private readonly double manualLockTimeoutMs;
+        public double ManualLockTimeoutMs;
 
         /// <summary>
         /// Maximum number of login attempts.
@@ -173,17 +170,21 @@ namespace WebDAVDrive
             appId = appSettings.AppID;
             RemoteStorageRootPath = remoteStorageRootPath;
             this.webSocketServerUrl = webSocketServerUrl;
+            secureStorage = secureStorageService;
             log = logFormatter.Log;
             this.domainsService = domainsService;
 
             Mapping = new Mapping(Path, remoteStorageRootPath);
 
-            autoLockTimeoutMs = appSettings.AutoLockTimeoutMs;
-            manualLockTimeoutMs = appSettings.ManualLockTimeoutMs;
-            secureStorage = secureStorageService;
+            //set four main settings from secure storage, and in case storage does nto have them - take defaults from Settings
+            UserSettingsService userSettingsService = ServiceProvider.GetService<UserSettingsService>();
+            UserSettings? userSettings = userSettingsService.GetSettings(remoteStorageRootPath);
+            AutoLockTimeoutMs = userSettings?.AutomaticLockTimeout ?? Settings.AutoLockTimeoutMs;
+            ManualLockTimeoutMs = userSettings?.ManualLockTimeout ?? Settings.ManualLockTimeoutMs;
+            SetLockReadOnly = userSettings?.SetLockReadOnly ?? Settings.SetLockReadOnly;
+            AutoLock = userSettings?.AutoLock ?? Settings.AutoLock;
 
             DavClient = CreateWebDavSession(InstanceId);
-            CheckoutManager = new CheckoutManager(this);
 
             Commands = new Commands(this, remoteStorageRootPath, logFormatter.Log);
 
@@ -204,11 +205,11 @@ namespace WebDAVDrive
             string userFileSystemPath = context.FileNameHint;
             if (itemType == FileSystemItemType.File)
             {
-                return new VirtualFile(remoteStorageId, userFileSystemPath, this, autoLockTimeoutMs, manualLockTimeoutMs, Settings, logger);
+                return new VirtualFile(remoteStorageId, userFileSystemPath, this, AutoLockTimeoutMs, ManualLockTimeoutMs, Settings, logger);
             }
             else
             {
-                return new VirtualFolder(remoteStorageId, userFileSystemPath, this, autoLockTimeoutMs, manualLockTimeoutMs, Settings, logger);
+                return new VirtualFolder(remoteStorageId, userFileSystemPath, this, AutoLockTimeoutMs, ManualLockTimeoutMs, Settings, logger);
             }
         }
 
@@ -307,7 +308,7 @@ namespace WebDAVDrive
         {
             // Set the remote storage item ID for the root folder. It will be passed to the IEngine.GetFileSystemItemAsync()
             // method as a remoteStorageItemId parameter when a root folder is requested.
-            IFileSystemItemMetadata rootMetadata = await GetRootRemoteStorageMetadata(RemoteStorageRootPath, cancellationToken);
+            IMetadata rootMetadata = await GetRootRemoteStorageMetadata(RemoteStorageRootPath, cancellationToken);
             SetRemoteStorageRootItemId(rootMetadata.RemoteStorageItemId);
 
             // Update root node display name and icon in Windows Explorer.
@@ -317,13 +318,6 @@ namespace WebDAVDrive
             ////storageInfo.IconResource =  
             //StorageProviderSyncRootManager.Register(storageInfo);
 
-            // For sharepoint set specific adjustments for Sync mode.
-            string domain = new Uri(RemoteStorageRootPath).Host;
-            if (domain.Contains("sharepoint.com", StringComparison.InvariantCultureIgnoreCase))
-            {
-                SyncService.SyncIntervalMs = 4000;
-                SyncService.IncomingSyncMode = IncomingSyncMode.Disabled;
-            }
         }
 
         static internal IncomingSyncMode GetSyncMode(IncomingSyncModeSetting preferedSyncMode)
@@ -443,6 +437,14 @@ namespace WebDAVDrive
             {
                 string itemPath = Mapping.ReverseMapPath(itemUrl);
 
+                // Update item if synchronization is disabled.
+                if (this.SyncService.IncomingSyncMode == IncomingSyncMode.Disabled)
+                {
+                    IWebDavResponse<ITHit.WebDAV.Client.IFile> resp = await this.DavClient.GetFileAsync(new Uri(itemUrl), Mapping.GetDavProperties());
+                    IMetadata metadata = Mapping.GetMetadata(resp.WebDavResponse);
+                    await this.ServerNotifications(itemPath).UpdateAsync(metadata);
+                }
+
                 switch (protocolParameters.Command)
                 {
                     case CommandType.Lock:
@@ -470,16 +472,28 @@ namespace WebDAVDrive
             }
         }
 
+        public override async Task<OperationResult> OnItemsChangingAsync(ItemsChangeEventArgs e)
+        {
+            //if ((e.ComponentName != "Outgoing Sync")  && (e.Direction == SyncDirection.Outgoing) )
+            //{
+            //    var changedItem = e.Items?.FirstOrDefault();
+            //    Logger.LogMessage($"{e.Direction}:{e.Source}:{e.OperationType} canceled", changedItem?.Path, changedItem?.NewPath, e.OperationContext, changedItem?.Metadata);
+            //    return new OperationResult(OperationStatus.Failed, 0, "Only manual Outgoing Sync supported");
+            //}
+
+            return await base.OnItemsChangingAsync(e);
+        }
+
         /// <summary>
         /// Gets remote storage metadata for the root folder.
         /// </summary>
-        private async Task<IFileSystemItemMetadata> GetRootRemoteStorageMetadata(string webDAVServerUrl, CancellationToken cancellationToken)
+        private async Task<IMetadata> GetRootRemoteStorageMetadata(string webDAVServerUrl, CancellationToken cancellationToken)
         {
             // Sending request to the server.
             IWebDavResponse<IHierarchyItem> response = await DavClient.GetItemAsync(new Uri(webDAVServerUrl), Mapping.GetDavProperties(), null, cancellationToken);
             IHierarchyItem rootFolder = response.WebDavResponse;
 
-            IFileSystemItemMetadata metadata = Mapping.GetUserFileSystemItemMetadata(rootFolder);
+            IMetadata metadata = Mapping.GetMetadata(rootFolder);
 
             // If remote storage ID is not returned, the SyncID collection synchronization is not supported.
             if (metadata.RemoteStorageItemId == null)
@@ -612,7 +626,6 @@ namespace WebDAVDrive
                         {
                             // Set cookies collected from the web browser dialog.
                             DavClient.CookieContainer.Add(cookies);
-                            CheckoutManager.AddCookies(cookies);
                             Cookies = cookies;
 
                             // Save cookies to the secure storage.

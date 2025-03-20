@@ -100,12 +100,12 @@ namespace VirtualFileSystem
 
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern})", UserFileSystemPath, default, operationContext);
 
-            List<IFileSystemItemMetadata> children = new List<IFileSystemItemMetadata>();
+            List<IMetadata> children = new List<IMetadata>();
             IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(RemoteStoragePath).EnumerateFileSystemInfos(pattern);
 
             foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
             {
-                IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                IMetadata itemInfo = Mapping.GetMetadata(remoteStorageItem);
                 children.Add(itemInfo);
             }
 

@@ -6,6 +6,8 @@ using System.Text;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common;
+using ITHit.FileSystem.Samples.Common.Windows;
+using ITHit.FileSystem.Synchronization;
 using Client = ITHit.WebDAV.Client;
 
 
@@ -108,54 +110,91 @@ namespace WebDAVDrive
         /// Gets a user file system item info from the remote storage data.
         /// </summary>
         /// <param name="remoteStorageItem">Remote storage item info.</param>
+        /// <param name="changeType">
+        /// Operation for which this metadata is requested. 
+        /// If <see cref="Change.Deleted"/> is specified (in case of Sync ID algorithm), 
+        /// you can fill only the remote storage item ID, the rest of the data can be omitted.
+        /// </param>
         /// <returns>User file system item info.</returns>
-        public static FileSystemItemMetadataExt GetUserFileSystemItemMetadata(Client.IHierarchyItem remoteStorageItem)
+        public static IMetadata GetMetadata(Client.IHierarchyItem remoteStorageItem, Change changeType = Change.Changed)
         {
-            FileSystemItemMetadataExt userFileSystemItem;
+            IMetadata metadata;
 
             if (remoteStorageItem is Client.IFile)
             {
                 Client.IFile remoteStorageFile = (Client.IFile)remoteStorageItem;
-                userFileSystemItem = new FileMetadataExt();
-                ((FileMetadataExt)userFileSystemItem).Length = remoteStorageFile.ContentLength;
-                ((FileMetadataExt)userFileSystemItem).ContentETag = remoteStorageFile.Etag;
-                userFileSystemItem.Attributes = FileAttributes.Normal;
+                metadata = new FileMetadata();
+                ((FileMetadata)metadata).Length = remoteStorageFile.ContentLength;
+                ((FileMetadata)metadata).ContentETag = remoteStorageFile.Etag;
+                metadata.Attributes = FileAttributes.Normal;
             }
             else
             {
-                userFileSystemItem = new FolderMetadataExt();
-                userFileSystemItem.Attributes = FileAttributes.Normal | FileAttributes.Directory;
+                metadata = new FolderMetadata();
+                metadata.Attributes = FileAttributes.Normal | FileAttributes.Directory;
             }
 
-            userFileSystemItem.MetadataETag = GetPropertyStringValue(remoteStorageItem, "metadata-Etag");
-            userFileSystemItem.Name = remoteStorageItem.DisplayName;
+            metadata.RemoteStorageItemId = GetPropertyByteValue(remoteStorageItem, "resource-id");
 
-            // In case the item is deleted, the min value is returned.
-            if (remoteStorageItem.CreationDate != DateTime.MinValue)
+            // Delete opertion requires remote storage ID only. No need to fill all other data.
+            if (changeType != Change.Deleted)
             {
-                userFileSystemItem.CreationTime = remoteStorageItem.CreationDate;
-                userFileSystemItem.LastWriteTime = remoteStorageItem.LastModified;
-                userFileSystemItem.LastAccessTime = remoteStorageItem.LastModified;
-                userFileSystemItem.ChangeTime = remoteStorageItem.LastModified;
-            }
+                metadata.RemoteStorageParentItemId = GetPropertyByteValue(remoteStorageItem, "parent-resource-id");
+                metadata.MetadataETag = GetPropertyStringValue(remoteStorageItem, "metadata-Etag");
+                metadata.Name = remoteStorageItem.DisplayName;
+                metadata.CreationTime = remoteStorageItem.CreationDate;
+                metadata.LastWriteTime = remoteStorageItem.LastModified;
+                metadata.LastAccessTime = remoteStorageItem.LastModified;
+                metadata.ChangeTime = remoteStorageItem.LastModified;
 
-            userFileSystemItem.RemoteStorageItemId = GetPropertyByteValue(remoteStorageItem, "resource-id");
-            userFileSystemItem.RemoteStorageParentItemId = GetPropertyByteValue(remoteStorageItem, "parent-resource-id");
+                // Add custom properties to metadata.Properties list.
 
-            // Set information about third-party lock, if any.
-            Client.LockInfo lockInfo = remoteStorageItem.ActiveLocks.FirstOrDefault();
-            if (lockInfo != null)
-            {
-                userFileSystemItem.Lock = new ServerLockInfo()
+                // Set information about lock, if any.
+                Client.LockInfo lockInfo = remoteStorageItem.ActiveLocks.FirstOrDefault();
+                if (lockInfo != null)
                 {
-                    LockToken = lockInfo.LockToken.LockToken,
-                    Owner = lockInfo.Owner,
-                    Exclusive = lockInfo.LockScope == Client.LockScope.Exclusive,
-                    LockExpirationDateUtc = DateTimeOffset.Now.Add(lockInfo.TimeOut)
-                };
+                    ServerLockInfo serverLock = new ServerLockInfo()
+                    {
+                        LockToken = lockInfo.LockToken.LockToken,
+                        Owner = lockInfo.Owner,
+                        Exclusive = lockInfo.LockScope == Client.LockScope.Exclusive,
+                        LockExpirationDateUtc = DateTimeOffset.Now.Add(lockInfo.TimeOut)
+                    };
+
+                    metadata.Properties.Add("LockInfo", serverLock);
+                }
+
+                metadata.Properties.PropertyChanged += PropertyChanged;
             }
 
-            return userFileSystemItem;
+            return metadata;
+        }
+
+        private static void PropertyChanged(Engine sender, PropertyChangeEventArgs e)
+        {
+            VirtualEngine engine = (VirtualEngine)sender;
+
+            // Set or remove read-only flag on files locked by other users.
+            if (engine.SetLockReadOnly)
+            {
+                if (e.Operation == PropertyOperation.Save)
+                {
+                    if (e.Metadata.Properties.TryGetActiveLockInfo(out var lockInfo))
+                    {
+                        if (!engine.IsCurrentUser(lockInfo.Owner))
+                        {
+                            new FileInfo(e.Path).IsReadOnly = true;
+                        }
+                    }
+                }
+
+                if (e.Operation == PropertyOperation.Delete)
+                {
+                    // If the file was locked and the lock was succesefully
+                    // deleted we also remove the read-only attribute.
+                    new FileInfo(e.Path).IsReadOnly = false;
+                }
+            }
         }
 
         /// <summary>

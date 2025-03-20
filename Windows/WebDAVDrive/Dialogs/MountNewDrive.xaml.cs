@@ -8,7 +8,8 @@ using Windows.ApplicationModel.Resources;
 using Windows.System;
 
 using WebDAVDrive.Services;
-using WebDAVDrive.Extensions;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace WebDAVDrive.Dialogs
 {
@@ -21,7 +22,7 @@ namespace WebDAVDrive.Dialogs
         public MountNewDrive() : base()
         {
             InitializeComponent();
-            this.Resize(800, 400);
+            Resize(800, 400);
             Title = $"{ServiceProvider.GetService<AppSettings>().ProductName} - {resourceLoader.GetString("MountNewDriveWindow/Title")}";
 
             // Resize and center the window.
@@ -47,13 +48,14 @@ namespace WebDAVDrive.Dialogs
                 // Validate the URL format
                 if (IsValidUrl(url))
                 {
+                    IDrivesService drivesService = ServiceProvider.GetService<IDrivesService>();
                     ValidationMessage.Visibility = Visibility.Collapsed;
                     btnAddDrive.IsEnabled = false;
 
                     // Mount new domain.
                     _ = Task.Run(async () =>
                     {
-                        (bool success, Exception? exception) result = await ServiceProvider.GetService<IDrivesService>().MountNewAsync(url);
+                        (bool success, Exception? exception) result = await drivesService.MountNewAsync(url);
 
                         if (result.success)
                         {
@@ -64,6 +66,13 @@ namespace WebDAVDrive.Dialogs
                         }
                         else
                         {
+                            // Unmount engine if mounting failed.
+                            KeyValuePair<Guid, VirtualEngine>? engine = drivesService.Engines.Where(p => p.Value.RemoteStorageRootPath == url).FirstOrDefault();
+                            if (engine != null)
+                            {
+                                await drivesService.UnMountAsync(engine.Value.Value.InstanceId, url);
+                            }
+
                             ServiceProvider.DispatcherQueue.TryEnqueue(async () =>
                             {
                                 ContentDialog dialog = new ContentDialog

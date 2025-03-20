@@ -2,8 +2,6 @@ using Microsoft.UI.Xaml;
 using Windows.ApplicationModel.Resources;
 using WinUIEx;
 
-using WebDAVDrive.Extensions;
-
 namespace WebDAVDrive.Dialogs
 {
     /// <summary>
@@ -14,7 +12,7 @@ namespace WebDAVDrive.Dialogs
         public Startup() : base()
         {
             InitializeComponent();
-            this.Resize(800, 400);
+            Resize(800, 400);
             ResourceLoader resourceLoader = ResourceLoader.GetForViewIndependentUse();
             Title = $"{ServiceProvider.GetService<AppSettings>().ProductName} - {resourceLoader.GetString("Startup/Title")}";
 

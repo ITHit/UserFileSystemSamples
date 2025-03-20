@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using ITHit.FileSystem;
-using ITHit.FileSystem.Samples.Common;
 using Client = ITHit.WebDAV.Client;
 using ITHit.FileSystem.Synchronization;
 
@@ -87,7 +86,7 @@ namespace WebDAVDrive
                 string remoteStorageId = response.Headers.GetValues("resource-id").FirstOrDefault();
                 remoteStorageItemId = Encoding.UTF8.GetBytes(remoteStorageId);
             }
-            return new FileMetadataExt()
+            return new FileMetadata()
             {
                 RemoteStorageItemId = remoteStorageItemId,
                 ContentETag = response.WebDavResponse
@@ -115,7 +114,7 @@ namespace WebDAVDrive
                 string remoteStorageId = response.Headers.GetValues("resource-id").FirstOrDefault();
                 remoteStorageItemId = Encoding.UTF8.GetBytes(remoteStorageId);
             }
-            return new FolderMetadataExt()
+            return new FolderMetadata()
             {
                 RemoteStorageItemId = remoteStorageItemId
                 // MetadataETag =
@@ -135,11 +134,11 @@ namespace WebDAVDrive
             // WebDAV Client lib will retry the request in case authentication is requested by the server.
             Client.IWebDavResponse<IList<Client.IHierarchyItem>> response = await Dav.GetChildrenAsync(new Uri(RemoteStoragePath), false, Mapping.GetDavProperties(), null, cancellationToken);
 
-            List<FileSystemItemMetadataExt> children = new List<FileSystemItemMetadataExt>();
+            List<IMetadata> children = new List<IMetadata>();
 
             foreach (Client.IHierarchyItem remoteStorageItem in response.WebDavResponse)
             {
-                FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
+                IMetadata itemInfo = Mapping.GetMetadata(remoteStorageItem);
                 children.Add(itemInfo);
             }
 
@@ -185,9 +184,11 @@ namespace WebDAVDrive
 
                 foreach (Client.IChangedItem remoteStorageItem in sortedChanges)
                 {
-                    IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
                     // Changed, created, moved and deleted item.
                     Change changeType = remoteStorageItem.ChangeType == Client.Change.Changed ? Change.Changed : Change.Deleted;
+
+                    IMetadata itemInfo = Mapping.GetMetadata(remoteStorageItem, changeType);
+
                     ChangedItem changedItem = new ChangedItem(changeType, itemInfo);
                     changes.Add(changedItem);
                 }

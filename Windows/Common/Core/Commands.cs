@@ -15,7 +15,7 @@ using System.Threading;
 namespace ITHit.FileSystem.Samples.Common.Windows
 {
     /// <summary>
-    /// Commands sent from tray app and comnsole.
+    /// Commands sent from tray app and console.
     /// </summary>
     public class Commands
     {
@@ -30,7 +30,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         public ISyncService RemoteStorageMonitor;
 
         /// <summary>
-        /// Remote storaage path.
+        /// Remote storage path.
         /// </summary>
         private readonly string RemoteStorageRootPath;
 
@@ -39,6 +39,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         private readonly ILog log;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Commands"/> class.
+        /// </summary>
+        /// <param name="engine">The engine instance.</param>
+        /// <param name="remoteStorageRootPath">The remote storage root path.</param>
+        /// <param name="log">The logger instance.</param>
         public Commands(EngineWindows engine, string remoteStorageRootPath, ILog log)
         {
             this.Engine = engine;
@@ -47,7 +53,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <summary>
-        /// Start/stop the Engine and all sync services.
+        /// Start or stop the Engine and all sync services.
         /// </summary>
         public async Task StartStopEngineAsync()
         {
@@ -64,7 +70,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <summary>
-        /// Start/stop synchronization service.
+        /// Start or stop the synchronization service.
         /// </summary>
         public async Task StartStopSynchronizationAsync()
         {
@@ -85,9 +91,12 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
         }
 
+        /// <summary>
+        /// Start or stop the remote storage monitor.
+        /// </summary>
         public async Task StartStopRemoteStorageMonitorAsync()
         {
-            if(RemoteStorageMonitor == null)
+            if (RemoteStorageMonitor == null)
             {
                 Engine.Logger.LogError("Remote storage monitor is null.", Engine.Path);
                 return;
@@ -98,7 +107,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 if (Engine.State != EngineState.Running)
                 {
                     Engine.Logger.LogError("Failed to start. The Engine must be running.", Engine.Path);
-                    //Engine.RemoteStorageMonitor.Logger.LogError("Failed to start. The Engine must be running.");
                     return;
                 }
                 await RemoteStorageMonitor.StartAsync();
@@ -110,37 +118,59 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <summary>
-        /// Opens path with associated application.
+        /// Opens the specified path with the associated application.
         /// </summary>
-        /// <param name="path">Path to the file or folder.</param>
+        /// <param name="path">The path to the file or folder.</param>
         public static void Open(string path)
         {
-            ProcessStartInfo startInfo = new ProcessStartInfo(path);
-            startInfo.UseShellExecute = true; // Open window only if not opened already.
+            ProcessStartInfo startInfo = new ProcessStartInfo(path)
+            {
+                UseShellExecute = true // Open window only if not opened already.
+            };
             using (Process ufsWinFileManager = Process.Start(startInfo))
             {
-
             }
         }
 
         /// <summary>
-        /// Open root user file system folder in Windows Explorer.
+        /// Tries to open the specified path.
         /// </summary>
-        public async Task OpenRootFolderAsync()
+        /// <param name="path">The path to the file or folder.</param>
+        /// <returns>True if the path was opened successfully, otherwise false.</returns>
+        public bool TryOpen(string path)
         {
-            Open(Engine.Path);
+            return TryOpen(path, log);
         }
 
         /// <summary>
-        /// Open remote storage.
+        /// Tries to open the specified path.
         /// </summary>
-        public async Task OpenRemoteStorageAsync()
+        /// <param name="path">The path to the file or folder.</param>
+        /// <returns>True if the path was opened successfully, otherwise false.</returns>
+        public static bool TryOpen(string path, ILog? log = null)
         {
-            Open(RemoteStorageRootPath);
+            try
+            {
+                if (!string.IsNullOrEmpty(path) && (File.Exists(path) || Directory.Exists(path)))
+                {
+                    Open(path);
+                    return true;
+                }
+                else
+                {
+                    log?.Warn($"The path {path} does not exist.");
+                }
+            }
+            catch (Exception ex)
+            {
+                log?.Error($"Failed to open {path}.", ex);
+            }
+
+            return false;
         }
 
         /// <summary>
-        /// Opens support portal.
+        /// Opens the support portal.
         /// </summary>
         public static async Task OpenSupportPortalAsync()
         {
@@ -155,11 +185,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             await StopEngineAsync();
             log.Info($"\n\n{RemoteStorageRootPath}");
             log.Info("\nAll downloaded file / folder placeholders remain in file system. Restart the application to continue managing files.");
-            log.Info("\nYou can edit documents when the app is not running and than start the app to sync all changes to the remote storage.\n");
+            log.Info("\nYou can edit documents when the app is not running and then start the app to sync all changes to the remote storage.\n");
         }
 
         /// <summary>
-        /// Stop the Engine and all sync services.
+        /// Stops the Engine and all sync services.
         /// </summary>
         public async Task StopEngineAsync()
         {
@@ -173,31 +203,27 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <summary>
         /// Opens Windows File Manager with both remote storage and user file system for testing.
         /// </summary>
-        /// <param name="openRemoteStorage">True if the Remote Storage must be opened. False - otherwise.</param>
+        /// <param name="openRemoteStorage">True if the Remote Storage must be opened. False otherwise.</param>
         /// <param name="engineIndex">Index used to position Windows Explorer window to show this user file system.</param>
-        /// <param name="totalEngines">Total number of Engined that will be mounted by this app.</param>
+        /// <param name="totalEngines">Total number of Engines that will be mounted by this app.</param>
+        /// <param name="userFileSystemWindowName">Name of the user file system window.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
         /// <remarks>This method is provided solely for the development and testing convenience.</remarks>
         public void ShowTestEnvironment(string userFileSystemWindowName, bool openRemoteStorage = true, CancellationToken cancellationToken = default, int engineIndex = 0, int totalEngines = 1)
         {
-            int numWindowsPerEngine = 2; //openRemoteStorage ? 2 : 1; // Each engine shows 2 windows - remote storage and UFS.
-            int horizintalIndex = engineIndex * numWindowsPerEngine;
+            int numWindowsPerEngine = 2; // Each engine shows 2 windows - remote storage and UFS.
+            int horizontalIndex = engineIndex * numWindowsPerEngine;
             int totalWindows = totalEngines * numWindowsPerEngine;
 
             // Open remote storage.
             if (openRemoteStorage)
             {
-                Commands.Open(RemoteStorageRootPath);
-                //string rsWindowName = Path.GetFileName(RemoteStorageRootPath.TrimEnd('\\'));
-                //IntPtr hWndRemoteStorage = WindowManager.FindWindow(rsWindowName, cancellationToken);
-                //WindowManager.PositionFileSystemWindow(hWndRemoteStorage, horizintalIndex, totalWindows);
+                TryOpen(RemoteStorageRootPath);
             }
 
             // Open Windows File Manager with user file system.
-            Commands.Open(Engine.Path);
-            //IntPtr hWndUserFileSystem = WindowManager.FindWindow(userFileSystemWindowName, cancellationToken);
-            //WindowManager.PositionFileSystemWindow(hWndUserFileSystem, horizintalIndex + 1, totalWindows);
+            TryOpen(Engine.Path);
         }
-
 #endif
     }
 }

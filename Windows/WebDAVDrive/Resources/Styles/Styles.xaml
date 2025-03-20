@@ -8,6 +8,20 @@
         <ResourceDictionary Source="Colors.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <ResourceDictionary.ThemeDictionaries>
+        <!-- Light Theme Colors -->
+        <ResourceDictionary x:Key="Light">
+            <x:String x:Key="KeyImagePath">/Images/Key.png</x:String>
+        </ResourceDictionary>
+
+        <!-- Dark Theme Colors -->
+        <ResourceDictionary x:Key="Dark">
+            <x:String x:Key="KeyImagePath">/Images/KeyWhite.png</x:String>
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+
+    <BitmapImage x:Key="KeyImage" UriSource="{ThemeResource KeyImagePath}" />
+    
     <Style x:Name="DialogButtonStyle" TargetType="Button">
         <Setter Property="Foreground" Value="{StaticResource ButtonBackgroundBrush}" />
         <Setter Property="Background" Value="{StaticResource PrimaryBrush}" />
@@ -54,4 +68,42 @@
         <Setter Property="Margin" Value="0,0,0,0" />
     </Style>
 
+    <Style x:Name="DialogMainGridStyle" TargetType="Grid">
+        <Setter Property="Background" Value="{StaticResource BackgroundBrush}" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="Padding" Value="20" />
+    </Style>
+
+    <Style x:Name="DialogTextBlockStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+    </Style>
+
+    <Style x:Name="DialogLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource DialogTextBlockStyle}">
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style x:Name="DialogBoldTextBlockStyle" TargetType="TextBlock" BasedOn="{StaticResource DialogTextBlockStyle}" >
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="0,20,0,0" />
+    </Style>
+
+    <Style x:Name="DialogTextBlockWrapStyle" TargetType="TextBlock" BasedOn="{StaticResource DialogTextBlockStyle}">
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+        <Setter Property="Padding" Value="0,0,20,0" />
+    </Style>
+
+    <Style x:Name="DialogTextBlockWrapWordsStyle" TargetType="TextBlock" BasedOn="{StaticResource DialogTextBlockWrapStyle}">
+        <Setter Property="TextWrapping" Value="WrapWholeWords" />
+    </Style>
+
+    <Style x:Name="DialogScrollViewerStyle" TargetType="ScrollViewer">
+        <Setter Property="HorizontalScrollMode" Value="Disabled" />
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="VerticalScrollMode" Value="Auto" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+    </Style>
 </ResourceDictionary>

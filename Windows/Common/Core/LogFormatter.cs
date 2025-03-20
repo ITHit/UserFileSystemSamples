@@ -316,7 +316,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
             long bytes = Math.Abs(length);
             int place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
-            double num = Math.Round(bytes / Math.Pow(1024, place), 1);
+            double num = Math.Round(bytes / Math.Pow(1024, place), 0);
             return (Math.Sign(length) * num).ToString() + suf[place];
         }
 

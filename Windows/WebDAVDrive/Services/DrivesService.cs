@@ -5,16 +5,20 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Windows.Storage.Provider;
+using Windows.ApplicationModel.Resources;
+using Microsoft.UI.Xaml.Controls;
 
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Windows.Package;
 using ITHit.FileSystem.Windows.ShellExtension;
+using ITHit.FileSystem.Windows.WinUI.ViewModels;
+using ITHit.FileSystem.Windows.WinUI;
+using WindowManager = ITHit.FileSystem.Samples.Common.Windows.WindowManager;
 
 using WebDAVDrive.Dialogs;
 using WinUIEx;
-
 
 namespace WebDAVDrive.Services
 {
@@ -67,7 +71,7 @@ namespace WebDAVDrive.Services
         /// </summary>
         public ConcurrentDictionary<Guid, VirtualEngine> Engines { get; } = new ConcurrentDictionary<Guid, VirtualEngine>();
 
-        private readonly DrivesTrayIconService trayIconService;
+        private readonly Dictionary<Guid, Tray> trayWindows;
 
         public DrivesService(AppSettings settings, LocalServer localServer, IToastNotificationService notificationService,
             SecureStorageService secureStorage, LogFormatter logFormatter)
@@ -78,10 +82,9 @@ namespace WebDAVDrive.Services
             Registrar = new Registrar(logFormatter.Log);
             Settings = settings;
             LogFormatter = logFormatter;
-            trayIconService = new DrivesTrayIconService(this, logFormatter);
             NotificationService = notificationService;
             ConsoleProcessor = new ConsoleProcessor(Registrar, LogFormatter, settings.AppID);
-
+            trayWindows = new Dictionary<Guid, Tray>();
         }
 
         public async Task<(bool success, Exception? exception)> MountNewAsync(string webDAVServerUrl)
@@ -96,16 +99,7 @@ namespace WebDAVDrive.Services
                 {
                     defaultTrayIcon.Dispose();
                 }
-            }
-            else
-            {
-                // Unmount engine if mounting failed.
-                KeyValuePair<Guid, VirtualEngine>? engine = Engines.Where(p => p.Value.RemoteStorageRootPath == webDAVServerUrl).FirstOrDefault();
-                if (engine != null)
-                {
-                    await UnMountAsync(engine.Value.Value.InstanceId, webDAVServerUrl);
-                }
-            }
+            }            
 
             return result;
         }
@@ -119,7 +113,7 @@ namespace WebDAVDrive.Services
 
             if (Engines.TryRemove(engineId, out _))
             {
-                trayIconService.RemoveTrayIcon(engineId);
+                RemoveTrayWindow(engineId);
             }
 
             if (Engines.Count == 0)
@@ -136,7 +130,7 @@ namespace WebDAVDrive.Services
                 await (engine.Value as VirtualEngine)!.Commands.EngineExitAsync();
                 engine.Value.Dispose();
 
-                trayIconService.RemoveTrayIcon(engine.Key);
+                RemoveTrayWindow(engine.Key);
             }
         }
 
@@ -332,7 +326,6 @@ namespace WebDAVDrive.Services
 
                 engine.SyncService.SyncIntervalMs = Settings.SyncIntervalMs;
                 engine.SyncService.IncomingSyncMode = VirtualEngine.GetSyncMode(Settings.IncomingSyncMode);
-                engine.AutoLock = Settings.AutoLock;
                 engine.MaxTransferConcurrentRequests = Settings.MaxTransferConcurrentRequests.Value;
                 engine.MaxOperationsConcurrentRequests = Settings.MaxOperationsConcurrentRequests.Value;
                 engine.FolderInvalidationIntervalMs = Settings.FolderInvalidationIntervalMs;
@@ -341,7 +334,7 @@ namespace WebDAVDrive.Services
                 await LogFormatter.PrintEngineStartInfoAsync(engine, webDAVServerUrl);
 
                 // Create tray.
-                trayIconService.CreateTrayIcon(GetDisplayName(webDAVServerUrl), engine.InstanceId, engine);
+                CreateTrayIcon(GetDisplayName(webDAVServerUrl), engine.InstanceId, engine);
 
                 // Start processing OS file system calls.
                 await engine.StartAsync();
@@ -361,6 +354,56 @@ namespace WebDAVDrive.Services
 
                 return (false, ex);
             }
+        }
+
+        private void CreateTrayIcon(string driveName, Guid engineKey, VirtualEngine engine)
+        {
+            ResourceLoader resourceLoader = ResourceLoader.GetForViewIndependentUse();
+            ServiceProvider.DispatcherQueue.TryEnqueue(() =>
+            {
+                
+                // Create Tray window.
+                Tray trayWindow = new Tray(engine);                  
+
+                //Set header text, mount, unmount, start/stop sync handlers here - as Tray does not access to sample related things
+                trayWindow.DriveNameText = engine.RemoteStorageRootPath;
+                trayWindow.NotifyIconText = $"{ServiceProvider.GetService<AppSettings>().ProductName}\n{engine.RemoteStorageRootPath}";
+                trayWindow.Header = ServiceProvider.GetService<AppSettings>().ProductName;
+                trayWindow.ShowSettingsMenu.Click += (sender, e) => ShowSettingsMenuClick(engine);
+                trayWindow.MountNewDriveMenu.Click += TrayMountNewDriveClick;
+                trayWindow.UnmountMenu.Click += (sender, e) => TrayUnmountClick(engine, engineKey);
+                trayWindow.ShowFeedbackMenu.Click += async (sender, e) => await Commands.OpenSupportPortalAsync();
+                trayWindow.OpenFolderButton.Click += (sender, e) => engine.Commands.TryOpen(engine.Path);
+                trayWindow.ViewOnlineButton.Click += (sender, e) => ViewOnlineClicked(engine);
+                trayWindow.ViewItemOnlineClick += (viewModel) => ViewItemOnlineClick(viewModel, engine);
+                trayWindow.ErrorDescriptionClick += (viewModel) => ErrorDescriptionClick(viewModel, engine, LogFormatter);
+                trayWindow.ResolveConflictClick += (viewModel) => ResolveConflictClick(viewModel, engine);
+
+#if DEBUG
+                MenuFlyoutItem hideShowConsole = new MenuFlyoutItem { Text = resourceLoader.GetString("HideLog") };
+                hideShowConsole.Click += (_, _) => HideShowConsoleClicked(hideShowConsole);
+                trayWindow.DebugMenu.Items.Add(hideShowConsole);
+#endif
+                MenuFlyoutItem enableDisableDebugLoggingMenu = new MenuFlyoutItem
+                {
+                    Text = LogFormatter.DebugLoggingEnabled ? resourceLoader.GetString("DisableDebugLogging")
+                    : resourceLoader.GetString("EnableDebugLogging")
+                };
+                enableDisableDebugLoggingMenu.Click += (sender, e) => EnableDisableDebugLoggingClicked(enableDisableDebugLoggingMenu);
+                MenuFlyoutItem openLogFile = new MenuFlyoutItem { Text = resourceLoader.GetString("OpenLogFile/Text") };
+                openLogFile.Click += (_, _) => Commands.TryOpen(LogFormatter.LogFilePath);
+                
+                trayWindow.DebugMenu.Items.Add(enableDisableDebugLoggingMenu);
+                trayWindow.DebugMenu.Items.Add(openLogFile);     
+                
+
+                trayWindows.Add(engineKey, trayWindow);
+            });
+        }
+
+        private void ShowSettingsMenuClick(VirtualEngine engine)
+        {
+            ServiceProvider.DispatcherQueue.TryEnqueue(() => new Settings(engine).Show());
         }
 
         private string GetDisplayName(string webDAVServerUrl)
@@ -390,8 +433,74 @@ namespace WebDAVDrive.Services
         /// </summary>
         private void CreateDefaultTrayIcon()
         {
-            defaultTrayIcon = new DefaultTrayIcon(this);
+            defaultTrayIcon = new DefaultTrayIcon(this, LogFormatter);
             defaultTrayIcon.CreateTrayIcon();
+        }
+
+        
+        private void ViewItemOnlineClick(FileEventViewModel fileEvent, VirtualEngine engine)
+        {
+            string url = engine.Mapping.MapPath(fileEvent.Path);
+            Commands.Open(url);
+        }
+
+        private void ErrorDescriptionClick(FileEventViewModel fileEvent, VirtualEngine engine, LogFormatter logFormatter)
+        {
+            new ErrorDetails(fileEvent, engine, logFormatter).Show();
+        }
+
+        private void ResolveConflictClick(FileEventViewModel fileEvent, VirtualEngine engine)
+        {
+            ServiceProvider.DispatcherQueue.TryEnqueue(() => new Compare(fileEvent.Path, engine).Show());
+        }
+
+        private async void TrayUnmountClick(VirtualEngine engine, Guid engineKey)
+        {
+            await engine.Commands.StopEngineAsync();
+            await UnMountAsync(engineKey, engine.RemoteStorageRootPath);
+        }
+
+        private void TrayMountNewDriveClick(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+        {
+            new MountNewDrive().Show();
+        }
+
+        /// <summary>
+        /// Enables/Disables debug logging.
+        /// </summary>
+        private void EnableDisableDebugLoggingClicked(MenuFlyoutItem menuItem)
+        {
+            LogFormatter.DebugLoggingEnabled = !LogFormatter.DebugLoggingEnabled;
+            ResourceLoader resourceLoader = ResourceLoader.GetForViewIndependentUse();
+            menuItem.Text = resourceLoader.GetString(LogFormatter.DebugLoggingEnabled ? "DisableDebugLogging" : "EnableDebugLogging");
+        }
+
+        /// <summary>
+        /// Hides/Shows console log.
+        /// </summary>
+        private void HideShowConsoleClicked(MenuFlyoutItem menuItem)
+        {
+            WindowManager.SetConsoleWindowVisibility(!WindowManager.ConsoleVisible);
+            ResourceLoader resourceLoader = ResourceLoader.GetForViewIndependentUse();
+            menuItem.Text = WindowManager.ConsoleVisible ? resourceLoader.GetString("HideLog") : resourceLoader.GetString("ShowLog");
+        }
+
+        /// <summary>
+        /// Opens remote URL of the drive (if supported). Otherwise that button is disabled.
+        /// </summary>
+        private void ViewOnlineClicked(VirtualEngine engine)
+        {
+            Commands.Open(engine.RemoteStorageRootPath);
+        }
+        
+
+        private void RemoveTrayWindow(Guid engineKey)
+        {
+            if (trayWindows.ContainsKey(engineKey))
+            {
+                trayWindows[engineKey].Dispose();
+                trayWindows.Remove(engineKey);
+            }
         }
     }
 }

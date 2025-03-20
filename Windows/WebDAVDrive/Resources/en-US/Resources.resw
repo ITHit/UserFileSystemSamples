@@ -145,69 +145,17 @@
     <value>Enter URL</value>
     <comment>Enter URL TextBlock content</comment>
   </data>
-  <data name="Exit.Text" xml:space="preserve">
-    <value>Exit</value>
-    <comment>Exit menu text</comment>
-  </data>
-  <data name="FilesSynching" xml:space="preserve">
-    <value>Your files are synching</value>
-    <comment>Synching label</comment>
-  </data>
-  <data name="FilesSynchronizationPaused" xml:space="preserve">
-    <value>Files synchronization stopped</value>
-    <comment>Synchronization paused label</comment>
-  </data>
-  <data name="FilesSynchronized" xml:space="preserve">
-    <value>Your files are synchronized</value>
-    <comment>Synchronized label</comment>
-  </data>
-  <data name="HideLog" xml:space="preserve">
-    <value>Hide Console</value>
-    <comment>Hide Console Window</comment>
-  </data>
   <data name="InvalidUrl" xml:space="preserve">
     <value>Invalid URL. Please enter a valid URL.</value>
     <comment>Invalid URL validation text</comment>
-  </data>
-  <data name="MountNewDrive.Text" xml:space="preserve">
-    <value>Mount New Drive</value>
-    <comment>Mount New Drive menu text</comment>
   </data>
   <data name="MountNewDriveButton.Content" xml:space="preserve">
     <value>Mount New Drive</value>
     <comment>Mount New Drive button label</comment>
   </data>
-  <data name="OpenFolder.Text" xml:space="preserve">
-    <value>Open Folder</value>
-    <comment>Open Folder button text</comment>
-  </data>
-  <data name="OpenLogFile.Text" xml:space="preserve">
-    <value>Open Log File</value>
-    <comment>Open Log File menu text</comment>
-  </data>
-  <data name="OpenRemoteStorage.Text" xml:space="preserve">
-    <value>Open Remote Storage</value>
-    <comment>Open Remote Storage button text</comment>
-  </data>
-  <data name="RequestSupport.Text" xml:space="preserve">
-    <value>Request Support</value>
-    <comment>Request Support menu text</comment>
-  </data>
-  <data name="ShowLog" xml:space="preserve">
-    <value>Show Console</value>
-    <comment>Show Console Log</comment>
-  </data>
-  <data name="StartSynchronization.Text" xml:space="preserve">
-    <value>Start Synchronization</value>
-    <comment>Start Synchronization menu text</comment>
-  </data>
   <data name="Startup.Title" xml:space="preserve">
     <value>Startup</value>
     <comment>Startup window title</comment>
-  </data>
-  <data name="StopSynchronization.Text" xml:space="preserve">
-    <value>Stop Synchronization</value>
-    <comment>Stop Synchronization menu text</comment>
   </data>
   <data name="TakeClient.Content" xml:space="preserve">
     <value>Take Client</value>
@@ -216,10 +164,6 @@
   <data name="TakeServer.Content" xml:space="preserve">
     <value>Take Server</value>
     <comment>Take Server button label</comment>
-  </data>
-  <data name="Unmount.Text" xml:space="preserve">
-    <value>Unmount</value>
-    <comment>Unmount menu text</comment>
   </data>
   <data name="UrlEntry.PlaceholderText" xml:space="preserve">
     <value>Enter URL here</value>
@@ -240,18 +184,6 @@
   <data name="WebBrowserLogin.Title" xml:space="preserve">
     <value>Login</value>
     <comment>Web Browser Login window title</comment>
-  </data>
-  <data name="Idle" xml:space="preserve">
-    <value>Idle</value>
-    <comment>Idle text (tray icon)</comment>
-  </data>
-  <data name="SynchronizationStopped" xml:space="preserve">
-    <value>Synchronization stopped</value>
-    <comment>Synchronization stopped text (tray icon)</comment>
-  </data>
-  <data name="Synching" xml:space="preserve">
-    <value>Synching</value>
-    <comment>Synching text (tray icon)</comment>
   </data>
   <data name="ServerTextBlock.Text" xml:space="preserve">
     <value>Server:</value>
@@ -297,80 +229,189 @@
     <value>OK</value>
     <comment>Error content dialog close button text</comment>
   </data>
-  <data name="OpenItemMenu.Text" xml:space="preserve">
-    <value>Open</value>
-    <comment>Event's submenu - Open label</comment>
+  <data name="ErrorDetailsWindow.Title" xml:space="preserve">
+    <value>Error Details</value>
+    <comment>Error Details window title</comment>
   </data>
-  <data name="ShowInFolderMenu.Text" xml:space="preserve">
-    <value>Show in Folder</value>
-    <comment>Event's submenu - Show in Folder label</comment>
+  <data name="FilePath.Text" xml:space="preserve">
+    <value>File Path</value>
+    <comment>Error File Path label text</comment>
   </data>
-  <data name="ViewItemOnlineMenu.Text" xml:space="preserve">
-    <value>View Online</value>
-    <comment>Event's submenu - View Online label</comment>
+  <data name="TargetPath.Text" xml:space="preserve">
+    <value>Target Path</value>
+    <comment>Error Target Path label text</comment>
   </data>
-  <data name="Checkout.Content" xml:space="preserve">
-    <value>Check Out</value>
-    <comment>Check Out</comment>
+  <data name="RemoteStoragePath.Text" xml:space="preserve">
+    <value>Remote Storage Path</value>
+    <comment>Error Remote Storage Path label text</comment>
   </data>
-  <data name="Checkout_Question.Text" xml:space="preserve">
-    <value>You are about to open the document, whould you like to check it out?</value>
+  <data name="Message.Text" xml:space="preserve">
+    <value>Message</value>
+    <comment>Error Message label text</comment>
   </data>
-  <data name="Checkout_FileName.Text" xml:space="preserve">
-    <value>Sample_Name.pdf</value>
+  <data name="SyncDirection.Text" xml:space="preserve">
+    <value>Sync Direction</value>
+    <comment>Error Sync Direction label text</comment>
   </data>
-  <data name="Checkout_OpenFromDomain.Text" xml:space="preserve">
-    <value>ithit.sharepoint.com</value>
+  <data name="OperationStatus.Text" xml:space="preserve">
+    <value>Operation Status</value>
+    <comment>Error Operation Status label text</comment>
   </data>
-  <data name="Name" xml:space="preserve">
-    <value>Name</value>
+  <data name="OperationType.Text" xml:space="preserve">
+    <value>Operation Type</value>
+    <comment>Error Operation Type label text</comment>
   </data>
-  <data name="From" xml:space="preserve">
-    <value>From</value>
+  <data name="ComponentName.Text" xml:space="preserve">
+    <value>Component Name</value>
+    <comment>Error ComponentName label text</comment>
   </data>
-  <data name="Alert_Question.Text" xml:space="preserve">
-    <value>Other users can't see your changes until you check in the document. &amp;#x0a;Do you want to check in now? </value>
+  <data name="NotificationTime.Text" xml:space="preserve">
+    <value>Notification Time</value>
+    <comment>Error Notification Time label text</comment>
   </data>
-  <data name="Yes" xml:space="preserve">
-    <value>Yes</value>
+  <data name="Toggle.OnContent" xml:space="preserve">
+    <value>On</value>
+    <comment>"On" option of standard toggler</comment>
   </data>
-  <data name="No" xml:space="preserve">
-    <value>No</value>
+  <data name="BottomToggle.OnContent" xml:space="preserve">
+    <value>On</value>
+    <comment>"On" option of standard toggler</comment>
   </data>
-  <data name="Checkin.Content" xml:space="preserve">
-    <value>Check In</value>
+  <data name="Toggle.OffContent" xml:space="preserve">
+    <value>Off</value>
+    <comment>"Off" option of standard toggler</comment>
   </data>
-  <data name="Checkin_Question.Text" xml:space="preserve">
-    <value>You are about to checkin</value>
+  <data name="BottomToggle.OffContent" xml:space="preserve">
+    <value>Off</value>
+    <comment>"Off" option of standard toggler</comment>
   </data>
-  <data name="Checkin_Comments.PlaceholderText" xml:space="preserve">
-    <value>Enter your version comments here</value>
+  <data name="EnableAutomaticLocking.Text" xml:space="preserve">
+    <value>Enable automatic locking</value>
+    <comment>Enable automatic locking label (settings)</comment>
   </data>
-  <data name="Checkin_Keep.Content" xml:space="preserve">
-    <value>Keep the document checked out after check in this version?</value>
+  <data name="EnableAutomaticLockingDescription.Text" xml:space="preserve">
+    <value>Automatically lock the file in remote storage when a file handle is being opened for writing, unlock on close. This enables automatic locking of MS Office documents when opened for editing.</value>
+    <comment>Enable automatic locking description (settings)</comment>
   </data>
-  <data name="DisableDebugLogging" xml:space="preserve">
-    <value>Disable Debug Logging</value>
-    <comment>Disable Debug Logging menu text</comment>
+  <data name="ReadOnlyOnLockedFilesLabel.Text" xml:space="preserve">
+    <value>Set read-only attribute on files locked by other users</value>
+    <comment>Read-only on locked file label (settings)</comment>
   </data>
-  <data name="EnableDebuglogging" xml:space="preserve">
-    <value>Enable Debug Logging</value>
-    <comment>Enable Debug Logging menu text</comment>
+  <data name="ReadOnlyOnLockedFilesLabelDescription.Text" xml:space="preserve">
+    <value>Mark documents locked by other users as read-only for this user and vice versa. A read-only MS Office document opens in a view-only mode preventing document collisions.</value>
+    <comment>Read-only on locked file description (settings)</comment>
   </data>
-  <data name="PinTooltip.Content" xml:space="preserve">
-    <value>Pin</value>
-    <comment>Pin button tooltip</comment>
+  <data name="ManualLockTimeoutLabel.Text" xml:space="preserve">
+    <value>Manual lock timeout (seconds)</value>
+    <comment>Manual lock timeout label (settings)</comment>
   </data>
-  <data name="SettingsTooltip.Content" xml:space="preserve">
+  <data name="ManualLockTimeoutLabelDescription.Text" xml:space="preserve">
+    <value>Manual lock timeout in seconds. Manual lock is set via context menu and is not extended. Set to -1 for infinity. Note that many WebDAV servers do not accept Infinity and will set its own default timeout instead.</value>
+    <comment>Manual lock timeout description (settings)</comment>
+  </data>
+  <data name="AutomaticRequiredMessage.Text" xml:space="preserve">
+    <value>Required</value>
+    <comment>Enable automatic locking required message</comment>
+  </data>
+  <data name="AutomaticLockTimeoutLabel.Text" xml:space="preserve">
+    <value>Automatic lock timeout (seconds)</value>
+    <comment>Automatic lock timeout label (settings)</comment>
+  </data>
+  <data name="AutomaticLockTimeoutLabelDescription.Text" xml:space="preserve">
+    <value>Automatic lock timeout in seconds. Automatic lock will be extended (refreshed) when this period is about to expire. This type of lock is set when Microsoft Office or AutoCAD application opens a document.</value>
+    <comment>Automatic lock timeout label (settings)</comment>
+  </data>
+  <data name="Save.Content" xml:space="preserve">
+    <value>Save</value>
+    <comment>Save button label</comment>
+  </data>
+  <data name="SettingsWindow.Title" xml:space="preserve">
     <value>Settings</value>
-    <comment>Settings button tooltip</comment>
+    <comment>Settings window title</comment>
   </data>
-  <data name="UnpinTooltip.Content" xml:space="preserve">
-    <value>Unpin</value>
-    <comment>Unpin button tooltip</comment>
+  <data name="ExceptionStackTrace.Text" xml:space="preserve">
+    <value>Exception Stack Trace</value>
+    <comment>Error Exception Stack Trace label text</comment>
+  </data>
+  <data name="HistoryItemsLabel.Text" xml:space="preserve">
+    <value>History Items</value>
+    <comment>History Items header text (error details window)</comment>
+  </data>
+  <data name="ErrorDetailsLabel.Text" xml:space="preserve">
+    <value>Error Details</value>
+    <comment>Error Details header text</comment>
+  </data>
+  <data name="OpenLogButton.Content" xml:space="preserve">
+    <value>Open Log</value>
+    <comment>Open Log button label</comment>
+  </data>
+  <data name="RequestSupportButton.Content" xml:space="preserve">
+    <value>Request Support</value>
+    <comment>Request Support button label</comment>
+  </data>
+  <data name="NotApplicable" xml:space="preserve">
+    <value>N/A</value>
+    <comment>N/A text</comment>
+  </data>
+  <data name="CheckInSuccess" xml:space="preserve">
+    <value>CheckIn Success</value>
+  </data>
+  <data name="CheckInFailed" xml:space="preserve">
+    <value>CheckIn Failed</value>
+  </data>
+  <data name="CheckOutSuccess" xml:space="preserve">
+    <value>CheckOut Success</value>
+  </data>
+  <data name="CheckOutFailed" xml:space="preserve">
+    <value>CheckOut Failed</value>
+  </data>
+  <data name="HideLog" xml:space="preserve">
+    <value>Hide Console</value>
+  </data>
+  <data name="ShowLog" xml:space="preserve">
+    <value>Show Console</value>
+  </data>
+  <data name="TestMenu" xml:space="preserve">
+    <value>Test menu label</value>
+  </data>
+  <data name="TrayProductName" xml:space="preserve">
+    <value>WebDAV Drive Sample</value>
+    <comment>Product name displaying on tray icon hover</comment>
+  </data>
+  <data name="AutomaticValidationMessage.Text" xml:space="preserve">
+    <value>Must be a number</value>
+    <comment>Enable automatic locking validation message</comment>
+  </data>
+  <data name="ManualValidationMessage.Text" xml:space="preserve">
+    <value>Must be a number</value>
+    <comment>Enable manual locking validation message</comment>
+  </data>
+  <data name="RequestSupport.Text" xml:space="preserve">
+    <value>Request Support</value>
+    <comment>Request Support menu text (default tray icon)</comment>
+  </data>
+  <data name="MountNewDrive.Text" xml:space="preserve">
+    <value>Mount New Drive</value>
+    <comment>Mount New Drive menu text (default tray icon)</comment>
   </data>
   <data name="DebugMenu.Text" xml:space="preserve">
     <value>Debug</value>
-    <comment>Debug menu text</comment>
+    <comment>Debug menu text (default tray icon)</comment>
+  </data>
+  <data name="EnableDebugLogging" xml:space="preserve">
+    <value>Enable Debug Logging</value>
+    <comment>Enable Debug Logging menu text (default tray icon)</comment>
+  </data>
+  <data name="DisableDebugLogging" xml:space="preserve">
+    <value>Disable Debug Logging</value>
+    <comment>Disable Debug Logging menu text (default tray icon)</comment>
+  </data>
+  <data name="OpenLogFile.Text" xml:space="preserve">
+    <value>Open Log File</value>
+    <comment>Open Log File menu text (default tray icon)</comment>
+  </data>
+  <data name="Exit.Text" xml:space="preserve">
+    <value>Exit</value>
+    <comment>Exit menu text (default tray icon)</comment>
   </data>
 </root>

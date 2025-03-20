@@ -121,7 +121,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                     bool isLocked = false;
                     if (engine.Placeholders.TryGetItem(userFileSystemPath, out PlaceholderItem placeholder))
                     {
-                        if (placeholder.Properties.TryGetLockInfo(out ServerLockInfo lockInfo))
+                        if (placeholder.Properties.TryGetActiveLockInfo(out ServerLockInfo lockInfo))
                         {
                             // Detect if locked by this user.
                             if (!engine.IsCurrentUser(lockInfo.Owner))

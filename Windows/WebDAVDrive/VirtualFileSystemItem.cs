@@ -210,7 +210,7 @@ namespace WebDAVDrive
             IList<FileSystemItemPropertyData> props = new List<FileSystemItemPropertyData>();
 
             // Read LockInfo and choose the lock icon.
-            if (operationContext.Properties.TryGetLockInfo(out ServerLockInfo lockInfo))
+            if (operationContext.Properties.TryGetActiveLockInfo(out ServerLockInfo lockInfo))
             {
                 // Determine if the item is locked by this user or thirt-party user.
                 bool thisUser = Engine.IsCurrentUser(lockInfo.Owner);
@@ -315,9 +315,6 @@ namespace WebDAVDrive
 
             // Save lock-token and lock-mode. Start the timer to refresh the lock.
             await SaveLockAsync(lockInfo, lockMode, operationContext, cancellationToken);
-
-            // Show checkout dialog and checkout file.
-            await Engine.CheckoutManager.TryCheckOutAsync(UserFileSystemPath, RemoteStoragePath, lockInfo);
         }
 
         /// <summary>
@@ -380,7 +377,7 @@ namespace WebDAVDrive
                 if (cancellationToken.IsCancellationRequested) return;
 
                 // Check that the item is still locked.
-                if (operationContext.Properties.TryGetLockInfo(out ServerLockInfo serverLockInfo))
+                if (operationContext.Properties.TryGetActiveLockInfo(out ServerLockInfo serverLockInfo))
                 {
                     // The item may be unlocked and than locked again. Check that the stored lock is the same as passed to this method.
                     bool sameToken = lockToken.Equals(serverLockInfo.LockToken, StringComparison.InvariantCultureIgnoreCase);
@@ -422,7 +419,7 @@ namespace WebDAVDrive
         ///<inheritdoc>
         public async Task<LockMode> GetLockModeAsync(IOperationContext operationContext, CancellationToken cancellationToken)
         {
-            if (operationContext.Properties.TryGetLockInfo(out ServerLockInfo lockInfo))
+            if (operationContext.Properties.TryGetActiveLockInfo(out ServerLockInfo lockInfo))
             {
                 return lockInfo.Mode;
             }
@@ -437,7 +434,7 @@ namespace WebDAVDrive
             Logger.LogMessage($"{nameof(ILock)}.{nameof(UnlockAsync)}()", UserFileSystemPath, default, operationContext);
 
             // Read the lock-token.
-            if (operationContext.Properties.TryGetLockInfo(out ServerLockInfo lockInfo))
+            if (operationContext.Properties.TryGetActiveLockInfo(out ServerLockInfo lockInfo))
             {
                 LockUriTokenPair[] lockTokens = new LockUriTokenPair[] { new LockUriTokenPair(new Uri(RemoteStoragePath), lockInfo.LockToken) };
 
@@ -454,9 +451,6 @@ namespace WebDAVDrive
 
             // Delete lock-mode and lock-token info.
             operationContext.Properties.TryDeleteLockInfo();
-
-            // Show checkin dialog and checkin file if user decide.
-            await Engine.CheckoutManager.TryCheckInAsync(UserFileSystemPath, RemoteStoragePath, lockInfo);
         }
         
     }

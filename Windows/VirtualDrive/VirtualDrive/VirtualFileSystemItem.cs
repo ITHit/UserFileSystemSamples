@@ -177,7 +177,7 @@ namespace VirtualDrive
             IList<FileSystemItemPropertyData> props = new List<FileSystemItemPropertyData>();
 
             // Read LockInfo and choose the lock icon.
-            if (operationContext.Properties.TryGetLockInfo(out ServerLockInfo lockInfo))
+            if (operationContext.Properties.TryGetActiveLockInfo(out ServerLockInfo lockInfo))
             {
                 // Determine if the item is locked by this user or thirt-party user.
                 bool thisUser = Engine.IsCurrentUser(lockInfo.Owner);
@@ -254,7 +254,7 @@ namespace VirtualDrive
                     {                        
                         if (cancellationToken.IsCancellationRequested) return;
 
-                        if (operationContext.Properties.TryGetLockInfo(out ServerLockInfo serverLockInfo) &&
+                        if (operationContext.Properties.TryGetActiveLockInfo(out ServerLockInfo serverLockInfo) &&
                             FilterHelper.IsLockedWithOwnerFile(UserFileSystemPath) && !FilterHelper.IsOwnerFileExists(UserFileSystemPath))
                         {
                             await Engine.ClientNotifications(UserFileSystemPath).UnlockAsync(true, cancellationToken);
@@ -282,7 +282,7 @@ namespace VirtualDrive
         ///<inheritdoc>
         public async Task<LockMode> GetLockModeAsync(IOperationContext operationContext, CancellationToken cancellationToken)
         {
-            if (operationContext.Properties.TryGetLockInfo(out ServerLockInfo lockInfo))
+            if (operationContext.Properties.TryGetActiveLockInfo(out ServerLockInfo lockInfo))
             {
                 return lockInfo.Mode;
             }
@@ -296,7 +296,7 @@ namespace VirtualDrive
             Logger.LogMessage($"{nameof(ILock)}.{nameof(UnlockAsync)}()", UserFileSystemPath, default, operationContext);
 
             // Read the lock-token.
-            if (operationContext.Properties.TryGetLockInfo(out ServerLockInfo lockInfo))
+            if (operationContext.Properties.TryGetActiveLockInfo(out ServerLockInfo lockInfo))
             {
                 // Unlock the item in the remote storage here.
             }

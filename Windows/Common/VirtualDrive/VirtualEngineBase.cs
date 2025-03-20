@@ -44,7 +44,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <summary>
         /// Mark documents locked by other users as read-only for this user and vice versa.
         /// </summary>
-        public readonly bool SetLockReadOnly;
+        public bool SetLockReadOnly;
 
         /// <summary>
         /// Creates a vitual file system Engine.
@@ -79,6 +79,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             StateChanged += Engine_StateChanged;
             ItemsChanging += Engine_ItemsChanging;
             ItemsChanged += Engine_ItemsChanged;
+            ItemsProgress += Engine_ItemsProgress;
             SyncService.StateChanged += SyncService_StateChanged;
             Error += logFormatter.LogError;
             Message += logFormatter.LogMessage;
@@ -94,7 +95,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             // Log info about the opertion.
             switch (e.OperationType)
             {
-                case OperationType.Populate:
+                case OperationType.Listing:
                     // Log a single parent folder for folder population.
                     LogItemChanging(e, e.Parent);
                     break;
@@ -114,12 +115,50 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             ILogger logger = Logger.CreateLogger(e.ComponentName);
             string msg = $"{e.Direction} {e.OperationType}:{e.NotificationTime}";
 
-            // Log progress.
-            if (e.NotificationTime.HasFlag(NotificationTime.Progress))
+            switch (e.Source)
             {
-                long progress = e.Position * 100 / (e.Length > 0 ? e.Length : 1);
-                msg = $"{msg}: {progress}%";
+                case OperationSource.Server:
+                    logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext, item.Metadata);
+                    break;
+                case OperationSource.Client:
+                    logger.LogDebug(msg, item.Path, item.NewPath, e.OperationContext, item.Metadata);
+                    break;
             }
+        }
+        
+
+        
+        /// <summary>
+        /// Fired during download, upload or population progress.
+        /// </summary>
+        private void Engine_ItemsProgress(Engine sender, ItemsChangeProgressEventArgs e)
+        {
+            // Log info about the opertion.
+            switch (e.OperationType)
+            {
+                case OperationType.Listing:
+                    // Log a single parent folder for folder population.
+                    LogItemProgress(e, e.Parent);
+                    break;
+                default:
+                    // Log each item in the list for all other operations.
+                    foreach (ChangeEventItem item in e.Items)
+                    {
+                        LogItemProgress(e, item);
+                    }
+                    break;
+            }
+        }
+
+        private void LogItemProgress(ItemsChangeProgressEventArgs e, ChangeEventItem item)
+        {
+            // Log info about the opertion.
+            ILogger logger = Logger.CreateLogger(e.ComponentName);
+            string msg = $"{e.Direction} {e.OperationType}:{e.NotificationTime}";
+
+            // Log progress.                
+            long progress = e.Position * 100 / (e.Length > 0 ? e.Length : 1);
+            msg = $"{msg}: {progress}%";
 
             switch (e.Source)
             {
@@ -141,24 +180,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             foreach (ChangeEventItem item in e.Items)
             {
-                // Save custom properties received from the remote storage here.
-                // They will be displayed in Windows Explorer columns.
-                if (e.Direction == SyncDirection.Incoming && e.Result.IsSuccess)
-                {
-                    switch (e.OperationType)
-                    {
-                        case OperationType.Create:
-                        //case OperationType.CreateCompletion:
-                        case OperationType.Populate:
-                        case OperationType.UpdateMetadata:
-                            if (item.Metadata != null)
-                            {
-                                item.Properties.SaveProperties(item.Metadata as FileSystemItemMetadataExt);
-                            }
-                            break;
-                    }
-                }
-
                 // If incoming update failed becase a file is in use,
                 // try to show merge dialog (for MS Office Word, PowerPoint etc.).
                 if (e.Direction == SyncDirection.Incoming
@@ -176,7 +197,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             // Log info about the opertion.
             switch (e.OperationType)
             {
-                case OperationType.Populate:
+                case OperationType.Listing:
                     // Log a single parent folder for folder population.
                     LogItemChanged(e, e.Parent);
                     break;
@@ -189,25 +210,15 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                     break;
             }
         }
+
         private void LogItemChanged(ItemsChangeEventArgs e, ChangeEventItem item)
         {
             ILogger logger = Logger.CreateLogger(e.ComponentName);
-            string msg = $"{e.Direction} {e.OperationType}:{e.NotificationTime}";
+            string msg = $"{e.Direction} {e.OperationType}:{e.NotificationTime}:{e.Result.Status}";
 
-            if (!e.NotificationTime.HasFlag(NotificationTime.Progress))
-            {
-                msg = $"{msg}:{e.Result.Status}";
-            }
             switch (e.Result.Status)
             {
                 case OperationStatus.Success:
-                    // Log progress.
-                    if (e.NotificationTime.HasFlag(NotificationTime.Progress))
-                    {
-                        long progress = e.Position * 100 / (e.Length > 0 ? e.Length : 1);
-                        msg = $"{msg}: {progress}%";
-                    }
-
                     switch (e.Source)
                     {
                         case OperationSource.Server:
@@ -253,6 +264,11 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             }
 
             if (await new MsOfficeFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
+            {
+                return true;
+            }
+
+            if (await new LibreOfficeFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             {
                 return true;
             }

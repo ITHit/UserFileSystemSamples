@@ -106,7 +106,7 @@ namespace WebDAVDrive
                         IHierarchyItem itemUpdate = resUpdate.WebDavResponse;
                         if (itemUpdate != null)
                         {
-                            IFileSystemItemMetadata metadataUpdate = Mapping.GetUserFileSystemItemMetadata(itemUpdate);
+                            IMetadata metadataUpdate = Mapping.GetMetadata(itemUpdate);
                             await engine.ServerNotifications(userFileSystemPath).UpdateAsync(metadataUpdate);
                         }
                         break;
@@ -150,7 +150,7 @@ namespace WebDAVDrive
                 string userFileSystemPath = engine.Mapping.ReverseMapPath(remoteStoragePath);
                 string userFileSystemParentPath = Path.GetDirectoryName(userFileSystemPath);
 
-                IFileSystemItemMetadata metadataCreate = Mapping.GetUserFileSystemItemMetadata(itemCreate);
+                IMetadata metadataCreate = Mapping.GetMetadata(itemCreate);
                 await engine.ServerNotifications(userFileSystemParentPath).CreateAsync(new[] { metadataCreate });
             }
         }

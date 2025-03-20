@@ -23,8 +23,8 @@
     <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.26100.1742" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="8.5.27248.0" />
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="8.5.27248.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="9.0.27334.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="9.0.27334.0-Beta" />
     <ProjectReference Include="..\..\..\Common\Common.csproj" />
   </ItemGroup>
 </Project>

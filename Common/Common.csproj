@@ -10,7 +10,12 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="8.5.27248.0" />
-    <PackageReference Include="ITHit.FileSystem" Version="8.5.27248.0" />
+    <Compile Remove="FileMetadataExt.cs" />
+    <Compile Remove="FileSystemItemMetadataExt.cs" />
+    <Compile Remove="FolderMetadataExt.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="9.0.27334.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem" Version="9.0.27334.0-Beta" />
   </ItemGroup>
 </Project>

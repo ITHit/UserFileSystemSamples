@@ -8,20 +8,22 @@
         <ResourceDictionary Source="Colors.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
-    <Style x:Name="CompareMainStackPanelStyle" TargetType="StackPanel">
+    <Style x:Name="ErrorDetailsMainStackPanelStyle" TargetType="StackPanel">
         <Setter Property="Padding" Value="5" />
-        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Top" />
         <Setter Property="Orientation" Value="Vertical" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
     </Style>
 
-    <Style x:Name="CompareLabelsContainerGridStyle" TargetType="Grid">
-        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Style x:Name="ErrorDetailsHistoryHeaderStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="40" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="0,15,0,15" />
+        <Setter Property="Visibility" Value="Collapsed" />
     </Style>
 
-    <Style x:Name="CompareLabelsStackPanelStyle" TargetType="StackPanel">
-        <Setter Property="Orientation" Value="Horizontal" />
-        <Setter Property="Margin" Value="20,0,20,0" />
-        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Style x:Name="ErrorDetailsLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource ErrorDetailsHistoryHeaderStyle}">
+        <Setter Property="Margin" Value="0,0,0,15" />
+        <Setter Property="Visibility" Value="Visible" />
     </Style>
 </ResourceDictionary>

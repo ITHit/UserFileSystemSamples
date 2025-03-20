@@ -79,7 +79,7 @@ namespace VirtualDrive
             //  - Content eTag. The Engine will store it to determine if the file content should be updated.
             //  - Medatdata eTag. The Engine will store it to determine if the item metadata should be updated.
             byte[] remoteStorageId = WindowsFileSystemItem.GetItemIdByPath(remoteStorageNewItem.FullName);
-            return new FileMetadataExt()
+            return new FileMetadata()
             {
                 RemoteStorageItemId = remoteStorageId,
                 // ContentETag = 
@@ -112,7 +112,7 @@ namespace VirtualDrive
             remoteStorageNewItem.Attributes = folderMetadata.Attributes.Value;
 
             byte[] remoteStorageId = WindowsFileSystemItem.GetItemIdByPath(remoteStorageNewItem.FullName);
-            return new FolderMetadataExt()
+            return new FolderMetadata()
             {
                 RemoteStorageItemId = remoteStorageId
                 // MetadataETag =
@@ -131,14 +131,14 @@ namespace VirtualDrive
 
             cancellationToken.Register(() => { Logger.LogMessage($"{nameof(IFolder)}.{nameof(GetChildrenAsync)}({pattern}) cancelled", UserFileSystemPath, default, operationContext); });
 
-            List<IFileSystemItemMetadata> children = new List<IFileSystemItemMetadata>();
+            List<IMetadata> children = new List<IMetadata>();
 
             if (Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath))
             {
                 IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(remoteStoragePath).EnumerateFileSystemInfos(pattern);
                 foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
                 {
-                    IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                    IMetadata itemInfo = Mapping.GetMetadata(remoteStorageItem);
                     children.Add(itemInfo);
                 }
             }
@@ -148,16 +148,15 @@ namespace VirtualDrive
             await resultContext.ReturnChildrenAsync(children.ToArray(), children.Count(), true, cancellationToken);
         }
 
-        public async Task<IEnumerable<FileSystemItemMetadataExt>> EnumerateChildrenAsync(string pattern, IOperationContext operationContext, CancellationToken cancellationToken)
+        public async Task<IEnumerable<IMetadata>> EnumerateChildrenAsync(string pattern, IOperationContext operationContext, CancellationToken cancellationToken)
         {
-            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return Enumerable.Empty<FileSystemItemMetadataExt>();
-            var userFileSystemChildren = new System.Collections.Concurrent.ConcurrentBag<FileSystemItemMetadataExt>();
+            if (!Mapping.TryGetRemoteStoragePathById(RemoteStorageItemId, out string remoteStoragePath)) return Enumerable.Empty<IMetadata>();
+            var userFileSystemChildren = new System.Collections.Concurrent.ConcurrentBag<IMetadata>();
             IEnumerable<FileSystemInfo> remoteStorageChildren = new DirectoryInfo(remoteStoragePath).EnumerateFileSystemInfos(pattern);
 
-            //Parallel.ForEach(remoteStorageChildren, new ParallelOptions() { CancellationToken = cancellationToken }, async (remoteStorageItem) =>
             foreach (FileSystemInfo remoteStorageItem in remoteStorageChildren)
             {
-                FileSystemItemMetadataExt itemInfo = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                IMetadata itemInfo = Mapping.GetMetadata(remoteStorageItem);
                 userFileSystemChildren.Add(itemInfo);
             }
 

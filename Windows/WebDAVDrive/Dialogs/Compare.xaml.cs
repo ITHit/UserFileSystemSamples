@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Windows.ApplicationModel.Resources;
 
 using WebDAVDrive.ViewModels;
-using WebDAVDrive.Extensions;
 
 namespace WebDAVDrive.Dialogs
 {
@@ -22,7 +21,7 @@ namespace WebDAVDrive.Dialogs
         public Compare(string filePath, VirtualEngine engine) : base()
         {
             InitializeComponent();
-            this.Resize(1000, 500);
+            Resize(1000, 500);
             resourceLoader = ResourceLoader.GetForViewIndependentUse();
             Title = $"{ServiceProvider.GetService<AppSettings>().ProductName} - {resourceLoader.GetString("CompareWindow/Title")}";
 

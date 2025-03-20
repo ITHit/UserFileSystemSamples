@@ -5,8 +5,6 @@ using Windows.ApplicationModel.Resources;
 using Windows.Security.Credentials.UI;
 using WinUIEx;
 
-using WebDAVDrive.Extensions;
-
 namespace WebDAVDrive.Dialogs
 {
     /// <summary>
@@ -32,7 +30,7 @@ namespace WebDAVDrive.Dialogs
 
             //Set the window transparent, remove minimize and maximize boxes, set other UI parameters.
             //as for this window UI parameters are different than for other dialogs - put it here instead of calling base class method
-            this.Resize(100, 100);
+            Resize(100, 100);
             SystemBackdrop = new TransparentTintBackdrop();
             this.SetExtendedWindowStyle(ExtendedWindowStyle.Layered | ExtendedWindowStyle.Transparent);
             this.SetIsResizable(false);

@@ -20,7 +20,7 @@
             <Color x:Key="HoverButtonColor">#DFDFDF</Color>
             <Color x:Key="HoverMenuButtonColor">#efefef</Color>
             <Color x:Key="TrayTextColor">Black</Color>
-            <Color x:Key="AnimatedIconColor">#6a6a6a</Color>
+            <Color x:Key="AnimatedIconColor">#1A1A1A</Color>
             <Color x:Key="HistoryItemHoveredColor">#f2f2f2</Color>
             <Color x:Key="HistoryItemPressedColor">#ebebeb</Color>
             <Color x:Key="DisabledButtonTextColor" >#141414</Color>
@@ -28,6 +28,12 @@
             <Color x:Key="ButtonBackgroundColor">White</Color>
             <Color x:Key="TraySubMenuHoverColor">#E1DFDD</Color>
             <Color x:Key="DialogButtonHoverColor">Black</Color>
+            <Color x:Key="HistoryFolderLinkColor">#0067C0</Color>
+
+            <Color x:Key="SettingsBackgroundColor">#F3F3F3</Color>
+            <Color x:Key="SettingsBlockBackgroundColor">#FBFBFB</Color>
+            <Color x:Key="SettingsBlockBorderColor">#E5E5E5</Color>
+            <Color x:Key="SettingsDescriptionColor">#646464</Color>
         </ResourceDictionary>
 
         <!-- Dark Theme Colors -->
@@ -52,6 +58,12 @@
             <Color x:Key="ButtonBackgroundColor">#242424</Color>
             <Color x:Key="TraySubMenuHoverColor">#323130</Color>
             <Color x:Key="DialogButtonHoverColor">#dddddd</Color>
+            <Color x:Key="HistoryFolderLinkColor">#99EBFF</Color>
+
+            <Color x:Key="SettingsBackgroundColor">#202020</Color>
+            <Color x:Key="SettingsBlockBackgroundColor">#2B2B2B</Color>
+            <Color x:Key="SettingsBlockBorderColor">#1D1D1D</Color>
+            <Color x:Key="SettingsDescriptionColor">#AAAAAA</Color>
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>    
 
@@ -105,4 +117,10 @@
     <SolidColorBrush x:Key="BackgroundBrush" Color="{ThemeResource BackgroundColor}"/>
     <SolidColorBrush x:Key="TraySubMenuHoverBrush" Color="{ThemeResource TraySubMenuHoverColor}"/>
     <SolidColorBrush x:Key="DialogButtonHoverBrush" Color="{ThemeResource DialogButtonHoverColor}"/>
+    <SolidColorBrush x:Key="HistoryFolderLinkBrush" Color="{ThemeResource HistoryFolderLinkColor}"/>
+
+    <SolidColorBrush x:Key="SettingsBackgroundBrush" Color="{ThemeResource SettingsBackgroundColor}" />
+    <SolidColorBrush x:Key="SettingsBlockBackgroundBrush" Color="{ThemeResource SettingsBlockBackgroundColor}" />
+    <SolidColorBrush x:Key="SettingsBlockBorderBrush" Color="{ThemeResource SettingsBlockBorderColor}" />
+    <SolidColorBrush x:Key="SettingsDescriptionBrush" Color="{ThemeResource SettingsDescriptionColor}" />
 </ResourceDictionary>

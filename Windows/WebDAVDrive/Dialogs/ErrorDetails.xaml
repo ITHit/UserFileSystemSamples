@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<local:DialogWindow
+    x:Class="WebDAVDrive.Dialogs.ErrorDetails"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WebDAVDrive.Dialogs"
+    xmlns:winui="using:ITHit.FileSystem.Windows.WinUI"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:animatedvisuals="using:Microsoft.UI.Xaml.Controls.AnimatedVisuals"
+    mc:Ignorable="d">
+
+    <Grid x:Name="gdMain" Style="{StaticResource DialogMainGridStyle}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="64"/>
+        </Grid.RowDefinitions>
+        <ScrollViewer x:Name="svHistory" Style="{StaticResource DialogScrollViewerStyle}" Grid.Row="0">
+            <StackPanel Orientation="Vertical">
+                <TextBlock x:Uid="ErrorDetailsLabel" Style="{StaticResource ErrorDetailsLabelStyle}" />
+                
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Vertical" Grid.Column="0">
+                        <TextBlock x:Uid="FilePath" Style="{StaticResource DialogLabelStyle}" />
+                        <TextBlock x:Uid="TargetPath" x:Name="TargetPathLabel" Style="{StaticResource DialogLabelStyle}" Visibility="Collapsed" />
+                        <TextBlock x:Uid="RemoteStoragePath" Style="{StaticResource DialogLabelStyle}" />
+                        <TextBlock x:Uid="Message" Style="{StaticResource DialogLabelStyle}" />
+                        <TextBlock x:Uid="SyncDirection" Style="{StaticResource DialogLabelStyle}" />
+                        <TextBlock x:Uid="OperationStatus" Style="{StaticResource DialogLabelStyle}" />
+                        <TextBlock x:Uid="OperationType" Style="{StaticResource DialogLabelStyle}" />
+                        <TextBlock x:Uid="ComponentName" Style="{StaticResource DialogLabelStyle}" />
+                        <TextBlock x:Uid="NotificationTime" Style="{StaticResource DialogLabelStyle}" />
+                        <TextBlock x:Uid="ExceptionStackTrace" Style="{StaticResource DialogLabelStyle}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Vertical" Margin="15,0,0,0" Grid.Column="1">
+                        <TextBlock x:Name="FilePath" Style="{StaticResource DialogTextBlockWrapStyle}" />
+                        <TextBlock x:Name="TargetPath" Style="{StaticResource DialogTextBlockWrapStyle}" Visibility="Collapsed" />
+                        <TextBlock x:Name="RemoteStoragePath" Style="{StaticResource DialogTextBlockWrapStyle}" />
+                        <TextBlock x:Name="Message" Style="{StaticResource DialogTextBlockWrapWordsStyle}" />
+                        <TextBlock x:Name="SyncDirection" Style="{StaticResource DialogTextBlockWrapWordsStyle}" />
+                        <TextBlock x:Name="OperationStatus" Style="{StaticResource DialogTextBlockWrapWordsStyle}" />
+                        <TextBlock x:Name="OperationType" Style="{StaticResource DialogTextBlockWrapWordsStyle}" />
+                        <TextBlock x:Name="ComponentName" Style="{StaticResource DialogTextBlockWrapWordsStyle}" />
+                        <TextBlock x:Name="NotificationTime" Style="{StaticResource DialogTextBlockWrapWordsStyle}" />
+                        <TextBlock x:Name="ExceptionStackTrace" Style="{StaticResource DialogTextBlockWrapStyle}" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock x:Uid="HistoryItemsLabel" x:Name="HistoryLabel" Style="{StaticResource ErrorDetailsHistoryHeaderStyle}" />
+
+                <ItemsRepeater x:Name="HistoryItems" ItemsSource="{Binding}">
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Grid.Row="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Orientation="Vertical" Grid.Column="0">
+                                    <TextBlock x:Uid="Message" Style="{StaticResource DialogLabelStyle}" />
+                                    <TextBlock x:Uid="OperationStatus" Style="{StaticResource DialogLabelStyle}" />
+                                    <TextBlock x:Uid="ExceptionStackTrace" Style="{StaticResource DialogLabelStyle}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Vertical" Margin="15,0,0,0" Grid.Column="1">
+                                    <TextBlock Text="{Binding ErrorMessage}" Style="{StaticResource DialogTextBlockWrapWordsStyle}" />
+                                    <TextBlock Text="{Binding OperationStatus}" Style="{StaticResource DialogTextBlockWrapWordsStyle}" />
+                                    <TextBlock Text="{Binding ExceptionStackTrace}" Style="{StaticResource DialogTextBlockWrapStyle}" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Buttons -->
+        <StackPanel Style="{StaticResource DialogButtonsStackPanelStyle}" Padding="0,20,0,0" Grid.Row="1">
+            <winui:CursorButton x:Uid="OpenLogButton" x:Name="btnOpenLog" Click="OpenLogClicked" Style="{StaticResource DialogButtonStyle}" />
+            <winui:CursorButton x:Uid="RequestSupportButton" x:Name="btnRequestSupport" Click="RequestSupportClicked" Style="{StaticResource DialogButtonStyle}" />
+            <winui:CursorButton x:Uid="Close" x:Name="CloseButton" Style="{StaticResource DialogButtonStyle}" Click="BtnCloseClicked" Loaded="CloseButtonLoaded" />
+        </StackPanel>
+    </Grid>
+</local:DialogWindow>

@@ -107,7 +107,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
                     case ConsoleKey.L:
                         // Open log file.
-                        Windows.Commands.Open(logFormatter.LogFilePath);
+                        Windows.Commands.TryOpen(logFormatter.LogFilePath);
                         break;
 
                     case ConsoleKey.B:

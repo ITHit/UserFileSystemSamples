@@ -126,6 +126,11 @@ namespace VirtualFileSystem
                 return true;
             }
 
+            if (await new LibreOfficeFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
+            {
+                return true;
+            }
+
             if (await new AutoCadFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             {
                 return true;

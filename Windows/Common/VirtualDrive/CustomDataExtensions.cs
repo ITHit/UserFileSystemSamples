@@ -13,42 +13,24 @@ namespace ITHit.FileSystem.Samples.Common.Windows
     public static class CustomDataExtensions
     {
         /// <summary>
-        /// Saves all custom metadata properties, such as locks, to storage associated with an item.
-        /// This data that is displayed in custom columns in file manager.
+        /// Tries to get lock info.
         /// </summary>
+        /// <remarks>This method returns only currently active lock. It does NOT return expired lock.</remarks>
         /// <param name="properties">Custom data attached to the item.</param>
-        /// <param name="metadata">Remote storage item metadata.</param>
-        public static void SaveProperties(this ICustomData properties, FileSystemItemMetadataExt metadata)
+        /// <param name="serverLockInfo">Lock info.</param>
+        /// <returns>True if method succeeded and the item is locked. False if the method failed or the item is not locked.</returns>
+        public static bool TryGetActiveLockInfo(this IPropertiesDictionary properties, out ServerLockInfo serverLockInfo)
         {
-            ICustomDataWindows propertiesWindows = properties as ICustomDataWindows;
-            string path = propertiesWindows.Placeholder.Path;
-            VirtualEngineBase engine =  propertiesWindows.Placeholder.Engine as VirtualEngineBase;
-
-            // Save or delete lock.
-            if (metadata.Lock != null)
+            if (properties.TryGetValue<ServerLockInfo>("LockInfo", out ServerLockInfo lockInfo))
             {
-                properties.SetLockInfo(metadata.Lock);
-
-                if (!properties.GetEngine().IsCurrentUser(metadata.Lock.Owner))
+                if (lockInfo.LockExpirationDateUtc > DateTimeOffset.Now)
                 {
-                    if (engine.SetLockReadOnly)
-                    {
-                        new FileInfo(path).IsReadOnly = true;
-                    }
+                    serverLockInfo = lockInfo;
+                    return true;
                 }
             }
-            else
-            {
-                if(properties.TryDeleteLockInfo())
-                {
-                    // If the file was locked and the lock was succesefully
-                    // deleted we also remove the read-only attribute.
-                    if (engine.SetLockReadOnly)
-                    {
-                        new FileInfo(path).IsReadOnly = false;
-                    }
-                }
-            }
+            serverLockInfo = null;
+            return false;
         }
 
         /// <summary>
@@ -57,7 +39,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="properties">Custom data attached to the item.</param>
         /// <param name="serverLockInfo">Lock info.</param>
         /// <returns>True if method succeeded and the item is locked. False if the method failed or the item is not locked.</returns>
-        public static bool TryGetLockInfo(this ICustomData properties, out ServerLockInfo serverLockInfo)
+        public static bool TryGetActiveLockInfo(this ICustomData properties, out ServerLockInfo serverLockInfo)
         {
             if (properties.TryGetValue("LockInfo", out IDataItem propLockInfo))
             {
@@ -82,7 +64,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <returns>True if method succeeded and the item is locked by current user. False if the method failed or the item is not locked by current user.</returns>
         public static bool TryGetCurrentUserLockToken(this ICustomData properties, out string lockToken)
         {
-            if (properties.TryGetLockInfo(out ServerLockInfo lockInfo))
+            if (properties.TryGetActiveLockInfo(out ServerLockInfo lockInfo))
             {
                 if (properties.GetEngine().IsCurrentUser(lockInfo.Owner))
                 {

@@ -110,7 +110,7 @@ namespace VirtualFileSystem
             FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
             if (remoteStorageItem != null)
             {
-                IFileSystemItemMetadata itemMetadata = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                IMetadata itemMetadata = Mapping.GetMetadata(remoteStorageItem);
                 await engine.ServerNotifications(userFileSystemParentPath, logger).CreateAsync(new[] { itemMetadata });
             }
         }
@@ -137,7 +137,7 @@ namespace VirtualFileSystem
                 FileSystemInfo remoteStorageItem = FsPath.GetFileSystemItem(remoteStoragePath);
                 if (remoteStorageItem != null)
                 {
-                    IFileSystemItemMetadata itemMetadata = Mapping.GetUserFileSysteItemMetadata(remoteStorageItem);
+                    IMetadata itemMetadata = Mapping.GetMetadata(remoteStorageItem);
                     await engine.ServerNotifications(userFileSystemPath, logger).UpdateAsync(itemMetadata);
                 }
             }

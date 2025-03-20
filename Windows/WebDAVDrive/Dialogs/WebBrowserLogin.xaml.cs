@@ -6,8 +6,6 @@ using System.Net;
 using Windows.ApplicationModel.Resources;
 using WinUIEx;
 
-using WebDAVDrive.Extensions;
-
 namespace WebDAVDrive.Dialogs
 {
     /// <summary>
@@ -39,7 +37,7 @@ namespace WebDAVDrive.Dialogs
             Title = $"{ServiceProvider.GetService<AppSettings>().ProductName} - {resourceLoader.GetString("WebBrowserLogin/Title")}";
 
             //set UI parameters; as for this window they are different than for other dialogs - put it here instead of calling base class method
-            this.Resize(600, 800);
+            Resize(600, 800);
             CenterWindow();
             this.SetForegroundWindow();
         }

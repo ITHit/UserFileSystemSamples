@@ -36,6 +36,14 @@ namespace WebDAVDrive
         /// <inheritdoc/>
         public async Task<string> GetTitleAsync(IEnumerable<string> filesPath)
         {
+            // If the item is in conflict state - the title is "Resolve conflict".
+            if (filesPath.Count() == 1 && engine.Placeholders.TryGetItem(filesPath.First(), out PlaceholderItem placeholder))
+            {
+                if (placeholder.TryGetErrorStatus(out bool errorStatus) && errorStatus)
+                {
+                    return "Resolve conflict...";
+                }
+            }
             return "Compare...";
         }
 

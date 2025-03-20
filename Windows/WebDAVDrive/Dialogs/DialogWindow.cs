@@ -1,7 +1,9 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI;
+using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Controls;
 using Windows.Graphics;
 using Windows.System;
 using WinRT.Interop;
@@ -74,6 +76,19 @@ namespace WebDAVDrive.Dialogs
 
             // Move the window to the center position
             AppWindow.Move(new PointInt32(centerX, centerY));
+        }
+
+        /// <summary>
+        /// Resizes the window to desired width and height, taking in count corrent scale
+        /// </summary>
+        /// <param name="width">Desired width</param>
+        /// <param name="height">Desired height</param>
+        public void Resize(int width, int height)
+        {
+            int scale = ServiceProvider.Scale;
+            int usedWidth = width * scale / 100 <= DisplayArea.Primary.WorkArea.Width ? width * scale / 100 : DisplayArea.Primary.WorkArea.Width;
+            int usedHeight = height * scale / 100 <= DisplayArea.Primary.WorkArea.Height ? height * scale / 100 : DisplayArea.Primary.WorkArea.Height;
+            AppWindow.Resize(new SizeInt32(usedWidth, usedHeight));
         }
     }
 }
