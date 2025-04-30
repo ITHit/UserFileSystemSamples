@@ -115,7 +115,6 @@ namespace VirtualFileSystem
         /// <inheritdoc/>
         public override async Task<bool> FilterAsync(SyncDirection direction, OperationType operationType, string path, FileSystemItemType itemType, string newPath, IOperationContext operationContext)
         {
-
             if (await new ZipFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             {
                 return true;
@@ -132,6 +131,21 @@ namespace VirtualFileSystem
             }
 
             if (await new AutoCadFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
+            {
+                return true;
+            }
+
+            if (await new FoxitFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
+            {
+                return true;
+            }
+
+            if (await new AutodeskInventorFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
+            {
+                return true;
+            }
+
+            if (await new AutodeskRevitFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             {
                 return true;
             }

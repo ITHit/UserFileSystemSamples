@@ -77,7 +77,9 @@ namespace VirtualFileSystem
                     Settings.UserFileSystemRootPath, 
                     Settings.RemoteStorageRootPath,
                     Settings.ProductName, 
-                    Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
+                    Path.Combine(Settings.IconsFolderPath, "Drive.ico"),
+                    Settings.CustomColumns
+                    );
 
                 using (Engine = new VirtualEngine(
                     Settings.UserFileSystemLicense,

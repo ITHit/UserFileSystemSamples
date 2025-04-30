@@ -14,6 +14,9 @@ using InvalidLicenseException = ITHit.FileSystem.InvalidLicenseException;
 
 using WebDAVDrive.Services;
 using WebDAVDrive.Dialogs;
+using System.Management;
+using System.Reflection;
+using System.Runtime.InteropServices;
 
 
 namespace WebDAVDrive
@@ -211,34 +214,9 @@ namespace WebDAVDrive
             {
                 return new VirtualFolder(remoteStorageId, userFileSystemPath, this, AutoLockTimeoutMs, ManualLockTimeoutMs, Settings, logger);
             }
-        }
+        }       
 
-        /// <inheritdoc/>
-        public override async Task<IMenuCommand> GetMenuCommandAsync(Guid menuGuid, IOperationContext operationContext = null)
-        {
-            // For this method to be called you need to register a menu command handler.
-            // See method description for more details.
-
-            Logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString(), default, operationContext);
-
-            if (menuGuid == typeof(ShellExtensions.ContextMenuVerbIntegratedLock).GUID)
-            {
-                return new MenuCommandLock(this, Logger);
-            }
-            if (menuGuid == typeof(ShellExtensions.ContextMenuVerbIntegratedCompare).GUID)
-            {
-                return new MenuCommandCompare(this, Logger);
-            }
-            if (menuGuid == typeof(ShellExtensions.ContextMenuVerbIntegratedUnmount).GUID)
-            {
-                return new MenuCommandUnmount(domainsService, this, Logger);
-            }
-
-            Logger.LogError($"Menu not found", Path, menuGuid.ToString(), default, operationContext);
-            throw new System.NotImplementedException();
-        }
-
-        public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
+        public override async Task StartAsync(bool processChanges = true, CancellationToken cancellationToken = default)
         {
             if (!await AuthenticateAsync(null, cancellationToken, true))
             {
@@ -250,7 +228,7 @@ namespace WebDAVDrive
 
             Logger.LogMessage($"Sync mode: {Settings.IncomingSyncMode}", Path);
 
-            await base.StartAsync(processModified, cancellationToken);
+            await base.StartAsync(processChanges, cancellationToken);
 
             // Create and start monitor, depending on server capabilities and prefered SyncMode.
             RemoteStorageMonitor = await StartRemoteStorageMonitorAsync(Settings.IncomingSyncMode, cancellationToken);

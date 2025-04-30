@@ -47,11 +47,16 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// </summary>
         /// <param name="displayName">Human readable display name.</param>
         /// <param name="iconPath">Path to the drive ico file.</param>
+        /// <param name="customColumns">
+        /// A dictionary where the key represents the column ID (an integer) and the value represents the display name of the column (a string).
+        /// These columns will appear in Windows File Explorer and can display additional metadata for files and folders, 
+        /// such as lock owner, lock expiration date, or custom identifiers.
+        /// </param>
         /// <remarks>
         /// In the case of a packaged installer (msix) call this method during first program start.
         /// In the case of a regular installer (msi) call this method during installation.
         /// </remarks>
-        public async Task<StorageProviderSyncRootInfo> RegisterSyncRootAsync(string syncRootId, string userFileSystemRootPath, string remotestorageRootPath, string displayName, string iconPath)
+        public async Task<StorageProviderSyncRootInfo> RegisterSyncRootAsync(string syncRootId, string userFileSystemRootPath, string remotestorageRootPath, string displayName, string iconPath, Dictionary<int, string>? customColumns)
         {
             StorageProviderSyncRootInfo syncRoot = null;
             if (!await IsRegisteredAsync(userFileSystemRootPath))
@@ -59,7 +64,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 Log.Info($"\n\nRegistering sync root.");
                 Directory.CreateDirectory(userFileSystemRootPath);
 
-                syncRoot = await RegisterAsync(syncRootId, userFileSystemRootPath, remotestorageRootPath, displayName, iconPath);
+                syncRoot = await RegisterAsync(syncRootId, userFileSystemRootPath, remotestorageRootPath, displayName, iconPath, customColumns);
             }
             else
             {
@@ -293,19 +298,23 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <param name="remoteStoragePath">Remote storage path. It will be stored inide the sync root to distinguish between sync roots when mounting a new remote storage.</param>
         /// <param name="displayName">Human readable display name.</param>
         /// <param name="iconPath">Path to the drive ico file.</param>
-        /// <param name="providerID">Provider ID will be stored in sync root to find if this sync root belongs to this application.</param>
+        /// <param name="customColumns">
+        /// A dictionary where the key represents the column ID (an integer) and the value represents the display name of the column (a string).
+        /// These columns will appear in Windows File Explorer and can display additional metadata for files and folders, 
+        /// such as lock owner, lock expiration date, or custom identifiers.
+        /// </param>
         /// <remarks>
         /// In the case of a packaged installer (msix) call this method during first program start.
         /// In the case of a regular installer (msi) call this method during installation.
         /// </remarks>
-        private static async Task<StorageProviderSyncRootInfo> RegisterAsync(string syncRootId, string path, string remoteStoragePath, string displayName, string iconPath)
+        private static async Task<StorageProviderSyncRootInfo> RegisterAsync(string syncRootId, string path, string remoteStoragePath, string displayName, string iconPath, Dictionary<int, string>? customColumns)
         {
             StorageProviderSyncRootInfo storageInfo = new StorageProviderSyncRootInfo();
             storageInfo.Path = await StorageFolder.GetFolderFromPathAsync(path);
             storageInfo.Id = syncRootId;
             storageInfo.DisplayNameResource = displayName;
             storageInfo.IconResource = iconPath;
-            storageInfo.Version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            storageInfo.Version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
             storageInfo.RecycleBinUri = new Uri("https://userfilesystem.com/recyclebin");
             storageInfo.SetRemoteStoragePath(remoteStoragePath);
             //storageInfo.ProviderId = providerID; // Provider ID is not returned by StorageProviderSyncRootManager.GetCurrentSyncRoots()
@@ -324,14 +333,14 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             // Adds columns to Windows File Manager. 
             // Show/hide columns in the "More..." context menu on the columns header in Windows Explorer.
             var proDefinitions = storageInfo.StorageProviderItemPropertyDefinitions;
-            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Lock Owner"   , Id = (int)CustomColumnIds.LockOwnerIcon });            
-            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Lock Scope"   , Id = (int)CustomColumnIds.LockScope });
-            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Lock Expires" , Id = (int)CustomColumnIds.LockExpirationDate });            
-            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Content ETag" , Id = (int)CustomColumnIds.ContentETag });
-            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "Metadata ETag", Id = (int)CustomColumnIds.MetadataETag });
-            proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = "ID"           , Id = (int)CustomColumnIds.Id });
-
-
+            if(customColumns != null)
+            {
+                foreach (var column in customColumns)
+                {
+                    proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = column.Value, Id = column.Key });
+                }
+            }
+      
             ValidateStorageProviderSyncRootInfo(storageInfo);
 
             StorageProviderSyncRootManager.Register(storageInfo);

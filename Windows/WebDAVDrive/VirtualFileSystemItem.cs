@@ -453,5 +453,18 @@ namespace WebDAVDrive
             operationContext.Properties.TryDeleteLockInfo();
         }
         
+
+        
+        ///<inheritdoc>
+        public async Task<IMetadata> GetMetadataAsync(IOperationContext operationContext, IResultContextBase resultContext, CancellationToken cancellationToken = default)
+        {
+            Logger.LogMessage($"{nameof(ILock)}.{nameof(GetMetadataAsync)}()", UserFileSystemPath, default, operationContext);
+
+            IWebDavResponse<ITHit.WebDAV.Client.IFile> resp = await Dav.GetFileAsync(new Uri(RemoteStoragePath), Mapping.GetDavProperties());
+            IMetadata metadata = Mapping.GetMetadata(resp.WebDavResponse);
+
+            return metadata;
+        }
+        
     }
 }

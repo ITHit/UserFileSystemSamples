@@ -5,6 +5,9 @@ using System.Threading;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Windows;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Linq;
 
 
 namespace VirtualDrive
@@ -52,27 +55,6 @@ namespace VirtualDrive
                 return new VirtualFolder(userFileSystemPath, remoteStorageItemId, this, logger);
             }
         }
-
-        
-        /// <inheritdoc/>
-        public override async Task<IMenuCommand> GetMenuCommandAsync(Guid menuGuid, IOperationContext operationContext = null)
-        {
-            // For this method to be called you need to register a menu command handler.
-            // See method description for more details.
-
-            Logger.LogDebug($"{nameof(IEngine)}.{nameof(GetMenuCommandAsync)}()", menuGuid.ToString(), default, operationContext);
-
-            Guid menuCommandLockGuid = typeof(ShellExtension.ContextMenuVerbIntegrated).GUID;
-
-            if (menuGuid == menuCommandLockGuid)
-            {
-                return new MenuCommandLock(this, this.Logger);
-            }
-
-            Logger.LogError($"Menu not found", Path, menuGuid.ToString(), default, operationContext);
-            throw new NotImplementedException();
-        }
-        
 
         /// <inheritdoc/>
         public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)

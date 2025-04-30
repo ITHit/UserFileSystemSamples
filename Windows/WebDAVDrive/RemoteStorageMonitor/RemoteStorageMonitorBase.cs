@@ -198,7 +198,7 @@ namespace WebDAVDrive
                                 {                                    
                                     if (clientWebSocket != null && clientWebSocket?.State != WebSocketState.Closed)
                                     {
-                                        Logger.LogError(e.Message, WebSocketServerUrl, null, e);
+                                        Logger.LogMessage(e.Message, WebSocketServerUrl, null);
                                     }
                                     else
                                     {
@@ -266,7 +266,7 @@ namespace WebDAVDrive
             }
             catch (WebSocketException ex)
             {
-                Logger.LogError("Failed to close websocket.", WebSocketServerUrl, null, ex);
+                Logger.LogMessage($"Failed to close websocket. {ex.Message}", WebSocketServerUrl, null);
             };
 
             Logger.LogMessage("Stoped", WebSocketServerUrl);

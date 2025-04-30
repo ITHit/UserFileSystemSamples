@@ -292,8 +292,9 @@ namespace WebDAVDrive.Services
                     GetSyncRootId(webDAVServerUrl),
                     userFileSystemRootPath,
                     webDAVServerUrl,
-                    displayName,
-                    Path.Combine(Settings.IconsFolderPath, "Drive.ico"));
+                    displayName,                 
+                    Path.Combine(Settings.IconsFolderPath, "Drive.ico"),
+                    Settings.CustomColumns);
             }
             catch (Exception ex)
             {

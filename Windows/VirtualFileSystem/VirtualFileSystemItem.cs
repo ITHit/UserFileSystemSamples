@@ -166,5 +166,10 @@ namespace VirtualFileSystem
 
             throw new NotImplementedException();
         }
+
+        public Task<IMetadata> GetMetadataAsync(IOperationContext operationContext, IResultContextBase resultContext, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

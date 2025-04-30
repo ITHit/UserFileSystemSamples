@@ -1,6 +1,8 @@
 using Windows.Storage.Provider;
 
 using ITHit.FileSystem.Windows.ShellExtension;
+using System.Reflection;
+using System;
 
 namespace WebDAVDrive.ShellExtensions
 {
@@ -18,11 +20,27 @@ namespace WebDAVDrive.ShellExtensions
         {
             LocalServer server = new LocalServerIntegrarted();
 
-            server.RegisterClass<ThumbnailProviderIntegrated>();
-            server.RegisterClass<ContextMenuVerbIntegratedLock>();
-            server.RegisterClass<ContextMenuVerbIntegratedCompare>();
-            server.RegisterClass<ContextMenuVerbIntegratedUnmount>();
-            server.RegisterWinRTClass<IStorageProviderItemPropertySource, CustomStateProviderIntegrated>();
+            // Dynamically register classes inheriting from CloudFilesContextMenuVerbIntegratedBase and ThumbnailProviderHandlerBase
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            foreach (Type type in assembly.GetTypes())
+            {
+                if (type.IsClass && !type.IsAbstract &&
+                    (type.IsSubclassOf(typeof(CloudFilesContextMenuVerbIntegratedBase)) ||
+                     type.IsSubclassOf(typeof(ThumbnailProviderHandlerBase))))
+                {
+                    MethodInfo? registerMethod = typeof(LocalServer).GetMethod("RegisterClass");
+                    MethodInfo? genericMethod = registerMethod?.MakeGenericMethod(type);
+                    genericMethod?.Invoke(server, null);
+                }
+                // Register WinRT classes that implement IStorageProviderItemPropertySource    
+                else if (type.IsClass && !type.IsAbstract &&
+                    typeof(IStorageProviderItemPropertySource).IsAssignableFrom(type))
+                {
+                    MethodInfo? registerMethod = typeof(LocalServer).GetMethod("RegisterWinRTClass");
+                    MethodInfo? genericMethod = registerMethod?.MakeGenericMethod(typeof(IStorageProviderItemPropertySource), type);
+                    genericMethod?.Invoke(server, null);
+                }
+            }   
             //server.RegisterWinRTClass<IStorageProviderUriSource, ShellExtension.UriSourceIntegrated>();
 
             return server;

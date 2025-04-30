@@ -283,6 +283,21 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 return true;
             }
 
+            if (await new FoxitFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
+            {
+                return true;
+            }
+
+            if (await new AutodeskInventorFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
+            {
+                return true;
+            }
+
+            if (await new AutodeskRevitFilter().FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
+            {
+                return true;
+            }
+
             //if (await new ErrorStatusFilter(true).FilterAsync(direction, operationType, path, itemType, newPath, operationContext))
             //{
             //    return true;
@@ -292,9 +307,9 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         }
 
         /// <inheritdoc/>
-        public override async Task StartAsync(bool processModified = true, CancellationToken cancellationToken = default)
+        public override async Task StartAsync(bool processChanges = true, CancellationToken cancellationToken = default)
         {
-            await base.StartAsync(processModified, cancellationToken);
+            await base.StartAsync(processChanges, cancellationToken);
         }
 
         public override async Task StopAsync()

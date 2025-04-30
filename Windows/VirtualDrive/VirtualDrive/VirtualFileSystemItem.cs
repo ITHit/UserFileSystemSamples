@@ -303,5 +303,10 @@ namespace VirtualDrive
             // Delete lock-mode and lock-token info.
             operationContext.Properties.TryDeleteLockInfo();
         }
+
+        public Task<IMetadata> GetMetadataAsync(IOperationContext operationContext, IResultContextBase resultContext, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
