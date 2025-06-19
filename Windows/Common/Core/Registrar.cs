@@ -123,7 +123,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
             if (res && !string.IsNullOrWhiteSpace(dataPath))
             {
-                log.Debug($"Deleteing data folder for {syncRootPath}");
+                log.Debug($"\nDeleting data folder for {syncRootPath}");
                 try
                 {
                     Directory.Delete(dataPath, true);
@@ -131,7 +131,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 catch (Exception ex)
                 {
                     res = false;
-                    log.Error($"Failed to delete data folder {syncRootPath} {dataPath}", ex);
+                    log.Error($"\nFailed to delete data folder {syncRootPath} {dataPath}", ex);
                 }
             }
 
@@ -149,25 +149,25 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             StorageProviderSyncRootInfo syncRootInfo = null;
             try
             {
-                logger.Debug($"Getting sync root info {syncRootPath}");
+                logger.Debug($"\nGetting sync root info {syncRootPath}");
                 syncRootInfo = StorageProviderSyncRootManager.GetSyncRootInformationForFolder(storageFolder);
             }
             catch (Exception ex)
             {
-                logger.Error($"Sync root is not registered {syncRootPath}", ex);
+                logger.Error($"\nSync root is not registered {syncRootPath}", ex);
             }
 
             // Unregister sync root.
             if (syncRootInfo != null)
             {
                 try
-                { 
-                    logger.Debug($"Unregistering sync root {syncRootPath} {syncRootInfo.Id}");
+                {
+                    logger.Debug($"\nUnregistering sync root {syncRootPath} {syncRootInfo.Id}");
                     StorageProviderSyncRootManager.Unregister(syncRootInfo.Id);
                 }
                 catch (Exception ex)
                 {
-                    logger.Error($"Failed to unregister sync root {syncRootPath} {syncRootInfo.Id}", ex);
+                    logger.Error($"\nFailed to unregister sync root {syncRootPath} {syncRootInfo.Id}", ex);
                     // IMPORTANT!
                     // If Unregister() failed, deleting items on the client may trigger deleting
                     // items in the remote storage if the Engine did not stop or if started again.
@@ -178,7 +178,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
 
             // Remore the read-only arrtibute. Otherwise delete fails.
             var allItems = Directory.EnumerateFileSystemEntries(syncRootPath, "*", SearchOption.AllDirectories);
-            foreach(var path in allItems)
+            foreach (var path in allItems)
             {
                 try
                 {
@@ -186,14 +186,14 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 }
                 catch (Exception ex)
                 {
-                    logger.Error($"Failed to remove read-only attribute for {path}", ex);
+                    logger.Error($"\nFailed to remove read-only attribute for {path}", ex);
                 }
             }
 
             // Delete sync root folder.
             try
             {
-                logger.Debug($"Deleteing sync root folder {syncRootPath}");
+                logger.Debug($"\nDeleting sync root folder {syncRootPath}");
                 Directory.Delete(syncRootPath, true);
                 res = true;
             }
@@ -217,7 +217,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         {
             bool res = true;
             var syncRoots = StorageProviderSyncRootManager.GetCurrentSyncRoots();
-            foreach(var syncRoot in syncRoots)
+            foreach (var syncRoot in syncRoots)
             {
                 string storedProviderId = syncRoot.Id?.Split('!')?.FirstOrDefault();
                 if (storedProviderId.Equals(providerId))
@@ -333,14 +333,14 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             // Adds columns to Windows File Manager. 
             // Show/hide columns in the "More..." context menu on the columns header in Windows Explorer.
             var proDefinitions = storageInfo.StorageProviderItemPropertyDefinitions;
-            if(customColumns != null)
+            if (customColumns != null)
             {
                 foreach (var column in customColumns)
                 {
                     proDefinitions.Add(new StorageProviderItemPropertyDefinition { DisplayNameResource = column.Value, Id = column.Key });
                 }
             }
-      
+
             ValidateStorageProviderSyncRootInfo(storageInfo);
 
             StorageProviderSyncRootManager.Register(storageInfo);
@@ -469,7 +469,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                     {
                         return syncRoot;
                     }
-                }    
+                }
             }
 
             return null;
@@ -510,7 +510,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                     string storedUri = syncRoot.GetRemoteStoragePath();
                     if (!System.Uri.TryCreate(storedUri, UriKind.Absolute, out System.Uri _))
                     {
-                        log.Error($"Can not parse URI for {syncRoot.DisplayNameResource}: {storedUri}");
+                        log.Error($"\nCan not parse URI for {syncRoot.DisplayNameResource}: {storedUri}");
                         continue;
                     }
 

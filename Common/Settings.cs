@@ -55,10 +55,6 @@ namespace ITHit.FileSystem.Samples.Common
         /// <summary>
         /// Get or set the custom columns for the file system items.
         /// </summary>
-        /// <remarks>
-        /// Each custom column is represented by an instance of the <see cref="CustomColumn"/> class, 
-        /// which includes an ID and a Name.
-        /// </remarks>
         public Dictionary<int, string> CustomColumns { get; set; }
     }
 }

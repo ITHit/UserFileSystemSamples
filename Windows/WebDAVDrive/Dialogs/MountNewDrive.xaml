@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<local:DialogWindow
+<dialogs:DialogWindow
     x:Class="WebDAVDrive.Dialogs.MountNewDrive"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:WebDAVDrive.Dialogs"
+    xmlns:dialogs="using:ITHit.FileSystem.Windows.WinUI.Dialogs"
     xmlns:winui="using:ITHit.FileSystem.Windows.WinUI"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -33,4 +33,4 @@
             <winui:CursorButton x:Uid="Add" x:Name="btnAddDrive" Click="OnValidateClicked" Style="{StaticResource DialogButtonStyle}" />
         </StackPanel>
     </Grid>
-</local:DialogWindow>
+</dialogs:DialogWindow>

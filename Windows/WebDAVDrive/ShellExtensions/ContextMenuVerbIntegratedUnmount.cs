@@ -82,7 +82,7 @@ namespace WebDAVDrive.ShellExtensions
         public async Task InvokeAsync(IEnumerable<string> filesPath, IEnumerable<byte[]> remoteStorageItemIds = null, CancellationToken cancellationToken = default)
         {
             await engine.Commands.StopEngineAsync();
-            await domainsService.UnMountAsync(engine.InstanceId, engine.RemoteStorageRootPath);
+            await domainsService.UnMountAsync(engine.InstanceId);
         }
 
         /// <inheritdoc/>

@@ -20,7 +20,7 @@ namespace WebDAVDrive.Services
         ConcurrentDictionary<Guid, VirtualEngine> Engines { get; }
         ConcurrentDictionary<Guid, EngineWindows> GetEngineWindowsDictionary();
         Task<(bool success, Exception? exception)> MountNewAsync(string webDAVServerUrl);
-        Task UnMountAsync(Guid engineId, string webDAVServerURL);
+        Task UnMountAsync(Guid? engineId);
         Task InitializeAsync(bool displayMountNewDriveWindow);
         Task EnginesExitAsync();
         Task<VirtualEngine?> EnsureEngineMountedAsync(Uri mountUrl);

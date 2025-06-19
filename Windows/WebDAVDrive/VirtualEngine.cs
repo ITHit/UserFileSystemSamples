@@ -1,23 +1,19 @@
+using ITHit.FileSystem;
+using ITHit.FileSystem.Samples.Common.Windows;
+using ITHit.FileSystem.Synchronization;
+using ITHit.FileSystem.Windows;
+using ITHit.WebDAV.Client;
+using ITHit.WebDAV.Client.Exceptions;
 using System;
 using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using WinUIEx;
-using ITHit.FileSystem;
-using ITHit.FileSystem.Windows;
-using ITHit.FileSystem.Samples.Common.Windows;
-using ITHit.WebDAV.Client;
-using ITHit.WebDAV.Client.Exceptions;
-using ITHit.FileSystem.Synchronization;
-using InvalidLicenseException = ITHit.FileSystem.InvalidLicenseException;
-
-using WebDAVDrive.Services;
 using WebDAVDrive.Dialogs;
-using System.Management;
-using System.Reflection;
-using System.Runtime.InteropServices;
-
+using WebDAVDrive.Enums;
+using WebDAVDrive.Services;
+using WinUIEx;
+using InvalidLicenseException = ITHit.FileSystem.InvalidLicenseException;
 
 namespace WebDAVDrive
 {
@@ -53,18 +49,6 @@ namespace WebDAVDrive
         /// Maps remote storage path to the user file system path and vice versa. 
         /// </summary>
         public readonly Mapping Mapping;
-
-        /// <summary>
-        /// Credentials used to connect to the server. 
-        /// Used for challenge-responce auth (Basic, Digest, NTLM or Kerberos).
-        /// </summary>
-        public NetworkCredential Credentials { get; set; }
-
-        /// <summary>
-        /// Cookies used to connect to the server. 
-        /// Used for cookies auth and MS-OFBA auth.
-        /// </summary>
-        public CookieCollection Cookies { get; set; } = new CookieCollection();
 
         /// <summary>
         /// Commands.
@@ -142,10 +126,23 @@ namespace WebDAVDrive
             get { return $"{appId} - {RemoteStorageRootPath}"; }
         }
 
+        public bool DavClientCredentialsSet
+        {
+            //ASP.NET Core Identity uses cookie with name .AspNetCore.Identity.Application, so check for it
+            get { return DavClient.Credentials != null || DavClient.CookieContainer.GetAllCookies().Any(c => c.Name?.ToLower() == ".aspnetcore.identity.application"); }
+        }
+
         /// <summary>
         /// Indicates whether the authentication was successful.
         /// </summary>
         private bool isAuthenticateSucceeded = false;
+
+        /// <summary>
+        /// Event fired when the authentication status changes.
+        /// </summary>
+        /// <remarks>See <see cref="EngineAuthentificationStatus"/> for statuses list.</remarks>
+        public event Action<Engine, EngineAuthentificationStatus> LoginStatusChanged;
+
 
         /// <summary>
         /// Creates a vitual file system Engine.
@@ -214,13 +211,14 @@ namespace WebDAVDrive
             {
                 return new VirtualFolder(remoteStorageId, userFileSystemPath, this, AutoLockTimeoutMs, ManualLockTimeoutMs, Settings, logger);
             }
-        }       
+        }
 
         public override async Task StartAsync(bool processChanges = true, CancellationToken cancellationToken = default)
         {
             if (!await AuthenticateAsync(null, cancellationToken, true))
-            {
-                // Authentication failed. There is no way to send requests without auth info. The Engine can not be started.
+            {                
+                LoginStatusChanged(this, EngineAuthentificationStatus.LoggedOut);
+                //Authentication failed. There is no way to send requests without auth info. The Engine can not be started.
                 return;
             }
 
@@ -229,6 +227,7 @@ namespace WebDAVDrive
             Logger.LogMessage($"Sync mode: {Settings.IncomingSyncMode}", Path);
 
             await base.StartAsync(processChanges, cancellationToken);
+            LoginStatusChanged(this, DavClientCredentialsSet ? EngineAuthentificationStatus.LoggedIn : EngineAuthentificationStatus.Anonymous);
 
             // Create and start monitor, depending on server capabilities and prefered SyncMode.
             RemoteStorageMonitor = await StartRemoteStorageMonitorAsync(Settings.IncomingSyncMode, cancellationToken);
@@ -241,7 +240,7 @@ namespace WebDAVDrive
             return await AuthenticateAsync(itemsChange, cancellationToken, false);
         }
 
-        private async Task<bool> AuthenticateAsync(IItemsChange itemsChange, CancellationToken cancellationToken, bool skipCachedCredential)
+        public async Task<bool> AuthenticateAsync(IItemsChange itemsChange, CancellationToken cancellationToken, bool skipCachedCredential)
         {
             if (await IsAuthenticatedAsync(itemsChange, cancellationToken) && !skipCachedCredential)
             {
@@ -277,6 +276,23 @@ namespace WebDAVDrive
             return isAuthenticateSucceeded;
         }
 
+        public async Task LogoutAsync()
+        {
+            DavClient.Credentials = null;
+            CurrentUserPrincipal = null;
+
+            CookieCollection cookies = DavClient.CookieContainer.GetAllCookies();
+            foreach (Cookie cookie in cookies)
+            {
+                cookie.Expires = DateTime.UtcNow.AddDays(-30);
+            }
+
+            secureStorage.RemoveSensitiveData(CredentialsStorageKey);
+
+            isAuthenticateSucceeded = false;
+            LoginStatusChanged(this, EngineAuthentificationStatus.LoggedOut);
+            await StopAsync();
+        }
 
         /// <summary>
         /// Sets remote storage item ID for the root folder and initializes other Engine values if needed.
@@ -353,8 +369,10 @@ namespace WebDAVDrive
 
                 if (monitor != null)
                 {
-                    monitor.Credentials = Credentials;
-                    monitor.Cookies = Cookies;
+
+                    monitor.Credentials = DavClient.Credentials != null && DavClient.Credentials is NetworkCredential ?
+                                          (DavClient.Credentials as NetworkCredential) : null;
+                    monitor.Cookies = DavClient.CookieContainer.GetAllCookies();
                     monitor.InstanceId = InstanceId;
                     monitor.ServerNotifications = ServerNotifications(Path, monitor.Logger);
                     await monitor.StartAsync();
@@ -505,13 +523,11 @@ namespace WebDAVDrive
 
             if (secureStorage.TryGetSensitiveData(CredentialsStorageKey, out BasicAuthCredentials credentials))
             {
-                Credentials = new NetworkCredential(credentials.UserName, credentials.Password);
-                davClient.Credentials = Credentials;
+                davClient.Credentials = new NetworkCredential(credentials.UserName, credentials.Password);
             }
             else if (secureStorage.TryGetSensitiveData(CredentialsStorageKey, out CookieCollection cookies))
             {
                 davClient.CookieContainer.Add(cookies);
-                Cookies = cookies;
             }
 
             return davClient;
@@ -563,8 +579,7 @@ namespace WebDAVDrive
 
                         Logger.LogDebug($"{httpException?.Status.Code} {httpException?.Status.Description} {httpException.Message}", null, failedUri?.OriginalString);
 
-                        WebBrowserLogin(failedUri);
-                        success = true;
+                        success = WebBrowserLogin(failedUri);
 
                         // Replay the request, so the listing or update can complete succesefully.
                         // Unless this is LOCK - incorrect lock owner map be passed in this case.
@@ -594,8 +609,9 @@ namespace WebDAVDrive
             return success;
         }
 
-        private void WebBrowserLogin(Uri failedUri)
+        private bool WebBrowserLogin(Uri failedUri)
         {
+            bool success = false;
             TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
             ServiceProvider.DispatcherQueue.TryEnqueue(() =>
             {
@@ -604,12 +620,13 @@ namespace WebDAVDrive
                         {
                             // Set cookies collected from the web browser dialog.
                             DavClient.CookieContainer.Add(cookies);
-                            Cookies = cookies;
 
                             // Save cookies to the secure storage.
                             secureStorage.SaveSensitiveData(CredentialsStorageKey, cookies);
+                            success = true;
                             tcs.SetResult(true);
-                        }, log);
+                        }, log, true);
+                webBrowserLoginWindow.Closed += (sender, e) => { tcs.TrySetResult(true); };
                 webBrowserLoginWindow.Show();
 
             });
@@ -619,6 +636,7 @@ namespace WebDAVDrive
             // In case of WebDAV current-user-principal can be used for this purpose.
             // For demo purposes we just set "DemoUserX".
             CurrentUserPrincipal = "DemoUserX";
+            return success;
         }
 
         private bool ChallengeLogin(Uri failedUri)
@@ -642,7 +660,6 @@ namespace WebDAVDrive
                     }
 
                     DavClient.Credentials = result.Value.Credential;
-                    Credentials = result.Value.Credential;
                     CurrentUserPrincipal = result.Value.Credential.UserName;
 
                     try

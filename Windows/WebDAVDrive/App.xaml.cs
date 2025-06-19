@@ -17,7 +17,6 @@ using WindowManager = ITHit.FileSystem.Samples.Common.Windows.WindowManager;
 using WebDAVDrive.Services;
 using System.Runtime.InteropServices;
 using WebDAVDrive.ShellExtensions;
-using WebDAVDrive.Dialogs;
 
 
 namespace WebDAVDrive

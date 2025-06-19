@@ -10,8 +10,10 @@ using ITHit.FileSystem;
 using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Windows.ShellExtension;
-using WebDAVDrive.Dialogs;
+using ITHit.FileSystem.Windows.WinUI.Dialogs;
+
 using WebDAVDrive.Services;
+
 
 namespace WebDAVDrive.ShellExtensions
 {
@@ -107,6 +109,7 @@ namespace WebDAVDrive.ShellExtensions
         public async Task InvokeAsync(IEnumerable<string> filesPath, IEnumerable<byte[]> remoteStorageItemIds = null, CancellationToken cancellationToken = default)
         {
             string userFileSystemPath = filesPath.First();
+            VirtualEngine virtualEngine = engine as VirtualEngine;
 
             //if (engine.Placeholders.TryGetItem(userFileSystemPath, out PlaceholderItem placeholder))
             //{
@@ -115,7 +118,8 @@ namespace WebDAVDrive.ShellExtensions
             //    ITHit.FileSystem.Windows.AppHelper.Utilities.TryCompare(placeholder.Path, res.ShadowFilePath);
             //}
 
-            _ = ServiceProvider.DispatcherQueue.TryEnqueue(() => new Compare(userFileSystemPath, engine as VirtualEngine).Show());
+            _ = ServiceProvider.DispatcherQueue.TryEnqueue(() => new Compare(userFileSystemPath, engine, (engine as VirtualEngine).Settings.Compare,
+                    ServiceProvider.GetService<AppSettings>().ProductName).Show());
         }
 
         /// <inheritdoc/>

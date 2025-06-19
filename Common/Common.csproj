@@ -15,7 +15,7 @@
     <Compile Remove="FolderMetadataExt.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows" Version="9.0.29481.0-Beta" />
-    <PackageReference Include="ITHit.FileSystem" Version="9.0.29481.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows" Version="9.0.29527.0" />
+    <PackageReference Include="ITHit.FileSystem" Version="9.0.29527.0" />
   </ItemGroup>
 </Project>

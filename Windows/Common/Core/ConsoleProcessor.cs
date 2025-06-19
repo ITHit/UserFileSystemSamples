@@ -34,10 +34,6 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             logFormatter.LogMessage("\n Commands:");
             PrintCommandDescription("Spacebar", "Exit without unregistering (simulate reboot).");
             PrintCommandDescription("Esc", "Unregister file system, delete all files/folders and exit.");
-            if (FileSystem.Windows.Package.PackageRegistrar.IsRunningWithSparsePackageIdentity())
-            {
-                PrintCommandDescription("Shift-Esc", "Unregister file system, delete all files/folders, unregister handlers, uninstall developer certificate, unregister sparse package and exit (simulate full uninstall).");
-            }
             PrintCommandDescription("e", "Start/stop the Engine and all sync services.");
             PrintCommandDescription("s", "Start/stop synchronization service.");
             PrintCommandDescription("m", "Start/stop remote storage monitor.");

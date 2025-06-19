@@ -10,6 +10,7 @@ using Windows.System;
 using WebDAVDrive.Services;
 using System.Collections.Generic;
 using System.Linq;
+using ITHit.FileSystem.Windows.WinUI.Dialogs;
 
 namespace WebDAVDrive.Dialogs
 {
@@ -70,7 +71,7 @@ namespace WebDAVDrive.Dialogs
                             KeyValuePair<Guid, VirtualEngine>? engine = drivesService.Engines.Where(p => p.Value.RemoteStorageRootPath == url).FirstOrDefault();
                             if (engine != null)
                             {
-                                await drivesService.UnMountAsync(engine.Value.Value.InstanceId, url);
+                                await drivesService.UnMountAsync(engine.Value.Value.InstanceId);
                             }
 
                             ServiceProvider.DispatcherQueue.TryEnqueue(async () =>

@@ -301,19 +301,14 @@
     <PackageReference Include="WinUIEx" Version="2.5.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="9.0.29481.0-Beta" />
-    <PackageReference Include="ITHit.FileSystem.Windows.WinUI" Version="9.0.29481.0-Beta" />
+    <PackageReference Include="ITHit.FileSystem.Windows.Package" Version="9.0.29527.0" />
+    <PackageReference Include="ITHit.FileSystem.Windows.WinUI" Version="9.0.29527.0" />
     <ProjectReference Include="..\..\Common\Common.csproj" />
     <ProjectReference Include="..\Common\Core\Common.Windows.Core.csproj" />
     <ProjectReference Include="..\Common\VirtualDrive\Common.Windows.VirtualDrive.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Page Update="Dialogs\ConflictResolution.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
-  <ItemGroup>
-    <Page Update="Dialogs\Compare.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>

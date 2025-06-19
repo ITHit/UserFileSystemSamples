@@ -129,10 +129,6 @@
     <value>Close</value>
     <comment>Close button label</comment>
   </data>
-  <data name="Compare.Content" xml:space="preserve">
-    <value>Compare</value>
-    <comment>Compare button label</comment>
-  </data>
   <data name="CompareWindow.Title" xml:space="preserve">
     <value>Compare</value>
     <comment>Compare window title</comment>
@@ -157,14 +153,6 @@
     <value>Startup</value>
     <comment>Startup window title</comment>
   </data>
-  <data name="TakeClient.Content" xml:space="preserve">
-    <value>Take Client</value>
-    <comment>Take Client button label</comment>
-  </data>
-  <data name="TakeServer.Content" xml:space="preserve">
-    <value>Take Server</value>
-    <comment>Take Server button label</comment>
-  </data>
   <data name="UrlEntry.PlaceholderText" xml:space="preserve">
     <value>Enter URL here</value>
     <comment>URL textbox placeholder</comment>
@@ -185,47 +173,11 @@
     <value>Login</value>
     <comment>Web Browser Login window title</comment>
   </data>
-  <data name="ServerTextBlock.Text" xml:space="preserve">
-    <value>Server:</value>
-    <comment>Server label in Compare window</comment>
-  </data>
-  <data name="ClientTextBlock.Text" xml:space="preserve">
-    <value>Client:</value>
-    <comment>Client label in Compare window</comment>
-  </data>
-  <data name="CreatedTextBlock.Text" xml:space="preserve">
-    <value>Created:</value>
-    <comment>Created label in Compare window</comment>
-  </data>
-  <data name="ModifiedTextBlock.Text" xml:space="preserve">
-    <value>Modified:</value>
-    <comment>Modified label in Compare window</comment>
-  </data>
-  <data name="SizeTextBlock.Text" xml:space="preserve">
-    <value>Size:</value>
-    <comment>Size label in Compare window</comment>
-  </data>
-  <data name="Bytes" xml:space="preserve">
-    <value>bytes</value>
-    <comment>Bytes label (Compare window)</comment>
-  </data>
-  <data name="BytesDifferent" xml:space="preserve">
-    <value>Bytes different:</value>
-    <comment>"Bytes different" label (Compare window)</comment>
-  </data>
-  <data name="ContentETagTextBlock.Text" xml:space="preserve">
-    <value>Content eTag:</value>
-    <comment>Content eTag label in Compare window</comment>
-  </data>
-  <data name="MetadataETagTextBlock.Text" xml:space="preserve">
-    <value>Metadata eTag:</value>
-    <comment>Metadata eTag label in Compare window</comment>
-  </data>
   <data name="ErrorContentDialog.Title" xml:space="preserve">
     <value>Error</value>
     <comment>Error content dialog title</comment>
   </data>
-  <data name="ErrorContentDialog/CloseButtonText" xml:space="preserve">
+  <data name="ErrorContentDialog.CloseButtonText" xml:space="preserve">
     <value>OK</value>
     <comment>Error content dialog close button text</comment>
   </data>
@@ -386,32 +338,16 @@
     <value>Must be a number</value>
     <comment>Enable manual locking validation message</comment>
   </data>
-  <data name="RequestSupport.Text" xml:space="preserve">
-    <value>Request Support</value>
-    <comment>Request Support menu text (default tray icon)</comment>
-  </data>
-  <data name="MountNewDrive.Text" xml:space="preserve">
-    <value>Mount New Drive</value>
-    <comment>Mount New Drive menu text (default tray icon)</comment>
-  </data>
-  <data name="DebugMenu.Text" xml:space="preserve">
-    <value>Debug</value>
-    <comment>Debug menu text (default tray icon)</comment>
-  </data>
   <data name="EnableDebugLogging" xml:space="preserve">
     <value>Enable Debug Logging</value>
-    <comment>Enable Debug Logging menu text (default tray icon)</comment>
+    <comment>Enable Debug Logging context menu text</comment>
   </data>
   <data name="DisableDebugLogging" xml:space="preserve">
     <value>Disable Debug Logging</value>
-    <comment>Disable Debug Logging menu text (default tray icon)</comment>
+	  <comment>Disable Debug Logging context menu text</comment>
   </data>
   <data name="OpenLogFile.Text" xml:space="preserve">
     <value>Open Log File</value>
-    <comment>Open Log File menu text (default tray icon)</comment>
-  </data>
-  <data name="Exit.Text" xml:space="preserve">
-    <value>Exit</value>
-    <comment>Exit menu text (default tray icon)</comment>
+    <comment>Open Log File menu text</comment>
   </data>
 </root>

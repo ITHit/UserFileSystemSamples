@@ -12,6 +12,7 @@ using log4net.Appender;
 
 using ITHit.FileSystem.Windows;
 using ITHit.FileSystem.Windows.Package;
+using ITHit.FileSystem.Extensions;
 using Windows.Storage.Search;
 using System.Text;
 
@@ -25,7 +26,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
         /// <summary>
         /// Log file path.
         /// </summary>
-        public readonly string LogFilePath;
+        public string LogFilePath { get; set; }
 
         /// <summary>
         /// Indicates if more debugging and performance information should be logged.
@@ -210,7 +211,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 if (ocWin != null)
                 {
                     fileId = ocWin.FileId.ToString();
-                    size = FormatBytes((e.OperationContext as IWindowsOperationContext).FileSize);
+                    size = (e.OperationContext as IWindowsOperationContext).FileSize.FormatBytes();
                 }
             }
 
@@ -218,7 +219,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             string targetPath = e.TargetPath?.FitString(sourcePathWidth, 6);
 
             string message = Format(DateTimeOffset.Now.ToString("hh:mm:ss.fff"), process, priorityHint?.ToString(), fileId, e.ComponentName, e.CallerLineNumber.ToString(), e.CallerMemberName, e.CallerFilePath, e.Message, remoteStorageId, sourcePath, attSource);
-            if (targetPath!=null)
+            if (targetPath != null)
             {
                 // For move operation output target path in the next line.
                 message += Format(null, null, null, null, null, null, null, null, null, null, targetPath, attTarget);
@@ -274,7 +275,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             {
                 return WindowsFileSystemItem.GetFileAttributesString(attributes.Value);
             }
-            
+
             return null;
         }
 
@@ -299,25 +300,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
                 return null;
             }
 
-            return FormatBytes(length);
-        }
-
-        /// <summary>
-        /// Formats bytes to string.
-        /// </summary>
-        /// <param name="length">Bytes to format.</param>
-        /// <returns>Human readable bytes string.</returns>
-        public static string FormatBytes(long length)
-        {
-            string[] suf = { "b ", "KB", "MB", "GB", "TB", "PB", "EB" };
-            if (length == 0)
-            {
-                return "0" + suf[0];
-            }
-            long bytes = Math.Abs(length);
-            int place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
-            double num = Math.Round(bytes / Math.Pow(1024, place), 0);
-            return (Math.Sign(length) * num).ToString() + suf[place];
+            return length.FormatBytes();
         }
 
         public static string IdToSting(byte[] remoteStorageItemId)
@@ -325,7 +308,7 @@ namespace ITHit.FileSystem.Samples.Common.Windows
             if (remoteStorageItemId == null)
                 return null;
 
-            switch(remoteStorageItemId.Length)
+            switch (remoteStorageItemId.Length)
             {
                 case 8:
                     return BitConverter.ToInt64(remoteStorageItemId, 0).ToString();

@@ -10,6 +10,7 @@ using ITHit.FileSystem.Samples.Common.Windows;
 using ITHit.FileSystem.Windows.WinUI.ViewModels;
 
 using WebDAVDrive.ViewModels;
+using ITHit.FileSystem.Windows.WinUI.Dialogs;
 
 
 namespace WebDAVDrive.Dialogs
@@ -22,7 +23,7 @@ namespace WebDAVDrive.Dialogs
         private ResourceLoader resourceLoader;
         private readonly LogFormatter logFormatter;
 
-        public ErrorDetails(FileEventViewModel eventMovel, VirtualEngine engine, LogFormatter logFormatter) : base()
+        public ErrorDetails(FileEventViewModel eventMovel, VirtualEngine? engine, LogFormatter logFormatter) : base()
         {
             this.logFormatter = logFormatter;
             InitializeComponent();
@@ -41,7 +42,7 @@ namespace WebDAVDrive.Dialogs
                 TargetPath.Text = eventMovel.Path;
                 TargetPath.Visibility = TargetPathLabel.Visibility = Visibility.Visible;
             }
-            RemoteStoragePath.Text = engine.Mapping.MapPath(eventMovel.Path);
+            RemoteStoragePath.Text = engine?.Mapping?.MapPath(eventMovel.Path) ?? notApplicable;
             Message.Text = string.IsNullOrEmpty(eventMovel.ErrorMessage) ? notApplicable : eventMovel.ErrorMessage;
             SyncDirection.Text = eventMovel.Direction.ToString();
             OperationStatus.Text = eventMovel.OperationStatus.ToString();

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "VirtualDrive (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "VirtualDrive (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
