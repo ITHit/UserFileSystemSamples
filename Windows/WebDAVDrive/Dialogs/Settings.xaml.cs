@@ -1,3 +1,4 @@
+using ITHit.FileSystem.Windows.WinUI;
 using ITHit.FileSystem.Windows.WinUI.Dialogs;
 using Microsoft.UI.Xaml;
 using WebDAVDrive.Services;
@@ -13,12 +14,14 @@ namespace WebDAVDrive.Dialogs
         private readonly ResourceLoader resourceLoader = ResourceLoader.GetForViewIndependentUse();
 
         private readonly VirtualEngine engine;
+        private readonly Tray parentTrayWindow;
 
-        public Settings(VirtualEngine engine) : base()
+        public Settings(Tray trayWindow) : base()
         {
             InitializeComponent();
-            Resize(700, 600);
-            this.engine = engine;
+            Resize(700, 700);
+            engine = (trayWindow.Engine as VirtualEngine)!;
+            parentTrayWindow = trayWindow;
             Title = $"{ServiceProvider.GetService<AppSettings>().ProductName} - {resourceLoader.GetString("SettingsWindow/Title")}";
 
             // Resize and center the window.
@@ -27,6 +30,7 @@ namespace WebDAVDrive.Dialogs
             //Set values from engine
             AutomaticLockTimeout.Text = (engine.AutoLockTimeoutMs / 1000).ToString();
             ManualLockTimeout.Text = engine.ManualLockTimeoutMs == -1 ? string.Empty : (engine.ManualLockTimeoutMs / 1000).ToString();
+            TrayMaxHistoryItems.Text = engine.TrayMaxHistoryItems.ToString();
             AutoLockEnable.IsOn = engine.AutoLock;
             ReadOnlyOnLockedFiles.IsOn = engine.SetLockReadOnly;
         }
@@ -39,7 +43,8 @@ namespace WebDAVDrive.Dialogs
         private void OnSaveClicked(object sender, RoutedEventArgs e)
         {
             bool isValidationError = false;
-            AutomaticRequiredMessage.Visibility = AutomaticValidationMessage.Visibility = ManualValidationMessage.Visibility = Visibility.Collapsed;
+            AutomaticRequiredMessage.Visibility = AutomaticValidationMessage.Visibility = ManualValidationMessage.Visibility =
+                TrayMaxHistoryItemsRequiredMessage.Visibility = TrayMaxHistoryItemsValidationMessage.Visibility = Visibility.Collapsed;
 
             //"Automatic lock timeout" field is required and should be a number
             if (string.IsNullOrWhiteSpace(AutomaticLockTimeout.Text))
@@ -62,16 +67,39 @@ namespace WebDAVDrive.Dialogs
                 ManualValidationMessage.Visibility = Visibility.Visible;
             }
 
+            //"Tray max history items" field is required and should be a 10+ integer number
+            if (string.IsNullOrWhiteSpace(TrayMaxHistoryItems.Text))
+            {
+                isValidationError = true;
+                TrayMaxHistoryItemsRequiredMessage.Visibility = Visibility.Visible;
+                TrayMaxHistoryItemsValidationMessage.Visibility = Visibility.Collapsed;
+            }
+            else if (!int.TryParse(TrayMaxHistoryItems.Text, out int trayMaxHistoryItems) || trayMaxHistoryItems < 10)
+            {
+                isValidationError = true;
+                TrayMaxHistoryItemsRequiredMessage.Visibility = Visibility.Collapsed;
+                TrayMaxHistoryItemsValidationMessage.Visibility = Visibility.Visible;
+            }
+
             if (!isValidationError)
             {
                 UserSettingsService userSettingsService = ServiceProvider.GetService<UserSettingsService>();
+                int trayMaxHistoryItemsShowing = int.Parse(TrayMaxHistoryItems.Text);
                 userSettingsService.SaveSettings(engine, new UserSettings
                 {
                     AutomaticLockTimeout = double.Parse(AutomaticLockTimeout.Text) * 1000,
                     ManualLockTimeout = string.IsNullOrWhiteSpace(ManualLockTimeout.Text) ? -1 : (double.Parse(ManualLockTimeout.Text) * 1000),
+                    TrayMaxHistoryItems = trayMaxHistoryItemsShowing,
                     SetLockReadOnly = ReadOnlyOnLockedFiles.IsOn,
                     AutoLock = AutoLockEnable.IsOn
-                });                
+                });
+                //update property of parent Tray window and clear history on the fly (if user provided smaller setting value)
+                int? oldValue = parentTrayWindow.TrayMaxHistoryItems;
+                parentTrayWindow.TrayMaxHistoryItems = trayMaxHistoryItemsShowing;
+                if (oldValue.HasValue && oldValue.Value > trayMaxHistoryItemsShowing)
+                {
+                    parentTrayWindow.CleanupHistoryItems();
+                }
 
                 Close();
             }

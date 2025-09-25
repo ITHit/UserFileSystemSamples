@@ -37,7 +37,7 @@
                 </StackPanel>
                 <StackPanel Style="{StaticResource SettingsStackPanelWithTextBox}" Grid.Column="1">
                     <TextBox x:Name="AutomaticLockTimeout" Style="{StaticResource SettingsTextBoxStyle}" />
-                    <TextBlock x:Name="AutomaticRequiredMessage" x:Uid="AutomaticRequiredMessage" Style="{StaticResource SettingsErrorStyle}" />
+                    <TextBlock x:Name="AutomaticRequiredMessage" x:Uid="RequiredSettingMessage" Style="{StaticResource SettingsErrorStyle}" />
                     <TextBlock x:Name="AutomaticValidationMessage" x:Uid="AutomaticValidationMessage" Style="{StaticResource SettingsErrorStyle}" />
                 </StackPanel>
             </Grid>
@@ -67,6 +67,22 @@
                     <TextBlock x:Uid="ReadOnlyOnLockedFilesLabelDescription" Style="{StaticResource SettingsDescriptionStyle}" />
                 </StackPanel>
                 <ToggleSwitch x:Uid="BottomToggle" x:Name="ReadOnlyOnLockedFiles" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}" />
+            </Grid>
+
+            <Grid Style="{StaticResource SettingsGridStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="100" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Style="{StaticResource SettingsStackPanel}" Grid.Column="0">
+                    <TextBlock x:Uid="TrayMaxHistoryItemsLabel" Style="{StaticResource SettingsTextBlockStyle}" />
+                    <TextBlock x:Uid="TrayMaxHistoryItemsLabelDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                </StackPanel>
+                <StackPanel Style="{StaticResource SettingsStackPanelWithTextBox}" Grid.Column="1">
+                    <TextBox x:Name="TrayMaxHistoryItems" Style="{StaticResource SettingsTextBoxStyle}" />
+                    <TextBlock x:Name="TrayMaxHistoryItemsRequiredMessage" x:Uid="RequiredSettingMessage" Style="{StaticResource SettingsErrorStyle}" />
+                    <TextBlock x:Name="TrayMaxHistoryItemsValidationMessage" x:Uid="TrayMaxHistoryItemsValidationMessage" Style="{StaticResource SettingsErrorStyle}" />
+                </StackPanel>
             </Grid>
         </StackPanel>
 

@@ -54,7 +54,8 @@
             <Color x:Key="AnimatedIconColor">#eaeaea</Color>
             <Color x:Key="HistoryItemHoveredColor">#242424</Color>
             <Color x:Key="HistoryItemPressedColor">#282828</Color>
-            <Color x:Key="DisabledButtonTextColor">#C8C8C8</Color>
+            <Color x:Key="DisabledButtonTextColor">#ffff</Color>
+            <Color x:Key="DisabledButtonBackgroundColor">#3C3C3C</Color>
             <Color x:Key="ButtonBackgroundColor">#242424</Color>
             <Color x:Key="TraySubMenuHoverColor">#323130</Color>
             <Color x:Key="DialogButtonHoverColor">#dddddd</Color>

@@ -35,6 +35,11 @@ namespace WebDAVDrive
         /// </summary>
         public double ManualLockTimeoutMs { get; set; }
 
+        // <summary>
+        /// Controls the number of events in the tray window.
+        /// </summary>
+        public int TrayMaxHistoryItems { get; set; }
+
         /// <summary>
         /// Full outgoing synchronization and hydration/dehydration interval in milliseconds.
         /// </summary>

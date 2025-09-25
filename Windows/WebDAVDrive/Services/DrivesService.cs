@@ -3,6 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Security.Principal;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Windows.Storage.Provider;
 using Windows.ApplicationModel.Resources;
@@ -20,6 +24,7 @@ using ITHit.FileSystem.Windows.ShellExtension;
 using ITHit.FileSystem.Windows.WinUI.ViewModels;
 using ITHit.FileSystem.Windows.WinUI;
 using WindowManager = ITHit.FileSystem.Samples.Common.Windows.WindowManager;
+
 
 namespace WebDAVDrive.Services
 {
@@ -114,7 +119,7 @@ namespace WebDAVDrive.Services
                     ServiceProvider.DispatcherQueue.TryEnqueue(async () =>
                     {
                         Tray existingTrayWindow = trayWindows[engineId];
-                        await trayWindows[engineId].SetEngineAsync(null, null);
+                        await trayWindows[engineId].SetEngineAsync(null, null, null);
                         AdjustEngineRelatedThings(existingTrayWindow, null);
                         //as single window is not more connected to engine - add it to dictionary with Guid.Empty
                         trayWindows.Remove(engineId);
@@ -333,10 +338,10 @@ namespace WebDAVDrive.Services
 
                 // Print Engine config, settings, logging headers.
                 await LogFormatter.PrintEngineStartInfoAsync(engine, webDAVServerUrl);
-                
+
                 if (defaultTrayWindow != null)
                 {
-                    await defaultTrayWindow.SetEngineAsync(engine, engine?.Settings?.Compare);
+                    await defaultTrayWindow.SetEngineAsync(engine, engine?.Settings?.Compare, engine?.Settings?.TrayMaxHistoryItems);
                     AdjustEngineRelatedThings(defaultTrayWindow, engine);
                     //remap single window to new engine in dictionary and clear defaultTrayWindow variable
                     trayWindows.Add(engine!.InstanceId, defaultTrayWindow);
@@ -347,7 +352,7 @@ namespace WebDAVDrive.Services
                 {
                     CreateTrayIcon(engine);
                 }
-                
+
                 // Start processing OS file system calls.
                 await engine.StartAsync();
 
@@ -375,11 +380,11 @@ namespace WebDAVDrive.Services
             {
                 
                 // Create Tray window.
-                Tray trayWindow = new Tray(engine, engine?.Settings?.Compare);
+                Tray trayWindow = new Tray(engine, engine?.Settings?.Compare, engine?.TrayMaxHistoryItems);
 
                 //Set header text, mount, unmount, start/stop sync handlers here - as Tray does not access to sample related things                    
                 trayWindow.Header = ServiceProvider.GetService<AppSettings>().ProductName;
-                trayWindow.ShowSettingsMenu.Click += (sender, e) => ShowSettingsMenuClick(trayWindow.Engine as VirtualEngine);
+                trayWindow.ShowSettingsMenu.Click += (sender, e) => ShowSettingsMenuClick(trayWindow);
                 trayWindow.MountNewDriveMenu.Click += (sender, e) => TrayMountNewDriveClick();
                 trayWindow.UnmountMenu.Click += (sender, e) => TrayUnmountClick(trayWindow.Engine as VirtualEngine);
                 trayWindow.ShowFeedbackMenu.Click += async (sender, e) => await Commands.OpenSupportPortalAsync();
@@ -461,9 +466,9 @@ namespace WebDAVDrive.Services
             });
         }
 
-        private void ShowSettingsMenuClick(VirtualEngine? engine)
+        private void ShowSettingsMenuClick(Tray trayWindow)
         {
-            ServiceProvider.DispatcherQueue.TryEnqueue(() => _ = engine == null ? false : new Settings(engine).Show());
+            ServiceProvider.DispatcherQueue.TryEnqueue(() => _ = trayWindow.Engine is VirtualEngine ? new Settings(trayWindow).Show() : false);
         }
 
         private string GetDisplayName(string webDAVServerUrl)
@@ -485,7 +490,35 @@ namespace WebDAVDrive.Services
         /// <remarks>An identifier in the form: [Storage Provider ID]![Windows SID]![Account ID]</remarks>
         private string GetSyncRootId(string remoteStoragePathRoot)
         {
-            return $"{Settings.AppID}!{System.Security.Principal.WindowsIdentity.GetCurrent().User}!{remoteStoragePathRoot}";
+            string accountId = WindowsIdentity.GetCurrent()?.User?.ToString() ?? "default";
+            string contextId = GetFullSha1Hash($"{Sanitize(accountId)}|{Sanitize(remoteStoragePathRoot)}");
+            string syncRootId = $"{Settings.AppID}!{contextId}";
+
+            // Ensure it doesn't exceed Windows path limits
+            if (syncRootId.Length > 200)
+                syncRootId = syncRootId.Substring(0, 200);
+
+            return syncRootId;
+        }
+
+        /// <summary>
+        /// Replace invalid characters with underscore
+        /// </summary>
+        private static string Sanitize(string input)
+        {
+            return Regex.Replace(input, @"[^A-Za-z0-9._-]", "_");
+        }
+
+        /// <summary>
+        /// Generates SHA1 hash for the input string.
+        /// </summary>
+        private static string GetFullSha1Hash(string input)
+        {
+            using (var sha1 = SHA1.Create())
+            {
+                byte[] bytes = sha1.ComputeHash(Encoding.UTF8.GetBytes(input));
+                return BitConverter.ToString(bytes).Replace("-", ""); // 40 hex chars
+            }
         }
 
         

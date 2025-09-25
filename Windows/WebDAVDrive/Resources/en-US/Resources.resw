@@ -261,9 +261,9 @@
     <value>Manual lock timeout in seconds. Manual lock is set via context menu and is not extended. Set to -1 for infinity. Note that many WebDAV servers do not accept Infinity and will set its own default timeout instead.</value>
     <comment>Manual lock timeout description (settings)</comment>
   </data>
-  <data name="AutomaticRequiredMessage.Text" xml:space="preserve">
+  <data name="RequiredSettingMessage.Text" xml:space="preserve">
     <value>Required</value>
-    <comment>Enable automatic locking required message</comment>
+    <comment>Required validation message (settings)</comment>
   </data>
   <data name="AutomaticLockTimeoutLabel.Text" xml:space="preserve">
     <value>Automatic lock timeout (seconds)</value>
@@ -338,16 +338,28 @@
     <value>Must be a number</value>
     <comment>Enable manual locking validation message</comment>
   </data>
+  <data name="TrayMaxHistoryItemsValidationMessage.Text" xml:space="preserve">
+    <value>Enter 10+ integer</value>
+    <comment>Enable manual locking validation message</comment>
+  </data>
   <data name="EnableDebugLogging" xml:space="preserve">
     <value>Enable Debug Logging</value>
     <comment>Enable Debug Logging context menu text</comment>
   </data>
   <data name="DisableDebugLogging" xml:space="preserve">
     <value>Disable Debug Logging</value>
-	  <comment>Disable Debug Logging context menu text</comment>
+    <comment>Disable Debug Logging context menu text</comment>
   </data>
   <data name="OpenLogFile.Text" xml:space="preserve">
     <value>Open Log File</value>
     <comment>Open Log File menu text</comment>
+  </data>
+  <data name="TrayMaxHistoryItemsLabel.Text" xml:space="preserve">
+    <value>Tray max history items</value>
+    <comment>Tray max history items label (settings)</comment>
+  </data>
+  <data name="TrayMaxHistoryItemsLabelDescription.Text" xml:space="preserve">
+    <value>Controls the number of events in the tray window.</value>
+    <comment>Tray max history items description (settings)</comment>
   </data>
 </root>

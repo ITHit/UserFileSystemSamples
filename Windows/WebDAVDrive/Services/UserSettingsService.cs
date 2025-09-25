@@ -4,6 +4,7 @@ namespace WebDAVDrive.Services
     {
         public double AutomaticLockTimeout { get; set; }
         public double ManualLockTimeout { get; set; }
+        public int TrayMaxHistoryItems { get; set; }
         public bool SetLockReadOnly { get; set; }
         public bool AutoLock { get; set; }
     }
@@ -19,6 +20,7 @@ namespace WebDAVDrive.Services
             //save to engine
             engine.AutoLockTimeoutMs = model.AutomaticLockTimeout;
             engine.ManualLockTimeoutMs = model.ManualLockTimeout;
+            engine.TrayMaxHistoryItems = model.TrayMaxHistoryItems;
             engine.AutoLock = model.AutoLock;
             engine.SetLockReadOnly = model.SetLockReadOnly;
         }

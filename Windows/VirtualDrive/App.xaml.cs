@@ -224,7 +224,7 @@ namespace VirtualDrive
 
             ServiceProvider.DispatcherQueue.TryEnqueue(() =>
             {
-                Tray trayWindow = new Tray(engine, null);
+                Tray trayWindow = new Tray(engine, null, null);
                 Commands commands = new Commands(engine, settings.RemoteStorageRootPath, logFormatter.Log);
 
                 //Set header text, mount, unmount, start/stop sync handlers here - as Tray does not access to sample related things

@@ -141,7 +141,10 @@ namespace WebDAVDrive
 
                     if (string.IsNullOrEmpty(newContentEtag))
                     {
-                        Logger.LogError("The server did not return ETag after update.", UserFileSystemPath, null, null, operationContext, metadata);
+                        Logger.LogDebug("The server did not return ETag after update.", UserFileSystemPath, null, null);
+
+                        // Try to get ETag by sending a HEAD request.
+                        newContentEtag = (await Dav.GetFileAsync(new Uri(RemoteStoragePath), null, null, cancellationToken)).WebDavResponse.Etag;
                     }
                 }
                 catch (Client.Exceptions.LockedException ex)

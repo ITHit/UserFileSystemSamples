@@ -71,6 +71,11 @@ namespace WebDAVDrive
         public double ManualLockTimeoutMs;
 
         /// <summary>
+        /// Controls the number of events in the tray window.
+        /// </summary>
+        public int TrayMaxHistoryItems;
+
+        /// <summary>
         /// Maximum number of login attempts.
         /// </summary>
         private readonly uint loginRetriesMax = 3;
@@ -129,7 +134,7 @@ namespace WebDAVDrive
         public bool DavClientCredentialsSet
         {
             //ASP.NET Core Identity uses cookie with name .AspNetCore.Identity.Application, so check for it
-            get { return DavClient.Credentials != null || DavClient.CookieContainer.GetAllCookies().Any(c => c.Name?.ToLower() == ".aspnetcore.identity.application"); }
+            get { return DavClient.Credentials != null || DavClient.CookieContainer.GetAllCookies().Any(c => c.Name?.Equals(".aspnetcore.identity.application", StringComparison.InvariantCultureIgnoreCase) ?? false); }
         }
 
         /// <summary>
@@ -183,6 +188,7 @@ namespace WebDAVDrive
             ManualLockTimeoutMs = userSettings?.ManualLockTimeout ?? Settings.ManualLockTimeoutMs;
             SetLockReadOnly = userSettings?.SetLockReadOnly ?? Settings.SetLockReadOnly;
             AutoLock = userSettings?.AutoLock ?? Settings.AutoLock;
+            TrayMaxHistoryItems = userSettings?.TrayMaxHistoryItems > 0 ? userSettings.TrayMaxHistoryItems : Settings.TrayMaxHistoryItems;
 
             DavClient = CreateWebDavSession(InstanceId);
 
@@ -216,7 +222,7 @@ namespace WebDAVDrive
         public override async Task StartAsync(bool processChanges = true, CancellationToken cancellationToken = default)
         {
             if (!await AuthenticateAsync(null, cancellationToken, true))
-            {                
+            {
                 LoginStatusChanged(this, EngineAuthentificationStatus.LoggedOut);
                 //Authentication failed. There is no way to send requests without auth info. The Engine can not be started.
                 return;
@@ -383,7 +389,7 @@ namespace WebDAVDrive
             {
                 Logger.LogMessage($"Failed to create remote storage monitor. {ex.Message}", Path);
                 monitor = null;
-                SyncService.IncomingSyncMode = preferedSyncMode == IncomingSyncModeSetting.Auto ? IncomingSyncMode.TimerPooling : IncomingSyncMode.Disabled;
+                SyncService.IncomingSyncMode = IncomingSyncMode.Disabled;
             }
             Commands.RemoteStorageMonitor = monitor;
 
@@ -520,6 +526,8 @@ namespace WebDAVDrive
             davClient.WebDavError += DavClient_WebDavError;
             davClient.WebDavMessage += DavClient_WebDAVMessage;
             davClient.CustomHeaders.Add("InstanceId", engineInstanceId.ToString());
+            // Is required for IIS WebDAV server to avoid 417 Expectation Failed response.
+            davClient.Client.DefaultRequestHeaders.ExpectContinue = false;
 
             if (secureStorage.TryGetSensitiveData(CredentialsStorageKey, out BasicAuthCredentials credentials))
             {

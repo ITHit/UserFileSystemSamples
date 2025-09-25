@@ -309,7 +309,7 @@ namespace WebDAVDrive
 
             string lockOwner = Engine.CurrentUserPrincipal;
             double timeoutMs = lockMode == LockMode.Auto ? autoLockTimeoutMs : manualLockTimeoutMs;
-            TimeSpan timeout = timeoutMs == -1 ? TimeSpan.MaxValue : TimeSpan.FromMilliseconds(timeoutMs);
+            TimeSpan timeout = timeoutMs == -1 ? TimeSpan.FromDays(365 * 100) /* Set 100 years */ : TimeSpan.FromMilliseconds(timeoutMs);
 
             LockInfo lockInfo = (await Dav.LockAsync(new Uri(RemoteStoragePath), LockScope.Exclusive, false, lockOwner, timeout, null, cancellationToken)).WebDavResponse;
 
@@ -354,7 +354,8 @@ namespace WebDAVDrive
 
                     System.Timers.Timer timer = new System.Timers.Timer(refreshTimeOut);
                     timer.AutoReset = false;
-                    timer.Elapsed += (object sender, System.Timers.ElapsedEventArgs e) => {
+                    timer.Elapsed += (object sender, System.Timers.ElapsedEventArgs e) =>
+                    {
                         LockRefreshAsync(
                             lockInfo.LockToken.LockToken,
                             lockInfo.TimeOut,
