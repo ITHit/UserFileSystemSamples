@@ -91,10 +91,10 @@ namespace WebDAVFileProviderExtension
 
                 IList<Client.IHierarchyItem> remoteStorageChildren = (await Engine.WebDavSession.GetChildrenAsync(RemoteStorageUriById, false, propNames, null, cancellationToken)).WebDavResponse;
 
-                List<IFileSystemItemMetadata> userFileSystemChildren = new List<IFileSystemItemMetadata>();
+                List<IMetadata> userFileSystemChildren = new List<IMetadata>();
                 foreach (Client.IHierarchyItem remoteStorageItem in remoteStorageChildren)
                 {
-                    IFileSystemItemMetadata itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
+                    IMetadata itemInfo = Mapping.GetUserFileSystemItemMetadata(remoteStorageItem);
                     userFileSystemChildren.Add(itemInfo);
                 }
 
@@ -104,17 +104,17 @@ namespace WebDAVFileProviderExtension
             }
             catch (WebDavHttpException httpException)
             {
-                await HandleWebExceptionsAsync(httpException, resultContext);               
+                await HandleWebExceptionsAsync(httpException, resultContext);
             }
         }
 
         /// <inheritdoc/>
-        public async Task<IFolderMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFolderMetadata> WriteAsync(IFolderMetadata folderMetadata, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             // Typically we can not change any folder metadata on a WebDAV server, just logging the call.
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(WriteAsync)}()", RemoteStorageUriById.AbsoluteUri, default, operationContext);
 
-            return await GetMetadataAsync() as IFolderMetadata;
+            return await GetMetadataAsync(null, null) as IFolderMetadata;
         }
 
         /// <inheritdoc/>

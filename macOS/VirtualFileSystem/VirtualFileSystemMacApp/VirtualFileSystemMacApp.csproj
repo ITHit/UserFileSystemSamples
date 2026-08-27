@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net7.0-macos</TargetFramework>
-    <RuntimeIdentifier>osx-x64</RuntimeIdentifier>
+    <TargetFramework>net8.0-macos</TargetFramework>
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
+    <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
     <ImplicitUsings>true</ImplicitUsings>
     <SupportedOSPlatformVersion>10.16</SupportedOSPlatformVersion>
     <RootNamespace>VirtualFilesystemMacApp</RootNamespace>
@@ -14,26 +14,6 @@
     <UseSGen>false</UseSGen>
     <LinkMode>None</LinkMode>
     <CodeSigningKey>adhoc</CodeSigningKey>
-    <CustomCommands>
-      <CustomCommands>
-        <Command>
-          <type>AfterBuild</type>
-          <command>bash ${ProjectDir}/sign.sh ${TargetDir}</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>mkdir -p "${TargetDir}/Virtual Filesystem Sample.app/Contents/PlugIns"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>cp -rf "${ProjectDir}/../FileProviderExtension/bin/Debug/FileProviderExtension.appex" "${TargetDir}/Virtual Filesystem Sample.app/Contents/PlugIns"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>codesign --force --sign - --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der "${TargetDir}/Virtual Filesystem Sample.app"</command>
-        </Command>
-      </CustomCommands>
-    </CustomCommands>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -53,33 +33,13 @@
     <HttpClientHandler></HttpClientHandler>
     <AOTMode>None</AOTMode>
     <UseHardenedRuntime>true</UseHardenedRuntime>
-    <CustomCommands>
-      <CustomCommands>
-        <Command>
-          <type>AfterBuild</type>
-          <command>bash ${ProjectDir}/sign_release.sh ${TargetDir}</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>mkdir -p "${TargetDir}/Virtual Filesystem Sample.app/Contents/PlugIns"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>cp -R "${ProjectDir}/../FileProviderExtension/bin/Release/FileProviderExtension.appex" "${TargetDir}/Virtual Filesystem Sample.app/Contents/PlugIns"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>codesign --force --sign "Mac Developer" --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der "${TargetDir}/Virtual Filesystem Sample.app"</command>
-        </Command>
-      </CustomCommands>
-    </CustomCommands>
     <CodeSigningKey>Mac Developer</CodeSigningKey>
     <PackageSigningKey>3rd Party Mac Developer Installer</PackageSigningKey>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>12.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Core\Common.Core.csproj" />
-    <ProjectReference Include="..\FileProviderExtension\FileProviderExtension.csproj" />
+    <ProjectReference Include="..\FileProviderExtension\FileProviderExtension.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\VirtualFileSystemCommon\VirtualFileSystemCommon.csproj" />
   </ItemGroup>
   <ItemGroup>
@@ -135,7 +95,22 @@
     </BundleResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Security.Permissions" Version="8.0.0" />
-    <PackageReference Include="System.Threading.AccessControl" Version="8.0.0" />
+    <PackageReference Include="System.Security.Permissions" Version="10.0.9" />
+    <PackageReference Include="System.Threading.AccessControl" Version="10.0.9" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="9.2.29658" />
   </ItemGroup>
+  <!-- AfterBuild embed + signing as MSBuild targets so they run under `dotnet build`
+       (the old <CustomCommands> were VS-for-Mac only and ignored by dotnet build). -->
+  <Target Name="EmbedAndSignDebug" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+    <Exec Command="bash &quot;$(ProjectDir)/sign.sh&quot; &quot;$(TargetDir)&quot;" />
+    <Exec Command="mkdir -p &quot;$(TargetDir)/Virtual Filesystem Sample.app/Contents/PlugIns&quot;" />
+    <Exec Command="cp -rf &quot;$(ProjectDir)/../FileProviderExtension/bin/Debug/FileProviderExtension.appex&quot; &quot;$(TargetDir)/Virtual Filesystem Sample.app/Contents/PlugIns&quot;" />
+    <Exec Command="codesign --force --sign - --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/Virtual Filesystem Sample.app&quot;" />
+  </Target>
+  <Target Name="EmbedAndSignRelease" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <Exec Command="bash &quot;$(ProjectDir)/sign_release.sh&quot; &quot;$(TargetDir)&quot;" />
+    <Exec Command="mkdir -p &quot;$(TargetDir)/Virtual Filesystem Sample.app/Contents/PlugIns&quot;" />
+    <Exec Command="cp -R &quot;$(ProjectDir)/../FileProviderExtension/bin/Release/FileProviderExtension.appex&quot; &quot;$(TargetDir)/Virtual Filesystem Sample.app/Contents/PlugIns&quot;" />
+    <Exec Command="codesign --force --sign &quot;Mac Developer&quot; --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/Virtual Filesystem Sample.app&quot;" />
+  </Target>
 </Project>

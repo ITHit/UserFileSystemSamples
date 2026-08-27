@@ -1,13 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net7.0-macos</TargetFramework>
+    <TargetFramework>net8.0-macos</TargetFramework>
     <OutputType>Library</OutputType>
     <Nullable>enable</Nullable>
+    <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
     <ImplicitUsings>true</ImplicitUsings>
     <SupportedOSPlatformVersion>11.0</SupportedOSPlatformVersion>
     <IsAppExtension>True</IsAppExtension>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <_ExportSymbolsExplicitly>false</_ExportSymbolsExplicitly>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -26,18 +28,6 @@
     <HttpClientHandler></HttpClientHandler>
     <LinkMode>Full</LinkMode>
     <AOTMode>None</AOTMode>
-    <CustomCommands>
-      <CustomCommands>
-        <Command>
-          <type>AfterBuild</type>
-          <command>bash ${ProjectDir}/sign.sh ${TargetDir}</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>codesign --force --sign - -o runtime --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der ${TargetDir}/WebDAVFileProviderUIExtension.appex</command>
-        </Command>
-      </CustomCommands>
-    </CustomCommands>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -56,28 +46,8 @@
     <LinkMode>None</LinkMode>
     <HttpClientHandler></HttpClientHandler>
     <AOTMode>None</AOTMode>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>12.0</LangVersion>
     <UseHardenedRuntime>true</UseHardenedRuntime>
-    <CustomCommands>
-      <CustomCommands>
-        <Command>
-          <type>AfterBuild</type>
-          <command>rm -f "${TargetDir}/WebDAVFileProviderUIExtension.appex/Contents/MonoBundle/createdump"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>cp -rf "${ProjectDir}/embedded.provisionprofile" "${TargetDir}/WebDAVFileProviderUIExtension.appex/Contents"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>bash ${ProjectDir}/sign_release.sh ${TargetDir}</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>codesign --force --sign "Apple Distribution" -o runtime --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der ${TargetDir}/WebDAVFileProviderUIExtension.appex</command>
-        </Command>
-      </CustomCommands>
-    </CustomCommands>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="ViewControllers\" />
@@ -100,9 +70,21 @@
     <ProjectReference Include="..\WebDAVCommon\WebDAVCommon.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem.Mac" Version="8.1.26901" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="9.2.29658" />
   </ItemGroup>
     <ItemGroup>
       <Content Include="..\WebDAVMacApp\Resources\appsettings.json" Link="Resources\appsettings.json" />
   </ItemGroup>
+  <!-- AfterBuild signing as MSBuild targets so they run under `dotnet build`
+       (the old <CustomCommands> were VS-for-Mac only and ignored by dotnet build). -->
+  <Target Name="SignUIExtensionDebug" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+    <Exec Command="bash &quot;$(ProjectDir)/sign.sh&quot; &quot;$(TargetDir)&quot;" />
+    <Exec Command="codesign --force --sign - -o runtime --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/WebDAVFileProviderUIExtension.appex&quot;" />
+  </Target>
+  <Target Name="SignUIExtensionRelease" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <Exec Command="rm -f &quot;$(TargetDir)/WebDAVFileProviderUIExtension.appex/Contents/MonoBundle/createdump&quot;" />
+    <Exec Command="cp -rf &quot;$(ProjectDir)/embedded.provisionprofile&quot; &quot;$(TargetDir)/WebDAVFileProviderUIExtension.appex/Contents&quot;" />
+    <Exec Command="bash &quot;$(ProjectDir)/sign_release.sh&quot; &quot;$(TargetDir)&quot;" />
+    <Exec Command="codesign --force --sign &quot;Apple Distribution&quot; -o runtime --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/WebDAVFileProviderUIExtension.appex&quot;" />
+  </Target>
 </Project>

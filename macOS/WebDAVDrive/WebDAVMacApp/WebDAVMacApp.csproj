@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net7.0-macos</TargetFramework>
+    <TargetFramework>net8.0-macos</TargetFramework>
     <RuntimeIdentifier>osx-x64</RuntimeIdentifier>
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
+    <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
     <ImplicitUsings>true</ImplicitUsings>
     <SupportedOSPlatformVersion>11.0</SupportedOSPlatformVersion>
     <RootNamespace>WebDAVMacApp</RootNamespace>
@@ -14,30 +15,6 @@
     <UseSGen>false</UseSGen>
     <LinkMode>None</LinkMode>
     <CodeSigningKey>adhoc</CodeSigningKey>
-    <CustomCommands>
-      <CustomCommands>
-        <Command>
-          <type>AfterBuild</type>
-          <command>bash ${ProjectDir}/sign.sh ${TargetDir}</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>mkdir -p "${TargetDir}/WebDAV Drive.app/Contents/PlugIns"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>cp -rf "${ProjectDir}/../WebDAVFileProviderExtension/bin/Debug/WebDAVFileProviderExtension.appex" "${TargetDir}/WebDAV Drive.app/Contents/PlugIns"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>cp -rf "${ProjectDir}/../WebDAVFileProviderUIExtension/bin/Debug/WebDAVFileProviderUIExtension.appex" "${TargetDir}/WebDAV Drive.app/Contents/PlugIns"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>codesign --force --sign - --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der "${TargetDir}/WebDAV Drive.app"</command>
-        </Command>
-      </CustomCommands>
-    </CustomCommands>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -57,45 +34,9 @@
     <HttpClientHandler></HttpClientHandler>
     <AOTMode>None</AOTMode>
     <UseHardenedRuntime>true</UseHardenedRuntime>
-    <CustomCommands>
-      <CustomCommands>
-        <Command>
-          <type>AfterBuild</type>
-          <command>rm -f "${TargetDir}/WebDAV Drive.app/Contents/MonoBundle/createdump"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>cp -rf "${ProjectDir}/embedded.provisionprofile" "${TargetDir}/WebDAV Drive.app/Contents"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>bash ${ProjectDir}/sign_release.sh ${TargetDir}</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>mkdir -p "${TargetDir}/WebDAV Drive.app/Contents/PlugIns"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>cp -rf "${ProjectDir}/../WebDAVFileProviderExtension/bin/Release/WebDAVFileProviderExtension.appex" "${TargetDir}/WebDAV Drive.app/Contents/PlugIns"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>cp -rf "${ProjectDir}/../WebDAVFileProviderUIExtension/bin/Release/WebDAVFileProviderUIExtension.appex" "${TargetDir}/WebDAV Drive.app/Contents/PlugIns"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>codesign --force --sign "Apple Distribution" --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der "${TargetDir}/WebDAV Drive.app"</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>productbuild --component "${TargetDir}/WebDAV Drive.app" /Applications --sign "Apple Distribution" "${TargetFile}/WebDAV Drive.pkg"</command>
-        </Command>
-      </CustomCommands>
-    </CustomCommands>
     <CodeSigningKey>Mac Developer</CodeSigningKey>
     <PackageSigningKey>3rd Party Mac Developer Installer</PackageSigningKey>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>12.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <None Update="appsettings.json">
@@ -153,16 +94,33 @@
     </BundleResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHit.FileSystem" Version="8.1.26901" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\WebDAVCommon\WebDAVCommon.csproj" />
     <ProjectReference Include="..\..\Common\Core\Common.Core.csproj" />
-    <ProjectReference Include="..\WebDAVFileProviderExtension\WebDAVFileProviderExtension.csproj" />  
-    <ProjectReference Include="..\WebDAVFileProviderUIExtension\WebDAVFileProviderUIExtension.csproj" />
+    <ProjectReference Include="..\WebDAVFileProviderExtension\WebDAVFileProviderExtension.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\WebDAVFileProviderUIExtension\WebDAVFileProviderUIExtension.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Security.Permissions" Version="8.0.0" />
-    <PackageReference Include="System.Threading.AccessControl" Version="8.0.0" />
+    <PackageReference Include="ITHit.FileSystem" Version="9.2.29658" />
+    <PackageReference Include="System.Security.Permissions" Version="10.0.9" />
+    <PackageReference Include="System.Threading.AccessControl" Version="10.0.9" />
   </ItemGroup>
+  <!-- AfterBuild embed + signing as MSBuild targets so they run under `dotnet build`
+       (the old <CustomCommands> were VS-for-Mac only and ignored by dotnet build). -->
+  <Target Name="EmbedAndSignDebug" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+    <Exec Command="bash &quot;$(ProjectDir)/sign.sh&quot; &quot;$(TargetDir)&quot;" />
+    <Exec Command="mkdir -p &quot;$(TargetDir)/WebDAV Drive.app/Contents/PlugIns&quot;" />
+    <Exec Command="cp -rf &quot;$(ProjectDir)/../WebDAVFileProviderExtension/bin/Debug/WebDAVFileProviderExtension.appex&quot; &quot;$(TargetDir)/WebDAV Drive.app/Contents/PlugIns&quot;" />
+    <Exec Command="cp -rf &quot;$(ProjectDir)/../WebDAVFileProviderUIExtension/bin/Debug/WebDAVFileProviderUIExtension.appex&quot; &quot;$(TargetDir)/WebDAV Drive.app/Contents/PlugIns&quot;" />
+    <Exec Command="codesign --force --sign - --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/WebDAV Drive.app&quot;" />
+  </Target>
+  <Target Name="EmbedAndSignRelease" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <Exec Command="rm -f &quot;$(TargetDir)/WebDAV Drive.app/Contents/MonoBundle/createdump&quot;" />
+    <Exec Command="cp -rf &quot;$(ProjectDir)/embedded.provisionprofile&quot; &quot;$(TargetDir)/WebDAV Drive.app/Contents&quot;" />
+    <Exec Command="bash &quot;$(ProjectDir)/sign_release.sh&quot; &quot;$(TargetDir)&quot;" />
+    <Exec Command="mkdir -p &quot;$(TargetDir)/WebDAV Drive.app/Contents/PlugIns&quot;" />
+    <Exec Command="cp -rf &quot;$(ProjectDir)/../WebDAVFileProviderExtension/bin/Release/WebDAVFileProviderExtension.appex&quot; &quot;$(TargetDir)/WebDAV Drive.app/Contents/PlugIns&quot;" />
+    <Exec Command="cp -rf &quot;$(ProjectDir)/../WebDAVFileProviderUIExtension/bin/Release/WebDAVFileProviderUIExtension.appex&quot; &quot;$(TargetDir)/WebDAV Drive.app/Contents/PlugIns&quot;" />
+    <Exec Command="codesign --force --sign &quot;Apple Distribution&quot; --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/WebDAV Drive.app&quot;" />
+    <Exec Command="productbuild --component &quot;$(TargetDir)/WebDAV Drive.app&quot; /Applications --sign &quot;Apple Distribution&quot; &quot;$(TargetPath)/WebDAV Drive.pkg&quot;" />
+  </Target>
 </Project>

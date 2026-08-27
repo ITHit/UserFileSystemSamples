@@ -53,12 +53,12 @@ namespace Common.Core
                 callerMemberName: e.CallerMemberName, callerFilePath: e.CallerFilePath);
         }
 
-        public void LogError(string message, string sourcePath = null, string targetPath = null, Exception ex = null, IOperationContext operationContext = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
+        public void LogError(string message, string sourcePath = null, string targetPath = null, Exception ex = null, IOperationContext operationContext = null, IMetadata metadata = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
         {
             LogError($"\n{DateTimeOffset.Now} [{Thread.CurrentThread.ManagedThreadId,2}] {ComponentName,-26}{message,-45} {sourcePath,-80}", ex);
         }
 
-        public void LogMessage(string message, string sourcePath = null, string targetPath = null, IOperationContext operationContext = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
+        public void LogMessage(string message, string sourcePath = null, string targetPath = null, IOperationContext operationContext = null, IMetadata metadata = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
         {
             LogWithLevel(string.Empty, $"\n{ComponentName,-26}{message,-45} {sourcePath,-80} {targetPath}");
         }
@@ -83,7 +83,7 @@ namespace Common.Core
             return new ConsoleLogger(componentName);
         }
 
-        public void LogDebug(string message, string sourcePath = null, string targetPath = null, IOperationContext operationContext = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
+        public void LogDebug(string message, string sourcePath = null, string targetPath = null, IOperationContext operationContext = null, IMetadata metadata = null, [CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = null, [CallerFilePath] string callerFilePath = null)
         {
             LogDebug($"\n{ComponentName,-26}{message,-45} {sourcePath,-80} {targetPath}");
         }
@@ -94,6 +94,6 @@ namespace Common.Core
 #if DEBUG
             LogWithLevel("[DEBUG]", str);
 #endif
-        }
+        }        
     }
 }

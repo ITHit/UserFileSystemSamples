@@ -1,13 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net7.0-macos</TargetFramework>
+    <TargetFramework>net8.0-macos</TargetFramework>
     <OutputType>Library</OutputType>
     <Nullable>enable</Nullable>
+    <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
     <ImplicitUsings>true</ImplicitUsings>
-    <SupportedOSPlatformVersion>10.14</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>10.15</SupportedOSPlatformVersion>
     <IsAppExtension>True</IsAppExtension>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <_ExportSymbolsExplicitly>false</_ExportSymbolsExplicitly>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -25,18 +27,6 @@
     <HttpClientHandler></HttpClientHandler>
     <LinkMode>None</LinkMode>
     <AOTMode>None</AOTMode>
-    <CustomCommands>
-      <CustomCommands>
-        <Command>
-          <type>AfterBuild</type>
-          <command>bash ${ProjectDir}/sign.sh ${TargetDir}</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>codesign --force --sign - -o runtime --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der ${TargetDir}/FileProviderExtension.appex</command>
-        </Command>
-      </CustomCommands>
-    </CustomCommands>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -54,31 +44,29 @@
     <LinkMode>None</LinkMode>
     <HttpClientHandler></HttpClientHandler>
     <AOTMode>None</AOTMode>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>12.0</LangVersion>
     <UseHardenedRuntime>true</UseHardenedRuntime>
-    <CustomCommands>
-      <CustomCommands>
-        <Command>
-          <type>AfterBuild</type>
-          <command>bash ${ProjectDir}/sign_release.sh ${TargetDir}</command>
-        </Command>
-        <Command>
-          <type>AfterBuild</type>
-          <command>codesign --force --sign "Mac Developer" -o runtime --entitlements ${ProjectDir}/Entitlements.plist --timestamp --generate-entitlement-der ${TargetDir}/FileProviderExtension.appex</command>
-        </Command>
-      </CustomCommands>
-    </CustomCommands>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\VirtualFileSystemCommon\VirtualFileSystemCommon.csproj" />
     <ProjectReference Include="..\..\Common\Core\Common.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Security.Permissions" Version="8.0.0" />
-    <PackageReference Include="System.Threading.AccessControl" Version="8.0.0" />
-    <PackageReference Include="ITHit.FileSystem.Mac" Version="8.1.26901" />
+    <PackageReference Include="System.Security.Permissions" Version="10.0.9" />
+    <PackageReference Include="System.Threading.AccessControl" Version="10.0.9" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="9.2.29658" />
   </ItemGroup>
    <ItemGroup>
       <Content Include="..\VirtualFileSystemMacApp\Resources\appsettings.json" Link="Resources\appsettings.json" />
   </ItemGroup>
+  <!-- AfterBuild signing as MSBuild targets so they run under `dotnet build`
+       (the old <CustomCommands> were VS-for-Mac only and ignored by dotnet build). -->
+  <Target Name="SignExtensionDebug" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+    <Exec Command="bash &quot;$(ProjectDir)/sign.sh&quot; &quot;$(TargetDir)&quot;" />
+    <Exec Command="codesign --force --sign - -o runtime --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/FileProviderExtension.appex&quot;" />
+  </Target>
+  <Target Name="SignExtensionRelease" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <Exec Command="bash &quot;$(ProjectDir)/sign_release.sh&quot; &quot;$(TargetDir)&quot;" />
+    <Exec Command="codesign --force --sign &quot;Mac Developer&quot; -o runtime --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/FileProviderExtension.appex&quot;" />
+  </Target>
 </Project>

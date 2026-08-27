@@ -38,9 +38,9 @@ namespace WebDAVFileProviderExtension
         /// </summary>
         /// <param name="remoteStorageItem">Remote storage item info.</param>
         /// <returns>User file system item info.</returns>
-        public static IFileSystemItemMetadata GetUserFileSystemItemMetadata(Client.IHierarchyItem remoteStorageItem)
+        public static IMetadata GetUserFileSystemItemMetadata(Client.IHierarchyItem remoteStorageItem)
         {
-            IFileSystemItemMetadataMac userFileSystemItem;
+            IMetadataMac userFileSystemItem;
 
             if (remoteStorageItem is Client.IFile)
             {
@@ -51,7 +51,7 @@ namespace WebDAVFileProviderExtension
 
                 // Set etag.
                 ((FileMetadataMac)userFileSystemItem).ContentETag = remoteStorageFile.Etag;
-                userFileSystemItem.Properties.AddOrUpdate("eTag", remoteStorageFile.Etag);
+                userFileSystemItem.Properties.Add("eTag", remoteStorageFile.Etag);
             }
             else
             {
@@ -66,12 +66,12 @@ namespace WebDAVFileProviderExtension
             userFileSystemItem.MetadataETag = GetPropertyValue(remoteStorageItem, "metadata-Etag", null);
 
             // Set item capabilities.
-            userFileSystemItem.Capabilities = FileSystemItemCapabilityMac.Writing
-               | FileSystemItemCapabilityMac.Deleting
-               | FileSystemItemCapabilityMac.Reading
-               | FileSystemItemCapabilityMac.Renaming
-               | FileSystemItemCapabilityMac.Reparenting
-               | FileSystemItemCapabilityMac.ExcludingFromSync;
+            userFileSystemItem.Capabilities = MetadataCapabilityMac.Writing
+               | MetadataCapabilityMac.Deleting
+               | MetadataCapabilityMac.Reading
+               | MetadataCapabilityMac.Renaming
+               | MetadataCapabilityMac.Reparenting
+               | MetadataCapabilityMac.ExcludingFromSync;
 
             if (DateTime.MinValue != remoteStorageItem.CreationDate)
             {
@@ -86,8 +86,8 @@ namespace WebDAVFileProviderExtension
             Client.LockInfo lockInfo = remoteStorageItem.ActiveLocks.FirstOrDefault();
             if (lockInfo != null)
             {
-                IFileSystemItemMetadataMac userFileSystemItemMac = userFileSystemItem as IFileSystemItemMetadataMac;
-                userFileSystemItem.Properties.AddOrUpdate("LockToken", new ServerLockInfo()
+                IMetadataMac userFileSystemItemMac = userFileSystemItem as IMetadataMac;
+                userFileSystemItem.Properties.Add("LockToken", new ServerLockInfo()
                 {
                     LockToken = lockInfo.LockToken.LockToken,
                     Owner = lockInfo.Owner,

@@ -37,9 +37,9 @@ namespace FileProviderExtension
         /// </summary>
         /// <param name="remoteStorageItem">Remote storage item info.</param>
         /// <returns>User file system item info.</returns>
-        public static IFileSystemItemMetadata GetUserFileSysteItemMetadata(FileSystemInfo remoteStorageItem)
+        public static IMetadata GetUserFileSysteItemMetadata(FileSystemInfo remoteStorageItem)
         {
-            IFileSystemItemMetadata userFileSystemItem;
+            IMetadataMac userFileSystemItem;
 
             if (remoteStorageItem is FileInfo)
             {

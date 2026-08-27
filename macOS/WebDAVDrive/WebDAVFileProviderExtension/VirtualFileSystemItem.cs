@@ -10,7 +10,7 @@ using Client = ITHit.WebDAV.Client;
 
 namespace WebDAVFileProviderExtension
 {
-    public abstract class VirtualFileSystemItem : IFileSystemItemMac, ILock
+    public abstract class VirtualFileSystemItem : IFileSystemItem, ILock
     {
         /// <summary>
         /// ID on the remote storage.
@@ -75,7 +75,7 @@ namespace WebDAVFileProviderExtension
         }
 
         ///<inheritdoc>
-        public async Task<IFileSystemItemMetadata?> GetMetadataAsync(IResultContext resultContext = null)
+        public async Task<IMetadata> GetMetadataAsync(IOperationContext operationContext, IResultContextBase resultContext, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(GetMetadataAsync)}()", RemoteStorageUriById.AbsoluteUri);
 
@@ -98,7 +98,7 @@ namespace WebDAVFileProviderExtension
             }
             catch (Client.Exceptions.WebDavHttpException httpException)
             {
-                await HandleWebExceptionsAsync(httpException, resultContext);                
+                await HandleWebExceptionsAsync(httpException, resultContext as IResultContext);                
             }
 
             return item != null ? Mapping.GetUserFileSystemItemMetadata(item) : null;
@@ -216,6 +216,16 @@ namespace WebDAVFileProviderExtension
 
             LockInfo lockInfo = (await Engine.WebDavSession.LockAsync(Mapping.GetUriById(RemoteStorageId, Engine.WebDAVServerUrl), LockScope.Exclusive, false, lockOwner, timeOut, null, cancellationToken)).WebDavResponse;
 
+            // Save lock-token to system
+            operationContext.Properties.AddOrUpdate("LockToken", new ServerLockInfo {
+                LockToken = lockInfo.LockToken.LockToken,
+                Exclusive = lockInfo.LockScope == LockScope.Exclusive,
+                Owner = lockInfo.Owner,
+                LockExpirationDateUtc = DateTimeOffset.Now.Add(lockInfo.TimeOut),
+                Mode = lockMode
+            });
+
+
             // Save lock-token and lock-mode. Start the timer to refresh the lock.
             await SaveLockAsync(lockInfo, lockMode, cancellationToken);
         }
@@ -290,6 +300,11 @@ namespace WebDAVFileProviderExtension
         public async Task UnlockAsync(IOperationContext operationContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(ILock)}.{nameof(UnlockAsync)}()", RemoteStorageUriById.AbsoluteUri, default, operationContext);
+
+            foreach(var prop in operationContext.Properties)
+            {
+                Logger.LogDebug($"Unlock: {prop.Key} - {prop.Value}", RemoteStorageUriById.AbsoluteUri, default, operationContext);
+            }
 
             if (operationContext.Properties.TryGetValue("LockToken", out IDataItem lockInfoData))
             {

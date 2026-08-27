@@ -4,7 +4,7 @@ using ITHit.FileSystem.Mac;
 
 namespace FileProviderExtension
 {
-    public abstract class VirtualFileSystemItem : IFileSystemItemMac
+    public abstract class VirtualFileSystemItem : IFileSystemItem
     {
         /// <summary>
         /// Path of this file or folder in the remote storage.
@@ -74,7 +74,7 @@ namespace FileProviderExtension
         }
 
         ///<inheritdoc>
-        public async Task<IFileSystemItemMetadata> GetMetadataAsync(IResultContext resultContext = null)
+        public async Task<IMetadata> GetMetadataAsync(IOperationContext operationContext, IResultContextBase resultContext, CancellationToken cancellationToken = default)
         {
             // Return IFileMetadata for a file, IFolderMetadata for a folder.
 

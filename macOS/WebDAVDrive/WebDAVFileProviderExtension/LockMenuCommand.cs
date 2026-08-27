@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Foundation;
 using ITHit.FileSystem;
 using ITHit.FileSystem.Mac;
+using ITHit.FileSystem.Mac.Contexts;
 using ITHit.WebDAV.Client;
 
 namespace WebDAVFileProviderExtension
@@ -45,7 +46,7 @@ namespace WebDAVFileProviderExtension
                 IFileSystemItem fileSystemItem = await engine.GetFileSystemItemAsync(remoteStorageItemId, FileSystemItemType.File, null);
                 if (fileSystemItem != null)
                 {
-                    await ((ILock)fileSystemItem).LockAsync(LockMode.Manual, null, default);
+                    await ((ILock)fileSystemItem).LockAsync(LockMode.Manual, new OperationContext(remoteStorageItemId), default);
                 }
             }
 

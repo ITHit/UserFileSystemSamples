@@ -92,7 +92,7 @@ namespace WebDAVFileProviderExtension
             // set remote root storage item id.
             SetRemoteStorageRootItemId(GetRootStorageItemIdAsync().Result);            
 
-            Logger.LogMessage("Engine started. v2");
+            Logger.LogMessage("Engine started.");
         }
 
         /// <inheritdoc/>
@@ -135,7 +135,7 @@ namespace WebDAVFileProviderExtension
             Logger.LogMessage($"{nameof(VirtualEngine)}.{nameof(GetRootStorageItemIdAsync)}()");
             try
             {
-                return (await new VirtualFolder(Encoding.UTF8.GetBytes(WebDAVServerUrl), this, Logger).GetMetadataAsync())?.RemoteStorageItemId;
+                return (await new VirtualFolder(Encoding.UTF8.GetBytes(WebDAVServerUrl), this, Logger).GetMetadataAsync(null, null))?.RemoteStorageItemId;
             }            
             catch (Exception ex)
             {

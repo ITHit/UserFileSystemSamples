@@ -62,7 +62,7 @@ namespace WebDAVFileProviderExtension
 
 
         /// <inheritdoc/>
-        public async Task<IFileMetadata> WriteAsync(IFileSystemBasicInfo fileBasicInfo, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
+        public async Task<IFileMetadata> WriteAsync(IFileMetadata fileMetadata, Stream content = null, IOperationContext operationContext = null, IInSyncResultContext inSyncResultContext = null, CancellationToken cancellationToken = default)
         {
             Logger.LogMessage($"{nameof(IFile)}.{nameof(WriteAsync)}()", RemoteStorageUriById.AbsoluteUri, default, operationContext);
 
@@ -95,12 +95,12 @@ namespace WebDAVFileProviderExtension
 
                     // macOS requires last modification date on the server to match the client. If date does not match, the file will be redownloaded.
                     // Here we use property name indetical to Microsoft Windows Explorer for max interability.
-                    if (fileBasicInfo.LastWriteTime.HasValue)
+                    if (fileMetadata.LastWriteTime.HasValue)
                     {
                         Client.IFile file = (await Engine.WebDavSession.GetFileAsync(RemoteStorageUriById.AbsoluteUri, null, cancellationToken)).WebDavResponse;
                         Client.Property[] propsToAddAndUpdate = new Client.Property[1];
                         propsToAddAndUpdate[0] = new Client.Property(new Client.PropertyName("Win32LastModifiedTime", "urn:schemas-microsoft-com:"),
-                            fileBasicInfo.LastWriteTime?.ToString(new CultureInfo("en-US")));
+                            fileMetadata.LastWriteTime?.ToString(new CultureInfo("en-US")));
 
                         await file.UpdatePropertiesAsync(propsToAddAndUpdate, null, lockTokens?.FirstOrDefault()?.LockToken);
                     }
@@ -111,7 +111,7 @@ namespace WebDAVFileProviderExtension
                 }           
             }
 
-            return await GetMetadataAsync() as IFileMetadata;
+            return await GetMetadataAsync(null, null) as IFileMetadata;
         }
     }
 }
