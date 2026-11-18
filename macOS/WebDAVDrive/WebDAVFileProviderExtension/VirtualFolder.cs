@@ -46,7 +46,8 @@ namespace WebDAVFileProviderExtension
                 {
                     // Setting position to 0 is required in case of retry.
                     content.Position = 0;
-                    await content.CopyToAsync(outputStream);
+                    // Small buffer: the File Provider extension has a ~20 MB memory limit on iOS.
+                    await content.CopyToAsync(outputStream, 16 * 1024, cancellationToken);
                 }
             }, null, contentLength, 0, -1, null, null, null, cancellationToken);
 
@@ -66,15 +67,35 @@ namespace WebDAVFileProviderExtension
             Uri newFolderUri = new Uri(await GetItemHrefAsync(), folderMetadata.Name);
             Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}()", newFolderUri.AbsoluteUri);
 
-            Client.IResponse response = await Engine.WebDavSession.CreateFolderAsync(newFolderUri, null, null, cancellationToken);
+            Client.PropertyName[] propNames = new Client.PropertyName[1];
+            propNames[0] = new Client.PropertyName("resource-id", "DAV:");
 
-            // Return new item remove storage id to the Engine.
-            // It will be past to GetFileSystemItemAsync during next call.
-            IEnumerable<string> values;
-            return new FolderMetadata()
+            try
             {
-                RemoteStorageItemId = Encoding.UTF8.GetBytes(response.Headers.TryGetValues("resource-id", out values) ? (values.FirstOrDefault() ?? newFolderUri.AbsoluteUri) : newFolderUri.AbsoluteUri)
-            };
+                Client.IResponse response = await Engine.WebDavSession.CreateFolderAsync(newFolderUri, null, null, cancellationToken);
+
+                // Return new item remove storage id to the Engine.
+                // It will be past to GetFileSystemItemAsync during next call.
+                IEnumerable<string> values;
+                return new FolderMetadata()
+                {
+                    RemoteStorageItemId = Encoding.UTF8.GetBytes(response.Headers.TryGetValues("resource-id", out values) ? (values.FirstOrDefault() ?? newFolderUri.AbsoluteUri) : newFolderUri.AbsoluteUri)
+                };
+            }
+            catch (Client.Exceptions.MethodNotAllowedException)
+            {
+                // MKCOL returned 405 - an item with this name may already exist,
+                // e.g. if the system retries creation after a partial upload.
+                Client.IHierarchyItem existingItem = (await Engine.WebDavSession.GetItemAsync(newFolderUri, propNames)).WebDavResponse;
+
+                Logger.LogMessage($"{nameof(IFolder)}.{nameof(CreateFolderAsync)}() - folder already exists", newFolderUri.AbsoluteUri);
+
+                Client.Property resourceId = existingItem.Properties.FirstOrDefault(p => p.Name.Name == "resource-id");
+                return new FolderMetadata()
+                {
+                    RemoteStorageItemId = Encoding.UTF8.GetBytes(resourceId?.StringValue ?? newFolderUri.AbsoluteUri)
+                };
+            }
         }
 
         /// <inheritdoc/>
@@ -154,6 +175,11 @@ namespace WebDAVFileProviderExtension
                 Logger.LogDebug($"{nameof(IFolder)}.{nameof(GetChangesAsync)}({syncToken}) - not supported.");
 
                 throw new SyncIdNotSupportedException();
+            }
+            catch (Client.Exceptions.WebDavHttpException httpException)
+            {
+                await HandleWebExceptionsAsync(httpException, null);
+                throw;
             }
 
             // Returns changes to the Engine. Engine applies changes to the user file system and stores the new sync-token.

@@ -15,8 +15,10 @@ using ITHit.FileSystem.Mac.Contexts;
 using ITHit.WebDAV.Client;
 using WebDAVCommon;
 
+#if __MACOS__
 // workaround for NSFileProvider Extension crash on MacOS 14.4 https://github.com/xamarin/xamarin-macios/issues/20034
 [assembly: ObjCRuntime.LinkWith(LinkerFlags = "-Wl,-unexported_symbol -Wl,_main")]
+#endif
 
 namespace WebDAVFileProviderExtension
 {
@@ -78,9 +80,12 @@ namespace WebDAVFileProviderExtension
             {
                 Logger.LogError($"{domain.Identifier} reading settings failed.");
             }
+            // Fall back to the appsettings URL that matches this domain. Picking the first
+            // configured URL blindly would connect every domain to the same server.
             WebDAVServerUrl = !string.IsNullOrWhiteSpace(serverUrlFromStorage)
                 ? serverUrlFromStorage
-                : AppGroupSettings.Settings.Value.WebDAVServerURLs.FirstOrDefault();
+                : AppGroupSettings.Settings.Value.WebDAVServerURLs.FirstOrDefault(u => u.Contains(domain.Identifier))
+                    ?? AppGroupSettings.Settings.Value.WebDAVServerURLs.FirstOrDefault();
 
             AutoLock = AppGroupSettings.Settings.Value.AutoLock;
             AutoLockTimoutMs = AppGroupSettings.Settings.Value.AutoLockTimoutMs;

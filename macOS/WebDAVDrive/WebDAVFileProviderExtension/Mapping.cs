@@ -29,7 +29,13 @@ namespace WebDAVFileProviderExtension
         public static Uri GetUriById(byte[] remoteStorageItemId, string webDAVServerRootUrl)
         {
             string remoteStorageIdStr = Encoding.UTF8.GetString(remoteStorageItemId);
-            return Uri.IsWellFormedUriString(remoteStorageIdStr, UriKind.Absolute) ? new Uri(remoteStorageIdStr) :
+
+            // Absolute URIs may contain unescaped characters (spaces, non-ASCII), for which
+            // Uri.IsWellFormedUriString returns false. Treat anything with an http(s) scheme as absolute.
+            bool isAbsolute = remoteStorageIdStr.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                || remoteStorageIdStr.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                || Uri.IsWellFormedUriString(remoteStorageIdStr, UriKind.Absolute);
+            return isAbsolute ? new Uri(remoteStorageIdStr) :
                 new Uri(webDAVServerRootUrl.TrimEnd('/') + "/" + remoteStorageIdStr.TrimStart('/'));
         }
 
@@ -96,7 +102,7 @@ namespace WebDAVFileProviderExtension
                 });
 
                 // Display system lock icon for the file.
-                userFileSystemItemMac.Decorations.Add("com.webdav.vfs.app.extension.decorating.locked");
+                userFileSystemItemMac.Decorations.Add("com.test.webdavdrive.app.extension.decorating.locked");
 
                 // Add Unclock context menu for the item in macOS finder.
                 userFileSystemItemMac.UserInfo.AddOrUpdate("locked", "1");

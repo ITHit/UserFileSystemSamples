@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0-macos</TargetFramework>
+    <TargetFramework>net10.0-macos</TargetFramework>
     <OutputType>Library</OutputType>
     <Nullable>enable</Nullable>
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
     <ImplicitUsings>true</ImplicitUsings>
-    <SupportedOSPlatformVersion>11.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>12.0</SupportedOSPlatformVersion>
     <IsAppExtension>True</IsAppExtension>
     <!-- .NET 8 defaults _ExportSymbolsExplicitly to true, which passes -exported_symbol to the
          native linker. App extensions also pass -unexported_symbol, and the new Apple linker
@@ -28,7 +28,8 @@
     <IncludeMonoRuntime>false</IncludeMonoRuntime>
     <UseSGen>true</UseSGen>
     <UseRefCounting>true</UseRefCounting>
-    <HttpClientHandler></HttpClientHandler>
+    <HttpClientHandler>
+    </HttpClientHandler>
     <LinkMode>None</LinkMode>
     <AOTMode>None</AOTMode>
   </PropertyGroup>
@@ -36,7 +37,8 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release</OutputPath>
-    <DefineConstants></DefineConstants>
+    <DefineConstants>
+    </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <EnableCodeSigning>False</EnableCodeSigning>
@@ -46,8 +48,9 @@
     <UseSGen>true</UseSGen>
     <UseRefCounting>true</UseRefCounting>
     <CodeSignEntitlements>Entitlements.plist</CodeSignEntitlements>
-    <LinkMode>None</LinkMode>
-    <HttpClientHandler></HttpClientHandler>
+    <LinkMode>SdkOnly</LinkMode>
+    <HttpClientHandler>
+    </HttpClientHandler>
     <AOTMode>None</AOTMode>
     <LangVersion>12.0</LangVersion>
     <UseHardenedRuntime>true</UseHardenedRuntime>
@@ -55,21 +58,21 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Core\Common.Core.csproj" />
     <ProjectReference Include="..\WebDAVCommon\WebDAVCommon.csproj" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="9.2.29685.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ITHitWebDAVClient" Version="7.1.5052" />
+    <PackageReference Include="ITHitWebDAVClient" Version="7.1.5051" />
     <PackageReference Include="System.Security.Permissions" Version="10.0.9" />
     <PackageReference Include="System.Threading.AccessControl" Version="10.0.9" />
-    <PackageReference Include="ITHit.FileSystem.Mac" Version="9.2.29658" />
   </ItemGroup>
-   <ItemGroup>
-      <Content Include="..\WebDAVMacApp\Resources\appsettings.json" Link="Resources\appsettings.json" />
-  </ItemGroup>  
+  <ItemGroup>
+    <Content Include="..\WebDAVMacApp\Resources\appsettings.json" Link="Resources\appsettings.json" />
+  </ItemGroup>
   <!-- AfterBuild signing as MSBuild targets so they run under `dotnet build`
        (the old <CustomCommands> were VS-for-Mac only and ignored by dotnet build). -->
   <Target Name="SignExtensionDebug" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
-    <Exec Command="bash &quot;$(ProjectDir)/sign.sh&quot; &quot;$(TargetDir)&quot;" />
-    <Exec Command="codesign --force --sign - -o runtime --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/WebDAVFileProviderExtension.appex&quot;" />
+    <Exec Command="bash &quot;$(ProjectDir)/sign.sh&quot; &quot;$(TargetDir)&quot; &quot;$(DebugSigningIdentity)&quot;" />
+    <Exec Command="codesign --force --sign &quot;$(DebugSigningIdentity)&quot; -o runtime --entitlements &quot;$(DebugSigningEntitlements)&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/WebDAVFileProviderExtension.appex&quot;" />
   </Target>
   <Target Name="SignExtensionRelease" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
     <Exec Command="rm -f &quot;$(TargetDir)/WebDAVFileProviderExtension.appex/Contents/MonoBundle/createdump&quot;" />
@@ -77,4 +80,5 @@
     <Exec Command="bash &quot;$(ProjectDir)/sign_release.sh&quot; &quot;$(TargetDir)&quot;" />
     <Exec Command="codesign --force --sign &quot;Apple Distribution&quot; -o runtime --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/WebDAVFileProviderExtension.appex&quot;" />
   </Target>
+  <Import Project="..\..\Common\DebugSigning.targets" />
 </Project>

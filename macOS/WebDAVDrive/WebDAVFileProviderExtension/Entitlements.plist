@@ -6,7 +6,7 @@
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.webdav.vfs</string>
+		<string>YOURTEAMID.group.com.test.webdavdrive</string>
 	</array>
 	<key>com.apple.security.files.downloads.read-write</key>
 	<true/>

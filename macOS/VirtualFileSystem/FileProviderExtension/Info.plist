@@ -6,6 +6,8 @@
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
 	<string>FileProviderExtension</string>
+	<key>SampleAppGroupId</key>
+	<string>YOURTEAMID.group.com.filesystem.vfs</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.filesystem.vfs.app.extension</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -21,7 +23,7 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>10.15</string>
+	<string>12.0</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSExtension</key>
@@ -46,7 +48,7 @@
 			</dict>
 		</array>
 		<key>NSExtensionFileProviderDocumentGroup</key>
-		<string>65S3A9JQ36.group.com.filesystem.vfs</string>
+		<string>YOURTEAMID.group.com.filesystem.vfs</string>
 	</dict>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>

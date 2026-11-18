@@ -15,7 +15,6 @@ namespace VirtualFilesystemMacApp
         private NSMenuItem InstallMenuItem = new NSMenuItem("Install FS Extension");
         private NSMenuItem UninstallMenuItem = new NSMenuItem("Uninstall FS Extension");
         private NSStatusItem StatusItem;
-        private SecureStorage secureStorage = new SecureStorage();
 
         public AppDelegate()
         {

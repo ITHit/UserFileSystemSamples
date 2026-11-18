@@ -11,15 +11,22 @@ namespace Common.Core
 {
     public static class NSLogHelper
     {
-        [DllImport("/System/Library/Frameworks/Foundation.framework/Foundation")]
-        extern static void NSLog(IntPtr format, [MarshalAs(UnmanagedType.LPStr)] string s);
+        // NSLog(NSString *format, ...) is a C variadic function. Passing a
+        // separate vararg (e.g. "%s" + value) breaks on ARM64 (devices), where
+        // variadic args are passed on the stack rather than in registers, which
+        // a fixed-signature P/Invoke cannot satisfy. Instead we format the whole
+        // message in managed code and pass it as the format itself with no
+        // varargs (escaping '%'), which is ABI-safe on both ARM64 and x86_64.
+        [DllImport("/System/Library/Frameworks/Foundation.framework/Foundation", EntryPoint = "NSLog")]
+        extern static void NSLogInternal(IntPtr format);
 
         public static void NSLog(string format, params object[] args)
         {
-            var fmt = CFString.CreateNative("%s");
             var val = (args is null || args.Length == 0) ? format : string.Format(format, args);
 
-            NSLog(fmt, val);
+            // No variadic args are passed, so escape '%' to avoid format parsing.
+            var fmt = CFString.CreateNative(val.Replace("%", "%%"));
+            NSLogInternal(fmt);
             NSString.ReleaseNative(fmt);
         }
     }

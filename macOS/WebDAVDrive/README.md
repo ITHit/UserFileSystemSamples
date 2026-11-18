@@ -7,9 +7,49 @@
 <p><span class="warn">This sample is provided with IT Hit User File System v6.2 and later versions.</span></p>
 <h2 class="heading-link" id="nav_requirements">Requirements<a class="list-link d-inline" href="https://www.userfilesystem.com/examples/virtual_file_system_mac/#nav_requirements"></a></h2>
 <ul>
-<li>.NET 7</li>
-<li>Xcode 14.3+</li>
-<li>Visual Studio Community 2022 for Mac, Stable Channel.</li>
+<li>.NET 10 SDK and the macOS workload.</li>
+<li>Xcode compatible with the installed workload, including its command-line tools. A tested combination is Xcode 26.0.1 with workload set 10.0.100 (macOS SDK 26.0.11017).</li>
+<li>A Mac running a macOS version supported by that Xcode release. The built sample targets macOS 12.0 or later.</li>
+<li>A valid Apple development signing certificate with its private key installed in Keychain. Debug builds generate the team-specific app-group configuration automatically.</li>
+<li>The dotnet command-line tools; Visual Studio for Mac is not required.</li>
+</ul>
+<h2>Build Setup for .NET 10</h2>
+<h3>1. Select Xcode and install the workload</h3>
+<p>Install the .NET 10 SDK and a compatible Xcode first. Open Xcode once to finish setup, then select it for command-line builds:</p>
+<pre><code>sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -runFirstLaunch
+xcodebuild -version
+dotnet --version</code></pre>
+<p>For Xcode 26.0.1, run the following from the sample directory. This selects workload set 10.0.100 rather than the newest Apple SDK, which may require a newer Xcode:</p>
+<pre><code>sudo dotnet workload install macos --version 10.0.100
+dotnet workload --version
+dotnet workload list</code></pre>
+<p>Do not run an unversioned workload update when keeping this Xcode version. For a different Xcode release, choose the matching workload set using the .NET for macOS release notes. Do not disable Xcode version validation.</p>
+<h3>2. Automatic Debug Team ID and app group</h3>
+<p><strong>No manual Team ID replacement is needed for Debug builds.</strong> The build selects an installed development identity and signs a temporary local executable to obtain its actual TeamIdentifier. It does not infer the Team ID from the certificate's display name. The temporary executable is removed afterward.</p>
+<p>For each app and extension project, the build generates <code>debug-signing/Info.plist</code> and <code>debug-signing/Entitlements.plist</code> under the project's intermediate output directory. It replaces <code>YOURTEAMID</code> in those generated copies with the detected team, sets <code>SampleAppGroupId</code>, and uses the copies for SDK and post-build signing. Tracked templates remain unchanged. The common storage code reads <code>SampleAppGroupId</code> from the running bundle rather than hardcoding a Team ID.</p>
+<p>The app and both extensions therefore use the same <code>TEAMID.group.com.test.webdavdrive</code> group. Local macOS development with this Team-ID-prefixed group does not require creating provisioning profiles solely for the app-group entitlement or registering the sample's bundle IDs in the developer portal. A valid installed development certificate with its private key is still required. This does not apply to iOS device deployment or distribution-specific requirements. The iOS group ID and authentication configuration are unchanged.</p>
+<p>Release builds do not perform this automatic configuration. Before distributing, configure your own group consistently in all three projects' entitlements and Info.plist templates (including <code>SampleAppGroupId</code> and the extensions' <code>NSExtensionFileProviderDocumentGroup</code>), signing identities, and any required profiles. If changing bundle IDs, update their references in code and project settings too. Do not commit profiles or private keys.</p>
+<h3>3. Check signing and configure the server</h3>
+<pre><code>security find-identity -v -p codesigning</code></pre>
+<p>Debug builds automatically select the first valid Apple development identity reported by Keychain and use its exact certificate fingerprint for SDK signing, embedded libraries, the app, and both extensions. Supported names are Apple Development, Mac Developer, and iPhone Developer. No personal certificate name is stored in the sample. If no valid identity is installed, the build stops with an actionable error; it does not silently fall back to ad-hoc signing.</p>
+<p>To select a different installed identity, pass <code>-p:DebugSigningIdentity=YOUR_CERTIFICATE_SHA1</code> to dotnet build, using the fingerprint reported by the command above. This single override also applies to the custom post-build signing steps. The Team ID and matching app-group configuration are generated automatically for this identity. Keep extensions sandboxed.</p>
+<p>Configure the licenses, WebDAV URL, and optional WebSocket URL in <code>WebDAVMacApp/Resources/appsettings.json</code> as described below. Do not publish credentials or personal license values.</p>
+<h3>4. Build and run</h3>
+<p>Run these commands from <code>Sources/Samples/macOS/WebDAVDrive</code>. Use <code>osx-x64</code> on Intel or <code>osx-arm64</code> on Apple Silicon:</p>
+<pre><code>dotnet build WebDAVMacApp/WebDAVMacApp.csproj -c Debug -r osx-x64
+open "WebDAVMacApp/bin/Debug/net10.0-macos/osx-x64/WebDAV Drive.app"</code></pre>
+<p>Replace both occurrences of <code>osx-x64</code> when building for Apple Silicon. Building the container project also builds and embeds both extensions and signs the bundles. Do not launch an extension independently. Use the app's menu-bar commands to install/mount the drive.</p>
+<h3>5. Verify and troubleshoot</h3>
+<pre><code>codesign --verify --deep --strict --verbose=2 "WebDAVMacApp/bin/Debug/net10.0-macos/osx-x64/WebDAV Drive.app"
+codesign -dvv "WebDAVMacApp/bin/Debug/net10.0-macos/osx-x64/WebDAV Drive.app/Contents/PlugIns/WebDAVFileProviderExtension.appex"
+codesign -d --entitlements - "WebDAVMacApp/bin/Debug/net10.0-macos/osx-x64/WebDAV Drive.app/Contents/PlugIns/WebDAVFileProviderExtension.appex"</code></pre>
+<ul>
+<li><strong>Shared-container access denied:</strong> check the signed TeamIdentifier, all group ID values, and provisioning authorization. Successful compilation or signature verification alone does not prove app-group access. Do not disable the sandbox or hardcode a container filesystem path.</li>
+<li><strong>Launch fails after upgrading .NET:</strong> check Console's launchd messages for an obsolete <code>net8.0-macos</code> path. Quit the app and reopen the new build; restart macOS if its launch job remains cached. Do not delete domain data as a first troubleshooting step.</li>
+<li><strong>Missing app/context-menu icon:</strong> rebuild with <code>dotnet build WebDAVMacApp/WebDAVMacApp.csproj -t:Rebuild -c Debug -r osx-x64</code>. Verify that the app's <code>Contents/Resources</code> contains <code>AppIcon.icns</code> and <code>Assets.car</code>. Keep only one asset catalog in compilation.</li>
+<li><strong>Minimum OS error:</strong> both <code>SupportedOSPlatformVersion</code> and the manifest's <code>LSMinimumSystemVersion</code> must be at least 12.0 and must match.</li>
+<li><strong>NuGet vulnerability warnings:</strong> review and update the affected dependencies before distribution; do not suppress audit checks to make the build appear clean.</li>
 </ul>
 <h2>Server Requirements</h2>
 <p>This sample requires WebDAV server with collections synchronization support. The following samples support collections synchronization:</p>
@@ -29,7 +69,7 @@
 <h2>Setting License</h2>
 <p><span class="warn">Note that to use the sample you need both the IT Hit WebDAV Client Library license and IT Hit User File System license.</span></p>
 <p>To run the example, you will need both IT Hit WebDAV Client Library for .NET license and IT Hit User File System Engine for .NET License. You can download&nbsp;a WebDAV Client for .NET trial license in the&nbsp;<a title="Download" href="https://www.webdavsystem.com/client/download/">IT Hit WebDAV Client Library product download area</a>&nbsp;and the User File System trial license in the&nbsp;<a title="Download" href="https://www.userfilesystem.com/download/">IT Hit User File System&nbsp;</a><a title="Download" href="https://www.userfilesystem.com/download/">product download area</a>.&nbsp;Note that this sample is fully functional with a trial licenses and does not have any limitations. The trial licenses are valid for one month will stop working after this. You can check the expiration date inside the license file.&nbsp;Download the license files and specify license strings in the&nbsp;<code class="code">WebDAVClientLicense</code>&nbsp;and&nbsp;<code class="code">UserFileSystemLicense</code>&nbsp;fields respectively in&nbsp;<code class="code">WebDAVMacApp\Resources\appsettings.json</code>&nbsp;file.&nbsp;Set the license content directly as a value (NOT as a path to the license file). Do not forget to escape quotes: \":</p>
-<pre class="brush:xml;auto-links:false;toolbar:false">"UserFileSystemLicense": "&lt;?xml version=\"1.0\" encoding=\"utf-8\"?&gt;&lt;License…</pre>
+<pre class="brush:xml;auto-links:false;toolbar:false">"UserFileSystemLicense": "&lt;?xml version=\"1.0\" encoding=\"utf-8\"?&gt;&lt;Licenseï¿½</pre>
 <p>You can also run the sample&nbsp;without explicitly specifying a license&nbsp;for 5 days. In this case,&nbsp;the&nbsp;Engine will automatically request the trial licenses from the IT Hit website https://www.userfilesystem.com. Make sure it is accessible via firewalls if any. After 5 days the Engine will stop working. To extend the trial period you will need to download trial licenses&nbsp;and specify them in&nbsp;<code class="code">appsettings.json</code></p>
 <h2>Setting WebDAV Server URL</h2>
 <p>To specify the WebDAV server URL edit the&nbsp;<code class="code">"WebDAVServerUrl"</code>&nbsp;parameter in&nbsp;<code class="code">appsettings.json</code>. This could be either a server root path (https://server/) or a WebDAV folder on your server (https://server/dav/).</p>
@@ -40,22 +80,18 @@
 <p>In case you are using IT Hit demo servers, you will specify the demo server root, without user folder: wss://webdavserver.net or wss://webdavserver.com.&nbsp;</p>
 <pre class="brush:html;auto-links:false;toolbar:false">"WebSocketServerUrl": "wss://webdavserver.net"</pre>
 <h2 class="heading-link" id="nav_runningthesample">Running the Sample<a class="list-link d-inline" href="https://www.userfilesystem.com/examples/virtual_file_system_mac/#nav_runningthesample"></a></h2>
-<p><span class="warn">Note that&nbsp;this sample does NOT require <a title="Projects Deployment on macOS" href="https://www.userfilesystem.com/examples/apple_deployment/">Group ID, App Identifies and Provisioning Profiles configuration</a> for development. It is required only required for production deployment.</span></p>
+<p>Install the toolchain and development certificate described above before running. Debug builds automatically resolve the Team ID and app group; source templates do not need manual editing.</p>
 <p>To run the sample:</p>
 <ol>
-<li>Open the project in Visual Studio and run the project. The application is added to the macOS Status Bar.</li>
+<li>Build the container project with dotnet and open the resulting app bundle as shown above. The application is added to the macOS Status Bar.</li>
 <li>Select 'Install Extension' command in the Status Bar.&nbsp;This will mount your WebDAV file system.</li>
 </ol>
 <p>Now you can manage documents using Finder, command prompt or by any other means. You can find the new file system in the 'Locations' sections in Finder.&nbsp;</p>
 <p>For the development and testing convenience, when installing the extension, it will automatically open an instance of Finder with a mounted file system as well as will launch a default web browser navigating to the WebDAV server URL specified in your appsettings.json:</p>
 <p><img id="__mcenew" alt="WebDAV Drive for macOS sample" src="https://www.userfilesystem.com/media/2196/webdavdrivemac.png" rel="125365"></p>
 <h2 class="heading-link" id="nav_packagingthesample">Packaging the Sample</h2>
-<p>To create installer for testing purposes and install the sample to /Application folder follow this steps:</p>
-<ol>
-<li>You need Mac Developer certificate to sign app and 3rd Party Mac Developer Installer certificate to sign pkg. To get them use this <a href="https://developer.apple.com/help/account/create-certificates/create-developer-id-certificates/">guide</a>.</li>
-<li>Start Release build.</li>
-<li>Then open Release output folder and find WebDAV Drive signed.pkg and use this pkg to install the Sample on the same host.</li>
-</ol>
+<p>The Debug commands above build a development app, not a distributable installer. Release signing and packaging targets are templates that must be configured for your distribution method. Review the Release project settings, signing targets, and <code>sign_release.sh</code> scripts; select your distribution/installer identities and provide the matching provisioning profiles where required. The WebDAV Release targets expect a local <code>embedded.provisionprofile</code> in the app and each extension project directory. Never commit those profiles or signing private keys.</p>
+<p>After configuring all Release targets, build with <code>dotnet build WebDAVMacApp/WebDAVMacApp.csproj -c Release -r osx-x64</code>. Developer ID distribution outside the App Store also requires the appropriate signing/notarization workflow; a successful Debug build is not a production-deployment validation.</p>
 <p>For production environment you need to create&nbsp;Group ID, App Identifies and Provisioning Profiles configuration as described in <a title="Projects Deployment on macOS" href="https://www.userfilesystem.com/examples/apple_deployment/">this article</a>.</p>
 <h2>See also:</h2>
 <ul>

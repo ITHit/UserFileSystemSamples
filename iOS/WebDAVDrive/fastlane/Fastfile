@@ -1,0 +1,168 @@
+# fastlane configuration for the WebDAV Drive iOS sample.
+#
+# This file automates everything needed to run the File Provider extension on a
+# real device:
+#   * creates (or reuses) the two App IDs
+#   * creates (or reuses) the shared App Group and associates it with both IDs
+#   * creates (or reuses) a development signing certificate
+#   * creates (or edits) a development provisioning profile for each App ID
+#   * builds and deploys the app with build-device.sh
+#
+# Authentication: Apple ID + password (interactive 2FA).
+#   export FASTLANE_USER="you@example.com"
+#   export FASTLANE_TEAM_ID="ABCD123456"
+# The password is read from FASTLANE_PASSWORD if set, otherwise fastlane prompts.
+# A 2FA code is requested the first time; set FASTLANE_SESSION to reuse a session.
+#
+# Common commands:
+#   fastlane signing            # app ids + app group + certificate + profiles
+#   fastlane profiles FORCE:true  # regenerate/edit existing profiles
+#   fastlane build              # build + deploy to the connected device
+#   fastlane release            # signing, then build + deploy
+
+# ---------------------------------------------------------------------------
+# Identifiers (must match Info.plist / Entitlements.plist in the projects).
+# ---------------------------------------------------------------------------
+APP_ID    = "com.test.webdavdrive.app"
+EXT_ID    = "com.test.webdavdrive.app.extension"
+APP_GROUP = "group.com.test.webdavdrive"
+
+APP_NAME   = "WebDAV Drive"
+EXT_NAME   = "WebDAV Drive File Provider"
+GROUP_NAME = "WebDAV VFS App Group"
+
+APP_PROFILE = "WebDAV Drive Development"
+EXT_PROFILE = "WebDAV Drive Extension Development"
+
+# true when the user passes FORCE:true (e.g. `fastlane profiles FORCE:true`)
+# or sets the FORCE env var. Forces profiles to be regenerated / edited.
+def force?(options)
+  options[:FORCE].to_s == "true" || ENV["FORCE"].to_s == "true"
+end
+
+PROJECT_DIR = File.expand_path("..", __dir__)
+
+# True when a profile already downloaded into PROJECT_DIR is still usable, so
+# the Developer portal does not need to be contacted (sigh would otherwise
+# create a brand new profile whenever it cannot match one to a local certificate).
+def local_profile_ok?(identifier)
+  require "cfpropertylist"
+  require "openssl"
+
+  path = Dir[File.join(PROJECT_DIR, "*#{identifier}.mobileprovision")].max_by { |f| File.mtime(f) }
+  return false unless path
+
+  xml = `security cms -D -i "#{path}" 2>/dev/null`
+  return false if xml.empty?
+
+  plist = CFPropertyList.native_types(CFPropertyList::List.new(data: xml).value)
+  return false if plist["ExpirationDate"].to_time <= Time.now
+  return false unless plist.dig("Entitlements", "application-identifier").to_s.end_with?(".#{identifier}")
+  return false unless Array(plist.dig("Entitlements", "com.apple.security.application-groups")).include?(APP_GROUP)
+
+  # At least one certificate in the profile must be installed in the keychain.
+  installed = `security find-identity -v -p codesigning`.scan(/\b[0-9A-F]{40}\b/)
+  profile_certs = Array(plist["DeveloperCertificates"]).map { |c| OpenSSL::Digest::SHA1.hexdigest(c.to_s).upcase }
+  (installed & profile_certs).any?
+rescue StandardError => e
+  UI.important("Could not inspect local profile for #{identifier}: #{e.message}")
+  false
+end
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Create or reuse both App IDs with the App Group capability enabled"
+  lane :app_ids do
+    [APP_ID, EXT_ID].each do |identifier|
+      name = identifier == APP_ID ? APP_NAME : EXT_NAME
+      # produce is idempotent: it registers the App ID if missing and leaves it
+      # untouched if it already exists. skip_itc avoids creating an App Store
+      # Connect record we don't need for a dev-only sample.
+      produce(
+        app_identifier: identifier,
+        app_name: name,
+        skip_itc: true,
+        enable_services: {
+          app_group: "on"
+        }
+      )
+    end
+  end
+
+  desc "Create or reuse the shared App Group and associate it with both App IDs"
+  lane :app_group do
+    # `produce group` / `associate_group` have no Ruby action, so call the CLI.
+    # They return a non-zero code if the group already exists, which is fine.
+    sh("fastlane produce group -g #{APP_GROUP} -n '#{GROUP_NAME}' || true")
+    sh("fastlane produce associate_group -a #{APP_ID} #{APP_GROUP} || true")
+    sh("fastlane produce associate_group -a #{EXT_ID} #{APP_GROUP} || true")
+  end
+
+  desc "Create or reuse a development signing certificate"
+  lane :certificates do
+    # get_certificates (alias `cert`) reuses a valid installed certificate and
+    # only creates a new one when none is available.
+    get_certificates(development: true)
+  end
+
+  desc "Register a new device in the Apple Developer Portal"
+  lane :add_device do |options|
+    name = options[:NAME] || ENV["DEVICE_NAME"]
+    udid = options[:UDID] || ENV["DEVICE_UDID"]
+
+    UI.user_error!("Device name required. Pass NAME:<name> or set DEVICE_NAME.") if name.to_s.empty?
+    UI.user_error!("Device UDID required. Pass UDID:<udid> or set DEVICE_UDID.") if udid.to_s.empty?
+
+    register_device(
+      name: name,
+      udid: udid
+    )
+  end
+
+  desc "Create or edit a development provisioning profile for each App ID"
+  lane :profiles do |options|
+    regenerate = force?(options)
+
+    # get_provisioning_profile (alias `sigh`) downloads the existing profile by
+    # default, or regenerates it (picking up new devices / capabilities) when
+    # force is true — this is the "edit if existing" behaviour.
+    [[APP_ID, APP_PROFILE], [EXT_ID, EXT_PROFILE]].each do |identifier, name|
+      if !regenerate && local_profile_ok?(identifier)
+        UI.success("Reusing valid local profile for #{identifier} (pass FORCE:true to regenerate)")
+        next
+      end
+
+      get_provisioning_profile(
+        app_identifier: identifier,
+        provisioning_name: name,
+        development: true,
+        force: regenerate
+      )
+    end
+  end
+
+  desc "Full signing setup: App IDs, App Group, certificate and profiles"
+  lane :signing do |options|
+    app_ids
+    app_group
+    certificates
+    profiles(options)
+  end
+
+  desc "Build and deploy to the connected device via build-device.sh"
+  lane :build do
+    team = CredentialsManager::AppfileConfig.try_fetch_value(:team_id)
+    UI.user_error!("Team ID not set. Export FASTLANE_TEAM_ID or edit fastlane/Appfile.") if team.to_s.empty?
+
+    # build-device.sh signs with 'Automatic' provisioning, which on .NET iOS
+    # matches each project's bundle id against the profiles fastlane installed.
+    sh("cd .. && TEAM_ID=#{team} ./build-device.sh")
+  end
+
+  desc "Set up signing, then build and deploy"
+  lane :release do |options|
+    signing(options)
+    build
+  end
+end

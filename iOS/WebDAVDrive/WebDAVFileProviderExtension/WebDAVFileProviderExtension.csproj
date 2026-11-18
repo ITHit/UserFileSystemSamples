@@ -1,0 +1,84 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-ios</TargetFramework>
+    <OutputType>Library</OutputType>
+    <Nullable>enable</Nullable>
+    <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
+    <ImplicitUsings>true</ImplicitUsings>
+    <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+    <IsAppExtension>True</IsAppExtension>
+    <RootNamespace>WebDAVFileProviderExtension</RootNamespace>
+    <AssemblyName>WebDAVFileProviderExtension</AssemblyName>
+    <!-- .NET 8 defaults _ExportSymbolsExplicitly to true, which passes -exported_symbol to the
+         native linker. App extensions also pass -unexported_symbol, and the new Apple linker
+         (ld-prime) rejects mixing the two. Disabling explicit export avoids the conflict. -->
+    <_ExportSymbolsExplicitly>false</_ExportSymbolsExplicitly>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <!-- System.Security.Cryptography on iOS depends on Security.framework. -->
+    <MtouchExtraArgs>--framework=Security --setenv=MONO_GC_PARAMS=nursery-size=512k,soft-heap-limit=8m,major=marksweep</MtouchExtraArgs>
+    <!-- NSUrlSessionHandler buffers the entire request body in memory; the managed handler streams it. -->
+    <UseNativeHttpHandler>false</UseNativeHttpHandler>
+    <!-- The interpreter allocates native IR for every executed method. -->
+    <UseInterpreter>false</UseInterpreter>
+    <!-- Drops the ICU data (~30 MB file) and native libs. PredefinedCulturesOnly=false keeps
+         CultureInfo("en-US") working, which the ITHit license date parsing needs. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <PredefinedCulturesOnly>false</PredefinedCulturesOnly>
+    <!-- All source files are shared with the macOS File Provider extension. -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <!-- Use the native static registrar to avoid managed-static registrar callback crashes. -->
+    <Registrar>static</Registrar>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <EnableCodeSigning>False</EnableCodeSigning>
+    <CreatePackage>false</CreatePackage>
+    <EnablePackageSigning>false</EnablePackageSigning>
+    <CodesignKey>
+    </CodesignKey>
+    <CodesignProvision>
+    </CodesignProvision>
+    <CodesignRequireProvisioningProfile>false</CodesignRequireProvisioningProfile>
+    <!-- App extensions are launched by the system, not the IDE, so debugger init fails. -->
+    <MtouchDebug>false</MtouchDebug>
+    <DebugType>none</DebugType>
+    <LinkMode>SdkOnly</LinkMode>
+    <LangVersion>12.0</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <DefineConstants>
+    </DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodesignKey Condition="'$(CodesignKey)' == ''">iPhone Developer</CodesignKey>
+    <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
+    <CodesignProvision Condition="'$(CodesignProvision)' == ''">Automatic</CodesignProvision>
+    <CodesignRequireProvisioningProfile Condition="'$(CodesignRequireProvisioningProfile)' == ''">true</CodesignRequireProvisioningProfile>
+    <LangVersion>12.0</LangVersion>
+    <LinkMode>SdkOnly</LinkMode>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\macOS\WebDAVDrive\WebDAVFileProviderExtension\**\*.cs" Exclude="..\..\..\macOS\WebDAVDrive\WebDAVFileProviderExtension\**\obj\**;..\..\..\macOS\WebDAVDrive\WebDAVFileProviderExtension\**\bin\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\macOS\Common\Core\Common.Core.iOS.csproj" />
+    <ProjectReference Include="..\..\..\macOS\WebDAVDrive\WebDAVCommon\WebDAVCommon.iOS.csproj" />
+    <PackageReference Include="ITHit.FileSystem.IOS" Version="9.2.29685.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ITHitWebDAVClient" Version="7.1.5051" />
+  </ItemGroup>
+  <ItemGroup>
+    <BundleResource Include="..\..\..\macOS\WebDAVDrive\WebDAVMacApp\Resources\appsettings.json" Link="appsettings.json" />
+  </ItemGroup>
+</Project>

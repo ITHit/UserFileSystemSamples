@@ -1,0 +1,97 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-ios</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
+    <ImplicitUsings>true</ImplicitUsings>
+    <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+    <RootNamespace>WebDAViOSApp</RootNamespace>
+    <AssemblyName>WebDAV Drive</AssemblyName>
+    <!-- System.Security.Cryptography on iOS depends on Security.framework. -->
+    <MtouchExtraArgs>--framework=Security</MtouchExtraArgs>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodesignKey>
+    </CodesignKey>
+    <CodesignProvision>
+    </CodesignProvision>
+    <CodesignRequireProvisioningProfile>false</CodesignRequireProvisioningProfile>
+    <MtouchDebug>false</MtouchDebug>
+    <DebugType>none</DebugType>
+    <LinkMode>None</LinkMode>
+    <LangVersion>12.0</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <DefineConstants>
+    </DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <!-- Use an iPhone Developer certificate + automatic provisioning for device testing.
+         Set these on the command line or via environment variables if needed. -->
+    <CodesignKey Condition="'$(CodesignKey)' == ''">iPhone Developer</CodesignKey>
+    <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
+    <CodesignProvision Condition="'$(CodesignProvision)' == ''">Automatic</CodesignProvision>
+    <CodesignRequireProvisioningProfile Condition="'$(CodesignRequireProvisioningProfile)' == ''">true</CodesignRequireProvisioningProfile>
+    <LangVersion>12.0</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup>
+    <!-- We include shared macOS files explicitly, so disable the default SDK glob for local sources. -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="AppDelegate.cs" />
+    <Compile Include="Authentication.cs" />
+    <Compile Include="CookiesAuthViewController.cs" />
+    <Compile Include="DriveListViewController.cs" />
+    <Compile Include="Main.cs" />
+    <Compile Include="SceneDelegate.cs" />
+    <!-- Remote storage monitoring and mapping code is shared with the macOS container app. -->
+    <Compile Include="..\..\..\macOS\WebDAVDrive\WebDAVMacApp\Mapping.cs" />
+    <Compile Include="..\..\..\macOS\WebDAVDrive\WebDAVMacApp\ProtocolParameters.cs" />
+    <Compile Include="..\..\..\macOS\WebDAVDrive\WebDAVMacApp\RemoteStorageMonitor.cs" />
+    <Compile Include="..\..\..\macOS\WebDAVDrive\WebDAVMacApp\RemoteStorageMonitorBase.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\macOS\Common\Core\Common.Core.iOS.csproj" />
+    <ProjectReference Include="..\..\..\macOS\WebDAVDrive\WebDAVCommon\WebDAVCommon.iOS.csproj" />
+    <PackageReference Include="ITHit.FileSystem.IOS" Version="9.2.29685.0" />
+    <!-- Builds the File Provider extension so it can be embedded into the app bundle. -->
+    <ProjectReference Include="..\WebDAVFileProviderExtension\WebDAVFileProviderExtension.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ITHit.FileSystem" Version="9.2.29685.0" />
+    <PackageReference Include="ITHitWebDAVClient" Version="7.1.5051" />
+  </ItemGroup>
+  <ItemGroup>
+    <BundleResource Include="..\..\..\macOS\WebDAVDrive\WebDAVMacApp\Resources\appsettings.json" Link="appsettings.json" />
+  </ItemGroup>
+  <!-- The File Provider extension uses P/Invoke callbacks that require the full marshaller. -->
+  <ItemGroup>
+    <RuntimeComponents Include="marshal-ilgen" />
+  </ItemGroup>
+  <!-- Embeds the File Provider extension (.appex) into the app bundle. -->
+  <Target Name="EmbedFileProviderExtension" AfterTargets="Build">
+    <ItemGroup>
+      <_AppexSource Include="..\WebDAVFileProviderExtension\bin\$(Configuration)\WebDAVFileProviderExtension.appex" />
+    </ItemGroup>
+    <Exec Command="mkdir -p &quot;$(TargetDir)/WebDAV Drive.app/PlugIns&quot;" />
+    <Exec Command="cp -rf &quot;$(ProjectDir)/../WebDAVFileProviderExtension/bin/$(Configuration)/WebDAVFileProviderExtension.appex&quot; &quot;$(TargetDir)/WebDAV Drive.app/PlugIns&quot;" Condition="Exists('$(ProjectDir)/../WebDAVFileProviderExtension/bin/$(Configuration)/WebDAVFileProviderExtension.appex')" />
+  </Target>
+  <!-- Ad-hoc sign the app and extension with their entitlements for the iOS Simulator.
+       This mirrors the macOS Debug AfterBuild target and avoids requiring a provisioning profile. -->
+  <Target Name="AdHocSignForSimulator" AfterTargets="EmbedFileProviderExtension" Condition="'$(Configuration)' == 'Debug'">
+    <Exec Command="codesign --force --sign - --entitlements &quot;$(ProjectDir)/../WebDAVFileProviderExtension/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/WebDAV Drive.app/PlugIns/WebDAVFileProviderExtension.appex&quot;" Condition="Exists('$(TargetDir)/WebDAV Drive.app/PlugIns/WebDAVFileProviderExtension.appex')" />
+    <Exec Command="codesign --force --sign - --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/WebDAV Drive.app&quot;" />
+  </Target>
+</Project>

@@ -262,8 +262,22 @@ namespace WebDAVMacApp
         {
             try
             {
-                cancellationTokenSource?.Cancel();
-                handlerChangesTask?.Wait();
+                try
+                {
+                    cancellationTokenSource?.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // The monitoring loop has already ended and disposed the source.
+                }
+
+                try
+                {
+                    handlerChangesTask?.Wait();
+                }
+                catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is OperationCanceledException))
+                {
+                }
 
                 if (clientWebSocket != null
                     && (clientWebSocket?.State == WebSocketState.Open || clientWebSocket?.State == WebSocketState.CloseSent || clientWebSocket?.State == WebSocketState.CloseReceived))
@@ -271,7 +285,7 @@ namespace WebDAVMacApp
                     await clientWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
                 }
             }
-            catch (WebSocketException ex)
+            catch (Exception ex) when (ex is WebSocketException || ex is ObjectDisposedException)
             {
                 Logger.LogError("Failed to close websocket.", webSocketServerUrl, null, ex);
             };

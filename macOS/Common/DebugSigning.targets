@@ -1,0 +1,29 @@
+<Project>
+  <Target Name="SelectDebugSigningIdentity" BeforeTargets="_DetectSigningIdentity" Condition="'$(Configuration)' == 'Debug'">
+    <Exec Command="bash &quot;$(MSBuildThisFileDirectory)select-debug-identity.sh&quot;" ConsoleToMSBuild="true" Condition="'$(DebugSigningIdentity)' == ''">
+      <Output TaskParameter="ConsoleOutput" PropertyName="DebugSigningIdentity" />
+    </Exec>
+    <PropertyGroup>
+      <CodeSigningKey>$(DebugSigningIdentity)</CodeSigningKey>
+      <CodesignKey>$(DebugSigningIdentity)</CodesignKey>
+    </PropertyGroup>
+    <Message Text="Debug signing identity: $(DebugSigningIdentity)" Importance="high" />
+  </Target>
+  <Target Name="PrepareDebugSigningConfiguration" BeforeTargets="CollectAppManifests;_DetectAppManifest;_DetectSigningIdentity" DependsOnTargets="SelectDebugSigningIdentity" Condition="'$(Configuration)' == 'Debug'">
+    <PropertyGroup>
+      <_DebugSigningDirectory>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)debug-signing', '$(MSBuildProjectDirectory)'))</_DebugSigningDirectory>
+      <DebugSigningEntitlements>$(_DebugSigningDirectory)/Entitlements.plist</DebugSigningEntitlements>
+    </PropertyGroup>
+    <Exec Command="bash &quot;$(MSBuildThisFileDirectory)prepare-debug-signing.sh&quot; &quot;$(DebugSigningIdentity)&quot; &quot;$(MSBuildProjectDirectory)/Info.plist&quot; &quot;$(MSBuildProjectDirectory)/Entitlements.plist&quot; &quot;$(_DebugSigningDirectory)&quot;" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="DebugSigningTeamId" />
+    </Exec>
+    <PropertyGroup>
+      <AppBundleManifest>$(_DebugSigningDirectory)/Info.plist</AppBundleManifest>
+      <CodesignEntitlements>$(DebugSigningEntitlements)</CodesignEntitlements>
+    </PropertyGroup>
+    <ItemGroup>
+      <FileWrites Include="$(AppBundleManifest);$(DebugSigningEntitlements)" />
+    </ItemGroup>
+    <Message Text="Debug signing team: $(DebugSigningTeamId)" Importance="high" />
+  </Target>
+</Project>

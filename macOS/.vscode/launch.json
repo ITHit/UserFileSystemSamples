@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Virtual Filesystem Sample",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/VirtualFileSystem/VirtualFileSystemMacApp/bin/Debug/net10.0-macos/osx-x64/Virtual Filesystem Sample.app/Contents/MacOS/Virtual Filesystem Sample",
+            "args": [],
+            "cwd": "${workspaceFolder}/VirtualFileSystem/VirtualFileSystemMacApp",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "Launch WebDAV Drive",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/WebDAVDrive/WebDAVMacApp/bin/Debug/net10.0-macos/osx-x64/WebDAV Drive.app/Contents/MacOS/WebDAV Drive",
+            "args": [],
+            "cwd": "${workspaceFolder}/WebDAVDrive/WebDAVMacApp",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        }
+    ]
+}

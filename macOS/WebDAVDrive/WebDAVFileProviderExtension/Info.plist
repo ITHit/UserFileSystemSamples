@@ -6,8 +6,10 @@
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
 	<string>WebDAVFileProviderExtension</string>
+	<key>SampleAppGroupId</key>
+	<string>YOURTEAMID.group.com.test.webdavdrive</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.webdav.vfs.app.extension</string>
+	<string>com.test.webdavdrive.app.extension</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -21,7 +23,7 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>11.0</string>
+	<string>12.0</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSExtension</key>
@@ -54,7 +56,7 @@
 			</dict>
 		</array>
 		<key>NSExtensionFileProviderDocumentGroup</key>
-		<string>group.com.webdav.vfs</string>
+		<string>YOURTEAMID.group.com.test.webdavdrive</string>
 		<key>NSFileProviderDecorations</key>
 		<array>
 			<dict>
@@ -63,7 +65,7 @@
 				<key>Category</key>
 				<string>Badge</string>
 				<key>Identifier</key>
-				<string>com.webdav.vfs.app.extension.decorating.locked</string>
+				<string>com.test.webdavdrive.app.extension.decorating.locked</string>
 				<key>Label</key>
 				<string>Locked item</string>
 			</dict>

@@ -1,0 +1,17 @@
+# fastlane Appfile for the WebDAV Drive iOS sample.
+#
+# Values can be set here or overridden with environment variables so the same
+# config works on a dev machine and in CI:
+#   FASTLANE_USER      -> your Apple ID email (login)
+#   FASTLANE_TEAM_ID   -> your 10-character Apple Developer Team ID
+#
+# The container app identifier is the "primary" app id. The File Provider
+# extension id and the App Group are referenced from the Fastfile.
+
+app_identifier ENV["APP_IDENTIFIER"] || "com.test.webdavdrive.app"
+
+# Apple ID used to log in to the Apple Developer portal.
+apple_id ENV["FASTLANE_USER"]
+
+# Apple Developer Team ID (Developer portal, not App Store Connect team name).
+team_id ENV["FASTLANE_TEAM_ID"]

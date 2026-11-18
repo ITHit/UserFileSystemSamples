@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0-macos</TargetFramework>
+    <TargetFramework>net10.0-macos</TargetFramework>
     <OutputType>Library</OutputType>
     <Nullable>enable</Nullable>
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
     <ImplicitUsings>true</ImplicitUsings>
-    <SupportedOSPlatformVersion>10.15</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>12.0</SupportedOSPlatformVersion>
     <IsAppExtension>True</IsAppExtension>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
@@ -24,7 +24,8 @@
     <IncludeMonoRuntime>false</IncludeMonoRuntime>
     <UseSGen>true</UseSGen>
     <UseRefCounting>true</UseRefCounting>
-    <HttpClientHandler></HttpClientHandler>
+    <HttpClientHandler>
+    </HttpClientHandler>
     <LinkMode>None</LinkMode>
     <AOTMode>None</AOTMode>
   </PropertyGroup>
@@ -32,7 +33,8 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release</OutputPath>
-    <DefineConstants></DefineConstants>
+    <DefineConstants>
+    </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <EnableCodeSigning>False</EnableCodeSigning>
@@ -42,7 +44,8 @@
     <UseRefCounting>true</UseRefCounting>
     <CodeSignEntitlements>Entitlements.plist</CodeSignEntitlements>
     <LinkMode>None</LinkMode>
-    <HttpClientHandler></HttpClientHandler>
+    <HttpClientHandler>
+    </HttpClientHandler>
     <AOTMode>None</AOTMode>
     <LangVersion>12.0</LangVersion>
     <UseHardenedRuntime>true</UseHardenedRuntime>
@@ -54,19 +57,20 @@
   <ItemGroup>
     <PackageReference Include="System.Security.Permissions" Version="10.0.9" />
     <PackageReference Include="System.Threading.AccessControl" Version="10.0.9" />
-    <PackageReference Include="ITHit.FileSystem.Mac" Version="9.2.29658" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="9.2.29685.0" />
   </ItemGroup>
-   <ItemGroup>
-      <Content Include="..\VirtualFileSystemMacApp\Resources\appsettings.json" Link="Resources\appsettings.json" />
+  <ItemGroup>
+    <Content Include="..\VirtualFileSystemMacApp\Resources\appsettings.json" Link="Resources\appsettings.json" />
   </ItemGroup>
   <!-- AfterBuild signing as MSBuild targets so they run under `dotnet build`
        (the old <CustomCommands> were VS-for-Mac only and ignored by dotnet build). -->
   <Target Name="SignExtensionDebug" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
-    <Exec Command="bash &quot;$(ProjectDir)/sign.sh&quot; &quot;$(TargetDir)&quot;" />
-    <Exec Command="codesign --force --sign - -o runtime --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/FileProviderExtension.appex&quot;" />
+    <Exec Command="bash &quot;$(ProjectDir)/sign.sh&quot; &quot;$(TargetDir)&quot; &quot;$(DebugSigningIdentity)&quot;" />
+    <Exec Command="codesign --force --sign &quot;$(DebugSigningIdentity)&quot; -o runtime --entitlements &quot;$(DebugSigningEntitlements)&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/FileProviderExtension.appex&quot;" />
   </Target>
   <Target Name="SignExtensionRelease" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
     <Exec Command="bash &quot;$(ProjectDir)/sign_release.sh&quot; &quot;$(TargetDir)&quot;" />
     <Exec Command="codesign --force --sign &quot;Mac Developer&quot; -o runtime --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/FileProviderExtension.appex&quot;" />
   </Target>
+  <Import Project="..\..\Common\DebugSigning.targets" />
 </Project>

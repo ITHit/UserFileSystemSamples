@@ -26,31 +26,35 @@ namespace WebDAVFileProviderExtension
         {           
             Logger.LogMessage($"{nameof(IFile)}.{nameof(ReadAsync)}({offset}, {length})", RemoteStorageUriById.AbsoluteUri, default, operationContext);
 
-            // Buffer size must be multiple of 4096 bytes for optimal performance.
-            const int bufferSize = 0x500000; // 5Mb.
+            // Buffer size must be multiple of 4096 bytes. Keep it small: iOS File Provider extensions are limited to ~20 MB.
+            const int bufferSize = 0x4000; // 16 KB.
             string contentETag = null;
-            using (Client.IDownloadResponse response = await Engine.WebDavSession.DownloadAsync(new Uri(RemoteStorageUriById.AbsoluteUri), offset, length, null, cancellationToken))
-            {
-                using (Stream stream = await response.GetResponseStreamAsync())
-                {
-                    try
-                    {
-                        Logger.LogMessage("Start download.");
-                        await stream.CopyToAsync(output, bufferSize, length, cancellationToken);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // Operation was canceled.
-                        Logger.LogMessage($"{nameof(ReadAsync)}({offset}, {length}) canceled", RemoteStorageUriById.AbsoluteUri, default);
-                    }
-                    catch (Client.Exceptions.WebDavHttpException httpException)
-                    {
-                        await HandleWebExceptionsAsync(httpException, resultContext);
-                    }
-                }
 
-                // Return content eTag to the Engine.
-                contentETag = response.Headers.ETag.Tag;
+            try
+            {
+                using (Client.IDownloadResponse response = await Engine.WebDavSession.DownloadAsync(new Uri(RemoteStorageUriById.AbsoluteUri), offset, length, null, cancellationToken))
+                {
+                    using (Stream stream = await response.GetResponseStreamAsync())
+                    {
+                        try
+                        {
+                            Logger.LogMessage("Start download.");
+                            await stream.CopyToAsync(output, bufferSize, length, cancellationToken);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // Operation was canceled.
+                            Logger.LogMessage($"{nameof(ReadAsync)}({offset}, {length}) canceled", RemoteStorageUriById.AbsoluteUri, default);
+                        }
+                    }
+
+                    // Return content eTag to the Engine.
+                    contentETag = response.Headers.ETag.Tag;
+                }
+            }
+            catch (Client.Exceptions.WebDavHttpException httpException)
+            {
+                await HandleWebExceptionsAsync(httpException, resultContext);
             }
 
             return new FileMetadataMac()
@@ -89,9 +93,9 @@ namespace WebDAVFileProviderExtension
                     await Engine.WebDavSession.UploadAsync(RemoteStorageUriById, async (outputStream) =>
                     {
                         content.Position = 0; // Setting position to 0 is required in case of retry.
-                        await content.CopyToAsync(outputStream);
+                        // Small buffer: the File Provider extension has a ~20 MB memory limit on iOS.
+                        await content.CopyToAsync(outputStream, 16 * 1024, cancellationToken);
                     }, null, content.Length, 0, -1, lockTokens, eTag, null, cancellationToken);
-
 
                     // macOS requires last modification date on the server to match the client. If date does not match, the file will be redownloaded.
                     // Here we use property name indetical to Microsoft Windows Explorer for max interability.

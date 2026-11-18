@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    iOS counterpart of WebDAVCommon.csproj. Shares all sources with the macOS project;
+    macOS-only files (AppKit/WebKit auth UI, security-scoped bookmarks) are excluded below.
+    A distinct intermediate output path is used so that obj/project.assets.json does not
+    collide with the macOS project.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-ios</TargetFramework>
+    <OutputType>Library</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>true</ImplicitUsings>
+    <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Deterministic>false</Deterministic>
+    <LangVersion>12.0</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin-ios\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <Optimize>true</Optimize>
+    <OutputPath>bin-ios\Release</OutputPath>
+  </PropertyGroup>
+  <!-- macOS-only code: AppKit/WebKit based UI, security-scoped bookmarks and NSOpenPanel. -->
+  <ItemGroup>
+    <Compile Remove="BookmarkUtils.cs" />
+    <Compile Remove="Extension\NSViewExtensions.cs" />
+    <Compile Remove="Extension\StringExtensions.cs" />
+    <Compile Remove="ViewControllers\**\*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\Core\Common.Core.iOS.csproj" />
+    <PackageReference Include="ITHit.FileSystem.IOS" Version="9.2.29685.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ITHitWebDAVClient" Version="7.1.5051" />
+  </ItemGroup>
+</Project>

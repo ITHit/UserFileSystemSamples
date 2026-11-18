@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Net.Mail;
 using System.Text;
@@ -15,17 +16,27 @@ namespace WebDAVFileProviderExtension
         /// <summary>
         /// ID on the remote storage.
         /// </summary>
-        protected readonly byte[] RemoteStorageId;
+        protected byte[] RemoteStorageId;
 
         /// <summary>
         /// Uri on the remote storage.
         /// </summary>
-        protected readonly Uri RemoteStorageUriById;
+        protected Uri RemoteStorageUriById;
 
         /// <summary>
         /// Logger.
         /// </summary>
         protected readonly ILogger Logger;
+
+        /// <summary>
+        /// Properties requested to resolve the remote storage item id.
+        /// </summary>
+        private static readonly Client.PropertyName[] IdPropertyNames = new Client.PropertyName[]
+        {
+            new Client.PropertyName("resource-id", "DAV:"),
+            new Client.PropertyName("parent-resource-id", "DAV:"),
+            new Client.PropertyName("metadata-Etag", "DAV:"),
+        };
 
         /// <summary>
         /// Engine instance.
@@ -63,6 +74,16 @@ namespace WebDAVFileProviderExtension
             Uri targetItemUri = new Uri(targetFolderUri, targetItemName);
 
             await Engine.WebDavSession.MoveToAsync(await GetItemHrefAsync(), targetItemUri, true);
+
+            // Point to the new location and resolve the moved item id via GetMetadataAsync -
+            // Mapping.GetUserFileSystemItemMetadata returns resource-id when the server
+            // provides one (persistent across move on sync-collection servers),
+            // Href.AbsoluteUri otherwise.
+            RemoteStorageUriById = targetItemUri;
+            IMetadata metadata = await GetMetadataAsync(operationContext, resultContext, cancellationToken);
+            RemoteStorageId = metadata?.RemoteStorageItemId ?? Encoding.UTF8.GetBytes(targetItemUri.AbsoluteUri);
+            (operationContext as IMacMoveOperationContext)?.SetRemoteStorageItemId(RemoteStorageId);
+
             Logger.LogMessage("Moved item in remote storage succesefully", RemoteStorageUriById.AbsoluteUri, targetItemUri.AbsoluteUri);
         }
 
@@ -80,15 +101,11 @@ namespace WebDAVFileProviderExtension
             Logger.LogMessage($"{nameof(IFileSystemItem)}.{nameof(GetMetadataAsync)}()", RemoteStorageUriById.AbsoluteUri);
 
             IHierarchyItem? item = null;
-            Client.PropertyName[] propNames = new Client.PropertyName[3];
-            propNames[0] = new Client.PropertyName("resource-id", "DAV:");
-            propNames[1] = new Client.PropertyName("parent-resource-id", "DAV:");
-            propNames[2] = new Client.PropertyName("metadata-Etag", "DAV:");
 
             try
             {
                 // Return IFileMetadata for a file, IFolderMetadata for a folder.
-                item = (await Engine.WebDavSession.GetItemAsync(RemoteStorageUriById, propNames)).WebDavResponse;
+                item = (await Engine.WebDavSession.GetItemAsync(RemoteStorageUriById, IdPropertyNames)).WebDavResponse;
             }
             catch (Client.Exceptions.NotFoundException)
             {
@@ -109,13 +126,26 @@ namespace WebDAVFileProviderExtension
         /// </summary>
         public async Task<Uri> GetItemHrefAsync()
         {
-            return (await Engine.WebDavSession.GetItemAsync(RemoteStorageUriById, propNames: null)).WebDavResponse.Href;
+            try
+            {
+                return (await Engine.WebDavSession.GetItemAsync(RemoteStorageUriById, propNames: null)).WebDavResponse.Href;
+            }
+            catch (Client.Exceptions.WebDavHttpException httpException)
+            {
+                await HandleWebExceptionsAsync(httpException, null);
+                throw;
+            }
         }
 
 
         ///<inheritdoc>
         public async Task<byte[]?> GetThumbnailAsync(uint size, IOperationContext operationContext)
         {
+#if IOS
+            // Thumbnails are disabled on iOS: downloading them in the extension process
+            // can exceed the 20 MB File Provider extension memory limit.
+            return null;
+#else
             byte[]? thumbnail = null;
 
             string[] exts = AppGroupSettings.Settings.Value.RequestThumbnailsFor.Trim().Split("|");
@@ -153,6 +183,7 @@ namespace WebDAVFileProviderExtension
             Logger.LogMessage($"{nameof(VirtualEngine)}.{nameof(GetThumbnailAsync)}() - {thumbnailResult}", RemoteStorageUriById.AbsoluteUri);
 
             return thumbnail;
+#endif
         }
 
         private async Task<byte[]> StreamToByteArrayAsync(Stream stream)
@@ -174,32 +205,35 @@ namespace WebDAVFileProviderExtension
         {
             Logger.LogError("HandleWebExceptions", ex: webDavHttpException);
 
+            // 302 redirect to login page. Redirect302Exception may not carry a populated
+            // Status, so check the exception type before reading Status.Code.
+            if (webDavHttpException is Client.Exceptions.Redirect302Exception redirectException)
+            {
+                Uri failedUri = redirectException.Uri ?? RemoteStorageUriById;
+                await Engine.SecureStorage.SetAsync("CookiesFailedUrl", failedUri.AbsoluteUri);
+
+                // Set login type to display sing in button in file manager.
+                await Engine.SecureStorage.RequireCookiesAuthenticationAsync();
+                if (resultContext != null)
+                {
+                    resultContext.ReportStatus(CloudFileStatus.STATUS_CLOUD_FILE_AUTHENTICATION_FAILED);
+                }
+                return;
+            }
+
             switch (webDavHttpException.Status.Code)
             {
                 // Challenge-responce auth: Basic, Digest, NTLM or Kerberos
                 case 401:
 
-                    // Set login type to display sing in button in Finder.
+                    // Set login type to display sing in button in file manager.
                     await Engine.SecureStorage.RequirePasswordAuthenticationAsync();
                     if (resultContext != null)
                     {
                         resultContext.ReportStatus(CloudFileStatus.STATUS_CLOUD_FILE_AUTHENTICATION_FAILED);
                     }
                     break;
-
-                // 302 redirect to login page.
-                case 302:
-                    Uri failedUri = webDavHttpException.Uri;
-                    await Engine.SecureStorage.SetAsync("CookiesFailedUrl", failedUri.AbsoluteUri);
-
-                    // Set login type to display sing in button in Finder.
-                    await Engine.SecureStorage.RequireCookiesAuthenticationAsync();
-                    if (resultContext != null)
-                    {
-                        resultContext.ReportStatus(CloudFileStatus.STATUS_CLOUD_FILE_AUTHENTICATION_FAILED);
-                    }
-                    break;
-            }    
+            }
         }
 
         public async Task LockAsync(LockMode lockMode, IOperationContext operationContext = null, CancellationToken cancellationToken = default)

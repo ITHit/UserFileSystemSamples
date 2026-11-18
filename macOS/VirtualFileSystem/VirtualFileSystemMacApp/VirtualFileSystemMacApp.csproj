@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0-macos</TargetFramework>
+    <TargetFramework>net10.0-macos</TargetFramework>
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
     <ImplicitUsings>true</ImplicitUsings>
-    <SupportedOSPlatformVersion>10.16</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>12.0</SupportedOSPlatformVersion>
     <RootNamespace>VirtualFilesystemMacApp</RootNamespace>
     <AssemblyName>Virtual Filesystem Sample</AssemblyName>
   </PropertyGroup>
@@ -13,13 +13,14 @@
     <CreatePackage>false</CreatePackage>
     <UseSGen>false</UseSGen>
     <LinkMode>None</LinkMode>
-    <CodeSigningKey>adhoc</CodeSigningKey>
+    <CodeSigningKey>Apple Development</CodeSigningKey>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release</OutputPath>
-    <DefineConstants></DefineConstants>
+    <DefineConstants>
+    </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <EnableCodeSigning>false</EnableCodeSigning>
@@ -30,7 +31,8 @@
     <UseRefCounting>true</UseRefCounting>
     <CodeSignEntitlements>Entitlements.plist</CodeSignEntitlements>
     <LinkMode>None</LinkMode>
-    <HttpClientHandler></HttpClientHandler>
+    <HttpClientHandler>
+    </HttpClientHandler>
     <AOTMode>None</AOTMode>
     <UseHardenedRuntime>true</UseHardenedRuntime>
     <CodeSigningKey>Mac Developer</CodeSigningKey>
@@ -43,6 +45,7 @@
     <ProjectReference Include="..\VirtualFileSystemCommon\VirtualFileSystemCommon.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <ImageAsset Remove="Resources\Assets.xcassets\**\*" />
     <ImageAsset Update="Assets.xcassets\AppIcon.appiconset\AppIcon-512%402x.png">
       <Link>Assets.xcassets\AppIcon.appiconset\AppIcon-512%402x.png</Link>
     </ImageAsset>
@@ -97,15 +100,15 @@
   <ItemGroup>
     <PackageReference Include="System.Security.Permissions" Version="10.0.9" />
     <PackageReference Include="System.Threading.AccessControl" Version="10.0.9" />
-    <PackageReference Include="ITHit.FileSystem.Mac" Version="9.2.29658" />
+    <PackageReference Include="ITHit.FileSystem.Mac" Version="9.2.29685.0" />
   </ItemGroup>
   <!-- AfterBuild embed + signing as MSBuild targets so they run under `dotnet build`
        (the old <CustomCommands> were VS-for-Mac only and ignored by dotnet build). -->
   <Target Name="EmbedAndSignDebug" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
-    <Exec Command="bash &quot;$(ProjectDir)/sign.sh&quot; &quot;$(TargetDir)&quot;" />
+    <Exec Command="bash &quot;$(ProjectDir)/sign.sh&quot; &quot;$(TargetDir)&quot; &quot;$(DebugSigningIdentity)&quot;" />
     <Exec Command="mkdir -p &quot;$(TargetDir)/Virtual Filesystem Sample.app/Contents/PlugIns&quot;" />
     <Exec Command="cp -rf &quot;$(ProjectDir)/../FileProviderExtension/bin/Debug/FileProviderExtension.appex&quot; &quot;$(TargetDir)/Virtual Filesystem Sample.app/Contents/PlugIns&quot;" />
-    <Exec Command="codesign --force --sign - --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/Virtual Filesystem Sample.app&quot;" />
+    <Exec Command="codesign --force --sign &quot;$(DebugSigningIdentity)&quot; --entitlements &quot;$(DebugSigningEntitlements)&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/Virtual Filesystem Sample.app&quot;" />
   </Target>
   <Target Name="EmbedAndSignRelease" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
     <Exec Command="bash &quot;$(ProjectDir)/sign_release.sh&quot; &quot;$(TargetDir)&quot;" />
@@ -113,4 +116,5 @@
     <Exec Command="cp -R &quot;$(ProjectDir)/../FileProviderExtension/bin/Release/FileProviderExtension.appex&quot; &quot;$(TargetDir)/Virtual Filesystem Sample.app/Contents/PlugIns&quot;" />
     <Exec Command="codesign --force --sign &quot;Mac Developer&quot; --entitlements &quot;$(ProjectDir)/Entitlements.plist&quot; --timestamp --generate-entitlement-der &quot;$(TargetDir)/Virtual Filesystem Sample.app&quot;" />
   </Target>
+  <Import Project="..\..\Common\DebugSigning.targets" />
 </Project>

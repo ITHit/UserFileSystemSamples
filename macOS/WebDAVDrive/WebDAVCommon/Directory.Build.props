@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <BaseIntermediateOutputPath Condition="$(MSBuildProjectName.Contains('iOS'))">obj-ios\</BaseIntermediateOutputPath>
+    <BaseOutputPath Condition="$(MSBuildProjectName.Contains('iOS'))">bin-ios\</BaseOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj\**;bin\**;obj-ios\**;bin-ios\**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,143 @@
+<h1 class="d-xl-block d-none">WebDAV Drive Sample for iOS in .NET, C#</h1>
+<p>This sample implements a virtual file system for iOS that displays documents from a WebDAV server.
+It uses the iOS File Provider API (<code>NSFileProviderReplicatedExtension</code>, iOS 16+) and exposes
+the virtual drive inside the iOS Files app.</p>
+
+<h2>Requirements</h2>
+<ul>
+<li>.NET 8 SDK with the <code>ios</code> workload (<code>sudo dotnet workload install ios</code>)</li>
+<li>Xcode 15+</li>
+<li>iOS 16.0+ device or simulator</li>
+</ul>
+
+<h2>Solution Structure</h2>
+<p>The iOS sample mirrors the macOS sample: a container application registers the
+File Provider domain and runs the WebSocket remote storage monitor, while the File Provider
+extension (<code>.appex</code>) implements the virtual file system.</p>
+<p>All virtual file system code (<code>VirtualEngine</code>, <code>VirtualFolder</code>,
+<code>VirtualFile</code>, <code>VirtualFileSystemItem</code>, <code>Mapping</code>) and the
+remote storage monitor (<code>RemoteStorageMonitorBase</code>, <code>RemoteStorageMonitor</code>,
+<code>ProtocolParameters</code>) are shared with the macOS sample via linked files.</p>
+<p>Shared libraries are built for iOS via companion projects that reference the same sources:</p>
+<ul>
+<li><code>Sources/ITHit.FileSystem.Mac/ITHit.FileSystem.Mac.iOS.csproj</code> — engine, targets
+<code>net8.0-ios</code>. FileProviderUI (<code>FPUIActionExtensionViewController</code>) is macOS-only
+and excluded. <code>NSDistributedNotificationCenter</code> does not exist on iOS, so the engine
+posts app↔extension notifications through files in the File Provider shared container
+(<code>NSFileProviderManager.DocumentStorageUrl</code>) instead — see
+<code>InterprocessNotification.cs</code>.</li>
+<li><code>Samples/macOS/Common/Core/Common.Core.iOS.csproj</code></li>
+<li><code>Samples/macOS/WebDAVDrive/WebDAVCommon/WebDAVCommon.iOS.csproj</code> — excludes
+AppKit/WebKit auth view controllers and security-scoped bookmark helpers.</li>
+</ul>
+
+<h2>Setting License</h2>
+<p>Set <code>WebDAVClientLicense</code> and <code>UserFileSystemLicense</code> in
+<code>Samples/macOS/WebDAVDrive/WebDAVMacApp/Resources/appsettings.json</code> (the file is shared
+with the macOS sample). The Engine can also run without an explicit license for a 5-day trial.</p>
+
+<h2>Setting WebDAV Server URL</h2>
+<p>Set <code>WebDAVServerURLs</code> and <code>WebSocketServerUrl</code> in
+<code>appsettings.json</code>, or add a server URL in the app UI (+ button).</p>
+
+<h2>Running the Sample</h2>
+<ol>
+<li>Build: <code>dotnet build ../UserFileSystemSamplesiOS.sln</code></li>
+<li>For the iOS Simulator on Apple Silicon Macs use the x64 build (runs under Rosetta) —
+<code>dotnet build WebDAViOSApp/WebDAViOSApp.csproj -p:RuntimeIdentifier=iossimulator-x64</code>.<br/>
+<strong>Note:</strong> the arm64 simulator build currently fails to link native
+<code>System.Security.Cryptography</code> symbols inside the File Provider extension;
+this is a .NET iOS runtime-pack/app-extension interaction and does not affect device builds.</li>
+<li>Deploy <code>WebDAV Drive.app</code> to a simulator (<code>xcrun simctl install booted "WebDAV Drive.app"</code>) or a device.</li>
+<li>In the app, tap a WebDAV server URL to mount it (registers the File Provider domain).</li>
+<li>Open the <b>Files</b> app — the drive appears under Locations.</li>
+</ol>
+
+<h3>Simulator troubleshooting</h3>
+<ul>
+<li><b>Extension crashes on launch</b> — the extension project uses the native static registrar
+(<code>&lt;Registrar&gt;static&lt;/Registrar&gt;</code>) and disables the managed debugger
+(<code>&lt;MtouchDebug&gt;false&lt;/MtouchDebug&gt;</code>) to avoid a Mono runtime assertion in the
+system-launched extension process. It also includes the <code>marshal-ilgen</code> runtime component.</li>
+<li><b>Files shows “content unavailable” after reinstalling</b> — the simulator caches the extension
+path from the previous install. Reboot the simulator to clear the cached service path:
+<code>xcrun simctl shutdown &lt;uuid&gt;</code> then <code>xcrun simctl boot &lt;uuid&gt;</code> before installing again.</li>
+<li><b>Mounting fails with a provisioning/app-group error</b> — the unsigned simulator build does
+not have a real app group entitlement. The UI and domain registration can still be tested, but
+the full mount flow requires a signed build with a valid <code>group.com.test.webdavdrive</code> app group.</li>
+</ul>
+<h2>Testing on a physical iOS device</h2>
+<p>Testing the full File Provider mount flow on a real device requires an Apple Developer account,
+signing, and an App Group. The simulator build can list the UI and register the domain, but the
+shared container between the app and extension is not reliably available without real entitlements.</p>
+
+<h3>1. Apple Developer portal setup</h3>
+<ol>
+<li>Sign in to <a href="https://developer.apple.com/account/resources/">Apple Developer Center</a>.</li>
+<li>Go to <b>Identifiers</b> and create:
+  <ul>
+    <li>An <b>App Group</b> with identifier <code>group.com.test.webdavdrive</code>.</li>
+    <li>An <b>App ID</b> with Bundle ID <code>com.test.webdavdrive.app</code>. Enable the <b>App Groups</b>
+        capability and assign it to <code>group.com.test.webdavdrive</code>.</li>
+    <li>An <b>App ID</b> with Bundle ID <code>com.test.webdavdrive.app.extension</code>. Enable the <b>App Groups</b>
+        capability and assign it to <code>group.com.test.webdavdrive</code>.</li>
+  </ul>
+</li>
+<li>Register the iOS device(s) you will test on.</li>
+<li>Go to <b>Profiles</b> and create an <b>iOS App Development</b> provisioning profile that includes
+  <code>com.test.webdavdrive.app</code> and <code>com.test.webdavdrive.app.extension</code> (multi-app profiles are allowed
+  for development) and your test device. Download and double-click to install it.</li>
+<li>Make sure your Mac has a valid <b>iPhone Developer</b> certificate in <code>Keychain Access</code>.</li>
+</ol>
+
+<h3>2. Project signing configuration</h3>
+<p>The <code>Release</code> configuration in both projects is already set up for device signing:</p>
+<ul>
+<li><code>WebDAViOSApp/WebDAViOSApp.csproj</code> — <code>CodesignKey=iPhone Developer</code>,
+  <code>CodesignEntitlements=Entitlements.plist</code>, <code>CodesignProvision=Automatic</code>.</li>
+<li><code>WebDAVFileProviderExtension/WebDAVFileProviderExtension.csproj</code> — same settings.</li>
+</ul>
+<p>You can override these from the command line if you have a specific certificate or provisioning
+profile:</p>
+<pre><code>dotnet build WebDAViOSApp/WebDAViOSApp.csproj \
+  -c Release \
+  -p:RuntimeIdentifier=ios-arm64 \
+  -p:CodesignKey="Apple Development: Your Name (TEAMID)" \
+  -p:CodesignProvision="Your Dev Profile Name" \
+  -p:CodesignRequireProvisioningProfile=true
+</code></pre>
+
+<h3>3. Deploy and run</h3>
+<p>Build an <code>.app</code> bundle for the device, then install and launch it. The simplest way is to let
+<code>dotnet</code> deploy to the connected device:</p>
+<pre><code>dotnet build WebDAViOSApp/WebDAViOSApp.csproj \
+  -c Release \
+  -t:Run \
+  -p:RuntimeIdentifier=ios-arm64 \
+  -p:CodesignKey="Apple Development: Your Name (TEAMID)" \
+  -p:CodesignProvision="Your Dev Profile Name"
+</code></pre>
+<p>A convenience script is provided: <code>build-device.sh</code>. Set <code>TEAM_ID</code> and run it:</p>
+<pre><code>export TEAM_ID=ABCD123456
+./build-device.sh
+</code></pre>
+<p>Alternatively, build the <code>.app</code> and install it manually with <code>xcrun devicectl</code> or Xcode’s
+<i>Devices and Simulators</i> window.</p>
+
+<h3>4. Test the provider</h3>
+<ol>
+<li>On the device, open <b>Settings → General → VPN &amp; Device Management</b> and trust the developer.</li>
+<li>Open the <b>WebDAV Drive</b> app and tap the WebDAV URL to mount it.</li>
+<li>Open the <b>Files</b> app → <b>Browse</b> → <b>WebDAV Drive</b>.</li>
+<li>Browse, open, edit, rename, and delete files against the WebDAV server.</li>
+</ol>
+
+<h3>5. Common device errors</h3>
+<ul>
+<li><b>“No valid provisioning profile”</b> — the App Group is missing from one of the App IDs, or the
+  profile does not include the test device.</li>
+<li><b>“The entitlements file requires the App Group ...”</b> — the provisioning profile does not include
+  <code>group.com.test.webdavdrive</code>.</li>
+<li><b>Files shows “content unavailable”</b> — the extension process may have crashed. Check the device
+  console in <b>Console.app</b> for <code>WebDAVFileProviderExtension</code> crash logs.</li>
+</ul>
